@@ -1,0 +1,5 @@
+# Playwright E2E artifacts
+/playwright/.auth/
+/playwright-report/
+/test-results/
+/blob-report/

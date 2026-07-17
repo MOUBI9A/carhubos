@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CarHub — Titan ERP Console · Architecture & Vision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0710;
+    --bg-soft: #120d1d;
+    --card: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --primary: #a855f7;
+    --primary-soft: rgba(168, 85, 247, 0.12);
+    --success: #22c55e;
+    --success-soft: rgba(34, 197, 94, 0.12);
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.12);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245, 158, 11, 0.12);
+    --blue: #3b82f6;
+    --blue-soft: rgba(59, 130, 246, 0.12);
+    --text: #f4f1fa;
+    --muted: rgba(244, 241, 250, 0.55);
+    --faint: rgba(244, 241, 250, 0.32);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.16) 0, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.07) 0, transparent 50%);
+    background-attachment: fixed;
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 56px 32px 120px; }
+
+  /* ── Typography ── */
+  h1 { font-size: 56px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.02; text-transform: uppercase; }
+  h2 { font-size: 13px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase; color: var(--primary); margin-bottom: 8px; }
+  h3 { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 18px; }
+  h4 { font-size: 15px; font-weight: 800; letter-spacing: 0.02em; margin-bottom: 6px; }
+  p  { color: var(--muted); font-size: 14.5px; }
+  .accent { color: var(--primary); }
+  .lead { font-size: 17px; color: var(--muted); max-width: 760px; }
+  .kicker { font-size: 10px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase; color: var(--faint); }
+
+  section { margin-top: 96px; }
+  .section-head { margin-bottom: 32px; }
+
+  /* ── Hero ── */
+  .hero { padding: 48px 0 12px; }
+  .hero-badges { display: flex; gap: 10px; flex-wrap: wrap; margin: 26px 0 30px; }
+  .badge {
+    font-size: 10px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--card-border);
+    background: var(--card); color: var(--muted);
+  }
+  .badge.primary { color: var(--primary); border-color: rgba(168,85,247,.35); background: var(--primary-soft); }
+
+  /* ── Cards & grids ── */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 860px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 22px; padding: 26px; backdrop-filter: blur(12px);
+  }
+  .card .icon {
+    width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 21px; margin-bottom: 16px; border: 1px solid var(--card-border); background: rgba(255,255,255,.04);
+  }
+  .icon.p { background: var(--primary-soft); border-color: rgba(168,85,247,.3); }
+  .icon.g { background: var(--success-soft); border-color: rgba(34,197,94,.3); }
+  .icon.r { background: var(--danger-soft); border-color: rgba(239,68,68,.3); }
+  .icon.a { background: var(--amber-soft); border-color: rgba(245,158,11,.3); }
+  .icon.b { background: var(--blue-soft); border-color: rgba(59,130,246,.3); }
+
+  /* ── Stat band ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 34px; }
+  @media (max-width: 860px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { text-align: center; padding: 22px 10px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-border); }
+  .stat .num { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; color: var(--text); }
+  .stat .lbl { font-size: 9px; font-weight: 900; letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); margin-top: 4px; }
+
+  /* ── Pain → answer rows ── */
+  .pain { display: flex; gap: 18px; align-items: flex-start; padding: 20px 22px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-border); border-left: 4px solid var(--danger); }
+  .pain.fix { border-left-color: var(--success); }
+  .pain b { color: var(--text); display: block; font-size: 13.5px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .04em; }
+  .pain p { font-size: 13px; }
+
+  /* ── Diagram frames ── */
+  .diagram {
+    background: var(--bg-soft); border: 1px solid var(--card-border); border-radius: 22px;
+    padding: 26px; overflow-x: auto; margin-top: 10px;
+  }
+  .diagram .mermaid { display: flex; justify-content: center; min-width: 640px; }
+  .diagram-caption { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 800; margin-top: 16px; text-align: center; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 18px; overflow: hidden; border: 1px solid var(--card-border); }
+  th { font-size: 10px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); text-align: left; padding: 14px 18px; background: rgba(255,255,255,.04); border-bottom: 1px solid var(--card-border); }
+  td { padding: 13px 18px; font-size: 13px; color: var(--muted); border-bottom: 1px solid rgba(255,255,255,.05); }
+  tr:last-child td { border-bottom: none; }
+  td b { color: var(--text); }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--primary); background: var(--primary-soft); padding: 2px 7px; border-radius: 6px; }
+
+  /* ── Flow strip (tenancy) ── */
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 26px; background: var(--bg-soft); border: 1px solid var(--card-border); border-radius: 22px; }
+  .flow .node { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; padding: 12px 16px; border-radius: 12px; background: var(--primary-soft); border: 1px solid rgba(168,85,247,.3); color: var(--text); }
+  .flow .arrow { color: var(--primary); font-weight: 900; font-size: 18px; }
+
+  /* ── Roadmap timeline ── */
+  .timeline { position: relative; padding-left: 34px; }
+  .timeline::before { content: ''; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(to bottom, var(--primary), rgba(168,85,247,.05)); }
+  .milestone { position: relative; padding: 0 0 30px 12px; }
+  .milestone::before { content: ''; position: absolute; left: -31px; top: 5px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 3px solid var(--primary); }
+  .milestone.done::before { background: var(--success); border-color: var(--success); }
+  .milestone .when { font-size: 10px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--primary); }
+  .milestone.done .when { color: var(--success); }
+  .milestone h4 { margin-top: 4px; }
+  .milestone p { font-size: 13px; max-width: 640px; }
+
+  /* ── Role pills ── */
+  .role-pill { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
+
+  footer { margin-top: 110px; text-align: center; }
+  footer .line { height: 1px; background: linear-gradient(to right, transparent, rgba(168,85,247,.4), transparent); margin-bottom: 30px; }
+
+  /* ── Print / PDF ── */
+  @media print {
+    body { background: var(--bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 24px 18px; max-width: 100%; }
+    section { margin-top: 42px; page-break-inside: avoid; }
+    section.breakable { page-break-inside: auto; }
+    .diagram { overflow: visible; }
+    .diagram .mermaid { min-width: 0; }
+    .diagram .mermaid svg { max-width: 100% !important; height: auto !important; }
+    h1 { font-size: 42px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════ HERO ═══════════════ -->
+  <header class="hero">
+    <div class="kicker">Architecture &amp; Product Vision · July 2026</div>
+    <h1 style="margin-top:14px;">CarHub<br /><span class="accent">Titan ERP Console</span></h1>
+    <div class="hero-badges">
+      <span class="badge primary">Multi-Tenant SaaS</span>
+      <span class="badge">Next.js 16 · React 19</span>
+      <span class="badge">NestJS 11 · Prisma 5</span>
+      <span class="badge">Forensic Audit Trail</span>
+      <span class="badge">B2B Fleet Network</span>
+    </div>
+    <p class="lead">
+      The operating system for independent car-rental agencies — replacing paper contracts,
+      WhatsApp threads and fragile spreadsheets with a centralized, automated and
+      <b style="color:var(--text)">intelligent command center</b>.
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="num">19</div><div class="lbl">Data Models</div></div>
+      <div class="stat"><div class="num">26</div><div class="lbl">Backend Modules</div></div>
+      <div class="stat"><div class="num">5</div><div class="lbl">Role Workspaces</div></div>
+      <div class="stat"><div class="num">∞</div><div class="lbl">Agencies · 1 Deploy</div></div>
+    </div>
+  </header>
+
+  <!-- ═══════════════ 1. PROBLEM / ANSWER ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>01 · The Problem We Kill</h2>
+      <h3>Four silent ways agencies lose money</h3>
+      <p class="lead">Every capability in CarHub exists to close one of these four leaks.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="pain">
+        <div class="icon r">⚠️</div>
+        <div><b>Compliance Risk</b><p>A car rented with expired insurance is an uninsured liability. Agencies discover expiries <i>after</i> the incident.</p></div>
+      </div>
+      <div class="pain fix">
+        <div class="icon g">🛡️</div>
+        <div><b>The Guardian</b><p>Vehicles with expired mandatory documents are <b style="display:inline">hard-locked</b> from booking — the API physically refuses the rental.</p></div>
+      </div>
+      <div class="pain">
+        <div class="icon r">👻</div>
+        <div><b>Invisible Demand</b><p>Every customer turned away — "no car available" — is unrecorded, unrecoverable revenue.</p></div>
+      </div>
+      <div class="pain fix">
+        <div class="icon g">📈</div>
+        <div><b>Refusal Log &amp; Waitlist</b><p>Every refusal is captured with its potential revenue in dirhams, queued for recovery when a vehicle frees up.</p></div>
+      </div>
+      <div class="pain">
+        <div class="icon r">🌫️</div>
+        <div><b>Cash-Flow Blindness</b><p>Quoted prices get mistaken for collected cash. Owners find the gap at month-end — or never.</p></div>
+      </div>
+      <div class="pain fix">
+        <div class="icon g">✅</div>
+        <div><b>Verified-Payment Accounting</b><p>Every metric on the platform is computed from <b style="display:inline">verified cash</b> stamped by a manager — never from quotes.</p></div>
+      </div>
+      <div class="pain">
+        <div class="icon r">🕳️</div>
+        <div><b>Zero Accountability</b><p>Prices change, bookings vanish — and nobody knows who did it, when, or why.</p></div>
+      </div>
+      <div class="pain fix">
+        <div class="icon g">🔍</div>
+        <div><b>Forensic Audit Trail</b><p>Every mutation records the actor, the before-state and the after-state as JSON snapshots, plus IP and timestamp.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 2. SYSTEM ARCHITECTURE ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>02 · System Architecture</h2>
+      <h3>Two clean tiers, one hard tenant boundary</h3>
+      <p class="lead">A Next.js App-Router frontend and a NestJS REST backend over Prisma ORM — SQLite in development, PostgreSQL in production, zero code changes between them.</p>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+    subgraph CLIENT["🖥️  Client — Browser"]
+        U1["Owner / Manager"]
+        U2["Agent"]
+        U3["Renter"]
+        U4["Root Admin"]
+    end
+    subgraph FE["⚡  Frontend — Next.js 16 · React 19 · Tailwind v4"]
+        RG1["(owner) Command Centre · Fleet · Bookings · CRM · ERP"]
+        RG2["(agent) Operations · Tasks · Inspections"]
+        RG3["(renter) Trust Vault Portal"]
+        RG4["(admin) Global Pulse · Provisioning"]
+    end
+    subgraph BE["🛡️  Backend — NestJS 11 REST API"]
+        GUARD["AuthGuard — JWT in HttpOnly Cookie"]
+        RBAC["RolesGuard — RBAC"]
+        VAL["ValidationPipe — whitelisted DTOs"]
+        MODS["26 Domain Modules — Analytics · Bookings · Cars · Customers · Payments · Audit …"]
+        PDFE["PDF Engine — Puppeteer Contracts"]
+        CRON["Scheduler — Expiry Sweeps"]
+    end
+    subgraph DATA["🗄️  Data Layer"]
+        PRISMA["Prisma ORM — every query agencyId-scoped"]
+        DB[("SQLite dev · PostgreSQL prod")]
+    end
+    subgraph EXT["🌐  Integrations"]
+        STRIPE["Stripe — SaaS Billing"]
+        TWILIO["Twilio — WhatsApp / SMS"]
+        WH["Outbound Webhooks"]
+    end
+    CLIENT -->|"HTTPS + HttpOnly JWT"| FE
+    FE -->|"Axios REST /api"| GUARD
+    GUARD --> RBAC --> VAL --> MODS
+    MODS --> PRISMA --> DB
+    MODS --> PDFE
+    MODS --> WH
+    CRON --> PRISMA
+    BE --> STRIPE
+    BE --> TWILIO
+      </pre>
+      <div class="diagram-caption">Every request passes three defense layers before touching a tenant-scoped query</div>
+    </div>
+
+    <div style="margin-top:28px;">
+      <h4 style="margin-bottom:12px;">The tenant boundary, end to end</h4>
+      <div class="flow">
+        <span class="node">JWT { sub · role · agencyId }</span>
+        <span class="arrow">→</span>
+        <span class="node">@CurrentUser()</span>
+        <span class="arrow">→</span>
+        <span class="node">service(agencyId, …)</span>
+        <span class="arrow">→</span>
+        <span class="node">WHERE agencyId = ?</span>
+      </div>
+      <p style="text-align:center; margin-top:14px; font-size:12.5px;">Tenancy is enforced in the service layer on every query — never trusted to the client. Composite uniques like <code>(agencyId, licensePlate)</code> isolate agencies while allowing global reuse.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 3. BOOKING LIFECYCLE ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>03 · One Booking, End to End</h2>
+      <h3>Where the Guardian earns its name</h3>
+      <p class="lead">A single reservation request triggers compliance enforcement, demand capture, and triple-linked accounting — automatically.</p>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant O as Owner (Browser)
+    participant N as Next.js UI
+    participant A as NestJS API
+    participant P as Prisma / DB
+    O->>N: "Execute Reservation"
+    N->>A: POST /api/bookings (JWT cookie)
+    A->>A: AuthGuard → RolesGuard → DTO validation
+    A->>P: Guardian check — expired mandatory docs?
+    alt Vehicle hard-locked
+        A->>P: Auto-log LOST refusal
+        A-->>N: 403 "Vehicle Hard-Locked: INSURANCE expired"
+    else Vehicle compliant
+        A->>P: Overlap check — dates collide?
+        alt Dates collide
+            A->>P: Auto-log WAITING refusal + potential revenue
+            A-->>N: 400 "Added to waitlist"
+        else Clear
+            A->>P: TRANSACTION — Booking + Invoice (20% VAT) + PENDING Payment
+            A->>P: Forensic audit entry (actor, before, after)
+            A->>A: Fire BOOKING_CREATED webhooks
+            A-->>N: 201 Booking
+        end
+    end
+    N-->>O: Toast + live dashboard refresh
+      </pre>
+      <div class="diagram-caption">The "triple link": no booking exists without its invoice and its pending payment — created atomically</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 4. DOMAINS ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>04 · Core Business Domains</h2>
+      <h3>Six pillars, one console</h3>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="icon p">🧠</div>
+        <h4>Command Centre — Analytics</h4>
+        <p>Verified revenue MTD with growth, 30-day fleet utilization, Guardian block queue, recoverable-demand value, 14-day intensity chart, star-asset ROI ranking, and a humanized live audit feed — one glance, five answers.</p>
+      </div>
+      <div class="card">
+        <div class="icon g">🚘</div>
+        <h4>Fleet &amp; The Guardian</h4>
+        <p>Every vehicle carries live document countdowns, mechanical history, odometer sync, and a continuously recomputed ROI score. Expired mandatory documents hard-lock the asset from booking — renewals restore it in one click.</p>
+      </div>
+      <div class="card">
+        <div class="icon b">👥</div>
+        <h4>CRM &amp; Bookings</h4>
+        <p>Identity-first rentals (CIN/passport required, walk-in quick-register), a Gantt-style visual scheduler with a live "now" line, a server-enforced booking state machine, blacklisting that preserves history, and Puppeteer-rendered PDF contracts.</p>
+      </div>
+      <div class="card">
+        <div class="icon a">💰</div>
+        <h4>Financial Vault</h4>
+        <p>Booking → Invoice (20% VAT) → PENDING payment, atomically. Cash counts only when a manager verifies it — the verifier's identity is stamped forever. Expenses, deposits in escrow states, P&amp;L pulse and CSV export.</p>
+      </div>
+      <div class="card">
+        <div class="icon p">🕸️</div>
+        <h4>The Hub — B2B Fleet Sharing</h4>
+        <p>Idle vehicles get listed at wholesale B2B rates; agencies with excess demand rent from each other. Every new agency deepens inventory liquidity — the network-effect moat.</p>
+      </div>
+      <div class="card">
+        <div class="icon r">🔐</div>
+        <h4>Security &amp; Forensic Auditing</h4>
+        <p>Helmet headers, rate limiting, HttpOnly JWT, DTO whitelisting, role guards, tenant-scoped queries — and an AuditLog capturing actor + before/after JSON + IP for every mutation on the platform.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:26px;">
+      <table>
+        <thead><tr><th>Role</th><th>Workspace</th><th>Powers</th></tr></thead>
+        <tbody>
+          <tr><td><span class="role-pill" style="background:var(--danger-soft);color:var(--danger)">ROOT_ADMIN</span></td><td><code>/admin</code></td><td>Platform provisioning, cross-agency pulse, tier management</td></tr>
+          <tr><td><span class="role-pill" style="background:var(--primary-soft);color:var(--primary)">OWNER</span></td><td><code>/dashboard</code></td><td>Full agency control — fleet, finance, analytics, staff</td></tr>
+          <tr><td><span class="role-pill" style="background:var(--blue-soft);color:var(--blue)">MANAGER</span></td><td><code>/dashboard</code></td><td>Operational control — bookings, customers, analytics</td></tr>
+          <tr><td><span class="role-pill" style="background:var(--amber-soft);color:var(--amber)">AGENT</span></td><td><code>/agent</code></td><td>Field work — tasks, inspections, check-in / check-out</td></tr>
+          <tr><td><span class="role-pill" style="background:var(--success-soft);color:var(--success)">RENTER</span></td><td><code>/portal</code></td><td>Self-service — documents, history, trust score</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 5. ERD ═══════════════ -->
+  <section class="breakable">
+    <div class="section-head">
+      <h2>05 · Data Model</h2>
+      <h3>19 entities, one tenant root</h3>
+      <p class="lead">Everything hangs off <code>Agency</code>. Deleting an agency cascades its entire universe; financial history is <code>Restrict</code>-protected against orphaning.</p>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+erDiagram
+    AGENCY ||--o{ USER : "employs"
+    AGENCY ||--o{ CAR : "owns"
+    AGENCY ||--o{ CUSTOMER : "registers"
+    AGENCY ||--o{ BOOKING : "operates"
+    AGENCY ||--o{ INVOICE : "issues"
+    AGENCY ||--o{ EXPENSE : "incurs"
+    AGENCY ||--o{ REFUSAL_LOG : "captures"
+    AGENCY ||--o{ AUDIT_LOG : "records"
+    AGENCY ||--o{ AUTOMATION_RULE : "configures"
+    AGENCY ||--o{ HUB_LISTING : "publishes"
+    CAR ||--o{ CAR_DOCUMENT : "carries"
+    CAR ||--o{ MAINTENANCE_RECORD : "logs"
+    CAR ||--o{ INSPECTION : "undergoes"
+    CAR ||--o{ BOOKING : "fulfills"
+    CAR ||--o| HUB_LISTING : "listed as"
+    CUSTOMER ||--o{ BOOKING : "places"
+    CUSTOMER ||--o{ CUSTOMER_DOCUMENT : "provides"
+    BOOKING ||--o{ INVOICE : "generates"
+    BOOKING ||--o{ CONTRACT : "formalized by"
+    BOOKING ||--o{ INSPECTION : "bounded by"
+    INVOICE ||--o{ PAYMENT : "settled by"
+    USER ||--o{ TASK : "assigned"
+    USER ||--o{ INSPECTION : "performs"
+    USER ||--o{ PAYMENT : "verifies"
+
+    AGENCY {
+        string id PK
+        string name
+        string subdomain UK
+        string subscriptionTier
+        string status
+    }
+    USER {
+        string id PK
+        string email UK
+        string role
+        int trustScore
+        string agencyId FK
+    }
+    CAR {
+        string id PK
+        string brand
+        string licensePlate
+        float pricePerDay
+        string status
+        int mileage
+        float currentRoi
+        string agencyId FK
+    }
+    CAR_DOCUMENT {
+        string id PK
+        string type
+        datetime expiryDate
+        string status
+        boolean isMandatory
+        string carId FK
+    }
+    MAINTENANCE_RECORD {
+        string id PK
+        string type
+        float cost
+        int mileage
+        string status
+        string carId FK
+    }
+    CUSTOMER {
+        string id PK
+        string firstName
+        string lastName
+        string identityNumber
+        string status
+        string agencyId FK
+    }
+    CUSTOMER_DOCUMENT {
+        string id PK
+        string type
+        string fileUrl
+        string customerId FK
+    }
+    BOOKING {
+        string id PK
+        datetime startDate
+        datetime endDate
+        float totalPrice
+        string depositStatus
+        string status
+        string carId FK
+        string customerId FK
+        string agencyId FK
+    }
+    INVOICE {
+        string id PK
+        float amount
+        float taxAmount
+        string status
+        string bookingId FK
+    }
+    PAYMENT {
+        string id PK
+        float amount
+        string method
+        string type
+        string status
+        string invoiceId FK
+        string verifiedById FK
+    }
+    EXPENSE {
+        string id PK
+        string category
+        float amount
+        string agencyId FK
+    }
+    INSPECTION {
+        string id PK
+        string type
+        int fuelLevel
+        int mileage
+        string carId FK
+        string inspectorId FK
+    }
+    CONTRACT {
+        string id PK
+        string status
+        datetime signedAt
+        string bookingId FK
+    }
+    REFUSAL_LOG {
+        string id PK
+        float potentialRevenue
+        string status
+        string agencyId FK
+    }
+    AUDIT_LOG {
+        string id PK
+        string actorId
+        string action
+        string beforeState
+        string afterState
+        string agencyId FK
+    }
+    AUTOMATION_RULE {
+        string id PK
+        string trigger
+        string action
+        boolean isActive
+        string agencyId FK
+    }
+    HUB_LISTING {
+        string id PK
+        float dailyRateB2B
+        string status
+        string carId FK
+    }
+    TASK {
+        string id PK
+        string title
+        string priority
+        string assigneeId FK
+    }
+      </pre>
+      <div class="diagram-caption">Composite uniques — (agencyId, licensePlate) and (agencyId, identityNumber) — isolate tenants while allowing global reuse</div>
+    </div>
+    <div class="grid grid-3" style="margin-top:22px;">
+      <div class="card"><h4>🔗 Restrict-protected money</h4><p style="font-size:12.5px;">Bookings block car &amp; customer deletion — the platform steers to <code>OUT_OF_SERVICE</code> / <code>BLACKLISTED</code> soft-states instead.</p></div>
+      <div class="card"><h4>✍️ Human-stamped cash</h4><p style="font-size:12.5px;"><code>Payment.verifiedById</code> — revenue only counts when someone with authority signs it, permanently.</p></div>
+      <div class="card"><h4>🧾 Snapshot auditing</h4><p style="font-size:12.5px;"><code>AuditLog</code> stores full before/after JSON — "who changed this price?" is answered in seconds.</p></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 6. STACK ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>06 · Technology Stack</h2>
+      <h3>Modern, boring where it counts</h3>
+    </div>
+    <table>
+      <thead><tr><th>Layer</th><th>Technology</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><b>Frontend</b></td><td>Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5</td><td>Role-scoped route groups, streaming, modern DX</td></tr>
+        <tr><td><b>Design System</b></td><td>Tailwind v4 · glassmorphism tokens · framer-motion · skeleton loaders</td><td>Premium dark-console feel, micro-interactions</td></tr>
+        <tr><td><b>Data Hooks</b></td><td>Typed axios client + purpose-built hooks (isLoading / error / empty)</td><td>Zero magic — every data flow traceable</td></tr>
+        <tr><td><b>Backend</b></td><td>NestJS 11 · class-validator · @nestjs/schedule</td><td>Modular DI, declarative validation, cron sweeps</td></tr>
+        <tr><td><b>Auth</b></td><td>JWT (7d) in HttpOnly cookie · bcrypt · role guards</td><td>XSS-immune sessions, least privilege</td></tr>
+        <tr><td><b>ORM / DB</b></td><td>Prisma 5 · SQLite dev → PostgreSQL prod</td><td>Type-safe queries, frictionless promotion</td></tr>
+        <tr><td><b>Documents</b></td><td>Puppeteer PDF engine · signature_pad</td><td>Pixel-perfect contracts, e-signatures</td></tr>
+        <tr><td><b>Integrations</b></td><td>Stripe · Twilio · outbound webhooks</td><td>Billing, WhatsApp nudges, partner systems</td></tr>
+        <tr><td><b>Quality</b></td><td>TS strict · ESLint 9 · Vitest + Testing Library · Jest</td><td>Regression safety on both tiers</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ═══════════════ 7. REPUTATION NETWORK ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>07 · Flagship Upgrade</h2>
+      <h3>Global Client Reputation &amp; Blacklist Network</h3>
+      <p class="lead">Today each agency's blacklist is an island: a renter who damages a car in Casablanca rents again in Marrakech tomorrow. The Reputation Network turns tenant-isolated data into an industry-wide risk shield — <b style="color:var(--text)">without breaking tenant privacy</b>.</p>
+    </div>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+    subgraph T1["Agency A — isolated tenant"]
+        BL1["Local blacklist + incident reports"]
+    end
+    subgraph T2["Agency B — isolated tenant"]
+        BL2["Local blacklist + incident reports"]
+    end
+    subgraph GRN["🌐 Global Reputation Network — opt-in"]
+        HASH["One-way hashed identity index (salted CIN / passport)"]
+        SCORE["Cross-network risk score 0–100"]
+        EVID["Anonymized incident categories — damage · non-payment · fraud"]
+    end
+    BL1 -- "hashed contribution" --> HASH
+    BL2 -- "hashed contribution" --> HASH
+    HASH --> SCORE
+    EVID --> SCORE
+    SCORE -- "risk signal at booking time" --> T1
+    SCORE -- "risk signal at booking time" --> T2
+      </pre>
+      <div class="diagram-caption">Identities travel as salted one-way hashes — agencies exchange risk signals, never customer data</div>
+    </div>
+    <div class="grid grid-3" style="margin-top:22px;">
+      <div class="card"><div class="icon p">🔒</div><h4>Privacy-preserving</h4><p style="font-size:12.5px;">No agency ever sees another's customer records — only a 0–100 risk signal at booking time.</p></div>
+      <div class="card"><div class="icon b">⚡</div><h4>Booking-time integration</h4><p style="font-size:12.5px;">"This CIN carries 2 non-payment incidents across the network — require a higher deposit?"</p></div>
+      <div class="card"><div class="icon g">🌱</div><h4>Reputation is earned back</h4><p style="font-size:12.5px;">Clean rentals decay old incidents. The network scores behavior, not people — and every member deepens the moat.</p></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 8. ROADMAP ═══════════════ -->
+  <section>
+    <div class="section-head">
+      <h2>08 · Roadmap</h2>
+      <h3>From complete console to category king</h3>
+    </div>
+    <div class="timeline">
+      <div class="milestone done">
+        <div class="when">Shipped · Now</div>
+        <h4>Live-data console core</h4>
+        <p>Command Centre, ERP, Fleet ×2, Visual Scheduler, CRM ×2 — fully wired to the API with RBAC, verified-cash metrics and forensic auditing. Finance, Waitlist, Vault, Hub and Admin suite in flight.</p>
+      </div>
+      <div class="milestone">
+        <div class="when">Q3 2026</div>
+        <h4>AI Vision damage detection</h4>
+        <p>Photo-based pre/post-rental inspection diffing — dispute-proof check-ins.</p>
+      </div>
+      <div class="milestone">
+        <div class="when">Q3 2026</div>
+        <h4>Dynamic pricing engine</h4>
+        <p>Utilization + seasonality + refusal-demand signals → +8–15% revenue per vehicle.</p>
+      </div>
+      <div class="milestone">
+        <div class="when">Q4 2026</div>
+        <h4>The Hub v2 + Renter mobile app</h4>
+        <p>Escrowed B2B settlements and cross-agency contracts; Trust-Vault QR check-in and digital signing for sub-2-minute handovers.</p>
+      </div>
+      <div class="milestone">
+        <div class="when">2027</div>
+        <h4>Global Reputation Network GA</h4>
+        <p>Cross-tenant risk intelligence — the category-defining moat.</p>
+      </div>
+      <div class="milestone">
+        <div class="when">2027</div>
+        <h4>Franchise &amp; multi-branch mode</h4>
+        <p>Consolidated group reporting over branch tenants — the move up-market.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:10px;">
+      <div class="card"><div class="icon p">💳</div><h4>SaaS Tiers</h4><p style="font-size:12.5px;">STARTER / PRO / BUSINESS per-agency subscriptions, Stripe-billed, gated by fleet size and automation depth.</p></div>
+      <div class="card"><div class="icon b">🕸️</div><h4>Network Services</h4><p style="font-size:12.5px;">Reputation Network membership + Hub transaction fees as usage-based revenue.</p></div>
+      <div class="card"><div class="icon g">🚀</div><h4>Expansion Surface</h4><p style="font-size:12.5px;">Insurance partnerships, garage marketplaces, embedded deposits &amp; payments.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="line"></div>
+    <div class="kicker">CarHub — Titan ERP Console</div>
+    <p style="margin-top:8px; font-size:13px;">Built to make every independent rental agency operate like a global fleet company.</p>
+  </footer>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    securityLevel: 'loose',
+    themeVariables: {
+      darkMode: true,
+      background: '#120d1d',
+      primaryColor: '#2a1b3d',
+      primaryTextColor: '#f4f1fa',
+      primaryBorderColor: '#a855f7',
+      lineColor: '#a855f7',
+      secondaryColor: '#1b1430',
+      tertiaryColor: '#161022',
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '13px',
+      clusterBkg: 'rgba(168,85,247,0.06)',
+      clusterBorder: 'rgba(168,85,247,0.35)',
+      edgeLabelBackground: '#120d1d',
+      actorBkg: '#2a1b3d',
+      actorBorder: '#a855f7',
+      actorTextColor: '#f4f1fa',
+      signalColor: '#c4b5fd',
+      signalTextColor: '#c4b5fd',
+      labelBoxBkgColor: '#2a1b3d',
+      labelTextColor: '#f4f1fa',
+      loopTextColor: '#c4b5fd',
+      noteBkgColor: '#1b1430',
+      noteTextColor: '#f4f1fa',
+      attributeBackgroundColorOdd: '#161022',
+      attributeBackgroundColorEven: '#1b1430'
+    }
+  });
+</script>
+</body>
+</html>

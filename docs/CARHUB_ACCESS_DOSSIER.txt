@@ -1,0 +1,39 @@
+🚗 CARHUB SAAS OS - ACCESS DOSSIER 🚗
+======================================
+
+Generated: 2026-04-02 13:28:00
+--------------------------------------
+
+📍 AGENCY: GLOBAL PLATFORM
+👤 ROLE:   SUPER_ADMIN
+📧 EMAIL:  admin@carhub.ma
+🔑 PASS:   admin123
+--------------------------------------
+📍 AGENCY: Casablanca Royal Motors
+👤 ROLE:   AGENCY_ADMIN
+📧 EMAIL:  manager@casaroyal.ma
+🔑 PASS:   user123
+--------------------------------------
+📍 AGENCY: Marrakech Luxury Safari
+👤 ROLE:   AGENCY_ADMIN
+📧 EMAIL:  demo.admin@prestige.ma
+🔑 PASS:   demo123
+--------------------------------------
+📍 AGENCY: Marrakech Luxury Safari
+👤 ROLE:   AGENT
+📧 EMAIL:  demo.agent@prestige.ma
+🔑 PASS:   demo123
+--------------------------------------
+📍 AGENCY: Tanger Med Fleet Services
+👤 ROLE:   AGENCY_ADMIN
+📧 EMAIL:  demo.manager@economy.ma
+🔑 PASS:   demo123
+--------------------------------------
+
+📝 AUDIT SUMMARY:
+- Total Accounts: 5
+- Verified OK:    5
+- Failures:       0
+
+✅ MULTI-SESSION CONCURRENCY: ENABLED (JWT Stateless)
+✅ Multi-browser support: Verified.

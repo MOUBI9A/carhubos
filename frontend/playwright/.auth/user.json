@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "infinity_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2M2Y1OWEyZS1kNjRjLTRlY2MtOTRjNS04NTI2YmQ0NDdmNmYiLCJlbWFpbCI6ImUyZSsxNzg0MjQ4NzA2NjEyQGNhcmh1Yi50ZXN0Iiwicm9sZSI6Ik9XTkVSIiwiYWdlbmN5SWQiOiI1MmUxNzI2MC04NDhkLTQyMjQtODdmNS1lNGFlMzIyYTRlYjEiLCJpYXQiOjE3ODQyNDg3MDcsImV4cCI6MTc4NDg1MzUwN30.9Uqu2SCQf_EYR6HixZdyu0nDIEHu3waNaL-tvbmz0OE",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1784853507.706946,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

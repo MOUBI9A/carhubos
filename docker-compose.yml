@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: carhub-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-carhub_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-REDACTED}
+      POSTGRES_DB: ${DB_NAME:-carhub_os}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-carhub_admin} -d ${DB_NAME:-carhub_os}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: carhub-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Prisma connection string format for PostgreSQL
+      DATABASE_URL: postgresql://${DB_USER:-carhub_admin}:${DB_PASSWORD:-REDACTED}@db:5432/${DB_NAME:-carhub_os}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-REDACTED}
+      PORT: 5406
+      ALLOWED_ORIGINS: "http://localhost:3000,http://frontend:3000"
+      NODE_ENV: production
+    ports:
+      - "5406:5406"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: carhub-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5406/api
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

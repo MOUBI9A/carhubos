@@ -1,0 +1,74 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+  variant?: 'default' | 'outline' | 'flat';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  style?: React.CSSProperties;
+}
+
+export function Card({ 
+  children, 
+  className, 
+  variant = 'default',
+  padding = 'md',
+  onClick,
+  style
+}: CardProps) {
+  const variants = {
+    default: 'glass shadow-soft',
+    outline: 'border border-white/10 bg-transparent',
+    flat: 'bg-white/5 border-none'
+  };
+
+  const paddings = {
+    none: 'p-0',
+    sm: 'p-4',
+    md: 'p-6',
+    lg: 'p-8'
+  };
+
+  return (
+    <div 
+      onClick={onClick}
+      style={style}
+      className={cn(
+        'rounded-2xl transition-all duration-300',
+        variants[variant],
+        paddings[padding],
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+
+
+export function CardHeader({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={cn('mb-4 flex items-center justify-between', className)}>
+      {children}
+    </div>
+  );
+}
+
+export function CardTitle({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <h3 className={cn('text-sm font-black tracking-tight text-white/90', className)}>
+      {children}
+    </h3>
+  );
+}
+
+export function CardDescription({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <p className={cn('text-[11px] font-bold text-white/40 uppercase tracking-widest', className)}>
+      {children}
+    </p>
+  );
+}
