@@ -4,6 +4,9 @@ CREATE TABLE "Agency" (
     "name" TEXT NOT NULL,
     "subdomain" TEXT,
     "city" TEXT NOT NULL DEFAULT 'Casablanca',
+    "address" TEXT,
+    "taxId" TEXT,
+    "logoUrl" TEXT,
     "contactEmail" TEXT NOT NULL,
     "businessPhone" TEXT,
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
@@ -171,10 +174,12 @@ CREATE TABLE "Payment" (
     "amount" DOUBLE PRECISION NOT NULL,
     "method" TEXT NOT NULL DEFAULT 'CASH',
     "type" TEXT NOT NULL DEFAULT 'INCOME',
+    "status" TEXT NOT NULL DEFAULT 'VERIFIED',
     "reference" TEXT,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "invoiceId" TEXT NOT NULL,
+    "verifiedById" TEXT,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
@@ -208,6 +213,7 @@ CREATE TABLE "Customer" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "agencyId" TEXT NOT NULL,
+    "renterIdentityId" TEXT,
 
     CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
 );
@@ -287,6 +293,74 @@ CREATE TABLE "Task" (
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "WebhookSubscription" (
+    "id" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "event" TEXT NOT NULL,
+    "secret" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "agencyId" TEXT NOT NULL,
+
+    CONSTRAINT "WebhookSubscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RenterIdentity" (
+    "id" TEXT NOT NULL,
+    "identityHash" TEXT NOT NULL,
+    "identityType" TEXT NOT NULL,
+    "identityMasked" TEXT NOT NULL,
+    "globalScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "reviewCount" INTEGER NOT NULL DEFAULT 0,
+    "activeFlagCount" INTEGER NOT NULL DEFAULT 0,
+    "riskLevel" TEXT NOT NULL DEFAULT 'UNKNOWN',
+    "firstSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastReviewAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "RenterIdentity_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RenterReview" (
+    "id" TEXT NOT NULL,
+    "rating" INTEGER NOT NULL,
+    "tags" TEXT NOT NULL DEFAULT '[]',
+    "comment" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PUBLISHED',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "identityId" TEXT NOT NULL,
+    "bookingId" TEXT NOT NULL,
+    "agencyId" TEXT NOT NULL,
+
+    CONSTRAINT "RenterReview_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BlacklistEntry" (
+    "id" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "severity" TEXT NOT NULL DEFAULT 'HIGH',
+    "details" TEXT NOT NULL,
+    "evidenceUrls" TEXT NOT NULL DEFAULT '[]',
+    "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "expiresAt" TIMESTAMP(3),
+    "liftedAt" TIMESTAMP(3),
+    "liftNote" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "identityId" TEXT NOT NULL,
+    "agencyId" TEXT NOT NULL,
+    "bookingId" TEXT,
+
+    CONSTRAINT "BlacklistEntry_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Agency_subdomain_key" ON "Agency"("subdomain");
 
@@ -357,6 +431,9 @@ CREATE INDEX "Invoice_agencyId_idx" ON "Invoice"("agencyId");
 CREATE INDEX "Payment_invoiceId_idx" ON "Payment"("invoiceId");
 
 -- CreateIndex
+CREATE INDEX "Payment_status_idx" ON "Payment"("status");
+
+-- CreateIndex
 CREATE INDEX "Expense_agencyId_idx" ON "Expense"("agencyId");
 
 -- CreateIndex
@@ -364,6 +441,9 @@ CREATE INDEX "Expense_category_idx" ON "Expense"("category");
 
 -- CreateIndex
 CREATE INDEX "Customer_agencyId_idx" ON "Customer"("agencyId");
+
+-- CreateIndex
+CREATE INDEX "Customer_renterIdentityId_idx" ON "Customer"("renterIdentityId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Customer_agencyId_identityNumber_key" ON "Customer"("agencyId", "identityNumber");
@@ -391,6 +471,33 @@ CREATE INDEX "Task_assigneeId_idx" ON "Task"("assigneeId");
 
 -- CreateIndex
 CREATE INDEX "Task_status_idx" ON "Task"("status");
+
+-- CreateIndex
+CREATE INDEX "WebhookSubscription_agencyId_idx" ON "WebhookSubscription"("agencyId");
+
+-- CreateIndex
+CREATE INDEX "WebhookSubscription_event_idx" ON "WebhookSubscription"("event");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RenterIdentity_identityHash_key" ON "RenterIdentity"("identityHash");
+
+-- CreateIndex
+CREATE INDEX "RenterIdentity_riskLevel_idx" ON "RenterIdentity"("riskLevel");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RenterReview_bookingId_key" ON "RenterReview"("bookingId");
+
+-- CreateIndex
+CREATE INDEX "RenterReview_identityId_status_idx" ON "RenterReview"("identityId", "status");
+
+-- CreateIndex
+CREATE INDEX "RenterReview_agencyId_idx" ON "RenterReview"("agencyId");
+
+-- CreateIndex
+CREATE INDEX "BlacklistEntry_identityId_status_idx" ON "BlacklistEntry"("identityId", "status");
+
+-- CreateIndex
+CREATE INDEX "BlacklistEntry_agencyId_status_idx" ON "BlacklistEntry"("agencyId", "status");
 
 -- AddForeignKey
 ALTER TABLE "HubListing" ADD CONSTRAINT "HubListing_carId_fkey" FOREIGN KEY ("carId") REFERENCES "Car"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -438,10 +545,16 @@ ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_agencyId_fkey" FOREIGN KEY ("agenc
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_verifiedById_fkey" FOREIGN KEY ("verifiedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Expense" ADD CONSTRAINT "Expense_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Customer" ADD CONSTRAINT "Customer_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Customer" ADD CONSTRAINT "Customer_renterIdentityId_fkey" FOREIGN KEY ("renterIdentityId") REFERENCES "RenterIdentity"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CustomerDocument" ADD CONSTRAINT "CustomerDocument_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -466,3 +579,24 @@ ALTER TABLE "Contract" ADD CONSTRAINT "Contract_agencyId_fkey" FOREIGN KEY ("age
 
 -- AddForeignKey
 ALTER TABLE "Task" ADD CONSTRAINT "Task_assigneeId_fkey" FOREIGN KEY ("assigneeId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WebhookSubscription" ADD CONSTRAINT "WebhookSubscription_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RenterReview" ADD CONSTRAINT "RenterReview_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "RenterIdentity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RenterReview" ADD CONSTRAINT "RenterReview_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RenterReview" ADD CONSTRAINT "RenterReview_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BlacklistEntry" ADD CONSTRAINT "BlacklistEntry_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "RenterIdentity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BlacklistEntry" ADD CONSTRAINT "BlacklistEntry_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BlacklistEntry" ADD CONSTRAINT "BlacklistEntry_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
