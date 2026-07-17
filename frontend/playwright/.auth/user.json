@@ -2,12 +2,12 @@
   "cookies": [
     {
       "name": "infinity_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2M2Y1OWEyZS1kNjRjLTRlY2MtOTRjNS04NTI2YmQ0NDdmNmYiLCJlbWFpbCI6ImUyZSsxNzg0MjQ4NzA2NjEyQGNhcmh1Yi50ZXN0Iiwicm9sZSI6Ik9XTkVSIiwiYWdlbmN5SWQiOiI1MmUxNzI2MC04NDhkLTQyMjQtODdmNS1lNGFlMzIyYTRlYjEiLCJpYXQiOjE3ODQyNDg3MDcsImV4cCI6MTc4NDg1MzUwN30.9Uqu2SCQf_EYR6HixZdyu0nDIEHu3waNaL-tvbmz0OE",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MjliOWM0MS1jNWZkLTRmZDEtOTIwMi03ZGFhNTY2MmE3MjQiLCJlbWFpbCI6ImUyZSsxNzg0MzIyNzI2NjI4QGNhcmh1Yi50ZXN0Iiwicm9sZSI6Ik9XTkVSIiwiYWdlbmN5SWQiOiI2NTAzODNkOC04NGExLTRlZGYtOTIwMy1lMDE2MTkzYzYxNjYiLCJpYXQiOjE3ODQzMjI3MjcsImV4cCI6MTc4NDkyNzUyN30.xQ51-RfynoNw1PqWZm0-j183wZAwBHl3JGfI5Pq4VDY",
       "domain": "localhost",
       "path": "/",
-      "expires": 1784853507.706946,
+      "expires": 1784927527.563524,
       "httpOnly": true,
-      "secure": true,
+      "secure": false,
       "sameSite": "Lax"
     }
   ],
