@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-carhub_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-REDACTED}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required (no committed default)}
       POSTGRES_DB: ${DB_NAME:-carhub_os}
     ports:
       - "5432:5432"
@@ -28,8 +28,8 @@ services:
         condition: service_healthy
     environment:
       # Prisma connection string format for PostgreSQL
-      DATABASE_URL: postgresql://${DB_USER:-carhub_admin}:${DB_PASSWORD:-REDACTED}@db:5432/${DB_NAME:-carhub_os}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-REDACTED}
+      DATABASE_URL: postgresql://${DB_USER:-carhub_admin}:${DB_PASSWORD:?DB_PASSWORD is required (no committed default)}@db:5432/${DB_NAME:-carhub_os}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (no committed default)}
       PORT: 5406
       ALLOWED_ORIGINS: "http://localhost:3000,http://frontend:3000"
       NODE_ENV: production

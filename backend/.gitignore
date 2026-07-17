@@ -3,3 +3,10 @@ node_modules
 .env
 
 /generated/prisma
+
+# Build output
+dist/
+
+# SQLite dev databases (contain bcrypt hashes + renter PII — never commit)
+*.db
+*.db-journal

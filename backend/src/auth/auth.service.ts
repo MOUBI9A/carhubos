@@ -28,9 +28,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
     return this.prisma.$transaction(async (tx) => {
-      let agencyId = registerDto.agencyId;
+      // agencyId is never accepted from the client; joining an existing agency
+      // must go through a signed invite flow (out of scope). Public register can
+      // only create a fresh agency (via agencyName) or a user with no agency.
+      let agencyId: string | undefined;
 
-      if (registerDto.agencyName && !agencyId) {
+      if (registerDto.agencyName) {
         const agency = await tx.agency.create({
           data: {
             name: registerDto.agencyName,

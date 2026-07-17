@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets — never commit real values (.env.example template is allowed)
+.env
+.env.*
+!.env.example
+
+# Databases (SQLite dev DBs contain bcrypt hashes + renter PII)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Build output
+dist/
+.next/
+out/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS / editor / misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# Vercel
+.vercel

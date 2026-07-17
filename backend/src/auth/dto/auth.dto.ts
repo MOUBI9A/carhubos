@@ -4,6 +4,7 @@ import {
   IsOptional,
   MinLength,
   IsString,
+  IsIn,
 } from 'class-validator';
 
 export class LoginDto {
@@ -30,12 +31,8 @@ export class RegisterDto {
   name: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['OWNER', 'AGENT', 'RENTER'])
   role?: string;
-
-  @IsOptional()
-  @IsString()
-  agencyId?: string;
 
   @IsOptional()
   @IsString()
