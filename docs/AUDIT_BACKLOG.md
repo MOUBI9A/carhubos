@@ -26,14 +26,16 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 
 ## PHASE 1 — Correctness & Authorization quick wins
 
-- **[H] Bind the ThrottlerGuard** — configured but never bound (`app.module.ts:42`, no `APP_GUARD`). → Add `{provide:APP_GUARD, useClass:ThrottlerGuard}` + strict `@Throttle` (~5–10/min) on auth routes.
-- **[H] JWT secret fallback** — `|| 'carhub-v2-super-secret-key'` in `auth.module.ts:12` & `auth.guard.ts:22`. → Remove fallback, fail fast if unset.
-- **[H] Trust writes have no role gate** — `trust.controller.ts:21` AuthGuard only; any AGENT can hard-block a renter network-wide; `/trust/backfill` unguarded. → Gate blacklist create/lift to `@Roles('MANAGER','OWNER')` + audit-log; restrict `backfill` to ROOT_ADMIN or remove from HTTP.
-- **[C] Double-booking on the happy path** — overlap check ignores REQUESTED and never re-checks on transition; outside the txn, no DB constraint (`bookings.service.ts:126,171,245`). → Include REQUESTED, re-validate in a transaction at APPROVE/ACTIVATE, add a DB-level guard.
-- **[C] `payments.verify` cross-agency IDOR** — no tenant scoping (`payments.service.ts:31`). → Scope by `invoice.agencyId`; reject unless status `PENDING`.
-- **[H] `expenses.update/remove` ignore agencyId** (`expenses.service.ts:49`). → Guard ownership by id+agencyId → 404.
-- **[H] Invoices never reconciled** — stay DUE forever after payment verified (`payments.service.ts:43`, no `invoice.update` in src). → On verify, sum VERIFIED income vs invoice total in a txn, set PAID/PARTIAL/DUE.
-- **[H] Identity hash brute-forceable** — plain unsalted SHA-256 of low-entropy CIN (`trust.service.ts:30`). → Use HMAC/KDF (scrypt/argon2); fail fast on missing pepper.
+> **STATUS: ✅ PHASE 1 CLOSED** — 6 parallel workers (disjoint files) + 4 adversarial verifier passes, all PASS; merged tree tsc-clean + 7/7 tests. On `main`.
+
+- ✅ **[H] Bind the ThrottlerGuard** — `{provide:APP_GUARD,useClass:ThrottlerGuard}` bound; `@Throttle({default:{limit:5,ttl:60000}})` on register+login (global default 100/60s). *Deploy follow-ups (Phase 9): in-memory store → Redis for multi-replica; `trust proxy` for real client IP.*
+- ✅ **[H] JWT secret fallback** — `|| 'carhub-v2-super-secret-key'` removed from `auth.module.ts` + `auth.guard.ts`; fail-fast throw at module load if `JWT_SECRET` unset (0 hits remain in src).
+- ✅ **[H] Trust writes role-gated** — `@Roles('MANAGER','OWNER')` on blacklist create/lift, `@Roles('ROOT_ADMIN')` on backfill; audit persisted via `AuditLogsService`; assess/reviews/list stay open. Service-layer cross-agency `ForbiddenException` on lift still intact.
+- ✅ **[C] Double-booking** — REQUESTED now blocks; overlap re-validated inside a `$transaction` (using the `tx` client, excludes own id, scoped by carId) at APPROVE/ACTIVATE → `ConflictException`. *DB-level exclusion constraint deferred to Phase 2 (Postgres). Regression test deferred to Phase 8 (no bookings test coverage yet).*
+- ✅ **[C] `payments.verify` cross-agency IDOR** — scoped by `invoice.agencyId` → 404; rejects non-`PENDING` → 409.
+- ✅ **[H] `expenses.update/remove` agencyId** — `findFirst({where:{id,agencyId}})` → 404 guard on both.
+- ✅ **[H] Invoices reconciled** — on verify, in a `$transaction`, sum VERIFIED+INCOME payments (rounded cents) vs `invoice.amount` → PAID/PARTIAL/DUE. *Note: pre-existing VAT-modeling mismatch (contracts "incl. 20% VAT" vs Invoice additive `taxAmount`) flagged for Phase 3; does not affect reconciliation since Payment.amount == Invoice.amount == totalPrice.*
+- ✅ **[H] Identity hash** — weak `sha256(pepper|cin)` + hardcoded fallback pepper → `HMAC-SHA256(IDENTITY_PEPPER, normalize(cin))`, fail-fast if pepper unset; golden test added. *Re-hash/backfill required before real data (ties to Phase 2 pepper-versioning).*
 
 ---
 

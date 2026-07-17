@@ -8,8 +8,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { TrustService } from './trust.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import {
   AssessDto,
   CreateReviewDto,
@@ -18,9 +21,14 @@ import {
 } from './dto/trust.dto';
 
 @Controller('trust')
-@UseGuards(AuthGuard)
+// RolesGuard is a no-op on handlers without @Roles metadata, so routes
+// left open below (assess/reviews/list) stay open to any authenticated user.
+@UseGuards(AuthGuard, RolesGuard)
 export class TrustController {
-  constructor(private readonly trust: TrustService) {}
+  constructor(
+    private readonly trust: TrustService,
+    private readonly auditLogs: AuditLogsService,
+  ) {}
 
   // POST (not GET) so the customer id never lands in a URL / access log.
   @Post('assess')
@@ -34,17 +42,46 @@ export class TrustController {
   }
 
   @Post('blacklist')
-  createBlacklist(@CurrentUser() user: any, @Body() dto: CreateBlacklistDto) {
-    return this.trust.createBlacklistEntry(user.agencyId, dto);
+  @Roles('MANAGER', 'OWNER')
+  async createBlacklist(
+    @CurrentUser() user: any,
+    @Body() dto: CreateBlacklistDto,
+  ) {
+    const entry = await this.trust.createBlacklistEntry(user.agencyId, dto);
+    await this.auditLogs.log(
+      user.agencyId,
+      user.id,
+      'CREATE_BLACKLIST_ENTRY',
+      'BLACKLIST_ENTRY',
+      entry.id,
+      undefined,
+      { customerId: dto.customerId, reason: dto.reason, severity: dto.severity },
+    );
+    return entry;
   }
 
   @Patch('blacklist/:id/lift')
-  lift(
+  @Roles('MANAGER', 'OWNER')
+  async lift(
     @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() dto: LiftBlacklistDto,
   ) {
-    return this.trust.liftBlacklistEntry(user.agencyId, id, dto.note);
+    const updated = await this.trust.liftBlacklistEntry(
+      user.agencyId,
+      id,
+      dto.note,
+    );
+    await this.auditLogs.log(
+      user.agencyId,
+      user.id,
+      'LIFT_BLACKLIST_ENTRY',
+      'BLACKLIST_ENTRY',
+      id,
+      undefined,
+      { status: 'LIFTED', note: dto.note },
+    );
+    return updated;
   }
 
   @Get('blacklist')
@@ -53,6 +90,7 @@ export class TrustController {
   }
 
   @Post('backfill')
+  @Roles('ROOT_ADMIN')
   backfill() {
     return this.trust.backfillIdentities();
   }

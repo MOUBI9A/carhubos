@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto, UpdateBookingDto } from './dto/bookings.dto';
@@ -123,10 +124,14 @@ export class BookingsService {
     }
 
     // 5. Check for overlaps
+    // A REQUESTED booking still reserves the car for these dates — it must
+    // block conflicting requests, not just APPROVED/ACTIVE ones, otherwise
+    // two pending requests for the same dates can both later be approved.
+    // TODO(Phase 2): add DB-level overlap exclusion constraint on Postgres
     const overlappingBooking = await this.prisma.booking.findFirst({
       where: {
         carId,
-        status: { in: ['APPROVED', 'ACTIVE'] },
+        status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE'] },
         OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
       },
     });
@@ -254,24 +259,52 @@ export class BookingsService {
       );
     }
 
-    // Sync the vehicle's status with the rental lifecycle
-    if (status === 'ACTIVE') {
-      await this.prisma.car.update({
-        where: { id: booking.carId },
-        data: { status: 'RENTED' },
-      });
-    } else if (status === 'COMPLETED' || status === 'CANCELLED') {
-      // Only release the car if it is actually out with this rental —
-      // never stomp a MAINTENANCE / OUT_OF_SERVICE flag set by the workshop.
-      await this.prisma.car.updateMany({
-        where: { id: booking.carId, status: 'RENTED' },
-        data: { status: 'AVAILABLE' },
-      });
-    }
+    const updatedBooking = await this.prisma.$transaction(async (tx) => {
+      // Re-check for a conflicting booking INSIDE the transaction before
+      // flipping to APPROVED/ACTIVE. Closes the check-then-act race where
+      // two overlapping REQUESTED bookings for the same car both get
+      // approved concurrently.
+      // TODO(Phase 2): add DB-level overlap exclusion constraint on Postgres
+      if (status === 'APPROVED' || status === 'ACTIVE') {
+        const conflictingBooking = await tx.booking.findFirst({
+          where: {
+            carId: booking.carId,
+            id: { not: booking.id },
+            status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE'] },
+            OR: [
+              {
+                startDate: { lte: booking.endDate },
+                endDate: { gte: booking.startDate },
+              },
+            ],
+          },
+        });
+        if (conflictingBooking) {
+          throw new ConflictException(
+            'Car is already booked for overlapping dates by another booking.',
+          );
+        }
+      }
 
-    const updatedBooking = await this.prisma.booking.update({
-      where: { id },
-      data: { status },
+      // Sync the vehicle's status with the rental lifecycle
+      if (status === 'ACTIVE') {
+        await tx.car.update({
+          where: { id: booking.carId },
+          data: { status: 'RENTED' },
+        });
+      } else if (status === 'COMPLETED' || status === 'CANCELLED') {
+        // Only release the car if it is actually out with this rental —
+        // never stomp a MAINTENANCE / OUT_OF_SERVICE flag set by the workshop.
+        await tx.car.updateMany({
+          where: { id: booking.carId, status: 'RENTED' },
+          data: { status: 'AVAILABLE' },
+        });
+      }
+
+      return tx.booking.update({
+        where: { id },
+        data: { status },
+      });
     });
 
     // BP Pillar C: Forensic audit of status change

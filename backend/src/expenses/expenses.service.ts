@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -47,6 +47,14 @@ export class ExpensesService {
   }
 
   async update(agencyId: string, id: string, data: { category?: string; description?: string; amount?: number; status?: string }) {
+    const expense = await this.prisma.expense.findFirst({
+      where: { id, agencyId },
+    });
+
+    if (!expense) {
+      throw new NotFoundException('Expense not found');
+    }
+
     return this.prisma.expense.update({
       where: { id },
       data,
@@ -54,6 +62,14 @@ export class ExpensesService {
   }
 
   async remove(agencyId: string, id: string) {
+    const expense = await this.prisma.expense.findFirst({
+      where: { id, agencyId },
+    });
+
+    if (!expense) {
+      throw new NotFoundException('Expense not found');
+    }
+
     return this.prisma.expense.delete({
       where: { id },
     });

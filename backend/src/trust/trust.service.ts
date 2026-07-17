@@ -5,7 +5,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto, CreateBlacklistDto } from './dto/trust.dto';
 
@@ -25,10 +25,20 @@ export class TrustService {
   constructor(private prisma: PrismaService) {}
 
   // ── Identity hashing ────────────────────────────────────────────────
-  // A rotating secret keeps the hash unguessable. The raw ID number never
-  // leaves its owning tenant; only this hash is matched across agencies.
+  // The keyed pepper is the HMAC secret: it keeps the derived hash
+  // unguessable and un-rainbow-tableable even though a CIN is low-entropy.
+  // The raw ID number never leaves its owning tenant; only this hash is
+  // matched across agencies. FAIL FAST — never silently fall back to a
+  // hardcoded/default pepper, which would make every hash forgeable.
   private get pepper(): string {
-    return process.env.IDENTITY_PEPPER || 'carhub-dev-trust-pepper-2026';
+    const p = process.env.IDENTITY_PEPPER;
+    if (!p || p.trim() === '') {
+      throw new Error(
+        'IDENTITY_PEPPER is not set. Refusing to derive renter identity hashes ' +
+          'without a keyed pepper — set IDENTITY_PEPPER before starting the service.',
+      );
+    }
+    return p;
   }
 
   private normalize(type: string, number: string): string {
@@ -38,8 +48,11 @@ export class TrustService {
   }
 
   private hashIdentity(type: string, number: string): string {
-    return createHash('sha256')
-      .update(`${this.pepper}|${this.normalize(type, number)}`)
+    // Keyed derivation: HMAC-SHA256(pepper, normalizedIdentity). Deterministic
+    // (required for cross-agency equality matching) but not brute-forceable
+    // without the secret pepper, unlike the previous bare SHA-256(CIN).
+    return createHmac('sha256', this.pepper)
+      .update(this.normalize(type, number))
       .digest('hex');
   }
 

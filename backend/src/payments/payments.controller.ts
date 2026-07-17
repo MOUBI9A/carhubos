@@ -15,6 +15,6 @@ export class PaymentsController {
 
   @Patch(':id/verify')
   verify(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.paymentsService.verify(id, user.id, user.role);
+    return this.paymentsService.verify(id, user.id, user.role, user.agencyId);
   }
 }
