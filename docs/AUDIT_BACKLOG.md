@@ -10,17 +10,17 @@
 
 The repo has a live remote (`github.com/MOUBI9A/carhubos`) containing real secrets and data. Verified against git.
 
-> **STATUS (branch `phase-0-security`, commit 761f342):** code/config work done + verifier-PASS + committed. Irreversible steps below still pending human action at the GATE.
+> **STATUS: ✅ PHASE 0 CLOSED** (single `main` branch; history rewritten). All code/config committed + verifier-PASS; repo made **private**; `JWT_SECRET` **rotated**; git history **scrubbed** (`filter-repo`) and force-pushed clean. Pre-scrub backup bundle at `~/Desktop/carhubos-prescrub-backup.bundle` (contains old secrets — delete once satisfied).
 
-- ✅ **[C] Committed secrets** — `backend/.env.example` sanitized to placeholders. **Also found & sanitized:** `docker-compose.yml` hardcoded the same live `JWT_SECRET` + DB password as defaults (now fail-fast). ⏸ **Still must rotate** the real `JWT_SECRET`, DB password, and `IDENTITY_PEPPER` — treat as compromised (human).
-- ✅ **[C] Committed database + PII** — `git rm --cached backend/dev.db` + `backend/prisma/dev.db`; `.gitignore` now covers `*.db`, `*.db-journal` (files kept on disk).
-- ✅ **[C] Committed build output** — 301 files under `backend/dist/` removed from index; root + backend `.gitignore` now cover `dist/` and `.next/`.
-- ⏸ **[C] History purge** — secrets/DB are still in past commits + on the remote. → Scrub with `git filter-repo`/BFG and force-push, **or** make the repo private immediately. *(Human decision + action — GATE.)*
-- ✅ **[C] Anonymous privilege escalation** — `role` now `@IsIn(['OWNER','AGENT','RENTER'])`; ROOT_ADMIN/MANAGER no longer self-assignable. (Register is public by design; rate-limiting is Phase 1.)
+- ✅ **[C] Committed secrets** — `backend/.env.example` sanitized; `docker-compose.yml` live `JWT_SECRET`+DB defaults removed (fail-fast). `JWT_SECRET` rotated in `backend/.env`. **DB password:** no live Postgres yet (SQLite in use) → nothing to rotate now; **do not reuse `carhub_secret_2026`** when provisioning Postgres in Phase 2. **`IDENTITY_PEPPER`:** never committed (only the placeholder was) → NOT rotated, to avoid breaking trust matching; weak value is a Phase 2 item.
+- ✅ **[C] Committed database + PII** — removed from index + all history; `.gitignore` covers `*.db`, `*.db-journal` (local `dev.db` restored from snapshot, still gitignored).
+- ✅ **[C] Committed build output** — 301 `backend/dist/` files removed from index + all history; `.gitignore` covers `dist/`/`.next/`.
+- ✅ **[C] History purge** — `git filter-repo` stripped `dev.db`/`prisma/dev.db`/`dist` and redacted the two secret strings across all 5 commits; force-pushed. Verified 0 occurrences remain. Repo private. ⚠ Open checks: (a) any **forks** made while public retain old history; (b) GitHub may cache old commit SHAs server-side — contact GH Support to purge if maximum cleanliness is required.
+- ✅ **[C] Anonymous privilege escalation** — `role` now `@IsIn(['OWNER','AGENT','RENTER'])`; ROOT_ADMIN/MANAGER not self-assignable. (rate-limiting is Phase 1.)
 - ✅ **[C] Tenant hijack (IDOR)** — `agencyId` dropped from `RegisterDto` + service; public register can only create a fresh agency or a no-agency user.
 
-**GATE:** stop after Phase 0 and confirm with the human that rotation + history purge/repo-privacy happened.
-Follow-up noted for invite-flow work: an anonymous caller can still self-select `role:"OWNER"` with no `agencyName` → OWNER with `agencyId:null` (inert cross-tenant; harden when the signed-invite join is built).
+**GATE: CLEARED** — rotation + history purge + repo-privacy confirmed done.
+Follow-up for the invite-flow work: an anonymous caller can still self-select `role:"OWNER"` with no `agencyName` → OWNER with `agencyId:null` (inert cross-tenant; harden when the signed-invite join is built).
 
 ---
 
