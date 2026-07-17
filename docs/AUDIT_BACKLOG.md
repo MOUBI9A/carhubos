@@ -10,14 +10,17 @@
 
 The repo has a live remote (`github.com/MOUBI9A/carhubos`) containing real secrets and data. Verified against git.
 
-- **[C] Committed secrets** — `backend/.env.example` holds the real `JWT_SECRET` and DB password. → Replace with placeholders; **rotate** the real `JWT_SECRET`, DB password, and `IDENTITY_PEPPER` (treat as compromised).
-- **[C] Committed database + PII** — `backend/dev.db` and `backend/prisma/dev.db` (bcrypt hashes + renter identity PII) are tracked. → `git rm --cached` both; add `*.db`, `*.db-journal` to `.gitignore`.
-- **[C] Committed build output** — 302 files under `backend/dist/` tracked. → `git rm --cached`; add `dist/` and `.next/` to `.gitignore`.
-- **[C] History purge** — secrets/DB are in past commits. → Scrub with `git filter-repo`/BFG and force-push, **or** make the repo private immediately. *(Human decision + action.)*
-- **[C] Anonymous privilege escalation** — `POST /auth/register` is unguarded and `role` is an unvalidated string (`auth.controller.ts:12`, `auth.dto.ts:34`, `auth.service.ts:49`). → `@IsIn(['OWNER','AGENT','RENTER'])`, never allow ROOT_ADMIN via public register, reject unknown roles.
-- **[C] Tenant hijack (IDOR)** — client-supplied `agencyId` accepted at register (`auth.dto.ts:36`, `auth.service.ts:31`). → Never accept `agencyId`; join existing agencies only via signed invite.
+> **STATUS (branch `phase-0-security`, commit 761f342):** code/config work done + verifier-PASS + committed. Irreversible steps below still pending human action at the GATE.
+
+- ✅ **[C] Committed secrets** — `backend/.env.example` sanitized to placeholders. **Also found & sanitized:** `docker-compose.yml` hardcoded the same live `JWT_SECRET` + DB password as defaults (now fail-fast). ⏸ **Still must rotate** the real `JWT_SECRET`, DB password, and `IDENTITY_PEPPER` — treat as compromised (human).
+- ✅ **[C] Committed database + PII** — `git rm --cached backend/dev.db` + `backend/prisma/dev.db`; `.gitignore` now covers `*.db`, `*.db-journal` (files kept on disk).
+- ✅ **[C] Committed build output** — 301 files under `backend/dist/` removed from index; root + backend `.gitignore` now cover `dist/` and `.next/`.
+- ⏸ **[C] History purge** — secrets/DB are still in past commits + on the remote. → Scrub with `git filter-repo`/BFG and force-push, **or** make the repo private immediately. *(Human decision + action — GATE.)*
+- ✅ **[C] Anonymous privilege escalation** — `role` now `@IsIn(['OWNER','AGENT','RENTER'])`; ROOT_ADMIN/MANAGER no longer self-assignable. (Register is public by design; rate-limiting is Phase 1.)
+- ✅ **[C] Tenant hijack (IDOR)** — `agencyId` dropped from `RegisterDto` + service; public register can only create a fresh agency or a no-agency user.
 
 **GATE:** stop after Phase 0 and confirm with the human that rotation + history purge/repo-privacy happened.
+Follow-up noted for invite-flow work: an anonymous caller can still self-select `role:"OWNER"` with no `agencyName` → OWNER with `agencyId:null` (inert cross-tenant; harden when the signed-invite join is built).
 
 ---
 
