@@ -23,7 +23,7 @@ export class UpdateSubscriptionDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(SUBSCRIPTION_STATUSES as unknown as string[])
+  @IsIn(SUBSCRIPTION_STATUSES)
   status?: string;
 
   @IsOptional()

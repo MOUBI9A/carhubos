@@ -54,7 +54,7 @@ export class CreateReviewDto {
 
   @IsOptional()
   @IsArray()
-  @IsIn(REVIEW_TAGS as unknown as string[], { each: true })
+  @IsIn(REVIEW_TAGS, { each: true })
   tags?: string[];
 
   @IsOptional()
@@ -67,10 +67,10 @@ export class CreateBlacklistDto {
   @IsNotEmpty()
   customerId: string;
 
-  @IsIn(BLACKLIST_REASONS as unknown as string[])
+  @IsIn(BLACKLIST_REASONS)
   reason: string;
 
-  @IsIn(BLACKLIST_SEVERITIES as unknown as string[])
+  @IsIn(BLACKLIST_SEVERITIES)
   severity: string;
 
   @IsString()
