@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -11,7 +11,13 @@ export class AiVisionService {
    * Analyzes an image of a vehicle to detect damages.
    * In a production environment, this would call an external CV API (e.g., Azure Custom Vision, AWS Rekognition).
    */
-  async analyzeVehicle(carId: string, imageBuffer: Buffer) {
+  async analyzeVehicle(agencyId: string, carId: string, imageBuffer: Buffer) {
+    const car = await this.prisma.car.findFirst({
+      where: { id: carId, agencyId },
+      select: { id: true },
+    });
+    if (!car) throw new NotFoundException('Car not found');
+
     this.logger.log(`Starting AI Neural Scan for car ${carId}...`);
 
     // Simulate analysis delay
@@ -48,11 +54,7 @@ export class AiVisionService {
   }
 
   async getRecentScans(agencyId: string) {
-    // This would typically fetch from an AiScan table
-    // For now, returning mock historical data
-    return [
-      { id: 'scan_1', carPlate: '1-A-2024', date: new Date(), score: 92 },
-      { id: 'scan_2', carPlate: '77-B-2023', date: new Date(Date.now() - 86400000), score: 74 },
-    ];
+    void agencyId;
+    return [];
   }
 }

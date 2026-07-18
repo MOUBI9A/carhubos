@@ -21,7 +21,12 @@ export class RefusalLogsService {
     });
   }
 
-  async markAsRecovered(id: string) {
+  async markAsRecovered(agencyId: string, id: string) {
+    const log = await this.prisma.refusalLog.findFirst({
+      where: { id, agencyId },
+      select: { id: true },
+    });
+    if (!log) throw new NotFoundException('Refusal log not found');
     return this.prisma.refusalLog.update({
       where: { id },
       data: { status: 'RECOVERED' },

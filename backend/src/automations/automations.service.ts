@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwilioService } from '../integrations/twilio/twilio.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { TrustService } from '../trust/trust.service';
 
 @Injectable()
 export class AutomationsService {
@@ -12,6 +13,7 @@ export class AutomationsService {
     private prisma: PrismaService,
     private twilio: TwilioService,
     private notifications: NotificationsService,
+    private trust: TrustService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -35,18 +37,30 @@ export class AutomationsService {
       );
 
       // 1. Create an automated task for employees
-      await this.prisma.task.create({
-        data: {
-          title: `Renew ${doc.type}`,
-          description: `Car: ${doc.car.brand} ${doc.car.model} (${doc.car.licensePlate}). Expiry: ${doc.expiryDate.toLocaleDateString()}`,
-          priority: 'HIGH',
-          status: 'PENDING',
-          agencyId: doc.car.agencyId,
-        },
+      const title = `Renew ${doc.type}`;
+      const existingTask = await this.prisma.task.findFirst({
+        where: { agencyId: doc.car.agencyId, title, status: { in: ['PENDING', 'IN_PROGRESS'] } },
+        select: { id: true },
       });
+      if (!existingTask) {
+        await this.prisma.task.create({
+          data: {
+            title,
+            description: `Car: ${doc.car.brand} ${doc.car.model} (${doc.car.licensePlate}). Expiry: ${doc.expiryDate.toLocaleDateString()}`,
+            priority: 'HIGH',
+            status: 'PENDING',
+            agencyId: doc.car.agencyId,
+          },
+        });
+      }
 
       // 2. BP Pillar D: Send real WhatsApp nudge to the Agency Owner
       const daysLeft = Math.ceil((doc.expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const agencyPhone = doc.car.agency.businessPhone?.trim();
+      if (!agencyPhone) {
+        this.logger.warn(`Skipping WhatsApp alert for agency ${doc.car.agencyId}: no phone configured.`);
+        continue;
+      }
       
       const message = await this.notifications.getWhatsAppLink('GUARDIAN_ALERT', {
         carBrand: doc.car.brand,
@@ -54,12 +68,12 @@ export class AutomationsService {
         plate: doc.car.licensePlate,
         docType: doc.type,
         daysLeft,
-        phone: doc.car.agency.businessPhone || '212600000000', // Owner's phone
+        phone: agencyPhone,
       });
 
       // Extract raw message from link (for real twilio send)
       const rawText = decodeURIComponent(message.split('text=')[1]);
-      await this.twilio.sendWhatsAppMessage(doc.car.agency.businessPhone || '212600000000', rawText);
+      await this.twilio.sendWhatsAppMessage(agencyPhone, rawText);
     }
   }
 
@@ -78,6 +92,12 @@ export class AutomationsService {
     });
 
     for (const booking of overdueBookings) {
+      const markedOverdue = await this.prisma.booking.updateMany({
+        where: { id: booking.id, status: 'ACTIVE' },
+        data: { status: 'OVERDUE' },
+      });
+      if (!markedOverdue.count) continue;
+
       this.logger.error(
         `Booking ${booking.id} is OVERDUE! Customer: ${booking.customer.firstName}`,
       );
@@ -105,5 +125,11 @@ export class AutomationsService {
       const rawText = decodeURIComponent(message.split('text=')[1]);
       await this.twilio.sendWhatsAppMessage(booking.customer.phone, rawText);
     }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleBlacklistExpiry() {
+    const result = await this.trust.expireBlacklistEntries();
+    if (result.expired) this.logger.log(`Expired ${result.expired} blacklist entrie(s).`);
   }
 }

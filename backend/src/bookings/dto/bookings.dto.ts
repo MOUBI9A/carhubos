@@ -12,6 +12,7 @@ export const BOOKING_STATUSES = [
   'REQUESTED',
   'APPROVED',
   'ACTIVE',
+  'OVERDUE',
   'COMPLETED',
   'CANCELLED',
 ] as const;

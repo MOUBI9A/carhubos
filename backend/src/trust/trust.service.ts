@@ -436,6 +436,25 @@ export class TrustService {
     }));
   }
 
+  async expireBlacklistEntries() {
+    const now = new Date();
+    const entries = await this.prisma.blacklistEntry.findMany({
+      where: { status: 'ACTIVE', expiresAt: { lte: now } },
+      select: { id: true, identityId: true },
+    });
+    if (!entries.length) return { expired: 0 };
+
+    await this.prisma.blacklistEntry.updateMany({
+      where: { id: { in: entries.map((entry) => entry.id) } },
+      data: { status: 'EXPIRED' },
+    });
+
+    for (const identityId of new Set(entries.map((entry) => entry.identityId))) {
+      await this.recompute(identityId);
+    }
+    return { expired: entries.length };
+  }
+
   // ── Backfill (one-off) ──────────────────────────────────────────────
   async backfillIdentities() {
     const customers = await this.prisma.customer.findMany({

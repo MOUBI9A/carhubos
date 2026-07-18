@@ -19,6 +19,16 @@ export class TasksService {
       dueDate?: Date;
     },
   ) {
+    if (data.assigneeId) {
+      const assignee = await this.prisma.user.findFirst({
+        where: { id: data.assigneeId, agencyId },
+        select: { id: true },
+      });
+      if (!assignee) {
+        throw new NotFoundException('Assignee not found');
+      }
+    }
+
     return this.prisma.task.create({
       data: { ...data, agencyId },
     });
@@ -27,6 +37,7 @@ export class TasksService {
   async findAllByAssignee(agencyId: string, assigneeId: string) {
     return this.prisma.task.findMany({
       where: { agencyId, assigneeId },
+      include: { assignee: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -34,6 +45,7 @@ export class TasksService {
   async findAll(agencyId: string) {
     return this.prisma.task.findMany({
       where: { agencyId },
+      include: { assignee: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }

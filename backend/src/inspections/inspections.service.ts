@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class InspectionsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: {
+  async create(agencyId: string, data: {
     type: string;
     fuelLevel: number;
     mileage: number;
@@ -16,26 +16,40 @@ export class InspectionsService {
     bookingId?: string;
     inspectorId: string;
   }) {
+    const car = await this.prisma.car.findFirst({
+      where: { id: data.carId, agencyId },
+      select: { id: true, agencyId: true, nextServiceKm: true, brand: true, model: true },
+    });
+    if (!car) throw new NotFoundException('Car not found');
+
+    if (data.bookingId) {
+      const booking = await this.prisma.booking.findFirst({
+        where: { id: data.bookingId, agencyId, carId: data.carId },
+        select: { id: true },
+      });
+      if (!booking) throw new NotFoundException('Booking not found');
+    }
+
     const inspection = await this.prisma.inspection.create({
       data,
     });
 
     // 1. Update the car's live mileage
-    const car = await this.prisma.car.update({
-      where: { id: data.carId },
+    const updatedCar = await this.prisma.car.update({
+      where: { id: car.id },
       data: { mileage: data.mileage },
     });
 
     // 2. BP Pillar C: Mileage Intelligence Logic
     // If we are within 500km of the next service, trigger an automation
-    if (car.nextServiceKm && data.mileage >= car.nextServiceKm - 500) {
-      const priority = data.mileage >= car.nextServiceKm ? 'URGENT' : 'HIGH';
-      const statusText = data.mileage >= car.nextServiceKm ? 'OVERDUE' : 'DUE SOON';
+    if (updatedCar.nextServiceKm && data.mileage >= updatedCar.nextServiceKm - 500) {
+      const priority = data.mileage >= updatedCar.nextServiceKm ? 'URGENT' : 'HIGH';
+      const statusText = data.mileage >= updatedCar.nextServiceKm ? 'OVERDUE' : 'DUE SOON';
 
       await this.prisma.task.create({
         data: {
           title: `Mechanical Service ${statusText}: ${car.brand} ${car.model}`,
-          description: `Current: ${data.mileage}km | Service Limit: ${car.nextServiceKm}km. Please schedule vidange and filter inspection.`,
+          description: `Current: ${data.mileage}km | Service Limit: ${updatedCar.nextServiceKm}km. Please schedule vidange and filter inspection.`,
           priority,
           status: 'PENDING',
           agencyId: car.agencyId,
@@ -46,17 +60,17 @@ export class InspectionsService {
     return inspection;
   }
 
-  async findByCar(carId: string) {
+  async findByCar(agencyId: string, carId: string) {
     return this.prisma.inspection.findMany({
-      where: { carId },
+      where: { carId, car: { agencyId } },
       include: { inspector: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findByBooking(bookingId: string) {
+  async findByBooking(agencyId: string, bookingId: string) {
     return this.prisma.inspection.findMany({
-      where: { bookingId },
+      where: { bookingId, booking: { agencyId } },
       include: { inspector: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });

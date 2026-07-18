@@ -138,7 +138,7 @@ export class BookingsService {
     const overlappingBooking = await this.prisma.booking.findFirst({
       where: {
         carId,
-        status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE'] },
+        status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE', 'OVERDUE'] },
         OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
       },
     });
@@ -255,7 +255,8 @@ export class BookingsService {
   private static readonly STATUS_TRANSITIONS: Record<string, string[]> = {
     REQUESTED: ['APPROVED', 'CANCELLED'],
     APPROVED: ['ACTIVE', 'CANCELLED'],
-    ACTIVE: ['COMPLETED'],
+    ACTIVE: ['OVERDUE', 'COMPLETED'],
+    OVERDUE: ['COMPLETED', 'CANCELLED'],
     COMPLETED: [],
     CANCELLED: [],
   };
@@ -283,7 +284,7 @@ export class BookingsService {
           where: {
             carId: booking.carId,
             id: { not: booking.id },
-            status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE'] },
+            status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE', 'OVERDUE'] },
             OR: [
               {
                 startDate: { lte: booking.endDate },

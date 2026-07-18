@@ -1,11 +1,14 @@
-import { Controller, Get, Param, Res, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards, NotImplementedException } from '@nestjs/common';
 import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
+import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { Response } from 'express';
 
 @Controller('reports')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, CapabilitiesGuard)
 export class ReportsController {
   constructor(
     private readonly pdfEngine: PdfEngineService,
@@ -16,9 +19,10 @@ export class ReportsController {
    * Generates and downloads a real PDF Contract for a booking.
    */
   @Get('contract/:bookingId')
-  async downloadContract(@Param('bookingId') bookingId: string, @Res() res: Response) {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
+  @RequireCapabilities('booking.view')
+  async downloadContract(@CurrentUser() user: any, @Param('bookingId') bookingId: string, @Res() res: Response) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, agencyId: user.agencyId },
       include: {
         car: true,
         customer: true,
@@ -45,9 +49,9 @@ export class ReportsController {
    * Generates a Fleet Health Audit PDF
    */
   @Get('fleet-audit')
+  @RequireCapabilities('reports.view')
   async downloadFleetAudit(@Res() res: Response) {
-    // Logic for fleet health PDF would go here
-    // For now, we return a 200 to confirm the route is ready
-    return res.status(200).send('Fleet Health Logic Initialized');
+    void res;
+    throw new NotImplementedException('Fleet health audit report is not available yet.');
   }
 }

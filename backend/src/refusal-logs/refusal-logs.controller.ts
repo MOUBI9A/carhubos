@@ -28,8 +28,8 @@ export class RefusalLogsController {
 
   /** Legacy route — kept for backward compatibility */
   @Patch(':id/recovered')
-  markAsRecovered(@Param('id') id: string) {
-    return this.refusalLogsService.markAsRecovered(id);
+  markAsRecovered(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.refusalLogsService.markAsRecovered(user.agencyId, id);
   }
 
   /** Generic status update: body { status: 'RECOVERED' | 'LOST' } */
