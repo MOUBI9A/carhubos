@@ -201,7 +201,7 @@ describe('ConsentService', () => {
       const grant: any = await svc.requestGrant('agency-1', 'staff-1', {
         renterUserId: 'r1',
         scope: ['CIN_FRONT'],
-      } as any);
+      });
 
       const created = prisma.consentGrant.create.mock.calls[0][0].data;
       expect(created).toMatchObject({

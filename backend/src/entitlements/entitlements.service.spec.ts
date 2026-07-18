@@ -39,7 +39,7 @@ describe('EntitlementsService', () => {
     it('returns BETA (unlimited, all features, operating) when no subscription exists', async () => {
       const prisma = makePrisma();
       prisma.subscription.findUnique.mockResolvedValue(null);
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
 
       const ent = await svc.getEntitlements('agency-1');
       expect(ent.planKey).toBe('BETA');
@@ -54,7 +54,7 @@ describe('EntitlementsService', () => {
 
     it('never hits the DB for an empty agencyId', async () => {
       const prisma = makePrisma();
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       const ent = await svc.getEntitlements('');
       expect(ent.planKey).toBe('BETA');
       expect(prisma.subscription.findUnique).not.toHaveBeenCalled();
@@ -65,14 +65,14 @@ describe('EntitlementsService', () => {
     it('grants everything on the BETA wildcard', async () => {
       const prisma = makePrisma();
       prisma.subscription.findUnique.mockResolvedValue(sub({ key: 'BETA', features: ['*'] }));
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       expect(await svc.hasFeature('a', 'hub')).toBe(true);
     });
 
     it('denies a feature the plan does not list', async () => {
       const prisma = makePrisma();
       prisma.subscription.findUnique.mockResolvedValue(sub({ features: ['trust_network'] }));
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       expect(await svc.hasFeature('a', 'hub')).toBe(false);
       expect(await svc.hasFeature('a', 'trust_network')).toBe(true);
     });
@@ -82,14 +82,14 @@ describe('EntitlementsService', () => {
     it('does not throw on an unlimited (null) limit', async () => {
       const prisma = makePrisma({ car: { count: jest.fn().mockResolvedValue(9999) } });
       prisma.subscription.findUnique.mockResolvedValue(sub({ maxCars: null }));
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       await expect(svc.assertWithinLimit('a', 'cars')).resolves.toBeUndefined();
     });
 
     it('throws PLAN_LIMIT_REACHED when adding would exceed the limit', async () => {
       const prisma = makePrisma({ car: { count: jest.fn().mockResolvedValue(15) } });
       prisma.subscription.findUnique.mockResolvedValue(sub({ maxCars: 15 }));
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       await expect(svc.assertWithinLimit('a', 'cars')).rejects.toBeInstanceOf(
         ForbiddenException,
       );
@@ -108,7 +108,7 @@ describe('EntitlementsService', () => {
     it('allows creating up to exactly the limit', async () => {
       const prisma = makePrisma({ car: { count: jest.fn().mockResolvedValue(14) } });
       prisma.subscription.findUnique.mockResolvedValue(sub({ maxCars: 15 }));
-      const svc = new EntitlementsService(prisma as any);
+      const svc = new EntitlementsService(prisma);
       await expect(svc.assertWithinLimit('a', 'cars')).resolves.toBeUndefined();
     });
   });
@@ -119,7 +119,7 @@ describe('EntitlementsService', () => {
       async (status) => {
         const prisma = makePrisma();
         prisma.subscription.findUnique.mockResolvedValue(sub({ maxCars: null }, status));
-        const svc = new EntitlementsService(prisma as any);
+        const svc = new EntitlementsService(prisma);
         await expect(svc.assertOperating('a')).resolves.toBeUndefined();
       },
     );
@@ -129,7 +129,7 @@ describe('EntitlementsService', () => {
       async (status) => {
         const prisma = makePrisma();
         prisma.subscription.findUnique.mockResolvedValue(sub({ maxCars: null }, status));
-        const svc = new EntitlementsService(prisma as any);
+        const svc = new EntitlementsService(prisma);
         await expect(svc.assertOperating('a')).rejects.toBeInstanceOf(
           ForbiddenException,
         );
