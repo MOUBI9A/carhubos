@@ -1,6 +1,9 @@
 # CarHub SaaS - Production Readiness Report
+
+> ⚠️ **SUPERSEDED (2026-07).** This May-5 report predates the market-readiness audit and **overstates** readiness. Claims below such as "PRODUCTION-READY", "83/83 tests passing", and "SQLite (WAL)" are **no longer accurate** — the codebase is on **PostgreSQL**, has real backend tests numbering in the single digits, and is mid-hardening. The authoritative status is **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)**; run/convention details are in **[../CLAUDE.md](../CLAUDE.md)**. Kept for historical reference only.
+
 **Generated**: May 5, 2026  
-**Status**: ✅ **PRODUCTION-READY**
+**Status**: ⛔ superseded — see the banner above
 
 ---
 

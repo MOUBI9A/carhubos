@@ -29,23 +29,25 @@ A production-grade, multi-tenant SaaS platform for car rental agencies, specific
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Node.js, Express, Prisma (SQLite/PostgreSQL)
-- **Frontend**: Next.js (React), Tailwind CSS
-- **Testing**: Jest, Supertest
-- **Security**: jsonwebtoken, helmet, express-rate-limit, zod
+- **Backend**: NestJS (Node.js) + Prisma ORM
+- **Database**: PostgreSQL (local dev via Docker `postgres:15`)
+- **Frontend**: Next.js 16 (React), Tailwind CSS
+- **Testing**: Jest
+- **Security**: `@nestjs/jwt`, `@nestjs/throttler` (rate limiting), `class-validator` (input validation), `RolesGuard` (RBAC)
+
+> See **[../CLAUDE.md](../CLAUDE.md)** for how to run it and the current conventions, and **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)** for market-readiness status.
 
 ## 📂 Project Structure
 
 ```bash
-├── backend             # Express server & Prisma ORM
+├── backend             # NestJS API + Prisma ORM
 │   ├── src
-│   │   ├── controllers # Request handlers
-│   │   ├── services    # Business logic (Pure)
-│   │   ├── middleware  # Security & Validation
-│   │   └── routes      # API Endpoints
-│   └── tests           # Jest test suite (78+ tests)
-├── frontend            # Next.js Application
-└── prisma              # Database schema & migrations
+│   │   ├── <feature>/  # per-feature module: *.controller.ts, *.service.ts, *.module.ts, dto/
+│   │   ├── common/     # shared guards (AuthGuard, RolesGuard) + decorators
+│   │   └── main.ts     # bootstrap (port 5406, /api prefix, ValidationPipe)
+│   └── prisma          # schema.prisma, migrations, seeds
+├── frontend            # Next.js 16 application
+└── docker-compose.yml  # local Postgres (db service)
 ```
 
 ## 📖 Documentation
