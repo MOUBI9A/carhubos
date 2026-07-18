@@ -22,6 +22,7 @@ import {
   Search,
   Ban,
   X,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ const roleConfigs = {
     { label: 'Waitlist', href: '/dashboard/waitlist', icon: History },
     { label: 'Blacklist', href: '/dashboard/blacklist', icon: Ban },
     { label: 'Global Search', href: '/dashboard/search', icon: Search },
+    { label: 'Staff & Access', href: '/dashboard/staff', icon: UserCog },
     { label: 'Settings', href: '/dashboard/settings', icon: Settings },
   ],
   MANAGER: [
