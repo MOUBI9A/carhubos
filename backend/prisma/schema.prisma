@@ -13,20 +13,20 @@ datasource db {
 
 // 🏛️ PILLAR 1: SAAS CORE & MULTI-TENANCY
 model Agency {
-  id               String      @id @default(uuid())
+  id               String    @id @default(uuid())
   name             String
-  subdomain        String?     @unique
-  city             String      @default("Casablanca")
-  address          String?     // Official headquarters
-  taxId            String?     // ICE / Patent Number
-  logoUrl          String?     // Cloud storage URL
-  contactEmail     String      @unique
+  subdomain        String?   @unique
+  city             String    @default("Casablanca")
+  address          String? // Official headquarters
+  taxId            String? // ICE / Patent Number
+  logoUrl          String? // Cloud storage URL
+  contactEmail     String    @unique
   businessPhone    String?
-  status           String      @default("ACTIVE") // ACTIVE, SUSPENDED
-  subscriptionTier String      @default("STARTER") // STARTER, PRO, BUSINESS
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  deletedAt        DateTime?   // Soft-delete tombstone; null = live. Never hard-delete an agency.
+  status           String    @default("ACTIVE") // ACTIVE, SUSPENDED
+  subscriptionTier String    @default("STARTER") // STARTER, PRO, BUSINESS
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime? // Soft-delete tombstone; null = live. Never hard-delete an agency.
 
   users            User[]
   cars             Car[]
@@ -43,73 +43,96 @@ model Agency {
   webhooks         WebhookSubscription[]
   renterReviews    RenterReview[]
   blacklistEntries BlacklistEntry[]
+  memberships      AgencyMembership[]
 
   @@index([deletedAt])
 }
 
 // 🕸️ PILLAR 5: THE HUB (B2B FLEET SHARING)
 model HubListing {
-  id              String   @id @default(uuid())
-  dailyRateB2B    Decimal  @db.Decimal(12, 2) // Discounted rate for other agencies
-  status          String   @default("ACTIVE") // ACTIVE, UNAVAILABLE
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(uuid())
+  dailyRateB2B Decimal  @db.Decimal(12, 2) // Discounted rate for other agencies
+  status       String   @default("ACTIVE") // ACTIVE, UNAVAILABLE
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  carId           String   @unique
-  car             Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  agencyId        String
-  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  carId    String @unique
+  car      Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([agencyId])
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String
-  name          String
-  role          String   @default("AGENT") // ROOT_ADMIN, OWNER, MANAGER, AGENT, RENTER
-  trustScore    Int      @default(50)      // Renter trust level (0-100)
-  qrHash        String?  @unique           // Encrypted hash for the Trust Vault QR
-  isVerified    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       String   @default("AGENT") // ROOT_ADMIN, OWNER, MANAGER, AGENT, RENTER
+  trustScore Int      @default(50) // Renter trust level (0-100)
+  qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  agencyId      String?
-  agency        Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  assignedTasks Task[]
-  inspections   Inspection[] @relation("Inspector")
-  rentals       Booking[]    @relation("Renter")
-  verifiedPayments Payment[]  @relation("PaymentVerifier")
+  agencyId         String?
+  agency           Agency?            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  assignedTasks    Task[]
+  inspections      Inspection[]       @relation("Inspector")
+  rentals          Booking[]          @relation("Renter")
+  verifiedPayments Payment[]          @relation("PaymentVerifier")
+  memberships      AgencyMembership[]
 
+  @@index([agencyId])
+}
+
+// 🔐 CAPABILITY ENGINE (schema foundation; guard wiring is a later task)
+// A user's membership in one agency carries a granular capability set. Roles
+// (User.role) become named presets that seed these defaults; enforcement moves
+// off role strings and onto `capabilities`. See docs/PRODUCT_VISION.md §2-3 and
+// backend/src/common/capabilities.ts (the catalog + presets).
+model AgencyMembership {
+  id           String   @id @default(cuid())
+  capabilities String[] // Postgres scalar list of capability strings
+  rolePreset   String // 'OWNER' | 'MANAGER' | 'AGENT' or a staff-preset name
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agencyId])
   @@index([agencyId])
 }
 
 // 🚘 PILLAR 2: ASSET INTELLIGENCE & GUARDIAN
 model Car {
-  id              String   @id @default(uuid())
-  brand           String
-  model           String
-  year            Int
-  licensePlate    String
-  pricePerDay     Decimal  @db.Decimal(12, 2)
-  fuelType        String   @default("DIESEL")
-  gearbox         String   @default("MANUAL")
-  status          String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE, OUT_OF_SERVICE
-  mileage         Int      @default(0)
-  nextServiceKm   Int?     @default(10000)      // Predictive maintenance (Vidange)
-  currentRoi      Float    @default(0)          // Real-time profitability score
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  brand         String
+  model         String
+  year          Int
+  licensePlate  String
+  pricePerDay   Decimal  @db.Decimal(12, 2)
+  fuelType      String   @default("DIESEL")
+  gearbox       String   @default("MANUAL")
+  status        String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE, OUT_OF_SERVICE
+  mileage       Int      @default(0)
+  nextServiceKm Int?     @default(10000) // Predictive maintenance (Vidange)
+  currentRoi    Float    @default(0) // Real-time profitability score
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  agencyId        String
-  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  
-  bookings        Booking[]
-  documents       CarDocument[]
-  maintenance     MaintenanceRecord[]
-  inspections     Inspection[]
-  hubListing      HubListing?
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  bookings    Booking[]
+  documents   CarDocument[]
+  maintenance MaintenanceRecord[]
+  inspections Inspection[]
+  hubListing  HubListing?
 
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
@@ -117,18 +140,18 @@ model Car {
 }
 
 model CarDocument {
-  id           String   @id @default(uuid())
-  type         String   // INSURANCE, CARTE_GRISE, TECHNICAL_INSPECTION, VIGNETTE
-  fileUrl      String?
-  issueDate    DateTime?
-  expiryDate   DateTime
-  status       String   @default("VALID") // VALID, EXPIRING_SOON, EXPIRED
-  isMandatory  Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String    @id @default(uuid())
+  type        String // INSURANCE, CARTE_GRISE, TECHNICAL_INSPECTION, VIGNETTE
+  fileUrl     String?
+  issueDate   DateTime?
+  expiryDate  DateTime
+  status      String    @default("VALID") // VALID, EXPIRING_SOON, EXPIRED
+  isMandatory Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  carId        String
-  car          Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
 
   @@index([carId])
   @@index([expiryDate])
@@ -136,38 +159,38 @@ model CarDocument {
 
 model MaintenanceRecord {
   id          String   @id @default(uuid())
-  type        String   // VIDANGE, REPAIR, TIRES, BRAKES, GENERAL
+  type        String // VIDANGE, REPAIR, TIRES, BRAKES, GENERAL
   description String
   cost        Decimal  @default(0) @db.Decimal(12, 2)
-  mileage     Int?     // Mileage at time of repair
-  garageName  String?  // Linked to a Garage registry logic
+  mileage     Int? // Mileage at time of repair
+  garageName  String? // Linked to a Garage registry logic
   invoiceUrl  String?
   status      String   @default("COMPLETED") // PENDING, IN_GARAGE, COMPLETED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  carId       String
-  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
 
   @@index([carId])
 }
 
 // 📈 PILLAR 3: DEMAND & FORENSIC LOGS
 model RefusalLog {
-  id                String   @id @default(uuid())
-  customerName      String
-  customerPhone     String
-  requestedCarType  String   // ECONOMY, SUV, LUXURY
+  id                 String   @id @default(uuid())
+  customerName       String
+  customerPhone      String
+  requestedCarType   String // ECONOMY, SUV, LUXURY
   requestedStartDate DateTime
   requestedEndDate   DateTime
-  potentialRevenue  Decimal @db.Decimal(12, 2)
-  status            String   @default("WAITING") // WAITING, RECOVERED, LOST
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  potentialRevenue   Decimal  @db.Decimal(12, 2)
+  status             String   @default("WAITING") // WAITING, RECOVERED, LOST
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Author agency may leave the network; retain the forensic log (anonymized) rather than cascade-delete it.
-  agencyId          String?
-  agency            Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
   @@index([agencyId])
   @@index([status])
@@ -176,50 +199,50 @@ model RefusalLog {
 model AuditLog {
   id          String   @id @default(uuid())
   actorId     String
-  action      String   // CREATE_BOOKING, DELETE_CAR, CHANGE_PRICE
-  entityType  String   // CAR, BOOKING, USER
+  action      String // CREATE_BOOKING, DELETE_CAR, CHANGE_PRICE
+  entityType  String // CAR, BOOKING, USER
   entityId    String
-  beforeState String?  // JSON string
-  afterState  String?  // JSON string
+  beforeState String? // JSON string
+  afterState  String? // JSON string
   ipAddress   String?
   createdAt   DateTime @default(now())
 
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([agencyId])
 }
 
 // 💰 PILLAR 4: FINANCIAL BRAIN & ERP
 model Booking {
-  id              String   @id @default(uuid())
-  startDate       DateTime
-  endDate         DateTime
-  totalPrice      Decimal  @db.Decimal(12, 2)
-  depositAmount   Decimal  @default(0) @db.Decimal(12, 2)
-  depositStatus   String   @default("PENDING") // PENDING, HELD, RETURNED, CLAIMED
-  depositMethod   String   @default("CASH")    // CASH, TRANSFER, CHEQUE
-  status          String   @default("REQUESTED") // REQUESTED, APPROVED, ACTIVE, COMPLETED, CANCELLED
-  contractUrl     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  startDate     DateTime
+  endDate       DateTime
+  totalPrice    Decimal  @db.Decimal(12, 2)
+  depositAmount Decimal  @default(0) @db.Decimal(12, 2)
+  depositStatus String   @default("PENDING") // PENDING, HELD, RETURNED, CLAIMED
+  depositMethod String   @default("CASH") // CASH, TRANSFER, CHEQUE
+  status        String   @default("REQUESTED") // REQUESTED, APPROVED, ACTIVE, COMPLETED, CANCELLED
+  contractUrl   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  carId           String
-  car             Car      @relation(fields: [carId], references: [id], onDelete: Restrict)
-  
-  renterId        String?
-  renter          User?    @relation("Renter", fields: [renterId], references: [id], onDelete: SetNull)
-  
-  customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  
-  agencyId        String
-  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  
-  invoices        Invoice[]
-  contracts       Contract[]
-  inspections     Inspection[]
-  renterReview    RenterReview?
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Restrict)
+
+  renterId String?
+  renter   User?   @relation("Renter", fields: [renterId], references: [id], onDelete: SetNull)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  invoices         Invoice[]
+  contracts        Contract[]
+  inspections      Inspection[]
+  renterReview     RenterReview?
   blacklistEntries BlacklistEntry[]
 
   @@index([carId])
@@ -237,32 +260,32 @@ model Invoice {
   updatedAt DateTime @updatedAt
 
   bookingId String
-  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  
-  payments  Payment[]
+  agency    Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  payments Payment[]
 
   @@index([bookingId])
   @@index([agencyId])
 }
 
 model Payment {
-  id            String   @id @default(uuid())
-  amount        Decimal  @db.Decimal(12, 2)
-  method        String   @default("CASH") // CASH, CARD, TRANSFER, CHEQUE
-  type          String   @default("INCOME") // INCOME, REFUND
-  status        String   @default("VERIFIED") // PENDING, VERIFIED, VOID
-  reference     String?
-  date          DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(12, 2)
+  method    String   @default("CASH") // CASH, CARD, TRANSFER, CHEQUE
+  type      String   @default("INCOME") // INCOME, REFUND
+  status    String   @default("VERIFIED") // PENDING, VERIFIED, VOID
+  reference String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  invoiceId     String
-  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  
-  verifiedById  String?
-  verifiedBy    User?    @relation("PaymentVerifier", fields: [verifiedById], references: [id])
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  verifiedById String?
+  verifiedBy   User?   @relation("PaymentVerifier", fields: [verifiedById], references: [id])
 
   @@index([invoiceId])
   @@index([status])
@@ -270,7 +293,7 @@ model Payment {
 
 model Expense {
   id          String   @id @default(uuid())
-  category    String   // SALARY, RENT, UTILITIES, MARKETING, TAX, OTHER
+  category    String // SALARY, RENT, UTILITIES, MARKETING, TAX, OTHER
   description String
   amount      Decimal  @db.Decimal(12, 2)
   date        DateTime @default(now())
@@ -278,8 +301,8 @@ model Expense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([agencyId])
   @@index([category])
@@ -287,23 +310,23 @@ model Expense {
 
 // 🛠️ SHARED LOGISTICS
 model Customer {
-  id            String   @id @default(uuid())
-  firstName     String
-  lastName      String
-  email         String?
-  phone         String
-  identityType  String   @default("CIN") // CIN, PASSPORT
+  id             String   @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String
+  identityType   String   @default("CIN") // CIN, PASSPORT
   identityNumber String
-  nationality   String   @default("MA")
-  status        String   @default("ACTIVE") // ACTIVE, BLACKLISTED
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  nationality    String   @default("MA")
+  status         String   @default("ACTIVE") // ACTIVE, BLACKLISTED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  
-  bookings      Booking[]
-  documents     CustomerDocument[]
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  bookings  Booking[]
+  documents CustomerDocument[]
 
   // 🌐 PILLAR 6 link: the global, cross-tenant identity this customer resolves to.
   renterIdentityId String?
@@ -315,90 +338,90 @@ model Customer {
 }
 
 model CustomerDocument {
-  id           String   @id @default(uuid())
-  type         String   // DRIVING_LICENSE, CIN_FRONT, CIN_BACK, PASSPORT
-  fileUrl      String
-  expiryDate   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String    @id @default(uuid())
+  type       String // DRIVING_LICENSE, CIN_FRONT, CIN_BACK, PASSPORT
+  fileUrl    String
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  customerId   String
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
 }
 
 model Inspection {
-  id            String   @id @default(uuid())
-  type          String   // PRE_RENTAL, POST_RENTAL
-  fuelLevel     Int      // 0-8 (eighths)
-  mileage       Int
-  damages       String?  // JSON string
-  photos        String?  // JSON array
-  notes         String?
-  createdAt     DateTime @default(now())
-  
-  carId         String
-  car           Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  bookingId     String?
-  booking       Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  inspectorId   String
-  inspector     User     @relation("Inspector", fields: [inspectorId], references: [id])
+  id        String   @id @default(uuid())
+  type      String // PRE_RENTAL, POST_RENTAL
+  fuelLevel Int // 0-8 (eighths)
+  mileage   Int
+  damages   String? // JSON string
+  photos    String? // JSON array
+  notes     String?
+  createdAt DateTime @default(now())
+
+  carId       String
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId   String?
+  booking     Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  inspectorId String
+  inspector   User     @relation("Inspector", fields: [inspectorId], references: [id])
 
   @@index([carId])
   @@index([bookingId])
 }
 
 model AutomationRule {
-  id          String   @id @default(uuid())
-  name        String
-  trigger     String   // BOOKING_CREATED, DOC_EXPIRING_3D, OVERDUE_RETURN
-  action      String   // SEND_WHATSAPP, SEND_EMAIL, CREATE_TASK
-  config      String   // JSON string
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String // BOOKING_CREATED, DOC_EXPIRING_3D, OVERDUE_RETURN
+  action    String // SEND_WHATSAPP, SEND_EMAIL, CREATE_TASK
+  config    String // JSON string
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([agencyId])
 }
 
 model Contract {
-  id            String   @id @default(uuid())
-  content       String   
-  status        String   @default("DRAFT") // DRAFT, SENT, SIGNED, EXPIRED
+  id            String    @id @default(uuid())
+  content       String
+  status        String    @default("DRAFT") // DRAFT, SENT, SIGNED, EXPIRED
   signedAt      DateTime?
-  signatureData String?  // Base64
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  signatureData String? // Base64
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  bookingId     String
-  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  agencyId  String
+  agency    Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
   @@index([agencyId])
 }
 
 model Task {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String?
-  status      String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
   dueDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  assigneeId  String?
-  assignee    User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId String?
+  assignee   User?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 
   // Tenant scope — Task was global (IDOR); now every task belongs to one agency.
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([assigneeId])
   @@index([agencyId])
@@ -408,14 +431,14 @@ model Task {
 model WebhookSubscription {
   id        String   @id @default(uuid())
   url       String
-  event     String   // BOOKING_CREATED, BOOKING_COMPLETED, CAR_MAINTENANCE
+  event     String // BOOKING_CREATED, BOOKING_COMPLETED, CAR_MAINTENANCE
   secret    String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
   @@index([agencyId])
   @@index([event])
@@ -428,19 +451,19 @@ model WebhookSubscription {
 // ever seeing Agency A's raw PII. (Precedent for non-scoped models: Task; for
 // cross-tenant reads: hub.discoverAssets.)
 model RenterIdentity {
-  id              String   @id @default(uuid())
-  identityHash    String   @unique // sha256(PEPPER + type + ':' + normalize(number))
-  identityType    String            // CIN, PASSPORT, DRIVING_LICENSE
-  identityMasked  String            // display-only, e.g. "K••••42"
+  id              String    @id @default(uuid())
+  identityHash    String    @unique // sha256(PEPPER + type + ':' + normalize(number))
+  identityType    String // CIN, PASSPORT, DRIVING_LICENSE
+  identityMasked  String // display-only, e.g. "K••••42"
   // Cached aggregates — recomputed by TrustService on every review/blacklist write.
-  globalScore     Float    @default(0)       // weighted 0-5, recency-decayed
-  reviewCount     Int      @default(0)
-  activeFlagCount Int      @default(0)        // ACTIVE blacklist entries
-  riskLevel       String   @default("UNKNOWN") // UNKNOWN, TRUSTED, LOW, MEDIUM, HIGH, CRITICAL
-  firstSeenAt     DateTime @default(now())
+  globalScore     Float     @default(0) // weighted 0-5, recency-decayed
+  reviewCount     Int       @default(0)
+  activeFlagCount Int       @default(0) // ACTIVE blacklist entries
+  riskLevel       String    @default("UNKNOWN") // UNKNOWN, TRUSTED, LOW, MEDIUM, HIGH, CRITICAL
+  firstSeenAt     DateTime  @default(now())
   lastReviewAt    DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   customers        Customer[]
   reviews          RenterReview[]
@@ -451,7 +474,7 @@ model RenterIdentity {
 
 model RenterReview {
   id        String   @id @default(uuid())
-  rating    Int      // 1-5
+  rating    Int // 1-5
   tags      String   @default("[]") // JSON array: LATE_RETURN, SMOKED_IN_CAR, PERFECT_RENTER, ...
   comment   String?
   status    String   @default("PUBLISHED") // PUBLISHED, DISPUTED, RETRACTED, REMOVED
@@ -462,10 +485,10 @@ model RenterReview {
   // its originating booking or agency (RETAINED + anonymized), never cascade away.
   identityId String
   identity   RenterIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
-  bookingId  String?  @unique // verified review: exactly one per (completed) booking; null once booking is gone
-  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  agencyId   String?           // authoring agency; null once that agency leaves the network
-  agency     Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  bookingId  String?        @unique // verified review: exactly one per (completed) booking; null once booking is gone
+  booking    Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  agencyId   String? // authoring agency; null once that agency leaves the network
+  agency     Agency?        @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
   @@index([identityId, status])
   @@index([agencyId])
@@ -473,10 +496,10 @@ model RenterReview {
 
 model BlacklistEntry {
   id           String    @id @default(uuid())
-  reason       String    // VEHICLE_THEFT_ATTEMPT, FRAUDULENT_DOCUMENTS, MAJOR_UNPAID_FINES, UNPAID_DAMAGE, ABANDONED_VEHICLE, VIOLENT_CONDUCT, OTHER
+  reason       String // VEHICLE_THEFT_ATTEMPT, FRAUDULENT_DOCUMENTS, MAJOR_UNPAID_FINES, UNPAID_DAMAGE, ABANDONED_VEHICLE, VIOLENT_CONDUCT, OTHER
   severity     String    @default("HIGH") // MEDIUM, HIGH, CRITICAL
   details      String
-  evidenceUrls String    @default("[]")   // JSON array of file URLs
+  evidenceUrls String    @default("[]") // JSON array of file URLs
   status       String    @default("ACTIVE") // ACTIVE, DISPUTED, LIFTED, EXPIRED
   expiresAt    DateTime?
   liftedAt     DateTime?
