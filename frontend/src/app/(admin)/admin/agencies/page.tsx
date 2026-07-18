@@ -84,7 +84,7 @@ export default function AgencyManagement() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white group-hover:text-primary transition-colors uppercase tracking-tight">{agency.name}</p>
-                      <p className="text-[10px] font-medium text-white/40">{agency.subdomain}.carhub.os</p>
+                      <p className="text-[10px] font-medium text-white/40">{agency.subdomain}.fider.app</p>
                     </div>
                   </div>
                 </td>
@@ -136,7 +136,7 @@ export default function AgencyManagement() {
               <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Subdomain Route</p>
               <div className="flex">
                  <input name="subdomain" required className="flex-1 bg-white/5 border border-white/10 rounded-l-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-colors" placeholder="atlas-drive" />
-                 <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-xl px-4 flex items-center text-[10px] font-black text-white/40">.carhub.os</div>
+                 <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-xl px-4 flex items-center text-[10px] font-black text-white/40">.fider.app</div>
               </div>
            </div>
            <div className="space-y-1.5">

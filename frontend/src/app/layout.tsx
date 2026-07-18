@@ -9,7 +9,7 @@ import { QueryProvider } from "@/lib/QueryProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CarHub Infinity OS",
+  title: "Fider",
   description: "The intelligent operating system for car rental agencies.",
 };
 

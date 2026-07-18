@@ -89,10 +89,10 @@ export function Sidebar() {
     <aside className="w-64 h-screen glass border-r border-white/10 flex flex-col fixed left-0 top-0 z-50">
       <div className="p-8">
         <h1 className="text-xl font-black tracking-tighter text-primary">
-          CarHub<span className="text-white">OS</span>
+          Fider<span className="text-white">OS</span>
         </h1>
         <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
-          Infinity Edition
+          Fider Edition
         </p>
       </div>
 

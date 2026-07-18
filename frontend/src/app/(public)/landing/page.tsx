@@ -4,20 +4,17 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { 
-  Shield, 
-  Brain, 
-  Lock, 
-  Building2, 
-  ArrowRight, 
-  Zap, 
-  Activity, 
-  Globe,
-  CheckCircle2,
-  ChevronRight,
-  Car
+import {
+  Fingerprint,
+  Receipt,
+  Building2,
+  ArrowRight,
+  Activity,
+  FileWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SolutionsSection from './_components/SolutionsSection';
+import ContactSection from './_components/ContactSection';
 
 export default function LandingPage() {
   return (
@@ -34,29 +31,28 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">v2.0 Infinity OS is Live</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Now in early access</span>
           </div>
-          
+
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-[0.9] mb-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100">
-            Intelligent <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500">Fleet Control</span>
+            Run your <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500">Rental Agency</span>
           </h1>
-          
-          <p className="max-w-2xl mx-auto text-lg md:text-xl font-medium text-white/40 leading-relaxed mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 uppercase tracking-tight">
-            The world's first neural operating system for car rental ecosystems. 
-            Automate trust, scale finance, and secure your assets with Infinity.
+
+          <p className="max-w-2xl mx-auto text-lg md:text-xl font-medium text-white/50 leading-relaxed mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 tracking-tight">
+            The operating system for Morocco&apos;s car-rental agencies — <span className="text-white/80">trust, fleet and finance on one spine.</span>{' '}Know a renter&apos;s history before you hand over the keys.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
             <Link href="/signup">
               <Button className="h-16 px-10 text-sm font-black uppercase tracking-[0.2em] group">
-                Deploy Infinity
+                Get Started Free
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link href="#features">
+            <Link href="#solutions">
               <Button variant="outline" className="h-16 px-10 text-sm font-black uppercase tracking-[0.2em] bg-white/5 border-white/10 hover:bg-white/10">
-                Explore Core
+                See how it works
               </Button>
             </Link>
           </div>
@@ -96,39 +92,39 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-32 bg-black relative">
+      <section id="features" className="py-32 bg-black relative scroll-mt-24">
         <div className="container mx-auto px-6">
           <div className="mb-24 text-center md:text-left">
-             <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-4">Core Architecture</h2>
-             <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter max-w-2xl">The pillars of a next-gen rental ecosystem.</h3>
+             <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-4">What you get</h2>
+             <h3 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter max-w-2xl">Four moving parts. One system of record.</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                title: 'The Guardian',
-                description: 'Autonomous risk detection and asset lockout protocols. Real-time compliance monitoring.',
-                icon: Shield,
-                color: 'text-danger',
-                bg: 'bg-danger/10'
-              },
-              {
-                title: 'Financial Brain',
-                description: 'Neural ledger for automated billing, debt recovery, and ROI optimization for every asset.',
-                icon: Brain,
+                title: 'Trust Network',
+                description: 'Privacy-hashed CIN (HMAC-SHA256) plus a cross-agency review score — collective renter trust, not a credit bureau.',
+                icon: Fingerprint,
                 color: 'text-primary',
                 bg: 'bg-primary/10'
               },
               {
-                title: 'Trust Vault',
-                description: 'Decentralized identity verification and high-fidelity customer credit scoring.',
-                icon: Lock,
+                title: 'Financial Engine',
+                description: 'MAD invoicing with 20% VAT, security deposits, and PAID / PARTIAL / DUE reconciliation to the cent.',
+                icon: Receipt,
                 color: 'text-success',
                 bg: 'bg-success/10'
               },
               {
+                title: 'Compliance Guardrails',
+                description: 'Document-expiry enforcement and inspection gates stop a non-compliant car — or an unverified renter — before handover.',
+                icon: FileWarning,
+                color: 'text-danger',
+                bg: 'bg-danger/10'
+              },
+              {
                 title: 'B2B Hub',
-                description: 'Multi-tenant infrastructure for agency networks to share fleets and maximize utilization.',
+                description: 'Share fleet across the agency network so an idle car earns from demand sitting at another agency.',
                 icon: Building2,
                 color: 'text-blue-500',
                 bg: 'bg-blue-500/10'
@@ -139,26 +135,29 @@ export default function LandingPage() {
                   <feature.icon className={cn("w-8 h-8", feature.color)} />
                 </div>
                 <h4 className="text-xl font-black text-white uppercase italic tracking-tighter mb-4">{feature.title}</h4>
-                <p className="text-white/40 text-sm font-medium leading-relaxed uppercase tracking-wide">{feature.description}</p>
+                <p className="text-white/50 text-sm font-medium leading-relaxed">{feature.description}</p>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Social Proof / Stats */}
+      {/* Solutions + interactive Trust Console + Enterprise strip */}
+      <SolutionsSection />
+
+      {/* Honest capability tiles (was: fabricated stats) */}
       <section className="py-24 border-y border-white/5 bg-[#050505]">
         <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 text-center">
             {[
-              { label: 'Transactions', value: '42M+' },
-              { label: 'Active Assets', value: '120K' },
-              { label: 'Debt Recovered', value: '85%' },
-              { label: 'Uptime', value: '99.99%' },
+              { value: 'MAD + 20% VAT', label: 'Native ledger — reconciled to the cent' },
+              { value: 'Per-vehicle ROI', label: 'Live P&L on every asset' },
+              { value: 'Paid · Partial · Due', label: 'Invoices auto-reconciled' },
+              { value: 'HMAC-SHA256', label: 'Hashed identities · tenant-isolated · audit-logged' },
             ].map((stat, i) => (
               <div key={i}>
-                <p className="text-4xl md:text-5xl font-black text-white tracking-tighter italic mb-2">{stat.value}</p>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">{stat.label}</p>
+                <p className="text-2xl md:text-3xl font-black text-white tracking-tighter italic mb-3 leading-tight">{stat.value}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40 leading-relaxed">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -171,21 +170,28 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 relative z-10 text-center">
            <div className="max-w-3xl mx-auto glass p-12 md:p-20 rounded-[3rem] border border-primary/20 relative overflow-hidden">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 rounded-full blur-[80px]" />
-              
+
               <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-8 leading-[0.9]">
-                Ready to upgrade your <br />
-                <span className="text-primary">Ecosystem?</span>
+                Be a founding agency <br />
+                <span className="text-primary">on the network.</span>
               </h2>
-              <p className="text-white/40 font-medium uppercase tracking-tight mb-12 max-w-md mx-auto">
-                Join 500+ agencies worldwide who have moved their operations to the Infinity protocol.
+              <p className="text-white/50 font-medium tracking-tight mb-12 max-w-lg mx-auto leading-relaxed">
+                The trust graph gets stronger with every agency that joins — and founders shape the signal everyone else inherits. Come see it on your own fleet.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button className="h-16 px-12 text-sm font-black uppercase tracking-[0.2em] w-full sm:w-auto">Get Started Now</Button>
-                <Button variant="ghost" className="h-16 px-12 text-sm font-black uppercase tracking-[0.2em] w-full sm:w-auto text-white/60">Contact Sales</Button>
+                <Link href="#contact" className="w-full sm:w-auto">
+                  <Button className="h-16 px-12 text-sm font-black uppercase tracking-[0.2em] w-full">Request Early Access</Button>
+                </Link>
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button variant="ghost" className="h-16 px-12 text-sm font-black uppercase tracking-[0.2em] w-full text-white/60">Sign in</Button>
+                </Link>
               </div>
            </div>
         </div>
       </section>
+
+      {/* Contact */}
+      <ContactSection email="hamzamoadin37@gmail.com" whatsapp="+212616880653" />
     </div>
   );
 }

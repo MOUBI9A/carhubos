@@ -119,7 +119,7 @@ export default function OwnerSettings() {
       await api.post('/auth/register', {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
-        password: `CarHub#${Math.random().toString(36).slice(2, 10)}`, // temp password
+        password: `Fider#${Math.random().toString(36).slice(2, 10)}`, // temp password
         role: formData.get('role') as string,
         agencyId: agency?.id,
       });
@@ -229,7 +229,7 @@ export default function OwnerSettings() {
                   {agency?.name.toLowerCase().replace(/\s+/g, '-') || 'my-agency'}
                 </div>
                 <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-xl px-4 flex items-center text-xs font-bold text-white/40">
-                  .carhub.os
+                  .fider.app
                 </div>
               </div>
               <button

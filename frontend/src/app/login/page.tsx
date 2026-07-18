@@ -46,17 +46,17 @@ export default function LoginPage() {
       >
         <div className="text-center mb-10">
           <h1 className="text-5xl font-black tracking-tighter text-white uppercase italic">
-            Infinity <span className="text-primary">OS</span>
+            Fider
           </h1>
           <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-[10px] mt-2">
-            Secure Enterprise Gateway
+            Sign in to your agency
           </p>
         </div>
 
         <form onSubmit={handleRealLogin} className="glass p-8 rounded-[2rem] shadow-2xl space-y-6 border-white/5">
            <div className="space-y-4">
               <div className="space-y-1.5">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Institutional Identity</p>
+                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Email</p>
                  <div className="relative group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
                     <input 
@@ -71,7 +71,7 @@ export default function LoginPage() {
               </div>
               
               <div className="space-y-1.5">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Security Key</p>
+                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Password</p>
                  <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
                     <input 
@@ -87,13 +87,13 @@ export default function LoginPage() {
            </div>
 
            <Button type="submit" className="w-full py-5 text-xs font-black tracking-[0.2em]" disabled={isLoading}>
-              {isLoading ? 'Decrypting...' : 'Secure Login'}
+              {isLoading ? 'Signing in…' : 'Sign In'}
            </Button>
         </form>
 
         <p className="text-center mt-8 text-white/20 text-[9px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
           <Zap className="w-3 h-3" />
-          AES-256 JWT Encryption Active
+          Secure session · HttpOnly cookie
         </p>
       </motion.div>
     </div>

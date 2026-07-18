@@ -116,7 +116,7 @@ export function CommandPalette() {
                  <span className="text-[10px] font-bold text-white/20 uppercase">Select</span>
               </div>
            </div>
-           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Infinity OS Universal Search</p>
+           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Fider Universal Search</p>
         </div>
       </motion.div>
     </div>,

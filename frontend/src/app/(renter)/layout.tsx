@@ -39,7 +39,7 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-2">
             <h1 className="text-xl font-black tracking-tighter text-primary">
-              CarHub<span className="text-white">OS</span>
+              Fider<span className="text-white">OS</span>
             </h1>
             <span className="bg-primary/20 text-primary text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest">Portal</span>
           </Link>

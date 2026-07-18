@@ -58,7 +58,7 @@ export default function AgencyPublicPage() {
            <div className="flex gap-4">
               <div className="text-right hidden md:block">
                  <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">Ecosystem Powered by</p>
-                 <p className="text-sm font-black text-white uppercase italic tracking-tighter">Infinity OS</p>
+                 <p className="text-sm font-black text-white uppercase italic tracking-tighter">Fider</p>
               </div>
               <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center">
                  <ShieldCheck className="w-6 h-6 text-primary" />
@@ -122,7 +122,7 @@ export default function AgencyPublicPage() {
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
          <div className="relative z-10">
             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-6">Security Protocol</h4>
-            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-8 max-w-2xl mx-auto">Seamless booking with the Infinity Trust Vault.</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-8 max-w-2xl mx-auto">Seamless booking with the Fider Trust Vault.</h2>
             <div className="flex flex-wrap justify-center gap-12">
                {[
                  { label: 'Instant ID Scan', icon: Zap },

@@ -46,7 +46,7 @@ export default function RenterPortal() {
           <h1 className="text-3xl font-black tracking-tighter text-white uppercase tracking-tight">My Digital Vault</h1>
           <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1 flex items-center gap-2">
              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-             Infinity Verified Alpha
+             Fider Verified Alpha
           </p>
         </div>
         <Button onClick={() => setIsQrModalOpen(true)}>

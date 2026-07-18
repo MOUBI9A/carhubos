@@ -240,7 +240,7 @@ export default function OwnerDashboard() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 text-foreground">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Infinity Control</h1>
+          <h1 className="text-4xl font-black tracking-tighter text-white uppercase">Fider Control</h1>
           <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1 flex items-center gap-2">
             <span className={cn("w-2 h-2 rounded-full animate-pulse", healthColor)} />
             Live System Health: {healthStatus}

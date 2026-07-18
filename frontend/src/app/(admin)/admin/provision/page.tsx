@@ -136,7 +136,7 @@ export default function ProvisionPage() {
                         className="bg-white/5 border-white/10 h-12 pr-24 focus:border-primary/50"
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20">
-                        .carhub.app
+                        .fider.app
                       </div>
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export default function ProvisionPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: 'Organization', value: formData.orgName || 'Not Set' },
-                    { label: 'Identity', value: `${formData.subdomain}.carhub.app` },
+                    { label: 'Identity', value: `${formData.subdomain}.fider.app` },
                     { label: 'Admin', value: formData.adminEmail || 'Not Set' },
                     { label: 'Cloud Region', value: formData.region.toUpperCase() },
                     { label: 'DB Architecture', value: formData.sharding.toUpperCase() },
