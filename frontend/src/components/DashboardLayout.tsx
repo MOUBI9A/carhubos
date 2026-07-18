@@ -3,7 +3,8 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { Menu } from 'lucide-react';
 
 // Where to send a signed-in user who lands on an area their role can't access.
 const HOME_BY_ROLE: Record<string, string> = {
@@ -24,6 +25,13 @@ export function DashboardLayout({
 }) {
   const { role, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  // Close the mobile drawer whenever the route changes.
+  React.useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   React.useEffect(() => {
     if (isLoading) return;
@@ -47,9 +55,33 @@ export function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8 overflow-y-auto">
+    <div className="min-h-screen bg-background text-foreground">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* Mobile top bar with hamburger */}
+      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 glass border-b border-white/10">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <span className="text-lg font-black tracking-tighter text-primary">
+          Fider<span className="text-white">OS</span>
+        </span>
+      </header>
+
+      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">
         {children}
       </main>
     </div>

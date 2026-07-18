@@ -20,7 +20,8 @@ import {
   Activity,
   Plus,
   Search,
-  Ban
+  Ban,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -77,7 +78,7 @@ const roleConfigs = {
   ],
 };
 
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const { role, logout, user } = useAuth();
   const pathname = usePathname();
 
@@ -86,14 +87,28 @@ export function Sidebar() {
   const navItems = roleConfigs[role as keyof typeof roleConfigs] || [];
 
   return (
-    <aside className="w-64 h-screen glass border-r border-white/10 flex flex-col fixed left-0 top-0 z-50">
-      <div className="p-8">
-        <h1 className="text-xl font-black tracking-tighter text-primary">
-          Fider<span className="text-white">OS</span>
-        </h1>
-        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
-          Fider Edition
-        </p>
+    <aside
+      className={cn(
+        "w-64 h-screen glass border-r border-white/10 flex flex-col fixed left-0 top-0 z-50 transform transition-transform duration-300 lg:translate-x-0",
+        open ? "translate-x-0" : "-translate-x-full",
+      )}
+    >
+      <div className="p-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-black tracking-tighter text-primary">
+            Fider<span className="text-white">OS</span>
+          </h1>
+          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
+            Fider Edition
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close menu"
+          className="lg:hidden -mr-2 -mt-1 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
@@ -103,6 +118,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
                 isActive 

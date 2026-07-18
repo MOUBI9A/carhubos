@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
 import { Car } from 'lucide-react';
+import PublicNav from './_components/PublicNav';
 
 export default function PublicLayout({
   children,
@@ -11,31 +11,7 @@ export default function PublicLayout({
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-primary selection:text-white">
       {/* Premium Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/landing" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]">
-              <Car className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tighter uppercase italic">Fider</span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-10">
-            <Link href="#features" className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors">Features</Link>
-            <Link href="#solutions" className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors">Solutions</Link>
-            <Link href="#enterprise" className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors">Enterprise</Link>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" className="text-[11px] font-black uppercase tracking-[0.2em]">Login</Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="text-[11px] font-black uppercase tracking-[0.2em] px-6">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
       <main className="pt-20">
         {children}
