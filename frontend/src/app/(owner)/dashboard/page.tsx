@@ -730,11 +730,11 @@ export default function OwnerDashboard() {
            <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Start Date</p>
-                 <input name="startDate" type="date" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" />
+                 <input name="startDate" type="date" required min={new Date().toISOString().slice(0, 10)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" />
               </div>
               <div className="space-y-2">
                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Return Date</p>
-                 <input name="endDate" type="date" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" />
+                 <input name="endDate" type="date" required min={new Date().toISOString().slice(0, 10)} className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" />
               </div>
            </div>
 

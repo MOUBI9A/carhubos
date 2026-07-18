@@ -623,6 +623,7 @@ export default function BookingsScheduler() {
               <input
                 type="date"
                 required
+                min={new Date().toISOString().slice(0, 10)}
                 value={form.startDate}
                 onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
                 className={inputCls}
@@ -633,6 +634,7 @@ export default function BookingsScheduler() {
               <input
                 type="date"
                 required
+                min={form.startDate || new Date().toISOString().slice(0, 10)}
                 value={form.endDate}
                 onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
                 className={inputCls}
