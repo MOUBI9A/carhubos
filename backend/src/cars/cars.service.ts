@@ -7,15 +7,22 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCarDto, UpdateCarDto } from './dto/cars.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Injectable()
 export class CarsService {
   constructor(
     private prisma: PrismaService,
     private auditLogs: AuditLogsService,
+    private entitlements: EntitlementsService,
   ) {}
 
   async create(agencyId: string, createCarDto: CreateCarDto, actorId: string) {
+    // SaaS gates: block suspended tenants, then enforce the plan's fleet limit
+    // (no-op on unlimited/BETA plans). PLAN_LIMIT_REACHED drives the upgrade prompt.
+    await this.entitlements.assertOperating(agencyId);
+    await this.entitlements.assertWithinLimit(agencyId, 'cars');
+
     // licensePlate is unique per agency — surface a clean 409 instead of a P2002 500
     const existing = await this.prisma.car.findFirst({
       where: { agencyId, licensePlate: createCarDto.licensePlate },

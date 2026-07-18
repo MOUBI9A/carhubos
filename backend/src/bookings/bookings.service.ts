@@ -11,6 +11,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { TrustService } from '../trust/trust.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Injectable()
 export class BookingsService {
@@ -20,6 +21,7 @@ export class BookingsService {
     private webhooks: WebhooksService,
     private pdfEngine: PdfEngineService,
     private trust: TrustService,
+    private entitlements: EntitlementsService,
   ) {}
 
   async create(
@@ -27,6 +29,11 @@ export class BookingsService {
     createBookingDto: CreateBookingDto,
     actorId: string,
   ) {
+    // SaaS gates: block suspended tenants, then enforce the plan's monthly
+    // booking quota (no-op on unlimited/BETA plans).
+    await this.entitlements.assertOperating(agencyId);
+    await this.entitlements.assertWithinLimit(agencyId, 'bookings');
+
     const { carId, customerId, startDate, endDate } = createBookingDto;
     const start = new Date(startDate);
     const end = new Date(endDate);

@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_PRESETS, STAFF_PRESETS } from '../common/capabilities';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 import {
   CreateStaffDto,
   UpdateStaffCapabilitiesDto,
@@ -21,7 +22,10 @@ import {
  */
 @Injectable()
 export class AgencyStaffService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   /** Resolve a preset name → its capability set (role presets ∪ staff presets). */
   private capsForPreset(preset: string): string[] | undefined {
@@ -74,6 +78,11 @@ export class AgencyStaffService {
       // DTO @IsIn already guards this; defensive belt-and-suspenders.
       throw new ConflictException('Unknown preset.');
     }
+
+    // SaaS gates: block suspended tenants, then enforce the plan's staff-seat
+    // limit (no-op on unlimited/BETA plans).
+    await this.entitlements.assertOperating(agencyId);
+    await this.entitlements.assertWithinLimit(agencyId, 'staff');
 
     if (callerRole !== 'ROOT_ADMIN') {
       const caller = await this.prisma.agencyMembership.findUnique({
