@@ -180,8 +180,10 @@ export class BookingsService {
         },
       });
 
-      // 20% VAT, quantized to 2 decimals (currency precision).
-      const taxAmount = totalPrice.times(0.2).toDecimalPlaces(2);
+      // VAT is INCLUSIVE (founder decision): totalPrice is the gross the renter
+      // pays; taxAmount is the 20% VAT *embedded* in it = total × 20/120.
+      // The invoice/payment total stays == totalPrice (VAT is not added on top).
+      const taxAmount = totalPrice.times(20).dividedBy(120).toDecimalPlaces(2);
       const invoice = await tx.invoice.create({
         data: {
           amount: totalPrice,
