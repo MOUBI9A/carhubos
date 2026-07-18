@@ -40,6 +40,7 @@ export default function LoginPage() {
       <div className="relative hidden lg:block">
         <AgencyImage
           slot="hero"
+          src="/img/hero-handover.webp"
           fill
           rounded="rounded-none"
           alt="An agency owner handing over the keys at golden hour"

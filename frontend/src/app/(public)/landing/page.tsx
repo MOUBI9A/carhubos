@@ -47,6 +47,7 @@ export default function LandingPage() {
           <div className="relative animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150">
             <AgencyImage
               slot="hero"
+              src="/img/hero-handover.webp"
               alt="An agency owner handing over the keys"
               ratio="4 / 3"
               rounded="rounded-2xl"

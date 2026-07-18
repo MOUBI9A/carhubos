@@ -55,6 +55,7 @@ export default function SignupPage() {
       <div className="relative hidden lg:block">
         <AgencyImage
           slot="agency"
+          src="/img/agency-storefront.webp"
           fill
           rounded="rounded-none"
           alt="A boutique car-rental agency storefront at golden hour"
