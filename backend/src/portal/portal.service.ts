@@ -52,6 +52,28 @@ export class PortalService {
     return { ...user, trustSummary };
   }
 
+  /**
+   * The renter's OWN document vault (RenterDocument), self-scoped on the
+   * caller's `userId`. This is the owner reading their own documents, so it
+   * needs NO consent grant — the consent gate governs AGENCY reads of this same
+   * vault (see ConsentService.readDocuments), not the owner's own view.
+   */
+  async documents(userId: string) {
+    return this.prisma.renterDocument.findMany({
+      where: { ownerUserId: userId },
+      select: {
+        id: true,
+        type: true,
+        label: true,
+        fileUrl: true,
+        verified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   /** The renter's bookings, newest first, with car + status + dates + price. */
   async bookings(userId: string) {
     return this.prisma.booking.findMany({

@@ -51,6 +51,17 @@ export interface PortalNotification {
   userId: string;
 }
 
+/** GET /portal/documents item — a document in the renter's OWN global vault. */
+export interface RenterDocument {
+  id: string;
+  type: string;
+  label: string | null;
+  fileUrl: string | null;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type BookingStatus = 'REQUESTED' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 export interface PortalBookingCar {

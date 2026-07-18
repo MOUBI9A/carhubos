@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import api from '@/lib/api';
-import type { ConsentGrant, PortalMe, PortalNotification } from './types';
+import type { ConsentGrant, PortalMe, PortalNotification, RenterDocument } from './types';
 
 function errMessage(err: any, fallback: string): string {
   return err?.response?.data?.message || err?.message || fallback;
@@ -62,6 +62,31 @@ export function usePortalConsent() {
   }, [fetchConsent]);
 
   return { grants, isLoading, error, refetch: fetchConsent };
+}
+
+export function usePortalDocuments() {
+  const [documents, setDocuments] = useState<RenterDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const { data } = await api.get<RenterDocument[]>('/portal/documents');
+      setDocuments(data);
+    } catch (err: any) {
+      setError(errMessage(err, 'Could not load your documents.'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  return { documents, isLoading, error, refetch: fetchDocuments };
 }
 
 export function usePortalNotifications() {

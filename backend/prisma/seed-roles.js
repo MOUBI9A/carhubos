@@ -53,6 +53,7 @@ async function main() {
   ];
 
   let renterUser = null;
+  let ownerUser = null;
   for (const a of accounts) {
     const user = await prisma.user.upsert({
       where: { email: a.email },
@@ -68,6 +69,7 @@ async function main() {
       },
     });
     if (a.role === 'RENTER') renterUser = user;
+    if (a.role === 'OWNER') ownerUser = user;
     console.log(`  ✓ ${a.role.padEnd(11)} ${a.email}  /  admin123`);
 
     // Agency-scoped roles need an AgencyMembership or CapabilitiesGuard 403s
@@ -131,10 +133,17 @@ async function main() {
         riskLevel: 'TRUSTED',
       },
     });
-    if (renterUser.renterIdentityId !== identity.id) {
-      await prisma.user.update({
+    // Link the identity and provision a stable Trust Vault QR token so the
+    // portal QR/badge + the agency's consent-request-by-QR flow work E2E.
+    // qrHash is @unique; a fixed demo token keeps reseeds idempotent.
+    const DEMO_QR = 'FDR-VAULT-SAMI-8F2A4C7E';
+    const patch = {};
+    if (renterUser.renterIdentityId !== identity.id) patch.renterIdentityId = identity.id;
+    if (!renterUser.qrHash) patch.qrHash = DEMO_QR;
+    if (Object.keys(patch).length > 0) {
+      renterUser = await prisma.user.update({
         where: { id: renterUser.id },
-        data: { renterIdentityId: identity.id },
+        data: patch,
       });
     }
 
@@ -155,6 +164,36 @@ async function main() {
     console.log(
       `  ✓ renter vault: RenterIdentity (${identity.riskLevel}) linked + ${vault.length} RenterDocuments (${added} new) for ${renterUser.email}`,
     );
+
+    // Seed a PENDING consent request from the demo agency so the renter portal
+    // opens with something to review out of the box (log in as renter → approve
+    // → the agency can then read the vault). Idempotent: only when the renter
+    // has no consent grant at all yet.
+    const existingGrant = await prisma.consentGrant.findFirst({
+      where: { grantorUserId: renterUser.id },
+    });
+    if (!existingGrant) {
+      const grant = await prisma.consentGrant.create({
+        data: {
+          grantorUserId: renterUser.id,
+          agencyId: agency.id,
+          requestedByUserId: ownerUser?.id ?? null,
+          scope: ['CIN_FRONT', 'DRIVING_LICENSE'],
+          status: 'PENDING',
+        },
+      });
+      await prisma.notification.create({
+        data: {
+          userId: renterUser.id,
+          type: 'CONSENT_REQUESTED',
+          title: `${agency.name} requests access to your documents`,
+          body: 'Requested document access: CIN_FRONT, DRIVING_LICENSE.',
+          relatedType: 'ConsentGrant',
+          relatedId: grant.id,
+        },
+      });
+      console.log(`  ✓ seeded a PENDING consent request + notification for ${renterUser.email}`);
+    }
   }
 
   console.log('\nRole accounts ready (password: admin123).');

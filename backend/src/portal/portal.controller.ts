@@ -31,6 +31,11 @@ export class PortalController {
     return this.portalService.me(user.id);
   }
 
+  @Get('documents')
+  documents(@CurrentUser() user: any) {
+    return this.portalService.documents(user.id);
+  }
+
   @Get('bookings')
   bookings(@CurrentUser() user: any) {
     return this.portalService.bookings(user.id);

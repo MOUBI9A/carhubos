@@ -18,11 +18,18 @@ import {
   RefreshCw,
   AlertTriangle,
   Copy,
+  FileText,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
-import { usePortalMe, usePortalConsent, usePortalNotifications } from './usePortalData';
+import {
+  usePortalMe,
+  usePortalConsent,
+  usePortalNotifications,
+  usePortalDocuments,
+} from './usePortalData';
 import {
   CONSENT_STATUS_STYLES,
   RISK_LEVEL_STYLES,
@@ -50,6 +57,12 @@ export default function RenterPortal() {
     error: notifError,
     refetch: refetchNotifications,
   } = usePortalNotifications();
+  const {
+    documents,
+    isLoading: docsLoading,
+    error: docsError,
+    refetch: refetchDocs,
+  } = usePortalDocuments();
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -368,6 +381,60 @@ export default function RenterPortal() {
               </Card>
             </>
           )}
+
+          {/* Vault documents — its own loading state, so a slow docs fetch never
+              blanks the profile / trust / QR cards above it. */}
+          <Card variant="outline">
+            <CardHeader>
+              <CardTitle>My Documents</CardTitle>
+            </CardHeader>
+            {docsLoading ? (
+              <SkeletonRows rows={2} />
+            ) : docsError ? (
+              <SectionError message={docsError} onRetry={refetchDocs} />
+            ) : documents.length === 0 ? (
+              <div className="flex items-start gap-3 py-1 text-white/30">
+                <FileText className="w-5 h-5 shrink-0" />
+                <p className="text-xs font-medium">No documents in your vault yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white truncate">
+                        {doc.label ?? scopeLabel(doc.type)}
+                      </p>
+                      <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest truncate">
+                        {scopeLabel(doc.type)}
+                      </p>
+                    </div>
+                    {doc.verified ? (
+                      <span className="shrink-0 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-success">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-white/30">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                ))}
+                <div className="flex items-center gap-2 pt-2 text-white/30">
+                  <Lock className="w-3 h-3 shrink-0" />
+                  <p className="text-[10px] font-medium leading-relaxed">
+                    Private to you. Agencies only see these after you approve a request in the Consent Center.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
 
         {/* ═══════ Column 2-3 — Consent Center ═══════ */}
