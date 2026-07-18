@@ -35,6 +35,8 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { SearchModule } from './common/search/search.module';
 import { TrustModule } from './trust/trust.module';
 import { AgencyStaffModule } from './agency-staff/agency-staff.module';
+import { ConsentModule } from './consent/consent.module';
+import { PortalModule } from './portal/portal.module';
 
 @Module({
   imports: [
@@ -78,6 +80,8 @@ import { AgencyStaffModule } from './agency-staff/agency-staff.module';
     SearchModule,
     TrustModule,
     AgencyStaffModule,
+    ConsentModule,
+    PortalModule,
   ],
   controllers: [AppController],
   providers: [

@@ -94,6 +94,7 @@ model User {
   customerRecords Customer[] // agency Customer rows that link to this portal account
   consentGrants   ConsentGrant[] // document-access grants this renter has issued
   notifications   Notification[]
+  renterDocuments RenterDocument[] // the renter's OWN global identity-document vault
 
   @@index([agencyId])
 }
@@ -583,4 +584,26 @@ model Notification {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+}
+
+// 🗄️ The renter's OWN global, cross-tenant identity-document vault. This is the
+// store the consent subsystem actually governs: it is renter-owned (keyed on
+// ownerUserId), NOT an agency's own collected paperwork. An agency's own
+// Customer/CustomerDocument rows are a SEPARATE store it already owns and reads
+// ungated (capability-gated on customer.view). An agency may read a renter's
+// RenterDocuments ONLY through an ACTIVE, in-scope ConsentGrant — see
+// ConsentService.readDocuments (the single enforcement point).
+model RenterDocument {
+  id        String   @id @default(cuid())
+  type      String // CIN_FRONT, CIN_BACK, DRIVING_LICENSE, PASSPORT, ...
+  label     String?
+  fileUrl   String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerUserId String
+  owner       User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, type])
 }
