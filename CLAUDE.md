@@ -1,7 +1,10 @@
-# CLAUDE.md — CarHub / Infinity OS
+# CLAUDE.md — Fider
 
 Multi-tenant SaaS ERP for car-rental agencies, localized for **Morocco** (currency **MAD**, **20% VAT**).
+**Public brand = "Fider"** (tagline *"the trust layer for mobility"*) — rebranded from "Infinity"/"CarHub" across the frontend (nav, footer, login, `/signup`, metadata). The repo dir is still `carhubos`; internal-only CSS class names (`.btn-infinity`) are unchanged.
 Being taken from demo → market-ready. **This file + [docs/AUDIT_BACKLOG.md](docs/AUDIT_BACKLOG.md) are the source of truth.** Older docs (`docs/README.md`, `docs/PRODUCTION_READINESS_REPORT.md`, the dossiers) are historical and may be stale — trust these two. **Keep this file current at the end of every phase.**
+
+**Public surface:** `/landing` (marketing — hero, features, `#solutions` with an interactive client-side **Trust Console** demo, `#enterprise`, honest capability tiles, `#contact` with WhatsApp `+212616880653` + email `hamzamoadin37@gmail.com`), `/login`, `/signup` (agency onboarding → `POST /auth/register` creates OWNER + agency → auto-login). Note: `lib/api.ts`'s 401 interceptor exempts public routes (`/landing`,`/login`,`/signup`,`/`) so logged-out visitors aren't bounced.
 
 ---
 
