@@ -37,6 +37,7 @@ import { TrustModule } from './trust/trust.module';
 import { AgencyStaffModule } from './agency-staff/agency-staff.module';
 import { ConsentModule } from './consent/consent.module';
 import { PortalModule } from './portal/portal.module';
+import { EntitlementsModule } from './entitlements/entitlements.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { PortalModule } from './portal/portal.module';
     AgencyStaffModule,
     ConsentModule,
     PortalModule,
+    EntitlementsModule,
   ],
   controllers: [AppController],
   providers: [
