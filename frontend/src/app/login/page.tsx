@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
-import { Shield, Briefcase, UserCircle, Users, Mail, Lock, Zap } from 'lucide-react';
+import { AgencyImage } from '@/components/ui/AgencyImage';
+import { Mail, Lock, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function LoginPage() {
@@ -34,68 +35,87 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
-      {/* Background aesthetics */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      {/* Photographic brand panel (lg+) */}
+      <div className="relative hidden lg:block">
+        <AgencyImage
+          slot="hero"
+          fill
+          rounded="rounded-none"
+          alt="An agency owner handing over the keys at golden hour"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/10" />
+        <div className="absolute inset-0 flex flex-col justify-end p-12">
+          <p className="font-display text-3xl md:text-4xl text-foreground max-w-sm leading-[1.15]">
+            The trust layer for mobility.
+          </p>
+          <p className="text-text-muted mt-4 max-w-sm leading-relaxed">
+            Trust, fleet and finance on one spine — know a renter&apos;s history before you
+            hand over the keys.
+          </p>
+        </div>
+      </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10"
-      >
+      {/* Form */}
+      <div className="relative flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md relative z-10"
+        >
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-black tracking-tighter text-white uppercase italic">
+          <h1 className="font-display text-4xl text-foreground">
             Fider
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-[10px] mt-2">
+          <p className="eyebrow mt-3">
             Sign in to your agency
           </p>
         </div>
 
-        <form onSubmit={handleRealLogin} className="glass p-8 rounded-[2rem] shadow-2xl space-y-6 border-white/5">
+        <form onSubmit={handleRealLogin} className="bg-surface border border-hairline rounded-2xl shadow-soft p-8 space-y-6">
            <div className="space-y-4">
               <div className="space-y-1.5">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Email</p>
+                 <p className="eyebrow px-1">Email</p>
                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-                    <input 
-                      required 
-                      type="email" 
+                    <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
+                    <input
+                      required
+                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary focus:bg-primary/5 transition-all shadow-inner" 
-                      placeholder="name@agency.com" 
+                      className="w-full bg-surface-raised border border-hairline rounded-xl ps-11 pe-4 py-4 text-sm font-medium text-foreground outline-none focus:border-primary transition-all"
+                      placeholder="name@agency.com"
                     />
                  </div>
               </div>
-              
+
               <div className="space-y-1.5">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Password</p>
+                 <p className="eyebrow px-1">Password</p>
                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-                    <input 
-                      required 
-                      type="password" 
+                    <Lock className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
+                    <input
+                      required
+                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary focus:bg-primary/5 transition-all shadow-inner" 
-                      placeholder="••••••••" 
+                      className="w-full bg-surface-raised border border-hairline rounded-xl ps-11 pe-4 py-4 text-sm font-medium text-foreground outline-none focus:border-primary transition-all"
+                      placeholder="••••••••"
                     />
                  </div>
               </div>
            </div>
 
-           <Button type="submit" className="w-full py-5 text-xs font-black tracking-[0.2em]" disabled={isLoading}>
-              {isLoading ? 'Signing in…' : 'Sign In'}
+           <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in…' : 'Sign in'}
            </Button>
         </form>
 
-        <p className="text-center mt-8 text-white/20 text-[9px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+        <p className="text-center mt-8 text-text-faint text-xs flex items-center justify-center gap-2">
           <Zap className="w-3 h-3" />
           Secure session · HttpOnly cookie
         </p>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

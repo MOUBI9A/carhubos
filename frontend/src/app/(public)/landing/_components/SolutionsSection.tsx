@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import TrustConsole from './TrustConsole';
 
 const PILLARS = [
@@ -27,8 +28,6 @@ const PILLARS = [
       "A renter's CIN is HMAC-hashed on device, then reviews and blacklist flags from every agency resolve into one cross-network risk band and deposit rule — seen before the keys leave your hand. No shared list of names, and no competitor shares renter trust across agencies.",
     icon: Fingerprint,
     tag: 'Trust · Reviews · Blacklist',
-    color: 'text-primary',
-    bg: 'bg-primary/10',
     featured: true,
   },
   {
@@ -38,8 +37,6 @@ const PILLARS = [
       'Request → approve → active → complete on one rail, with a hard double-booking guard (re-checked inside a database transaction), e-signed digital contracts, and pre/post inspections — the auditable record every trust review is built on.',
     icon: CalendarCheck,
     tag: 'Bookings · Contracts',
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
   },
   {
     name: 'Financial Engine',
@@ -48,8 +45,6 @@ const PILLARS = [
       'MAD-native invoicing with 20% VAT, security deposits, and automatic PAID / PARTIAL / DUE reconciliation to the cent — money math in Decimal cents, plus per-booking payment verification and per-vehicle ROI.',
     icon: Receipt,
     tag: 'Invoices · Payments',
-    color: 'text-success',
-    bg: 'bg-success/10',
   },
   {
     name: 'Fleet & Assets',
@@ -58,8 +53,6 @@ const PILLARS = [
       'Every vehicle carries its own P&L — documents, maintenance, availability and live ROI — with document-expiry enforcement that blocks a car from renting on lapsed papers.',
     icon: Car,
     tag: 'Fleet · Maintenance',
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
   },
   {
     name: 'B2B Hub',
@@ -68,8 +61,6 @@ const PILLARS = [
       'List and share fleet across the agency network, so a car idle on your lot earns from demand sitting at another — turning idle inventory into utilization.',
     icon: Building2,
     tag: 'Hub · Network',
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
   },
 ];
 
@@ -93,8 +84,8 @@ const STEPS = [
 
 const LEGEND = [
   { label: 'Trusted', dot: 'bg-success' },
-  { label: 'Caution', dot: 'bg-amber-400' },
-  { label: 'New', dot: 'bg-white/40' },
+  { label: 'Caution', dot: 'bg-warning' },
+  { label: 'New', dot: 'bg-text-faint' },
   { label: 'Blacklisted', dot: 'bg-danger' },
 ];
 
@@ -110,27 +101,16 @@ const ENTERPRISE = [
 
 export default function SolutionsSection() {
   return (
-    <section id="solutions" className="relative py-32 bg-[#050505] overflow-hidden scroll-mt-24">
-      {/* Ambient blobs + noise — continuous with the hero */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] animate-pulse delay-700" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
-      </div>
-
-      <div className="container mx-auto px-6 relative z-10">
+    <section id="solutions" className="relative py-24 md:py-32 scroll-mt-24">
+      <div className="mx-auto max-w-6xl px-6">
         {/* (A) Header */}
-        <div className="max-w-3xl text-center md:text-left mb-16 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-5">
-            Solutions · The Trust Network
-          </h2>
-          <h3 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-[0.9] mb-6">
+        <div className="max-w-3xl mb-14 md:mb-16 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+          <p className="eyebrow mb-4">Solutions · The trust network</p>
+          <h2 className="display text-4xl md:text-5xl lg:text-6xl text-foreground mb-5">
             A stranger to you. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500">
-              Not to the network.
-            </span>
-          </h3>
-          <p className="text-white/50 font-medium tracking-tight max-w-xl mx-auto md:mx-0 leading-relaxed">
+            Not to the network.
+          </h2>
+          <p className="text-lg text-text-muted leading-relaxed">
             Every completed rental leaves a signal. Fider privacy-hashes each renter&apos;s national ID, then
             resolves reviews and blacklist flags from across the network into one risk band — seen before the
             keys change hands. Fleet, bookings and MAD-native finance ride the same spine.
@@ -145,24 +125,20 @@ export default function SolutionsSection() {
 
           <div className="lg:col-span-5 flex flex-col justify-between gap-8">
             {/* 3-step flow */}
-            <div className="relative pl-2">
-              <div className="absolute left-[27px] top-6 bottom-6 w-px bg-primary/20" />
+            <div className="relative ps-2">
+              <div className="absolute start-[27px] top-6 bottom-6 w-px bg-hairline" />
               <div className="space-y-8">
                 {STEPS.map((s, i) => (
                   <div key={i} className="relative flex gap-5">
-                    <div className="relative z-10 shrink-0 w-12 h-12 rounded-2xl glass flex items-center justify-center border border-primary/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
-                      <s.icon className="w-5 h-5 text-primary" />
+                    <div className="relative z-10 shrink-0 w-12 h-12 rounded-2xl bg-surface-raised border border-hairline flex items-center justify-center">
+                      <s.icon className="w-5 h-5 text-text-muted" strokeWidth={1.5} />
                     </div>
                     <div className="pt-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[10px] font-black text-primary/70 tracking-[0.3em]">
-                          0{i + 1}
-                        </span>
-                        <h4 className="text-base font-black text-white uppercase italic tracking-tighter">
-                          {s.title}
-                        </h4>
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <span className="eyebrow">0{i + 1}</span>
+                        <h4 className="text-base font-semibold text-foreground">{s.title}</h4>
                       </div>
-                      <p className="text-white/50 text-sm font-medium leading-relaxed">{s.body}</p>
+                      <p className="text-sm text-text-muted leading-relaxed">{s.body}</p>
                     </div>
                   </div>
                 ))}
@@ -170,17 +146,13 @@ export default function SolutionsSection() {
             </div>
 
             {/* Risk-band legend */}
-            <div className="glass rounded-2xl px-5 py-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 mb-3">
-                Risk bands
-              </p>
+            <div className="bg-surface border border-hairline rounded-2xl px-5 py-4">
+              <p className="eyebrow mb-3">Risk bands</p>
               <div className="flex flex-wrap gap-x-6 gap-y-2">
                 {LEGEND.map((l) => (
                   <div key={l.label} className="flex items-center gap-2">
                     <span className={cn('w-2 h-2 rounded-full', l.dot)} />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/60">
-                      {l.label}
-                    </span>
+                    <span className="eyebrow">{l.label}</span>
                   </div>
                 ))}
               </div>
@@ -190,45 +162,44 @@ export default function SolutionsSection() {
 
         {/* (C) Pillar spine */}
         <div className="mt-20">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white/30 mb-8 text-center md:text-left">
-            One spine · six modules
-          </h4>
+          <p className="eyebrow mb-8">One spine · six modules</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {PILLARS.map((p, i) => (
               <Card
                 key={i}
                 padding="lg"
                 className={cn(
-                  'group bg-white/[0.02] border-white/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4',
-                  p.featured
-                    ? 'ring-1 ring-primary/40 shadow-[0_0_40px_rgba(168,85,247,0.15)] md:col-span-2 lg:col-span-1'
-                    : 'hover:ring-1 ring-white/10',
+                  'group h-full flex flex-col animate-in fade-in slide-in-from-bottom-4',
+                  p.featured && 'ring-1 ring-metal/30 md:col-span-2 lg:col-span-1',
                 )}
                 style={{ animationDelay: `${i * 90}ms` }}
               >
+                {p.featured && (
+                  <AgencyImage
+                    slot="agency"
+                    alt="An agency owner reviewing a renter's trust band before handing over the keys"
+                    ratio="16 / 9"
+                    rounded="rounded-lg"
+                    className="mb-5"
+                  />
+                )}
                 <div
                   className={cn(
-                    'w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-white/5 transition-transform group-hover:scale-110 duration-500',
-                    p.bg,
+                    'mb-6 flex h-12 w-12 items-center justify-center rounded-xl border bg-surface-raised transition-colors',
+                    p.featured
+                      ? 'border-metal/40'
+                      : 'border-hairline group-hover:border-metal/40',
                   )}
                 >
-                  <p.icon className={cn('w-7 h-7', p.color)} />
+                  <p.icon
+                    className={cn('h-6 w-6', p.featured ? 'text-metal' : 'text-text-muted')}
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <h5
-                  className={cn(
-                    'text-lg font-black text-white uppercase italic tracking-tighter mb-2',
-                    p.featured && 'text-glow',
-                  )}
-                >
-                  {p.name}
-                </h5>
-                <p className="text-white/30 text-[11px] font-bold uppercase tracking-tight mb-3">
-                  {p.pain}
-                </p>
-                <p className="text-white/60 text-sm font-medium leading-relaxed mb-4">{p.valueProp}</p>
-                <span className="inline-block text-[9px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 rounded-full px-2.5 py-1">
-                  {p.tag}
-                </span>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{p.name}</h3>
+                <p className="text-sm font-medium text-text-muted leading-relaxed mb-3">{p.pain}</p>
+                <p className="text-sm text-text-muted leading-relaxed mb-5 flex-1">{p.valueProp}</p>
+                <p className="eyebrow">{p.tag}</p>
               </Card>
             ))}
           </div>
@@ -236,27 +207,26 @@ export default function SolutionsSection() {
 
         {/* (D) Enterprise strip — resolves the #enterprise anchor */}
         <div id="enterprise" className="mt-20 scroll-mt-24">
-          <div className="max-w-3xl mb-6 text-center md:text-left">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-3">
-              Enterprise-grade by default
-            </h4>
-            <p className="text-white/60 font-medium tracking-tight leading-relaxed max-w-xl mx-auto md:mx-0">
+          <div className="max-w-3xl mb-8">
+            <p className="eyebrow mb-4">Security &amp; compliance</p>
+            <h3 className="display text-2xl md:text-3xl text-foreground mb-4">
+              Enterprise-grade by default.
+            </h3>
+            <p className="text-lg text-text-muted leading-relaxed">
               Security posture, not a promise — the architecture that lets agencies share trust without
               sharing customer lists.
             </p>
           </div>
-          <div className="glass rounded-2xl px-6 py-5 flex flex-wrap items-center gap-x-8 gap-y-4">
+          <div className="bg-surface border border-hairline rounded-2xl px-6 py-5 flex flex-wrap items-center gap-x-8 gap-y-4">
             {ENTERPRISE.map((e) => (
               <div key={e.label} className="flex items-center gap-2.5">
-                <e.icon className="w-4 h-4 text-primary/70 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50">
-                  {e.label}
-                </span>
+                <e.icon className="w-4 h-4 text-text-faint shrink-0" strokeWidth={1.5} />
+                <span className="eyebrow">{e.label}</span>
               </div>
             ))}
             <Link
               href="#contact"
-              className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-white/70 hover:text-primary transition-colors"
+              className="ms-auto inline-flex items-center gap-1.5 text-sm font-medium text-text-muted hover:text-primary transition-colors"
             >
               Request the security overview
               <ArrowRight className="w-3.5 h-3.5" />

@@ -5,12 +5,14 @@ import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  Fuel, 
-  Settings, 
-  Star, 
-  MapPin, 
+import { AgencyImage, CarPhoto } from '@/components/ui/AgencyImage';
+import { SealDivider } from '@/components/ui/Seal';
+import {
+  Users,
+  Fuel,
+  Settings,
+  Star,
+  MapPin,
   ShieldCheck,
   Zap,
   CheckCircle2,
@@ -36,32 +38,40 @@ export default function AgencyPublicPage() {
   const subdomain = params.subdomain;
 
   return (
-    <div className="container mx-auto px-6 py-12">
+    <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
       {/* Agency Header */}
-      <div className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="mb-14 md:mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Storefront hero photography (real photo swaps in via src later) */}
+        <AgencyImage
+          slot="agency"
+          alt={`${AGENCY_DATA.name} storefront`}
+          ratio="21 / 9"
+          rounded="rounded-3xl"
+          className="shadow-soft mb-8"
+        />
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
            <div>
               <div className="flex items-center gap-3 mb-4">
-                 <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black tracking-widest uppercase">Verified Agency</Badge>
-                 <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span className="text-xs font-black text-white">{AGENCY_DATA.rating}</span>
-                    <span className="text-[10px] font-bold text-white/40">({AGENCY_DATA.reviews} reviews)</span>
+                 <Badge variant="trust">Verified agency</Badge>
+                 <div className="flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                    <span className="font-mono tabular text-sm font-semibold text-foreground">{AGENCY_DATA.rating}</span>
+                    <span className="text-xs text-text-faint">({AGENCY_DATA.reviews} reviews)</span>
                  </div>
               </div>
-              <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-white uppercase italic leading-none mb-4">{AGENCY_DATA.name}</h1>
-              <p className="flex items-center gap-2 text-white/40 font-bold uppercase tracking-widest text-xs">
-                <MapPin className="w-4 h-4 text-primary" />
+              <h1 className="display text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight mb-4">{AGENCY_DATA.name}</h1>
+              <p className="flex items-center gap-2 text-text-muted text-sm">
+                <MapPin className="w-4 h-4 text-text-faint" strokeWidth={1.5} />
                 {AGENCY_DATA.location}
               </p>
            </div>
-           <div className="flex gap-4">
-              <div className="text-right hidden md:block">
-                 <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">Ecosystem Powered by</p>
-                 <p className="text-sm font-black text-white uppercase italic tracking-tighter">Fider</p>
+           <div className="flex items-center gap-4">
+              <div className="text-end hidden md:block">
+                 <p className="eyebrow mb-1">Ecosystem powered by</p>
+                 <p className="font-display text-lg text-foreground">Fider</p>
               </div>
-              <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center">
-                 <ShieldCheck className="w-6 h-6 text-primary" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-raised border border-hairline">
+                 <ShieldCheck className="w-6 h-6 text-text-muted" strokeWidth={1.5} />
               </div>
            </div>
         </div>
@@ -70,46 +80,50 @@ export default function AgencyPublicPage() {
       {/* Fleet Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
         {AGENCY_DATA.fleet.map((car, i) => (
-          <Card key={i} className="group overflow-hidden border-white/5 bg-white/[0.02] hover:ring-1 ring-primary/50 transition-all duration-500 animate-in fade-in slide-in-from-bottom-6 duration-1000" style={{ animationDelay: `${i * 100}ms` }}>
-            <div className="p-8">
-              <div className="flex justify-between items-start mb-12">
+          <Card key={i} padding="none" className="group h-full overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-1000" style={{ animationDelay: `${i * 100}ms` }}>
+            <div className="p-6 md:p-8">
+              {/* Car photo — first-class hero of the card */}
+              <CarPhoto
+                alt={car.name}
+                plate={car.category}
+                price={`${car.price} MAD`}
+                rounded="rounded-2xl"
+                className="mb-6 transition-transform duration-700 group-hover:scale-[1.01]"
+              />
+
+              <div className="flex justify-between items-start gap-4 mb-6">
                  <div>
-                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-[0.2em] mb-3 text-white/40 border-white/10">{car.category}</Badge>
-                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">{car.name}</h3>
+                    <p className="eyebrow mb-2">{car.category}</p>
+                    <h3 className="text-2xl font-semibold text-foreground leading-tight">{car.name}</h3>
                  </div>
                  {car.tag && (
-                    <Badge className="bg-white/10 text-white border-white/10 text-[9px] font-black tracking-widest uppercase">{car.tag}</Badge>
+                    <Badge variant="secondary" className="shrink-0">{car.tag}</Badge>
                  )}
               </div>
 
-              {/* Placeholder for Car Image */}
-              <div className="h-48 w-full bg-white/[0.03] rounded-[2rem] border border-white/5 mb-8 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-700">
-                 <div className="text-6xl grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700">🚗</div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                 <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 border border-white/5">
-                    <Users className="w-4 h-4 text-white/20" />
-                    <span className="text-[10px] font-black text-white uppercase">{car.passengers} seats</span>
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                 <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-raised border border-hairline">
+                    <Users className="w-4 h-4 text-text-faint" strokeWidth={1.5} />
+                    <span className="text-xs text-text-muted">{car.passengers} seats</span>
                  </div>
-                 <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 border border-white/5">
-                    <Fuel className="w-4 h-4 text-white/20" />
-                    <span className="text-[10px] font-black text-white uppercase">{car.fuel}</span>
+                 <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-raised border border-hairline">
+                    <Fuel className="w-4 h-4 text-text-faint" strokeWidth={1.5} />
+                    <span className="text-xs text-text-muted">{car.fuel}</span>
                  </div>
-                 <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 border border-white/5">
-                    <Settings className="w-4 h-4 text-white/20" />
-                    <span className="text-[10px] font-black text-white uppercase">{car.transmission}</span>
+                 <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-raised border border-hairline">
+                    <Settings className="w-4 h-4 text-text-faint" strokeWidth={1.5} />
+                    <span className="text-xs text-text-muted">{car.transmission}</span>
                  </div>
               </div>
 
-              <div className="flex items-center justify-between pt-8 border-t border-white/5">
+              <div className="flex items-center justify-between gap-4 pt-6 border-t border-hairline">
                  <div>
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Price per day</p>
-                    <p className="text-3xl font-black text-white tracking-tighter">{car.price} <span className="text-sm text-white/40">MAD</span></p>
+                    <p className="eyebrow mb-1">Price per day</p>
+                    <p className="font-mono tabular text-2xl font-semibold text-foreground">{car.price} <span className="text-sm text-text-faint">MAD</span></p>
                  </div>
-                 <Button className="h-14 px-8 text-[11px] font-black uppercase tracking-[0.2em] group">
-                    Start Booking
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                 <Button variant="primary" size="lg" className="group">
+                    Start booking
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                  </Button>
               </div>
             </div>
@@ -118,24 +132,26 @@ export default function AgencyPublicPage() {
       </div>
 
       {/* Trust Section */}
-      <section className="glass p-12 rounded-[3rem] border border-white/10 text-center relative overflow-hidden">
-         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-         <div className="relative z-10">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-6">Security Protocol</h4>
-            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-8 max-w-2xl mx-auto">Seamless booking with the Fider Trust Vault.</h2>
-            <div className="flex flex-wrap justify-center gap-12">
-               {[
-                 { label: 'Instant ID Scan', icon: Zap },
-                 { label: 'Secure Escrow', icon: ShieldCheck },
-                 { label: 'Digital Constat', icon: CheckCircle2 },
-               ].map((item, i) => (
-                 <div key={i} className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-primary" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60">{item.label}</span>
-                 </div>
-               ))}
+      <section>
+         <Card padding="lg" className="text-center relative overflow-hidden">
+            <div className="relative z-10 max-w-2xl mx-auto">
+               <p className="eyebrow mb-4">Security protocol</p>
+               <h2 className="display text-3xl md:text-4xl text-foreground mb-6">Seamless booking with the Fider Trust Vault.</h2>
+               <SealDivider className="max-w-xs mx-auto mb-8" />
+               <div className="flex flex-wrap justify-center gap-8 md:gap-12">
+                  {[
+                    { label: 'Instant ID scan', icon: Zap },
+                    { label: 'Secure escrow', icon: ShieldCheck },
+                    { label: 'Digital constat', icon: CheckCircle2 },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                       <item.icon className="w-5 h-5 text-text-muted" strokeWidth={1.5} />
+                       <span className="text-sm text-text-muted">{item.label}</span>
+                    </div>
+                  ))}
+               </div>
             </div>
-         </div>
+         </Card>
       </section>
     </div>
   );

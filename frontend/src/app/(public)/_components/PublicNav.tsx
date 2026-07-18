@@ -17,18 +17,18 @@ export default function PublicNav() {
   const close = () => setOpen(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-      <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-        <Link href="/landing" onClick={close} className="flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]">
-            <Car className="w-6 h-6 text-white" />
+    <nav className="fixed inset-x-0 top-0 z-50 scrim">
+      <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between">
+        <Link href="/landing" onClick={close} className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-raised border border-hairline">
+            <Car className="h-5 w-5 text-metal" strokeWidth={1.75} />
           </div>
-          <span className="text-xl font-black tracking-tighter uppercase italic">Fider</span>
+          <span className="font-display text-lg text-foreground">Fider</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-10">
           {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-colors">
+            <Link key={l.href} href={l.href} className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">
               {l.label}
             </Link>
           ))}
@@ -36,10 +36,10 @@ export default function PublicNav() {
 
         <div className="hidden md:flex items-center gap-4">
           <Link href="/login">
-            <Button variant="ghost" className="text-[11px] font-black uppercase tracking-[0.2em]">Login</Button>
+            <Button variant="ghost" size="sm">Log in</Button>
           </Link>
           <Link href="/signup">
-            <Button className="text-[11px] font-black uppercase tracking-[0.2em] px-6">Get Started</Button>
+            <Button variant="primary" size="sm">Get started</Button>
           </Link>
         </div>
 
@@ -48,7 +48,7 @@ export default function PublicNav() {
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
-          className="md:hidden p-2 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+          className="md:hidden p-2 -me-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface transition-colors"
         >
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -56,24 +56,24 @@ export default function PublicNav() {
 
       {/* Mobile menu panel */}
       {open && (
-        <div className="md:hidden border-t border-white/10 bg-black/90 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="container mx-auto px-6 py-5 flex flex-col">
+        <div className="md:hidden border-t border-hairline scrim animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="mx-auto max-w-6xl px-6 py-5 flex flex-col">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={close}
-                className="py-3.5 text-sm font-black uppercase tracking-[0.2em] text-white/70 hover:text-white border-b border-white/5 transition-colors"
+                className="py-3.5 text-base font-medium text-text-muted hover:text-foreground border-b border-hairline transition-colors"
               >
                 {l.label}
               </Link>
             ))}
             <div className="flex flex-col gap-3 pt-5">
               <Link href="/login" onClick={close}>
-                <Button variant="outline" className="w-full py-3 text-[11px] font-black uppercase tracking-[0.2em]">Login</Button>
+                <Button variant="outline" className="w-full">Log in</Button>
               </Link>
               <Link href="/signup" onClick={close}>
-                <Button className="w-full py-3 text-[11px] font-black uppercase tracking-[0.2em]">Get Started</Button>
+                <Button variant="primary" className="w-full">Get started</Button>
               </Link>
             </div>
           </div>

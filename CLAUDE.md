@@ -19,6 +19,8 @@ Being taken from demo → market-ready. **This file + [docs/AUDIT_BACKLOG.md](do
 | Validation | `class-validator` DTOs | global `ValidationPipe` (`whitelist` + `forbidNonWhitelisted`) |
 | Tests | Jest | `cd backend && npx jest` |
 
+**MCP tools available in this project** (2026-07-18): `.mcp.json` connects Claude Code to the Docker MCP Toolkit gateway (`MCP_DOCKER`, `dev_workflow` profile) — GitHub (repos/files/issues/PRs/search) and Atlassian (Jira/Confluence) tools, both OAuth-authorized (`docker mcp oauth ls` → `authorized`; GitHub account `MOUBI9A`). Use them when a task actually calls for it (checking/filing a GitHub issue, opening a PR, a Jira ticket, searching a repo) — this does **not** change the locked workflow decision in §9 (commit verified milestones directly to `main`, no phase branches) unless the founder says otherwise. If a session reports these tools as unavailable/ungated, it needs an app restart to pick up `.mcp.json` — the connection itself (`docker mcp client ls`) is already live.
+
 ---
 
 ## 2. Run it locally

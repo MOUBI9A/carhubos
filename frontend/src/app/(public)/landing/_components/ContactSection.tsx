@@ -3,6 +3,7 @@
 import React, { useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { AgencyImage } from "@/components/ui/AgencyImage";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ const EMPTY_FORM: ContactFormState = {
 
 // Shared shape for the two "quick contact" pills (WhatsApp / Email / disabled state).
 const PILL_CLASSES =
-  "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-xl px-6 text-sm font-black uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
+  "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-xl px-6 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60";
 
 // Matches components/ui/input.tsx's visual language (border-input, focus ring, disabled states)
 // so the free-text message field feels like the same design system, without needing a new
@@ -99,20 +100,14 @@ export default function ContactSection({
   }
 
   return (
-    <section id="contact" className="relative py-32 overflow-hidden bg-[#050505] scroll-mt-24">
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/15 rounded-full blur-[140px]" />
-      </div>
-
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-2xl mx-auto text-center mb-16 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-5">
-            Get started &middot; Early access
-          </h2>
-          <h3 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter leading-[0.95] mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500">
+    <section id="contact" className="relative py-24 md:py-32 border-t border-hairline scroll-mt-24">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="max-w-2xl mx-auto text-center mb-14 md:mb-16 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+          <p className="eyebrow mb-4">Get started &middot; Early access</p>
+          <h2 className="display text-4xl md:text-5xl lg:text-6xl text-foreground mb-5">
             Let&apos;s put your agency on the network.
-          </h3>
-          <p className="text-white/40 font-medium tracking-tight leading-relaxed max-w-lg mx-auto">
+          </h2>
+          <p className="text-lg text-text-muted leading-relaxed max-w-lg mx-auto">
             Book a walkthrough or claim a founding-agency spot &mdash; tell us a bit about your fleet
             and we&apos;ll reply fast. No sales deck, just a real look at the product.
           </p>
@@ -125,10 +120,16 @@ export default function ContactSection({
         >
           <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* Path 1: quick contact */}
-            <div className="p-8 md:p-12 border-b lg:border-b-0 lg:border-r border-white/10 flex flex-col">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-6">
-                Quick contact
-              </h4>
+            <div className="p-8 md:p-12 border-b lg:border-b-0 lg:border-e border-hairline flex flex-col">
+              <AgencyImage
+                slot="hero"
+                alt="An agency owner handing over a set of car keys"
+                ratio="16 / 9"
+                rounded="rounded-xl"
+                className="mb-8 shadow-soft"
+              />
+
+              <h4 className="eyebrow mb-6">Quick contact</h4>
 
               <div className="space-y-3">
                 {hasWhatsapp ? (
@@ -138,7 +139,7 @@ export default function ContactSection({
                     rel="noopener noreferrer"
                     className={cn(
                       PILL_CLASSES,
-                      "bg-[#25D366] text-black shadow-lg shadow-[#25D366]/20 hover:bg-[#20bd5c]",
+                      "bg-[#25D366] text-background shadow-sm hover:bg-[#20bd5c]",
                     )}
                   >
                     <MessageCircle className="w-5 h-5" aria-hidden="true" />
@@ -150,7 +151,7 @@ export default function ContactSection({
                     disabled
                     className={cn(
                       PILL_CLASSES,
-                      "border border-dashed border-white/15 text-white/40 cursor-not-allowed hover:scale-100",
+                      "border border-dashed border-hairline text-text-faint cursor-not-allowed hover:scale-100",
                     )}
                   >
                     <MessageCircle className="w-5 h-5" aria-hidden="true" />
@@ -163,8 +164,8 @@ export default function ContactSection({
                   className={cn(
                     PILL_CLASSES,
                     hasWhatsapp
-                      ? "border border-white/15 text-white hover:bg-white/5"
-                      : "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90",
+                      ? "border border-hairline text-foreground hover:bg-surface-raised"
+                      : "bg-cream text-background shadow-sm hover:bg-white",
                   )}
                 >
                   <Mail className="w-4 h-4" aria-hidden="true" />
@@ -172,34 +173,34 @@ export default function ContactSection({
                 </a>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-white/10 space-y-4">
+              <div className="mt-8 pt-8 border-t border-hairline space-y-4">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-white/50 shrink-0" aria-hidden="true" />
+                  <Mail className="w-4 h-4 text-text-faint shrink-0" aria-hidden="true" />
                   <a
                     href={`mailto:${email}`}
-                    className="text-sm font-bold text-white/70 hover:text-white transition-colors underline decoration-white/20 underline-offset-4"
+                    className="text-sm font-medium text-text-muted hover:text-foreground transition-colors underline decoration-hairline underline-offset-4"
                   >
                     {email}
                   </a>
                 </div>
                 <div className="flex items-center gap-3">
-                  <MessageCircle className="w-4 h-4 text-white/50 shrink-0" aria-hidden="true" />
+                  <MessageCircle className="w-4 h-4 text-text-faint shrink-0" aria-hidden="true" />
                   {hasWhatsapp ? (
                     <a
                       href={quickWhatsappHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-bold text-white/70 hover:text-white transition-colors underline decoration-white/20 underline-offset-4"
+                      className="text-sm font-medium text-text-muted hover:text-foreground transition-colors underline decoration-hairline underline-offset-4"
                     >
                       {whatsapp}
                     </a>
                   ) : (
-                    <span className="text-sm font-bold text-white/50">WhatsApp &mdash; coming soon</span>
+                    <span className="text-sm font-medium text-text-faint">WhatsApp &mdash; coming soon</span>
                   )}
                 </div>
               </div>
 
-              <p className="mt-auto pt-8 text-[11px] font-medium text-white/40 leading-relaxed">
+              <p className="mt-auto pt-8 text-[11px] text-text-faint leading-relaxed">
                 We usually reply within a day. Nothing here is sent anywhere until you tap a button
                 &mdash; your details stay in your browser.
               </p>
@@ -207,9 +208,7 @@ export default function ContactSection({
 
             {/* Path 2: short form */}
             <div className="p-8 md:p-12">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-6">
-                Or send us the details
-              </h4>
+              <h4 className="eyebrow mb-6">Or send us the details</h4>
 
               <form onSubmit={handleSubmit} className="space-y-5" noValidate={false}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -268,7 +267,7 @@ export default function ContactSection({
 
                   <div className="space-y-2">
                     <Label htmlFor={`${uid}-phone`}>
-                      Phone <span className="text-white/50 font-normal normal-case">(optional)</span>
+                      Phone <span className="text-text-faint font-normal">(optional)</span>
                     </Label>
                     <Input
                       id={`${uid}-phone`}
@@ -285,7 +284,7 @@ export default function ContactSection({
 
                 <div className="space-y-2">
                   <Label htmlFor={`${uid}-message`}>
-                    Message <span className="text-white/50 font-normal normal-case">(optional)</span>
+                    Message <span className="text-text-faint font-normal">(optional)</span>
                   </Label>
                   <textarea
                     id={`${uid}-message`}
@@ -298,7 +297,7 @@ export default function ContactSection({
                   />
                 </div>
 
-                <Button type="submit" className="w-full h-12">
+                <Button type="submit" variant="primary" size="lg" className="w-full">
                   <Send className="w-4 h-4" aria-hidden="true" />
                   Send message
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -306,7 +305,7 @@ export default function ContactSection({
 
                 <div role="status" aria-live="polite" className="min-h-[1.5rem]">
                   {submitted && (
-                    <p className="flex items-center gap-2 text-sm font-bold text-success">
+                    <p className="flex items-center gap-2 text-sm font-medium text-success">
                       <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
                       Thanks &mdash; opening your messenger. We usually reply within a day.
                     </p>

@@ -28,6 +28,7 @@ export function AgencyImage({
   rounded = 'rounded-xl',
   className,
   overlay,
+  fill = false,
 }: {
   src?: string | null;
   alt: string;
@@ -36,12 +37,14 @@ export function AgencyImage({
   rounded?: string;
   className?: string;
   overlay?: React.ReactNode;
+  /** Fill the parent (h-full w-full) instead of using an aspect ratio. */
+  fill?: boolean;
 }) {
   const Glyph = SLOT_GLYPH[slot];
   return (
     <div
-      className={cn('relative overflow-hidden bg-surface-raised', rounded, className)}
-      style={{ aspectRatio: ratio }}
+      className={cn('relative overflow-hidden bg-surface-raised', fill && 'h-full w-full', rounded, className)}
+      style={fill ? undefined : { aspectRatio: ratio }}
     >
       {src ? (
         <>

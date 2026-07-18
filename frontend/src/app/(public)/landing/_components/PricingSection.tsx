@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { Check, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -55,19 +56,18 @@ export default function PricingSection() {
   const featured = 'PRO';
 
   return (
-    <section id="pricing" className="py-32 bg-black relative scroll-mt-24">
-      <div className="container mx-auto px-6">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">Free during the beta</span>
+    <section id="pricing" className="relative py-24 md:py-32 scroll-mt-24">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="text-center max-w-2xl mx-auto mb-14 md:mb-16">
+          <div className="flex justify-center mb-5">
+            <Badge variant="trust">Free during the beta</Badge>
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-[0.9] mb-6">
-            Simple, honest <span className="text-primary">pricing.</span>
+          <h2 className="display text-4xl md:text-5xl lg:text-6xl text-foreground mb-5">
+            Simple, honest pricing.
           </h2>
-          <p className="text-white/50 font-medium tracking-tight leading-relaxed">
-            Every plan is <span className="text-white font-bold">free while we&apos;re in beta</span> — pick the tier that
-            fits your fleet and pay nothing until we launch. Prices below are what you&apos;ll pay after.
+          <p className="text-lg text-text-muted leading-relaxed">
+            Every plan is <span className="text-foreground font-medium">free while we&apos;re in beta</span> — pick the
+            tier that fits your fleet and pay nothing until we launch. Prices below are what you&apos;ll pay after.
           </p>
         </div>
 
@@ -78,46 +78,48 @@ export default function PricingSection() {
               <div
                 key={plan.id}
                 className={cn(
-                  'relative flex flex-col rounded-[2rem] p-8 border transition-all',
+                  'relative flex flex-col rounded-2xl p-8',
                   isFeatured
-                    ? 'bg-primary/[0.07] border-primary/40 shadow-2xl shadow-primary/10 md:-translate-y-3'
-                    : 'glass border-white/10',
+                    ? 'bg-surface-raised border border-metal/30 shadow-soft md:-translate-y-3'
+                    : 'bg-surface border border-hairline',
                 )}
               >
                 {isFeatured && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-white text-[9px] font-black uppercase tracking-widest">
-                    Most Popular
+                  <span className="absolute -top-3 start-1/2 -translate-x-1/2">
+                    <Badge variant="trust">Most popular</Badge>
                   </span>
                 )}
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40">{plan.name}</p>
-                <div className="mt-4 flex items-end gap-1.5">
-                  <span className="text-4xl font-black text-white tracking-tighter">
+                <p className="eyebrow mb-4">{plan.name}</p>
+                <div className="flex items-end gap-1.5 mb-2">
+                  <span
+                    className={cn(
+                      'font-mono tabular text-4xl font-semibold',
+                      isFeatured ? 'metal-text' : 'text-foreground',
+                    )}
+                  >
                     {new Intl.NumberFormat('en-US').format(plan.priceMonthly)}
                   </span>
-                  <span className="text-xs font-bold text-white/40 mb-1.5">{plan.currency}/mo</span>
+                  <span className="text-xs text-text-faint mb-1.5">{plan.currency}/mo</span>
                 </div>
-                <p className="text-[11px] font-medium text-white/40 mt-2 leading-relaxed min-h-[2.5rem]">
+                <p className="text-sm text-text-muted leading-relaxed min-h-[2.5rem] mb-6">
                   {plan.description}
                 </p>
 
-                <div className="mt-6 pt-6 border-t border-white/5 space-y-2.5 flex-1">
+                <div className="border-t border-hairline pt-6 space-y-2.5 flex-1">
                   {limitLine(plan).map((l) => (
-                    <div key={l} className="flex items-center gap-2.5 text-xs text-white/70 font-medium">
-                      <Check className="w-4 h-4 text-success shrink-0" /> {l}
+                    <div key={l} className="flex items-center gap-2.5 text-sm text-text-muted">
+                      <Check className="h-4 w-4 text-primary shrink-0" /> {l}
                     </div>
                   ))}
                   {plan.features.map((f) => (
-                    <div key={f} className="flex items-center gap-2.5 text-xs text-white/70 font-medium">
-                      <Check className="w-4 h-4 text-primary shrink-0" /> {FEATURE_LABELS[f] ?? f}
+                    <div key={f} className="flex items-center gap-2.5 text-sm text-text-muted">
+                      <Check className="h-4 w-4 text-primary shrink-0" /> {FEATURE_LABELS[f] ?? f}
                     </div>
                   ))}
                 </div>
 
                 <Link href="/signup" className="mt-8">
-                  <Button
-                    variant={isFeatured ? 'primary' : 'outline'}
-                    className="w-full h-12 text-xs font-black uppercase tracking-[0.2em]"
-                  >
+                  <Button variant={isFeatured ? 'premium' : 'outline'} className="w-full">
                     Start free
                   </Button>
                 </Link>
@@ -126,7 +128,7 @@ export default function PricingSection() {
           })}
         </div>
 
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] text-white/25 mt-10">
+        <p className="text-center text-sm text-text-faint mt-10">
           Prices in MAD, VAT included · No card required during beta
         </p>
       </div>

@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import api from '@/lib/api';
 import { Building2, User, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const INPUT_CLASS =
-  'w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary focus:bg-primary/5 transition-all placeholder:text-white/25';
+  'w-full bg-surface-raised border border-hairline rounded-xl ps-11 pe-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint';
 
 export default function SignupPage() {
   const { login } = useAuth();
@@ -49,27 +50,46 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      {/* Photographic brand panel (lg+) */}
+      <div className="relative hidden lg:block">
+        <AgencyImage
+          slot="agency"
+          fill
+          rounded="rounded-none"
+          alt="A boutique car-rental agency storefront at golden hour"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/10" />
+        <div className="absolute inset-0 flex flex-col justify-end p-12">
+          <p className="font-display text-3xl md:text-4xl text-foreground max-w-sm leading-[1.15]">
+            Put your fleet on the network.
+          </p>
+          <p className="text-text-muted mt-4 max-w-sm leading-relaxed">
+            Set up your agency in minutes — and start renting to people you can already
+            trust, backed by every other agency&apos;s experience.
+          </p>
+        </div>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10"
-      >
+      {/* Form */}
+      <div className="relative flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md relative z-10"
+        >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60">Free during early access</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-hairline mb-5">
+            <span className="w-1.5 h-1.5 rounded-full bg-success" />
+            <span className="eyebrow">Free during early access</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic mb-2">Create your agency</h1>
-          <p className="text-white/40 font-medium tracking-tight text-sm max-w-xs mx-auto leading-relaxed">
+          <h1 className="display text-4xl text-foreground mb-3">Create your agency</h1>
+          <p className="text-text-muted text-sm max-w-xs mx-auto leading-relaxed">
             Set up your workspace on Fider and put your fleet on the Trust Network.
           </p>
         </div>
 
-        <form onSubmit={handleSignup} className="glass p-8 rounded-[2rem] shadow-2xl space-y-5 border-white/5">
+        <form onSubmit={handleSignup} className="bg-surface border border-hairline rounded-2xl shadow-soft p-8 space-y-5">
           <Field label="Agency name" icon={Building2}>
             <input required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className={INPUT_CLASS} placeholder="Atlas Cars" autoComplete="organization" />
           </Field>
@@ -83,22 +103,23 @@ export default function SignupPage() {
             <input required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT_CLASS} placeholder="••••••••" autoComplete="new-password" />
           </Field>
 
-          <Button type="submit" className="w-full py-5 text-xs font-black tracking-[0.2em] group" disabled={isLoading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full group" disabled={isLoading}>
             {isLoading ? 'Creating your agency…' : 'Create agency'}
             {!isLoading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
           </Button>
 
-          <p className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 pt-1 text-center">
+          <p className="flex items-center justify-center gap-2 text-[11px] text-text-faint pt-1 text-center">
             <ShieldCheck className="w-3 h-3 shrink-0" />
-            You become the OWNER — full control of your agency
+            You become the owner — full control of your agency
           </p>
         </form>
 
-        <p className="text-center mt-8 text-white/40 text-xs font-medium">
+        <p className="text-center mt-8 text-text-faint text-xs">
           Already on Fider?{' '}
-          <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+          <Link href="/login" className="text-primary font-semibold hover:underline">Sign in</Link>
         </p>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
@@ -117,11 +138,11 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</p>
-        {hint && <p className="text-[9px] font-medium text-white/25">{hint}</p>}
+        <p className="eyebrow">{label}</p>
+        {hint && <p className="text-[10px] font-medium text-text-faint">{hint}</p>}
       </div>
       <div className="relative group">
-        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors z-10" />
+        <Icon className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors z-10" />
         {children}
       </div>
     </div>
