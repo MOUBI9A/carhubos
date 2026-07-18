@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Sidebar } from './Sidebar';
+import { ImpersonationBanner } from './ImpersonationBanner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -56,6 +57,7 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <ImpersonationBanner />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Mobile backdrop */}

@@ -12,6 +12,8 @@ interface User {
   email: string;
   role: UserRole;
   agencyId?: string;
+  isImpersonated?: boolean;
+  impersonatorId?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  exitImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,8 +80,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
+  // Exit an impersonation session: swaps the cookie back to the founder's own
+  // session and returns them to the platform console.
+  const exitImpersonation = async () => {
+    const { data } = await api.post('/auth/exit-impersonation');
+    setUser(data.user);
+    setRole(data.user.role);
+    router.push('/admin');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, role, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, role, isLoading, login, logout, exitImpersonation }}
+    >
       {children}
     </AuthContext.Provider>
   );
