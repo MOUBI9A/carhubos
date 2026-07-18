@@ -4,47 +4,77 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   FIDER LUX — design tokens (Phase 12)
+   A warm, boutique-hospitality dark system: graphite surfaces, cream text,
+   a restrained violet interactive accent, and brass/gold reserved for a few
+   premium "trust" moments. Retires the old near-black + neon-violet + glass look.
+   Token NAMES are kept stable (primary/card/border/…) so the whole app inherits
+   the new palette without per-file edits.
+   ══════════════════════════════════════════════════════════════════════════ */
 @theme {
-  --font-sans: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-hanken), "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-plex), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-background: hsl(222 47% 4%);
-  --color-foreground: hsl(210 40% 98%);
+  /* Base warm-graphite surfaces */
+  --color-background: hsl(30 9% 7%);
+  --color-foreground: hsl(38 28% 94%);
 
-  --color-card: hsl(222 47% 6%);
-  --color-card-foreground: hsl(210 40% 98%);
+  --color-surface: hsl(30 8% 10.5%);
+  --color-surface-raised: hsl(32 9% 14%);
+  --color-hairline: hsl(32 9% 20%);
 
-  --color-popover: hsl(222 47% 6%);
-  --color-popover-foreground: hsl(210 40% 98%);
+  --color-card: hsl(30 8% 10.5%);
+  --color-card-foreground: hsl(38 28% 94%);
 
-  --color-primary: hsl(270 100% 60%);
-  --color-primary-foreground: hsl(210 40% 98%);
+  --color-popover: hsl(32 9% 14%);
+  --color-popover-foreground: hsl(38 28% 94%);
 
-  --color-secondary: hsl(217.2 32.6% 17.5%);
-  --color-secondary-foreground: hsl(210 40% 98%);
+  /* Restrained violet — the single interactive accent */
+  --color-primary: hsl(266 58% 66%);
+  --color-primary-foreground: hsl(40 30% 96%);
+  --color-violet-soft: hsl(266 40% 22%);
 
-  --color-muted: hsl(217.2 32.6% 17.5%);
-  --color-muted-foreground: hsl(215 20.2% 65.1%);
+  /* Warm metallic — premium moments ONLY (CTA, trust seal, plan tier, hero KPI) */
+  --color-metal: hsl(40 56% 58%);
+  --color-metal-soft: hsl(40 42% 42%);
+  --color-cream: hsl(42 44% 90%);
 
-  --color-accent: hsl(217.2 32.6% 17.5%);
-  --color-accent-foreground: hsl(210 40% 98%);
+  --color-secondary: hsl(32 9% 14%);
+  --color-secondary-foreground: hsl(38 28% 94%);
 
-  --color-success: hsl(142 70% 45%);
-  --color-danger: hsl(0 72% 51%);
+  --color-muted: hsl(32 9% 14%);
+  --color-muted-foreground: hsl(35 14% 66%);
+  --color-text-muted: hsl(35 14% 66%);
+  --color-text-faint: hsl(33 11% 48%);
 
-  --color-border: hsl(217.2 32.6% 17.5%);
-  --color-input: hsl(217.2 32.6% 17.5%);
-  --color-ring: hsl(270 100% 60%);
+  --color-accent: hsl(32 9% 14%);
+  --color-accent-foreground: hsl(38 28% 94%);
 
+  /* Semantic — warm-tuned */
+  --color-success: hsl(150 46% 46%);
+  --color-danger: hsl(6 64% 56%);
+  --color-destructive: hsl(6 64% 56%);
+  --color-destructive-foreground: hsl(40 30% 96%);
+  --color-warning: hsl(38 72% 55%);
+  --color-info: hsl(202 46% 56%);
+
+  --color-border: hsl(32 9% 20%);
+  --color-input: hsl(32 9% 20%);
+  --color-ring: hsl(266 58% 66%);
+
+  --radius-xl: 1.25rem;
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
   --radius-sm: 0.5rem;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  /* Warm, low shadows (not the old cold black drops) */
+  --shadow-sm: 0 1px 2px 0 hsl(30 30% 2% / 0.4);
+  --shadow-md: 0 6px 16px -8px hsl(30 30% 2% / 0.5);
+  --shadow-lg: 0 12px 28px -10px hsl(30 30% 2% / 0.55);
+  --shadow-xl: 0 24px 48px -12px hsl(30 30% 2% / 0.6);
+  --shadow-soft: 0 10px 34px -14px hsl(30 40% 1% / 0.6);
 }
 
 /* Skeleton shimmer sweep (used by components/ui/Skeleton) */
@@ -73,94 +103,159 @@
     html { scroll-behavior: auto; }
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/25;
+    /* Warm, barely-there vignette instead of the old neon-violet radials. */
     background-image:
-      radial-gradient(at 0% 0%, hsla(270, 100%, 60%, 0.15) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 0.15) 0, transparent 50%);
+      radial-gradient(120% 80% at 50% -10%, hsl(34 30% 12% / 0.5) 0, transparent 60%),
+      radial-gradient(80% 60% at 100% 0%, hsl(40 40% 20% / 0.06) 0, transparent 55%);
+    background-attachment: fixed;
   }
+  /* Calm, human headings — NO forced uppercase / font-black. Real hierarchy
+     comes from weight + size + the .display / .eyebrow utilities below. */
   h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tighter font-black uppercase;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
   }
 }
 
 @layer utilities {
-  .glass {
-    background-color: hsla(0, 0%, 100%, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid hsla(0, 0%, 100%, 0.1);
-    box-shadow: var(--shadow-soft);
+  /* Editorial serif display — marketing hero/section headlines ONLY. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-mono, .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 
+  /* The ONLY place uppercase survives: small labels / eyebrows / column heads. */
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--color-text-faint);
+  }
+
+  /* Warm metallic accent — use sparingly (see design vision §premiumMoment). */
+  .text-metal { color: var(--color-metal); }
+  .metal-text {
+    background: linear-gradient(100deg, hsl(44 60% 72%), hsl(40 56% 58%) 45%, hsl(38 48% 46%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .metal-hairline {
+    background-image: linear-gradient(90deg, transparent, var(--color-metal-soft), var(--color-metal), var(--color-metal-soft), transparent);
+  }
+  .border-metal { border-color: color-mix(in srgb, var(--color-metal) 55%, transparent); }
+  .ring-metal { box-shadow: 0 0 0 1px var(--color-metal); }
+
+  /* Warm "paper grain" so dark surfaces read as matte card stock, not flat black. */
+  .paper-grain {
+    position: relative;
+  }
+  .paper-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.028;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Surfaces. `.glass` / `.glass-card` are RETUNED (used in ~42 files): they are
+     now warm SOLID card stock + hairline + soft shadow (no more white-on-black
+     blur). This single change warms every dashboard/card/modal in the app. */
+  .glass {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-hairline);
+    box-shadow: var(--shadow-soft);
+  }
   .glass-card {
-    background-color: hsla(0, 0%, 100%, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid hsla(0, 0%, 100%, 0.1);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-hairline);
     box-shadow: var(--shadow-soft);
     border-radius: var(--radius-lg);
-    transition-property: all;
+    transition-property: transform, border-color, background-color, box-shadow;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
+    transition-duration: 250ms;
   }
-  
   .glass-card:hover {
-    background-color: hsla(0, 0%, 100%, 0.1);
+    border-color: color-mix(in srgb, var(--color-metal-soft) 45%, var(--color-hairline));
+    background-color: var(--color-surface-raised);
   }
 
+  /* The ONE remaining true-glass treatment: chrome floating over photography
+     (sticky marketing nav, overlays). Warm graphite tint, not white. */
+  .scrim {
+    background-color: hsl(30 9% 7% / 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--color-hairline);
+  }
+
+  /* The trust moment: contracts, invoices, renter consent + QR render on warm
+     cream "paper" (light-on-dark inversion) so the hand-over feels physical.
+     Opt in via className; the consuming screen uses graphite text tokens. */
+  .document {
+    background-color: var(--color-cream);
+    color: hsl(30 14% 13%);
+    border: 1px solid hsl(40 26% 80%);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Brass "seal" divider — a hairline with a centered diamond, marking premium
+     / trust moments. The one recurring metallic thread across the product. */
+  .seal-rule {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-metal);
+  }
+  .seal-rule::before,
+  .seal-rule::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-metal) 55%, transparent));
+  }
+  .seal-rule::after {
+    background-image: linear-gradient(90deg, color-mix(in srgb, var(--color-metal) 55%, transparent), transparent);
+  }
+
+  /* Legacy pre-rebrand button utilities — kept as thin aliases so the one file
+     still using them renders in the new system. Prefer <Button/> going forward. */
   .btn-infinity {
     border-radius: var(--radius-md);
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-    box-shadow: var(--shadow-lg);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    padding: 0.75rem 1.5rem;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-md);
   }
-  
-  .btn-infinity:hover {
-    transform: scale(1.02);
-  }
-  
-  .btn-infinity:active {
-    transform: scale(0.98);
-  }
-  
-  .btn-infinity:disabled {
-    opacity: 0.5;
-  }
+  .btn-infinity:active { transform: scale(0.98); }
+  .btn-infinity:disabled { opacity: 0.5; }
+  .btn-primary-infinity { background-color: var(--color-primary); color: var(--color-primary-foreground); }
+  .btn-primary-infinity:hover { background-color: color-mix(in srgb, var(--color-primary), transparent 10%); }
+  .btn-outline-infinity { border: 1px solid var(--color-hairline); }
+  .btn-outline-infinity:hover { background-color: hsl(0 0% 100% / 0.05); }
 
-  .btn-primary-infinity {
-    background-color: var(--color-primary);
-    color: white;
-  }
-  
-  .btn-primary-infinity:hover {
-    background-color: color-mix(in srgb, var(--color-primary), transparent 10%);
-  }
-
-  .btn-outline-infinity {
-    border: 1px solid hsla(0, 0%, 100%, 0.1);
-  }
-  
-  .btn-outline-infinity:hover {
-    background-color: hsla(0, 0%, 100%, 0.05);
-  }
-
-  .text-glow {
-    text-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary);
-  }
+  /* Neon glow retired — kept as a no-op so the 4 files referencing it are inert. */
+  .text-glow { text-shadow: none; }
 }
 
-
-
-/* Custom scrollbar */
+/* Custom scrollbar — warm */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -168,6 +263,9 @@
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  background-color: hsl(32 9% 24%);
+  border-radius: 9999px;
 }
-
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(40 30% 34%);
+}

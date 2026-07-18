@@ -10,7 +10,7 @@ describe('Button Component', () => {
 
   it('applies correct variant classes', () => {
     const { container } = render(<Button variant="outline">Outline Button</Button>);
-    expect(container.firstChild).toHaveClass('border-white/10');
+    expect(container.firstChild).toHaveClass('border-border');
   });
 
   it('can be disabled', () => {
