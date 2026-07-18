@@ -84,6 +84,20 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 - **[M] Vault/Reports/Accidents/Fleet-map need new backends** → build or clearly label demo (no fake success toasts).
 - **[M] Settings staff-removal 404s; Automations & AI-Vision half-real** → users controller (`DELETE /users/:id`); thin `/automations` controller over the cron; real vehicle picker for AI Vision.
 
+### 5A — Capability Engine (replace coarse roles — see PRODUCT_VISION §2–3)
+
+- **[H] Capabilities model** — introduce granular `Capability` (const catalog + `@IsIn`) and an `AgencyMembership` join (`userId`+`agencyId`+`capabilities` string[] + `role` preset label). Keep `User.role` as the identity-type/preset seed; enforcement moves to capabilities. Migration + backfill existing users' role→default capability set.
+- **[H] Capability guard** — `@RequireCapabilities('booking.create', …)` + `CapabilitiesGuard` reading the caller's membership for `req.user.agencyId`, server-side, always tenant-scoped. Platform-tier capability set (`tenant.*`, `billing.manage`, `impersonate`, `platform.config`, `support.view`) for ROOT_ADMIN + new Platform Staff. Migrate existing `@Roles()` gates to capabilities (keep role checks only where identity-type is the real gate).
+- **[H] Owner staff management UI** — owner creates staff, picks a preset ("Front desk", "Fleet manager", "Accountant"), edits exact capabilities per member; `DELETE /users/:id`; signed-invite path for staff (no open self-register into an existing agency).
+- Agency catalog: `fleet.view/manage · booking.view/create/manage/return · customer.view/manage · finance.view · payment.record/verify · expense.manage · contract.manage/sign · deposit.manage · trust.report · inspection.perform · reports.view · hub.manage · staff.manage · settings.manage`.
+
+### 5B — Renter portal + Consent/QR subsystem (see PRODUCT_VISION §5)
+
+- **[H] Identity linkage** — `Customer` (per-agency) ↔ `RenterIdentity` (global) ↔ `User(role=RENTER)`. Booking creates/links the global identity and can **invite the renter to claim a portal account** (signed token). No more dead-end `Customer` rows.
+- **[H] Renter portal (real backend)** — profile + trust summary, my-bookings/history, documents shared *to* the renter (their contract, rented car docs, incident dossier), notifications. Wire the mock renter pages to real, self-scoped endpoints.
+- **[C] Consent-grant subsystem** — new `ConsentGrant` model (grantor renter, agency, scope of doc types, expiry, status ACTIVE/APPROVED/REVOKED/EXPIRED, full audit). QR flow: renter shows QR → agency scan creates a scoped consent *request* → renter approves in portal → agency gets a **time-boxed, revocable, audited** view of exactly the approved docs. **No agency sees renter PII without an active grant.** Scheduled expiry job.
+- **[M] Notifications model** — real in-app notification model (+ optional WhatsApp) for return reminders, incidents, document requests, deposit status — not just the cron.
+
 ---
 
 ## PHASE 6 — Performance & scalability
@@ -141,6 +155,21 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 
 - Run `/security-review` and `/code-review` on the full diff; re-run an 8-dimension audit; fix remaining criticals/highs.
 - Regenerate this backlog; confirm every C/H is closed or explicitly deferred with rationale.
+
+---
+
+## PHASE 11 — SaaS Business Layer (the money side; see PRODUCT_VISION §4)
+
+> Execution order: build BEFORE Phase 9 deploy / Phase 10 final pass. This is what makes it a SaaS, not an app. Live billing-key wiring + production billing are human/gated.
+
+- **[C] Subscriptions & billing** — agencies pay a **recurring subscription** (distinct from rental payments). `Subscription` + `Plan` + `PlatformInvoice` models; Stripe Checkout + subscriptions + **webhooks** (source of truth for state); agency-facing billing page (plan, payment method, receipts, proration). *(Founder decision: self-serve Stripe vs manual invoicing. Human: Stripe keys.)*
+- **[C] Plans & entitlements gating** — central `EntitlementsService` the whole app checks; `STARTER/PRO/BUSINESS` actually gate features + limits (max cars, staff seats, bookings/month, Trust Network access, hub, etc.). *(Founder decision: tiers, limits, pricing.)*
+- **[H] Self-serve onboarding funnel** — public signup → **trial** → subscribe → provisioned agency + guided first-run setup. Extends the hardened `/signup`; signed-invite path for staff. *(Founder decision: trial length — default 14 days.)*
+- **[H] Usage metering & limit enforcement** — count usage vs plan limits; block/soft-warn at limit; upgrade prompts.
+- **[H] Tenant lifecycle & dunning** — `TRIAL → ACTIVE → PAST_DUE → SUSPENDED → CANCELED`; suspend service on non-payment (middleware/guard); reactivation flow.
+- **[H] Founder metrics** — platform-owner dashboard: MRR, active tenants, trials, trial→paid conversion, churn, plan distribution (real, not rental GMV).
+- **[H] Support & impersonation** — securely, audited, log into a tenant (wire the existing `ForensicService`); scoped Platform-Staff capability.
+- **[M] Platform-level audit** on all tenant/billing/impersonation actions.
 
 ---
 
