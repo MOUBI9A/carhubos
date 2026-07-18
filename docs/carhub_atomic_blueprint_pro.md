@@ -1,5 +1,7 @@
 # THE ATOMIC BLUEPRINT: CarHub SaaS Operations Manual
 
+> ⚠️ **Historical.** Some details are stale — the DB is now **PostgreSQL** (not SQLite). Current source of truth: **[../CLAUDE.md](../CLAUDE.md)** + **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)**.
+
 **Project Maturity**: 🟢 Final Phase (Hardened & Atomic)  
 **Document Purpose**: Definitive operational and technical record of all core platform logic.
 

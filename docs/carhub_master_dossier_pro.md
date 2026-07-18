@@ -1,5 +1,7 @@
 # THE MASTER DOSSIER: CarHub SaaS Business OS (Pro Edition)
 
+> ⚠️ **Historical (2026-03).** Some technical details here are stale — the database is now **PostgreSQL** (not SQLite/WAL). For current stack, run steps, and status see **[../CLAUDE.md](../CLAUDE.md)** and **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)**.
+
 **Project Identifier**: `CARHUB-SaaS-V1-PRO`  
 **Completion Date**: 2026-03-31  
 **Technical Status**: 🟢 Phase 4.5 Hardened (High-Concurrency Optimized)

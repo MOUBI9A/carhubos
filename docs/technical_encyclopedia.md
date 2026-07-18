@@ -1,5 +1,7 @@
 # TECHNICAL ENCYCLOPEDIA & OPERATIONAL BLUEPRINT: CarHub SaaS
 
+> ⚠️ **Historical.** Stack details are stale — persistence is now **PostgreSQL** (not SQLite/WAL) and the backend is **NestJS**. Current source of truth: **[../CLAUDE.md](../CLAUDE.md)** + **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)**.
+
 **Project ID**: CarHub-Business-OS  
 **Version**: 1.0.0-PRO  
 **Status**: 🟢 Fully Operational & Hardened  
