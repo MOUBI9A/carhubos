@@ -1,7 +1,8 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> Last updated after commit `50f32df` (Phase 11 **complete** — SaaS business layer, verified E2E). **DONE so far: Phases 0, 1, 2, 5 (5A+5B), 11.** Next up: the remaining hardening — **Phase 3** (financial lifecycle/deposits), then 4, 6, 7, 8, 9(gate), 10, 12.
+> Last updated during **Phase 12 (design rebuild "Fider Lux")** — foundation `46968f1` + public marketing/auth `44a59ef` done & browser-verified; owner-dashboard restyle in progress. **DONE: Phases 0, 1, 2, 5 (5A+5B), 11; Phase 12 foundation + marketing.** Remaining: Phase 12 (dashboard + agent/admin/renter portals), then hardening **Phase 3** (financial lifecycle/deposits), 4, 6, 7, 8, 9(gate), 10.
+> Phase 12 method: design tokens + shared kit restyled first (propagates app-wide, stable APIs); then per-portal restyle workflows (playbook → per-file agents → consistency critic) + in-browser verification. Tokens: `frontend/src/app/globals.css` @theme. Kit + imagery components: `frontend/src/components/ui/`. Direction: warm graphite/cream, restrained violet, sparing brass; Fraunces/Hanken/Plex Mono.
 > **2026-07-18 addendum:** `docs/DESIGN_VISION.md` added — full audit of the current frontend (generic dark glass-morphism, one neon-purple accent, all-caps headings, zero real imagery anywhere in the product) + the target "lux/humanized" direction + a ready-to-send master prompt for the full frontend rebuild (**Phase 12**, added to `docs/AUDIT_BACKLOG.md`). Read it before starting Phase 12 work.
 
 ## The goal

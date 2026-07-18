@@ -178,16 +178,17 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 12 — Design & Frontend Rebuild (lux/humanized redesign; see `docs/DESIGN_VISION.md`)
+## PHASE 12 — Design & Frontend Rebuild 🔄 IN PROGRESS ("Fider Lux"; see `docs/DESIGN_VISION.md`)
 
-> Presentation-layer only — no backend, schema, or business-logic changes. Full brief + the copy-paste master prompt live in **`docs/DESIGN_VISION.md`**.
+> Presentation-layer only — no backend, schema, or business-logic changes. Direction chosen via a 4-proposal design judge panel → synthesis ("Graphite & Brass — Concierge", 9.3). Method: restyle the `@theme` tokens + shared kit (propagates app-wide with stable APIs), then fan out per-portal restyle workflows (playbook → per-file → consistency critic), browser-verifying each portal.
 
-- ⬜ **[H] Design system replaces the single dark-glass/neon-purple motif** — new token set in `globals.css` (`@theme`): warm charcoal/cream palette, restrained violet + brass/bronze accent pair, real type scale (drop blanket `uppercase font-black` on every heading), spacing/radius/shadow scale.
-- ⬜ **[H] Zero real imagery across the whole product** — `frontend/public/` has only default Next.js placeholder SVGs; only 2 files reference `next/image`/`<img>` in all of `src/`. → hero/marketing photography, staff/renter avatars, photographic empty-states, car photos as first-class in fleet/booking UI (curated stock/AI placeholder now, swap-in slot for real agency uploads later).
-- ⬜ **[M] Small reusable component kit** on top of the existing shadcn/Base UI primitives (buttons, cards, inputs, badges, empty states, avatars) — every portal pulls from it instead of hand-styled glass cards.
-- ⬜ **[M] Brand-name cleanup** — retire pre-rebrand `.btn-infinity`/`.btn-primary-infinity`/`.btn-outline-infinity` utility naming left over from "Infinity" → consistent "Fider" tokens.
-- ⬜ **[M] RTL-safe from the start** — logical CSS properties (`ms-`/`me-`/`ps-`/`pe-`), not hardcoded left/right, so this isn't redone for Phase 7's Arabic/RTL work.
-- ⬜ **[H] Sequenced rollout** — design system → public marketing site (`(public)/landing`, `/login`, `/signup`) → owner dashboard (18 sections) → agent/admin/renter portals. Browser-verify each portal before moving to the next.
+- ✅ **[H] Design system foundation** (commit `46968f1`) — `globals.css` @theme: warm graphite surfaces, cream text, restrained violet + brass `metal` accent; Fraunces (display) + Hanken Grotesk (UI) + IBM Plex Mono via next/font; killed the global `uppercase font-black` heading rule → `.display`/`.eyebrow`; retuned `.glass`→warm solid (42 files inherit); `.document`/`.scrim`/`.seal-rule`/`.paper-grain`/`.metal-*`. Kit: Button cream primary + brass `premium`, CardTitle sentence-case, Badge `trust`.
+- ✅ **[H] Imagery kit + swap slots** — `Avatar` (warm monogram, brass verified ring), `AgencyImage`/`CarPhoto` (warm placeholder + real-photo `src` slot + `fill`), `TrustSeal`/`SealDivider`. Real AI/stock photos drop into the slots later without layout changes.
+- ✅ **[M] Brand-name cleanup** — `.btn-infinity*` + `.text-glow` retired to inert aliases (only 1 file referenced them).
+- ✅ **[H] Public marketing + auth** (commit `44a59ef`) — editorial Fraunces hero + brass CTA, `.scrim` nav, warm pricing (featured tier brass), TrustConsole/Solutions token-cohered, photographic split-panel login/signup. Verified in-browser.
+- 🔄 **[H] Owner dashboard (18 sections)** — restyle workflow running: calm sentence-case headings, warm KPI cards/tables, `CarPhoto` in fleet, `Avatar` for people, violet charts, ≤1 brass/viewport.
+- ⬜ **[H] Agent / Admin / Renter portals** — same system; renter portal gets the `.document` cream trust-surface for consent/QR.
+- ⬜ **[M] RTL-safe** — logical props (`ms-`/`me-`/`ps-`/`pe-`) baked in as each file is touched (for Phase 7 AR/RTL).
 
 ---
 
