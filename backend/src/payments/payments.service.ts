@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
@@ -50,9 +51,11 @@ export class PaymentsService {
     }
 
     const invoiceId = payment.invoiceId;
-    // Money is Float today (Decimal is Phase 2) — reconcile on rounded cents to
-    // avoid floating-point drift when summing/comparing amounts.
-    const totalCents = Math.round(payment.invoice.amount * 100);
+    // Money is Prisma.Decimal (see @db.Decimal(12,2)). Reconcile on EXACT
+    // integer cents: a (_,2) column can hold at most 2 fraction digits, so
+    // `.times(100)` yields a whole-number Decimal and `.toNumber()` is lossless.
+    // Integer comparison then avoids any binary-float drift.
+    const totalCents = payment.invoice.amount.times(100).toNumber();
 
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
       const verified = await tx.payment.update({
@@ -70,7 +73,9 @@ export class PaymentsService {
         where: { invoiceId, status: 'VERIFIED', type: 'INCOME' },
         _sum: { amount: true }
       });
-      const paidCents = Math.round((agg._sum.amount ?? 0) * 100);
+      const paidCents = (agg._sum.amount ?? new Prisma.Decimal(0))
+        .times(100)
+        .toNumber();
 
       const invoiceStatus =
         paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE';

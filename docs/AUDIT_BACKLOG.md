@@ -41,16 +41,18 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 
 ## PHASE 2 — Data foundation (requires DB decision)
 
-- **[C] Datasource hardcoded to SQLite** — `DATABASE_URL` ignored, provider mismatch blocks `prisma migrate` (`schema.prisma:9`, `migration_lock.toml`). → `provider='postgresql'`, `url=env('DATABASE_URL')`.
-- **[C] Pillar 6 has no migration** — migrations frozen at May; Trust Network absent (`schema.prisma:412`). → Regenerate migrations against Postgres incl. the trust models; verify `migrate deploy` on an empty DB.
-- **[H] Money stored as Float** everywhere. → Convert money columns to `Decimal`/`NUMERIC(12,2)`; use a decimal lib in services; quantize VAT.
-- **[H] Agency/Booking delete cascades into the GLOBAL trust graph** with no recompute (`schema.prisma:440`). → Soft-delete agencies; retain/anonymize authored reviews/flags; recompute affected identities.
-- **[M] `BlacklistEntry.expiresAt` never enforced** → scheduled job flips ACTIVE→EXPIRED then recomputes.
-- **[M] `IDENTITY_PEPPER` rotation silently breaks matching** → fail fast if unset; version the pepper + re-hash migration if ever rotated; document "never change."
-- **[M] String pseudo-enums unconstrained + drifting** — seed uses `BANK_TRANSFER` not in the documented set. → Real enums or shared const + `@IsIn`; fix seed.
-- **[M] `Task` has no agencyId** — global across tenants. → Add agencyId + index, backfill, scope queries.
-- **[M] `recompute()` is non-transactional read-then-write** → wrap in txn / atomic aggregate; set `lastReviewAt=null` when no reviews.
-- **[L] Seeds mutually destructive/unscoped; missing `updatedAt` on Payment/RefusalLog** → idempotent scoped seeds + NODE_ENV guard.
+> **STATUS: 🔄 IN PROGRESS.** DB decision = **local Docker Postgres** now, prod host at Phase 9. Postgres switch + money Decimal done & verified; remaining items below still open.
+
+- ✅ **[C] Datasource hardcoded to SQLite** — switched to `provider='postgresql'`, `url=env('DATABASE_URL')`; 3 stale May migrations reset to one clean `init_postgres` (22 tables incl. Trust models). Verified: migrate deploy on empty DB, app boots + login + throttle on Postgres.
+- ✅ **[C] Pillar 6 has no migration** — Trust models (RenterIdentity/RenterReview/BlacklistEntry/RefusalLog + AuditLog) now in the init migration.
+- ✅ **[H] Money stored as Float** — 10 monetary columns → `Decimal @db.Decimal(12,2)`; decimal-safe service math (reconciliation in integer cents, VAT quantized 2dp); global `DecimalToNumberInterceptor` keeps the API/wire contract numeric. Verifier PASS; `pricePerDay` returns `350` (number) live. Non-money floats (currentRoi, globalScore) left Float. *Follow-up (Phase 8): reconciliation regression test.*
+- ⬜ **[H] Agency/Booking delete cascades into the GLOBAL trust graph** with no recompute (`schema.prisma:440`). → Soft-delete agencies; retain/anonymize authored reviews/flags; recompute affected identities.
+- ⬜ **[M] `BlacklistEntry.expiresAt` never enforced** → scheduled job flips ACTIVE→EXPIRED then recomputes.
+- 🟡 **[M] `IDENTITY_PEPPER` rotation silently breaks matching** → fail-fast **done** (Phase 1); still TODO: version the pepper + re-hash migration if ever rotated; document "never change."
+- ⬜ **[M] String pseudo-enums unconstrained + drifting** — seed uses `BANK_TRANSFER` not in the documented set. → Real enums or shared const + `@IsIn`; fix seed. (schema currently has 0 enums.)
+- ⬜ **[M] `Task` has no agencyId** — global across tenants. → Add agencyId + index, backfill, scope queries.
+- ⬜ **[M] `recompute()` is non-transactional read-then-write** → wrap in txn / atomic aggregate; set `lastReviewAt=null` when no reviews.
+- ⬜ **[L] Seeds mutually destructive/unscoped; missing `updatedAt` on Payment/RefusalLog** → idempotent scoped seeds + NODE_ENV guard.
 
 ---
 

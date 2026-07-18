@@ -46,7 +46,7 @@ model Agency {
 // 🕸️ PILLAR 5: THE HUB (B2B FLEET SHARING)
 model HubListing {
   id              String   @id @default(uuid())
-  dailyRateB2B    Float    // Discounted rate for other agencies
+  dailyRateB2B    Decimal  @db.Decimal(12, 2) // Discounted rate for other agencies
   status          String   @default("ACTIVE") // ACTIVE, UNAVAILABLE
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -88,7 +88,7 @@ model Car {
   model           String
   year            Int
   licensePlate    String
-  pricePerDay     Float
+  pricePerDay     Decimal  @db.Decimal(12, 2)
   fuelType        String   @default("DIESEL")
   gearbox         String   @default("MANUAL")
   status          String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE, OUT_OF_SERVICE
@@ -134,7 +134,7 @@ model MaintenanceRecord {
   id          String   @id @default(uuid())
   type        String   // VIDANGE, REPAIR, TIRES, BRAKES, GENERAL
   description String
-  cost        Float    @default(0)
+  cost        Decimal  @default(0) @db.Decimal(12, 2)
   mileage     Int?     // Mileage at time of repair
   garageName  String?  // Linked to a Garage registry logic
   invoiceUrl  String?
@@ -156,7 +156,7 @@ model RefusalLog {
   requestedCarType  String   // ECONOMY, SUV, LUXURY
   requestedStartDate DateTime
   requestedEndDate   DateTime
-  potentialRevenue  Float
+  potentialRevenue  Decimal @db.Decimal(12, 2)
   status            String   @default("WAITING") // WAITING, RECOVERED, LOST
   createdAt         DateTime @default(now())
 
@@ -189,8 +189,8 @@ model Booking {
   id              String   @id @default(uuid())
   startDate       DateTime
   endDate         DateTime
-  totalPrice      Float
-  depositAmount   Float    @default(0)
+  totalPrice      Decimal  @db.Decimal(12, 2)
+  depositAmount   Decimal  @default(0) @db.Decimal(12, 2)
   depositStatus   String   @default("PENDING") // PENDING, HELD, RETURNED, CLAIMED
   depositMethod   String   @default("CASH")    // CASH, TRANSFER, CHEQUE
   status          String   @default("REQUESTED") // REQUESTED, APPROVED, ACTIVE, COMPLETED, CANCELLED
@@ -224,8 +224,8 @@ model Booking {
 
 model Invoice {
   id        String   @id @default(uuid())
-  amount    Float
-  taxAmount Float    @default(0) // 20% VAT
+  amount    Decimal  @db.Decimal(12, 2)
+  taxAmount Decimal  @default(0) @db.Decimal(12, 2) // 20% VAT
   status    String   @default("DUE") // DUE, PARTIAL, PAID, CANCELLED
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -243,7 +243,7 @@ model Invoice {
 
 model Payment {
   id            String   @id @default(uuid())
-  amount        Float
+  amount        Decimal  @db.Decimal(12, 2)
   method        String   @default("CASH") // CASH, CARD, TRANSFER, CHEQUE
   type          String   @default("INCOME") // INCOME, REFUND
   status        String   @default("VERIFIED") // PENDING, VERIFIED, VOID
@@ -265,7 +265,7 @@ model Expense {
   id          String   @id @default(uuid())
   category    String   // SALARY, RENT, UTILITIES, MARKETING, TAX, OTHER
   description String
-  amount      Float
+  amount      Decimal  @db.Decimal(12, 2)
   date        DateTime @default(now())
   status      String   @default("PAID") // PENDING, PAID
   createdAt   DateTime @default(now())

@@ -32,12 +32,14 @@ export class ExpensesService {
       where: { agencyId },
     });
 
+    // amount is Prisma.Decimal — coerce to number per addend so we never
+    // string-concatenate a Decimal into these numeric summary totals.
     const byCategory = expenses.reduce((acc, exp) => {
-      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+      acc[exp.category] = (acc[exp.category] || 0) + exp.amount.toNumber();
       return acc;
     }, {} as Record<string, number>);
 
-    const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const total = expenses.reduce((sum, exp) => sum + exp.amount.toNumber(), 0);
 
     return {
       total,

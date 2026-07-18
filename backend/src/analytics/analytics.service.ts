@@ -33,7 +33,8 @@ export class AnalyticsService {
       for (const invoice of booking.invoices) {
         for (const payment of invoice.payments) {
           if (payment.type === 'INCOME' && payment.status === 'VERIFIED') {
-            totalRevenue += payment.amount;
+            // amount is Prisma.Decimal — coerce per addend (ROI is a Float score).
+            totalRevenue += payment.amount.toNumber();
           }
         }
       }
@@ -41,7 +42,7 @@ export class AnalyticsService {
 
     // 2. Calculate Total Maintenance Costs
     const totalMaintenance = car.maintenance.reduce(
-      (sum, record) => sum + record.cost,
+      (sum, record) => sum + record.cost.toNumber(),
       0,
     );
 
@@ -69,7 +70,7 @@ export class AnalyticsService {
     });
 
     const potentialRevenue = logs.reduce(
-      (sum, log) => sum + log.potentialRevenue,
+      (sum, log) => sum + log.potentialRevenue.toNumber(),
       0,
     );
 
@@ -140,7 +141,7 @@ export class AnalyticsService {
     
     const monthlyData = payments.reduce((acc, payment) => {
       const month = months[new Date(payment.date).getMonth()];
-      acc[month] = (acc[month] || 0) + payment.amount;
+      acc[month] = (acc[month] || 0) + payment.amount.toNumber();
       return acc;
     }, {} as Record<string, number>);
 
@@ -202,13 +203,17 @@ export class AnalyticsService {
         status: 'VERIFIED',
       },
     });
-    const gmvTotal = allPayments.reduce((sum, p) => sum + p.amount, 0);
+    // Money fields are Prisma.Decimal — coerce each addend to a number.
+    const gmvTotal = allPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
 
     // Calculate last-year comparison
     const lastYearPayments = allPayments.filter(
       (p) => p.date < twelveMonthsAgo,
     );
-    const lastYearGmv = lastYearPayments.reduce((sum, p) => sum + p.amount, 0);
+    const lastYearGmv = lastYearPayments.reduce(
+      (sum, p) => sum + p.amount.toNumber(),
+      0,
+    );
     const gmvChange = lastYearGmv > 0
       ? ((gmvTotal - lastYearGmv) / lastYearGmv) * 100
       : gmvTotal > 0 ? 100 : 0;
@@ -281,17 +286,17 @@ export class AnalyticsService {
 
     recentPayments.forEach((p) => {
       const m = months[new Date(p.date).getMonth()];
-      monthlyRevenue[m] += p.amount;
+      monthlyRevenue[m] += p.amount.toNumber();
     });
 
     expenses.forEach((e) => {
       const m = months[new Date(e.date).getMonth()];
-      monthlyExpenses[m] += e.amount;
+      monthlyExpenses[m] += e.amount.toNumber();
     });
 
     maintenanceCosts.forEach((mc) => {
       const m = months[new Date(mc.createdAt).getMonth()];
-      monthlyExpenses[m] += mc.cost;
+      monthlyExpenses[m] += mc.cost.toNumber();
     });
 
     const monthlyData = months.map((m) => ({
@@ -348,7 +353,7 @@ export class AnalyticsService {
         : 'Unknown';
       exceptions.push({
         id: inv.id,
-        msg: `Unpaid invoice ${inv.amount.toLocaleString()} MAD from ${customerName}`,
+        msg: `Unpaid invoice ${Number(inv.amount).toLocaleString()} MAD from ${customerName}`,
         severity: 'primary',
         link: `/dashboard/bookings`,
       });
@@ -397,7 +402,7 @@ export class AnalyticsService {
     const inflows = [
       {
         source: 'Active & Confirmed Bookings',
-        amount: futureBookings.reduce((sum, b) => sum + b.totalPrice, 0),
+        amount: futureBookings.reduce((sum, b) => sum + b.totalPrice.toNumber(), 0),
         date: 'Ongoing',
       },
     ];
@@ -413,7 +418,7 @@ export class AnalyticsService {
     if (pendingPayments.length > 0) {
       inflows.push({
         source: 'Pending Payment Verifications',
-        amount: pendingPayments.reduce((sum, p) => sum + p.amount, 0),
+        amount: pendingPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0),
         date: 'Awaiting Verification',
       });
     }
@@ -425,7 +430,10 @@ export class AnalyticsService {
     if (refusalPotential.length > 0) {
       inflows.push({
         source: `Recoverable Demand (${refusalPotential.length} leads)`,
-        amount: refusalPotential.reduce((sum, r) => sum + r.potentialRevenue, 0),
+        amount: refusalPotential.reduce(
+          (sum, r) => sum + r.potentialRevenue.toNumber(),
+          0,
+        ),
         date: 'If Recovered',
       });
     }
@@ -437,7 +445,7 @@ export class AnalyticsService {
     const outflows = [
       {
         source: 'Pending Expenses',
-        amount: pendingExpenses.reduce((sum, e) => sum + e.amount, 0),
+        amount: pendingExpenses.reduce((sum, e) => sum + e.amount.toNumber(), 0),
         date: 'Scheduled',
       },
     ];
@@ -449,7 +457,7 @@ export class AnalyticsService {
     if (carsNeedingService.length > 0) {
       // Estimate average maintenance cost
       const avgMaintCost = maintenanceCosts.length > 0
-        ? maintenanceCosts.reduce((sum, mc) => sum + mc.cost, 0) / maintenanceCosts.length
+        ? maintenanceCosts.reduce((sum, mc) => sum + mc.cost.toNumber(), 0) / maintenanceCosts.length
         : 500;
       outflows.push({
         source: `Estimated Maintenance (${carsNeedingService.length} vehicles)`,
@@ -535,7 +543,7 @@ export class AnalyticsService {
         date: { gte: startOfMonth },
       },
     });
-    const revenueMtd = mtdPayments.reduce((sum, p) => sum + p.amount, 0);
+    const revenueMtd = mtdPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
 
     // Previous month for comparison
     const prevPayments = await this.prisma.payment.findMany({
@@ -546,7 +554,7 @@ export class AnalyticsService {
         date: { gte: prevMonthStart, lte: prevMonthEnd },
       },
     });
-    const prevRevenue = prevPayments.reduce((sum, p) => sum + p.amount, 0);
+    const prevRevenue = prevPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
     const revenueGrowth = prevRevenue > 0
       ? Math.round(((revenueMtd - prevRevenue) / prevRevenue) * 100)
       : revenueMtd > 0 ? 100 : 0;
@@ -605,7 +613,7 @@ export class AnalyticsService {
     const waitingRefusals = await this.prisma.refusalLog.findMany({
       where: { agencyId, status: 'WAITING' },
     });
-    const refusalRecoverable = waitingRefusals.reduce((sum, r) => sum + r.potentialRevenue, 0);
+    const refusalRecoverable = waitingRefusals.reduce((sum, r) => sum + r.potentialRevenue.toNumber(), 0);
     const refusalCount = waitingRefusals.length;
 
     // ── 5. Daily Intensity (bookings + verified cash flow, last 14 days) ─────────
@@ -653,7 +661,7 @@ export class AnalyticsService {
     recentPayments.forEach((p) => {
       const key = new Date(p.date).toISOString().slice(0, 10);
       if (dailyMap[key]) {
-        dailyMap[key].revenue += p.amount;
+        dailyMap[key].revenue += p.amount.toNumber();
       }
     });
 
@@ -683,7 +691,7 @@ export class AnalyticsService {
           status: 'VERIFIED',
         },
       });
-      const carRevenue = carPayments.reduce((sum, p) => sum + p.amount, 0);
+      const carRevenue = carPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
 
       starAsset = {
         id: bestCar.id,

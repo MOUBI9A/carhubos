@@ -149,7 +149,8 @@ export class BookingsService {
           requestedCarType: car.brand,
           requestedStartDate: start,
           requestedEndDate: end,
-          potentialRevenue: diffDays * car.pricePerDay,
+          // pricePerDay is Prisma.Decimal — keep the multiply in Decimal space.
+          potentialRevenue: car.pricePerDay.times(diffDays),
           status: 'WAITING',
         },
       });
@@ -159,9 +160,11 @@ export class BookingsService {
     }
 
     // 6. Calculate total price
+    // car.pricePerDay is a Prisma.Decimal — the whole price/VAT chain stays in
+    // Decimal space so we never round-trip money through binary float.
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const totalPrice = diffDays * car.pricePerDay;
+    const totalPrice = car.pricePerDay.times(diffDays);
 
     // 7. Create booking, invoice, and initial PENDING payment in a transaction
     const booking = await this.prisma.$transaction(async (tx) => {
@@ -177,7 +180,8 @@ export class BookingsService {
         },
       });
 
-      const taxAmount = totalPrice * 0.2; // 20% VAT
+      // 20% VAT, quantized to 2 decimals (currency precision).
+      const taxAmount = totalPrice.times(0.2).toDecimalPlaces(2);
       const invoice = await tx.invoice.create({
         data: {
           amount: totalPrice,

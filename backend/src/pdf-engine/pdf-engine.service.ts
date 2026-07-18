@@ -46,11 +46,11 @@ export class PdfEngineService {
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <span style="color: #64748b; font-size: 13px;">Montant Total:</span>
-            <span style="font-weight: 900; font-size: 18px; color: #1e293b;">${booking.totalPrice.toLocaleString()} MAD</span>
+            <span style="font-weight: 900; font-size: 18px; color: #1e293b;">${Number(booking.totalPrice).toLocaleString()} MAD</span>
           </div>
           <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
             <span style="color: #64748b; font-size: 13px;">Caution (Security Deposit):</span>
-            <span style="font-weight: bold; color: #ef4444;">${booking.depositAmount.toLocaleString()} MAD</span>
+            <span style="font-weight: bold; color: #ef4444;">${Number(booking.depositAmount).toLocaleString()} MAD</span>
           </div>
         </div>
 

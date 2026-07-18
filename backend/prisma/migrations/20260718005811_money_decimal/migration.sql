@@ -1,0 +1,26 @@
+-- AlterTable
+ALTER TABLE "Booking" ALTER COLUMN "totalPrice" SET DATA TYPE DECIMAL(12,2),
+ALTER COLUMN "depositAmount" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "Car" ALTER COLUMN "pricePerDay" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "Expense" ALTER COLUMN "amount" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "HubListing" ALTER COLUMN "dailyRateB2B" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "Invoice" ALTER COLUMN "amount" SET DATA TYPE DECIMAL(12,2),
+ALTER COLUMN "taxAmount" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "MaintenanceRecord" ALTER COLUMN "cost" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "Payment" ALTER COLUMN "amount" SET DATA TYPE DECIMAL(12,2);
+
+-- AlterTable
+ALTER TABLE "RefusalLog" ALTER COLUMN "potentialRevenue" SET DATA TYPE DECIMAL(12,2);
+

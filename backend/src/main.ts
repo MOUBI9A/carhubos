@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +15,8 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
   app.useGlobalFilters(new AllExceptionsFilter());
+  // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
+  app.useGlobalInterceptors(new DecimalToNumberInterceptor());
 
   app.useGlobalPipes(
     new ValidationPipe({

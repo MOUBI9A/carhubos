@@ -115,10 +115,12 @@ export class CarsService {
         invoice: { booking: { carId: id } },
       },
     });
-    const totalRevenue = revenueAgg._sum.amount ?? 0;
+    // Money is Prisma.Decimal — sum and subtract in Decimal space, exact.
+    // The global DecimalToNumberInterceptor serialises these to JSON numbers.
+    const totalRevenue = revenueAgg._sum.amount ?? new Prisma.Decimal(0);
     const totalMaintenanceCost = car.maintenance.reduce(
-      (sum, m) => sum + m.cost,
-      0,
+      (sum, m) => sum.plus(m.cost),
+      new Prisma.Decimal(0),
     );
 
     return {
@@ -126,7 +128,7 @@ export class CarsService {
       financials: {
         totalRevenue,
         totalMaintenanceCost,
-        netProfit: totalRevenue - totalMaintenanceCost,
+        netProfit: totalRevenue.minus(totalMaintenanceCost),
       },
     };
   }
@@ -143,9 +145,11 @@ export class CarsService {
       data: updateCarDto,
     });
 
+    // oldCar.pricePerDay is a Prisma.Decimal — compare via .equals(), not !==,
+    // (a number vs Decimal !== is always true and mislabels every edit).
     const action =
       updateCarDto.pricePerDay !== undefined &&
-      updateCarDto.pricePerDay !== oldCar.pricePerDay
+      !oldCar.pricePerDay.equals(updateCarDto.pricePerDay)
         ? 'CHANGE_PRICE'
         : 'UPDATE_CAR';
 
