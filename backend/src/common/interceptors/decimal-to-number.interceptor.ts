@@ -41,7 +41,7 @@ function convertDecimals(value: unknown, seen = new WeakSet<object>()): unknown 
 
   // The actual conversion: Prisma.Decimal -> number.
   if (Prisma.Decimal.isDecimal(value)) {
-    return (value as Prisma.Decimal).toNumber();
+    return (value).toNumber();
   }
 
   if (Array.isArray(value)) {
