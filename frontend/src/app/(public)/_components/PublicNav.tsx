@@ -9,6 +9,7 @@ const LINKS = [
   { href: '#features', label: 'Features' },
   { href: '#solutions', label: 'Solutions' },
   { href: '#enterprise', label: 'Enterprise' },
+  { href: '#pricing', label: 'Pricing' },
 ];
 
 export default function PublicNav() {

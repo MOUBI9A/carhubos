@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SolutionsSection from './_components/SolutionsSection';
+import PricingSection from './_components/PricingSection';
 import ContactSection from './_components/ContactSection';
 
 export default function LandingPage() {
@@ -163,6 +164,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Public pricing (real, from GET /platform/plans) */}
+      <PricingSection />
 
       {/* CTA Section */}
       <section className="py-32 relative overflow-hidden">
