@@ -115,6 +115,33 @@ export class AuthService {
     });
   }
 
+  /**
+   * Re-issue a normal 7-day session for a user by id. Used to restore the
+   * founder's own session when exiting impersonation.
+   */
+  async issueSessionForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      agencyId: user.agencyId,
+    };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        agencyId: user.agencyId,
+      },
+    };
+  }
+
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findOneByEmail(loginDto.email);
     if (!user) {

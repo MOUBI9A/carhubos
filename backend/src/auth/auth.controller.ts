@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Res, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Res, Get, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
@@ -50,6 +50,32 @@ export class AuthController {
   @Get('me')
   getProfile(@CurrentUser() user: any) {
     return { user };
+  }
+
+  /**
+   * Exit an impersonation session: if the current token was minted by the founder
+   * console (`isImpersonated`), re-issue the founder's own session from
+   * `impersonatorId` and swap the cookie back. No-op error otherwise.
+   */
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @Post('exit-impersonation')
+  async exitImpersonation(
+    @CurrentUser() user: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!user?.isImpersonated || !user?.impersonatorId) {
+      throw new BadRequestException('Not in an impersonation session.');
+    }
+    const data = await this.authService.issueSessionForUser(user.impersonatorId);
+    res.cookie('infinity_token', data.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return data;
   }
 }
 

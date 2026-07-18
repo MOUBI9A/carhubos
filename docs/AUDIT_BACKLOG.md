@@ -177,6 +177,19 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
+## PHASE 12 — Design & Frontend Rebuild (lux/humanized redesign; see `docs/DESIGN_VISION.md`)
+
+> Presentation-layer only — no backend, schema, or business-logic changes. Full brief + the copy-paste master prompt live in **`docs/DESIGN_VISION.md`**.
+
+- ⬜ **[H] Design system replaces the single dark-glass/neon-purple motif** — new token set in `globals.css` (`@theme`): warm charcoal/cream palette, restrained violet + brass/bronze accent pair, real type scale (drop blanket `uppercase font-black` on every heading), spacing/radius/shadow scale.
+- ⬜ **[H] Zero real imagery across the whole product** — `frontend/public/` has only default Next.js placeholder SVGs; only 2 files reference `next/image`/`<img>` in all of `src/`. → hero/marketing photography, staff/renter avatars, photographic empty-states, car photos as first-class in fleet/booking UI (curated stock/AI placeholder now, swap-in slot for real agency uploads later).
+- ⬜ **[M] Small reusable component kit** on top of the existing shadcn/Base UI primitives (buttons, cards, inputs, badges, empty states, avatars) — every portal pulls from it instead of hand-styled glass cards.
+- ⬜ **[M] Brand-name cleanup** — retire pre-rebrand `.btn-infinity`/`.btn-primary-infinity`/`.btn-outline-infinity` utility naming left over from "Infinity" → consistent "Fider" tokens.
+- ⬜ **[M] RTL-safe from the start** — logical CSS properties (`ms-`/`me-`/`ps-`/`pe-`), not hardcoded left/right, so this isn't redone for Phase 7's Arabic/RTL work.
+- ⬜ **[H] Sequenced rollout** — design system → public marketing site (`(public)/landing`, `/login`, `/signup`) → owner dashboard (18 sections) → agent/admin/renter portals. Browser-verify each portal before moving to the next.
+
+---
+
 ## Market-Ready Checklist (definition of done)
 
 - [ ] No secrets/DB/build-output in git; history clean; secrets rotated & managed.

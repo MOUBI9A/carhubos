@@ -1,7 +1,8 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
-> Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
+> Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
 > Last updated after commit `7e2bbf9` (Phase 5B **fully complete** — renter portal UI verified E2E + document vault view + self-contained consent demo). **Phase 5 (5A capability engine + 5B renter/consent) is DONE.** Next up: **Phase 11 — SaaS Business Layer** (see §1).
+> **2026-07-18 addendum:** `docs/DESIGN_VISION.md` added — full audit of the current frontend (generic dark glass-morphism, one neon-purple accent, all-caps headings, zero real imagery anywhere in the product) + the target "lux/humanized" direction + a ready-to-send master prompt for the full frontend rebuild (**Phase 12**, added to `docs/AUDIT_BACKLOG.md`). Read it before starting Phase 12 work.
 
 ## The goal
 Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the **founder** (ROOT_ADMIN) runs the platform; **agencies** (OWNER + staff) are paying subscribers; **renters** are end users. Three big architectural additions from the vision: (1) capability-based access, (2) SaaS business layer, (3) renter portal + consent/QR. Plus the hardening phases 0–10. Done = the **Market-Ready Checklist** at the bottom of the backlog.
@@ -71,6 +72,9 @@ Migrate-on-deploy, managed Postgres + volume + backups, PDF engine runtime (Pupp
 
 ### 8. Phase 10 — final pass
 `/security-review` + `/code-review` on the full diff; re-run the 8-dimension audit; close/deferring every remaining C/H.
+
+### 9. Phase 12 — Design & Frontend Rebuild (NOT STARTED; full brief in `docs/DESIGN_VISION.md`)
+Presentation-layer-only rebuild of the entire frontend (public site + owner/agent/admin/renter portals) replacing the current generic dark glass-morphism/neon-purple/all-caps look with a warm, premium, photographic "lux/humanized" system. Sequence: design tokens + component kit → public marketing site → owner dashboard (18 sections) → agent/admin/renter portals. No backend/schema/business-logic changes. See `docs/AUDIT_BACKLOG.md` PHASE 12 for the checklist and `docs/DESIGN_VISION.md` for the audit + the copy-paste master prompt.
 
 ## Open questions / mid-debugging
 - **Renter portal WIP** (§0) unverified — died at browser login. Verify + commit; add `GET /portal/documents` + provision renter `qrHash`.
