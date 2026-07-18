@@ -4,11 +4,15 @@ import React from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { LogOut, User, Car, History, Shield } from 'lucide-react';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 
 export default function RenterLayout({ children }: { children: React.ReactNode }) {
   const { role, isLoading, logout, user } = useAuth();
   const router = useRouter();
+  const t = useTranslations('nav.renter');
+  const tc = useTranslations('common');
 
   const HOME_BY_ROLE: Record<string, string> = {
     ROOT_ADMIN: '/admin', OWNER: '/dashboard', MANAGER: '/dashboard', AGENT: '/agent', RENTER: '/portal',
@@ -39,15 +43,15 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-2">
             <h1 className="text-xl font-black tracking-tighter text-primary">
-              Fider<span className="text-white">OS</span>
+              {tc('brand')}<span className="text-white">OS</span>
             </h1>
-            <span className="bg-primary/20 text-primary text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest">Portal</span>
+            <span className="bg-primary/20 text-primary text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest">{tc('portal')}</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/portal" className="text-sm font-bold text-white/60 hover:text-white transition-colors">My Vault</Link>
-            <Link href="/portal/book" className="text-sm font-bold text-white/60 hover:text-white transition-colors">Book a Car</Link>
-            <Link href="/portal/history" className="text-sm font-bold text-white/60 hover:text-white transition-colors">History</Link>
+            <Link href="/portal" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('vault')}</Link>
+            <Link href="/portal/book" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('book')}</Link>
+            <Link href="/portal/history" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('history')}</Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -60,6 +64,7 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
             <button onClick={logout} className="p-2 text-white/40 hover:text-danger transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
+            <LocaleSwitcher variant="pills" />
           </div>
         </div>
       </header>

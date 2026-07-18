@@ -12,6 +12,10 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import arMessages from '../../../messages/ar.json';
+import enMessages from '../../../messages/en.json';
+import frMessages from '../../../messages/fr.json';
+import { defaultLocale, isLocale, LOCALE_COOKIE, type Locale } from '@/i18n/config';
 
 type ToastType = 'success' | 'danger' | 'warning' | 'info' | 'pulse';
 
@@ -28,12 +32,65 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+const TOAST_KEYS: Record<string, string> = {
+  'Missing Fields': 'missingFields',
+  'Registration Failed': 'registrationFailed',
+  'Booking Confirmed': 'bookingConfirmed',
+  'Booking Failed': 'bookingFailed',
+  'All Clear': 'allClear',
+  'Task Created': 'taskCreated',
+  'Invalid Dates': 'invalidDates',
+  'Customer Required': 'customerRequired',
+  'Renter Blocked': 'renterBlocked',
+  'Deploying Booking': 'deployingBooking',
+  'Customer Registered': 'customerRegistered',
+  'Load Failed': 'loadFailed',
+  Failed: 'failed',
+  'Action Failed': 'actionFailed',
+  'Search Failed': 'searchFailed',
+  'Input Required': 'inputRequired',
+  'Listing Created': 'listingCreated',
+  'B2B Request Sent': 'b2bRequestSent',
+  'Contract Ready': 'contractReady',
+  'Status Updated': 'statusUpdated',
+  'Save Failed': 'saveFailed',
+  'Update Failed': 'updateFailed',
+  'Deletion Blocked': 'deleteFailed',
+  'Inspection Recorded': 'inspectionRecorded',
+};
+
+const catalogs = { fr: frMessages, ar: arMessages, en: enMessages } as const;
+
+function currentLocale(): Locale {
+  if (typeof document === 'undefined') return defaultLocale;
+  const value = document.cookie
+    .split('; ')
+    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`))
+    ?.split('=')[1];
+  return isLocale(value) ? value : defaultLocale;
+}
+
+function translateToast(locale: Locale, text: string): string {
+  const key = TOAST_KEYS[text];
+  return key ? catalogs[locale].toast[key as keyof typeof frMessages.toast] : text;
+}
+
+function translateCommon(locale: Locale, key: 'close'): string {
+  return catalogs[locale].common[key];
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((type: ToastType, title: string, message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
+    const locale = currentLocale();
+    setToasts((prev) => [...prev, {
+      id,
+      type,
+      title: translateToast(locale, title),
+      message,
+    }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 5000);
@@ -46,7 +103,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-8 right-8 z-[200] flex flex-col gap-4 w-full max-w-sm pointer-events-none">
+      <div className="fixed bottom-8 end-8 z-[200] flex flex-col gap-4 w-full max-w-sm pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div
@@ -58,7 +115,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               <div className={cn(
                 "glass p-5 rounded-2xl flex gap-4 shadow-2xl relative overflow-hidden",
-                "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
+                "before:absolute before:start-0 before:top-0 before:bottom-0 before:w-1",
                 toast.type === 'danger' ? 'before:bg-danger' : 
                 toast.type === 'success' ? 'before:bg-success' : 
                 toast.type === 'warning' ? 'before:bg-amber-500' : 'before:bg-primary'
@@ -81,6 +138,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 </div>
                 <button 
                   onClick={() => removeToast(toast.id)}
+                  aria-label={translateCommon(currentLocale(), 'close')}
                   className="p-1 hover:bg-white/5 rounded-lg transition-colors h-fit"
                 >
                   <X className="w-4 h-4 text-white/20" />

@@ -48,7 +48,6 @@ export function Avatar({
       aria-label={label || undefined}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={label}

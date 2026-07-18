@@ -17,11 +17,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const router = useRouter();
+  const t = useTranslations('command');
 
   const toggle = useCallback(() => setIsOpen(open => !isOpen), []);
 
@@ -37,16 +39,16 @@ export function CommandPalette() {
   }, []);
 
   const commands = [
-    { group: 'Navigation', items: [
-      { name: 'Dashboard', icon: Zap, href: '/dashboard' },
-      { name: 'Fleet Guardian', icon: Car, href: '/dashboard/fleet' },
-      { name: 'Financial Brain', icon: TrendingUp, href: '/dashboard/finance' },
-      { name: 'Audit Logs', icon: FileText, href: '/admin/logs' },
+    { group: t('navigation'), items: [
+      { name: t('dashboard'), icon: Zap, href: '/dashboard' },
+      { name: t('fleetGuardian'), icon: Car, href: '/dashboard/fleet' },
+      { name: t('financialBrain'), icon: TrendingUp, href: '/dashboard/finance' },
+      { name: t('auditLogs'), icon: FileText, href: '/admin/logs' },
     ]},
-    { group: 'Quick Actions', items: [
-      { name: 'Provision Agency', icon: Plus, href: '/admin/agencies' },
-      { name: 'Log Refusal', icon: Users, href: '/dashboard/waitlist' },
-      { name: 'System Settings', icon: Settings, href: '/admin/settings' },
+    { group: t('quickActions'), items: [
+      { name: t('provisionAgency'), icon: Plus, href: '/admin/agencies' },
+      { name: t('logRefusal'), icon: Users, href: '/dashboard/waitlist' },
+      { name: t('systemSettings'), icon: Settings, href: '/admin/settings' },
     ]},
   ];
 
@@ -71,7 +73,7 @@ export function CommandPalette() {
           <Search className="w-6 h-6 text-white/20" />
           <input 
             autoFocus
-            placeholder="Type a command or search assets..." 
+            placeholder={t('searchPlaceholder')} 
             className="bg-transparent border-none outline-none text-xl font-bold text-white w-full placeholder:text-white/10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -109,14 +111,14 @@ export function CommandPalette() {
            <div className="flex gap-4">
               <div className="flex items-center gap-2">
                  <div className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">↑↓</div>
-                 <span className="text-[10px] font-bold text-white/20 uppercase">Navigate</span>
+                 <span className="text-[10px] font-bold text-white/20 uppercase">{t('navigate')}</span>
               </div>
               <div className="flex items-center gap-2">
                  <div className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">↵</div>
-                 <span className="text-[10px] font-bold text-white/20 uppercase">Select</span>
+                 <span className="text-[10px] font-bold text-white/20 uppercase">{t('select')}</span>
               </div>
            </div>
-           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Fider Universal Search</p>
+           <p className="text-[10px] font-black text-primary uppercase tracking-widest">{t('universalSearch')}</p>
         </div>
       </motion.div>
     </div>,

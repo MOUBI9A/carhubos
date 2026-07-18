@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFormat } from '@/lib/useFormat';
 import { useBilling, type BillingSnapshot } from './useBilling';
 
 const STATUS_STYLES: Record<string, { chip: string; label: string }> = {
@@ -43,19 +44,6 @@ const FEATURE_LABELS: Record<string, string> = {
   api_access: 'API & Webhooks',
   priority_support: 'Priority Support',
 };
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function fmtMoney(n: number): string {
-  return new Intl.NumberFormat('en-US').format(n);
-}
 
 function daysLeft(iso: string | null): number | null {
   if (!iso) return null;
@@ -102,6 +90,7 @@ export default function BillingPage() {
 }
 
 function BillingBody({ data }: { data: BillingSnapshot }) {
+  const { money: fmtMoney, date: fmtDate } = useFormat();
   const status = STATUS_STYLES[data.status] ?? STATUS_STYLES.ACTIVE;
   const trial = daysLeft(data.trialEndsAt);
 
@@ -132,7 +121,7 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
             <p className="text-4xl font-black text-white">{data.planName}</p>
           </div>
           <p className="text-sm text-white/40 font-bold mt-1">
-            {data.priceMonthly > 0 ? `${fmtMoney(data.priceMonthly)} MAD / month` : 'Free during beta'}
+            {data.priceMonthly > 0 ? `${fmtMoney(data.priceMonthly)} / month` : 'Free during beta'}
           </p>
           {trial !== null && (
             <p className="text-[11px] text-white/40 mt-3 font-medium">

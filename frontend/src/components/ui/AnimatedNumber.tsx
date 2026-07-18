@@ -41,8 +41,6 @@ export function AnimatedNumber({
       onUpdate: (v) => setDisplay(format(v)),
     });
     return controls.stop;
-    // format is intentionally excluded — callers pass inline fns.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, reduce, duration]);
 
   return (

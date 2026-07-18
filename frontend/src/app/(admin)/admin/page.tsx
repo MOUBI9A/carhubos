@@ -18,6 +18,7 @@ import {
   Rocket,
   Percent,
 } from 'lucide-react';
+import { useFormat } from '@/lib/useFormat';
 import { useAdminOverview, useFounderMetrics, type FounderMetrics } from './useAdminOverview';
 
 const PLAN_COLORS: Record<string, string> = {
@@ -29,15 +30,15 @@ const PLAN_COLORS: Record<string, string> = {
 
 function FounderMetricsBand() {
   const { data: m } = useFounderMetrics();
+  const { money } = useFormat();
   if (!m) return null;
 
-  const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n);
   const pct = (n: number) => `${Math.round(n * 100)}%`;
   const planEntries = Object.entries(m.planDistribution);
 
   const cells: { icon: React.ElementType; tint: string; value: string; label: string }[] = [
-    { icon: Wallet, tint: 'text-success bg-success/10 border-success/20', value: `${fmt(m.mrr)} MAD`, label: 'MRR (recurring)' },
-    { icon: TrendingUp, tint: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', value: `${fmt(m.arr)} MAD`, label: 'ARR (annualized)' },
+    { icon: Wallet, tint: 'text-success bg-success/10 border-success/20', value: money(m.mrr, { compact: true }), label: 'MRR (recurring)' },
+    { icon: TrendingUp, tint: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', value: money(m.arr, { compact: true }), label: 'ARR (annualized)' },
     { icon: Rocket, tint: 'text-blue-400 bg-blue-500/10 border-blue-500/20', value: `${m.trials}`, label: 'Active Trials' },
     { icon: Percent, tint: 'text-amber-500 bg-amber-500/10 border-amber-500/20', value: pct(m.conversionRate), label: 'Trial → Paid' },
   ];

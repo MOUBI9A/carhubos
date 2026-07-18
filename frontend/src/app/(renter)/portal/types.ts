@@ -144,33 +144,24 @@ export function scopeLabel(type: string): string {
   return SCOPE_LABELS[type] ?? type;
 }
 
-// ── Formatters ────────────────────────────────────────────────────────────
+// ── Formatters (locale-aware via lib/format; default FR / fr-MA) ───────────
 
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+export {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from '@/lib/format';
 
-export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-/** "3 days left" / "Expired" / "Today" for a future-facing expiry timestamp. */
-export function formatRelativeToNow(iso: string | null | undefined): string {
+/** "3 days left" / "Expired" / "Today" — pass translated labels when available. */
+export function formatRelativeToNow(
+  iso: string | null | undefined,
+  labels?: { expired: string; expiresToday: string; daysLeft: (days: number) => string },
+): string {
   if (!iso) return '—';
   const diffMs = new Date(iso).getTime() - Date.now();
-  if (diffMs <= 0) return 'Expired';
+  if (diffMs <= 0) return labels?.expired ?? 'Expired';
   const days = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-  if (days <= 1) return 'Expires today';
-  return `${days} days left`;
+  if (days <= 1) return labels?.expiresToday ?? 'Expires today';
+  return labels?.daysLeft?.(days) ?? `${days} days left`;
 }

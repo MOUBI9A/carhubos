@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Sidebar } from './Sidebar';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -27,6 +28,7 @@ export function DashboardLayout({
   const { role, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const tc = useTranslations('common');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   // Close the mobile drawer whenever the route changes.
@@ -73,13 +75,13 @@ export function DashboardLayout({
       <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 glass border-b border-hairline">
         <button
           onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
+          aria-label={tc('openMenu')}
           className="p-2 -ms-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface-raised transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
         <span className="text-lg font-semibold tracking-tight text-foreground">
-          Fider<span className="text-text-faint">OS</span>
+          {tc('brand')}<span className="text-text-faint">OS</span>
         </span>
       </header>
 

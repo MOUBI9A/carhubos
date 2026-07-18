@@ -16,6 +16,8 @@
   --font-sans: var(--font-hanken), "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), "Fraunces", Georgia, "Times New Roman", serif;
   --font-mono: var(--font-plex), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Arabic body/UI when <html dir="rtl" lang="ar"> (Phase 7) */
+  --font-arabic: var(--font-noto-arabic), "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif;
 
   /* Base warm-graphite surfaces */
   --color-background: hsl(30 9% 7%);

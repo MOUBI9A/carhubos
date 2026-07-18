@@ -37,7 +37,7 @@ export default function AgencyManagement() {
       await api.post(`/saas-admin/agency/${agency.id}/impersonate`);
       // Full reload so AuthContext re-hydrates from the swapped cookie as the
       // impersonated owner (the banner then renders in the dashboard).
-      window.location.href = '/dashboard';
+      window.location.replace('/dashboard');
     } catch (err: any) {
       showToast('danger', 'Impersonation Failed', err?.response?.data?.message || 'Could not start the session.');
       setBusyId(null);
