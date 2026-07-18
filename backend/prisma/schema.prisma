@@ -44,6 +44,7 @@ model Agency {
   renterReviews    RenterReview[]
   blacklistEntries BlacklistEntry[]
   memberships      AgencyMembership[]
+  consentGrants    ConsentGrant[]
 
   @@index([deletedAt])
 }
@@ -83,6 +84,16 @@ model User {
   rentals          Booking[]          @relation("Renter")
   verifiedPayments Payment[]          @relation("PaymentVerifier")
   memberships      AgencyMembership[]
+
+  // 🌐 PILLAR 6 link: the global, cross-tenant identity this claimed RENTER portal
+  // account resolves to. Null until the renter claims/verifies their identity.
+  renterIdentityId String?
+  renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
+
+  // 🪪 Renter portal & consent subsystem back-relations
+  customerRecords Customer[] // agency Customer rows that link to this portal account
+  consentGrants   ConsentGrant[] // document-access grants this renter has issued
+  notifications   Notification[]
 
   @@index([agencyId])
 }
@@ -332,9 +343,14 @@ model Customer {
   renterIdentityId String?
   renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
 
+  // 🪪 Renter portal link: the claimed RENTER portal account this Customer row maps to.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   @@unique([agencyId, identityNumber])
   @@index([agencyId])
   @@index([renterIdentityId])
+  @@index([userId])
 }
 
 model CustomerDocument {
@@ -468,6 +484,7 @@ model RenterIdentity {
   customers        Customer[]
   reviews          RenterReview[]
   blacklistEntries BlacklistEntry[]
+  users            User[] // claimed RENTER portal accounts resolving to this identity
 
   @@index([riskLevel])
 }
@@ -517,4 +534,53 @@ model BlacklistEntry {
 
   @@index([identityId, status])
   @@index([agencyId, status])
+}
+
+// 🪪 RENTER PORTAL & CONSENT SUBSYSTEM (PRODUCT_VISION §5)
+// A renter must explicitly, time-boxed and revocably, consent before an agency
+// can view their identity documents. ConsentGrant is that consent record; the
+// renter (grantor) approves/revokes it and the agency reads docs only while it is
+// APPROVED and unexpired. Endpoints/guards/UI are separate tasks — this is schema only.
+model ConsentGrant {
+  id                String    @id @default(cuid())
+  scope             String[] // doc types the grant covers, e.g. CIN, DRIVING_LICENSE, PASSPORT
+  status            String    @default("PENDING") // PENDING -> APPROVED -> (REVOKED | EXPIRED)
+  requestedByUserId String? // agency staff who scanned/requested — audit only, no relation
+  requestedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  revokedAt         DateTime?
+  expiresAt         DateTime?
+  note              String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // The RENTER granting access to their identity documents.
+  grantorUserId String
+  grantor       User   @relation(fields: [grantorUserId], references: [id], onDelete: Cascade)
+  // The agency requesting access.
+  agencyId      String
+  agency        Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([grantorUserId])
+  @@index([agencyId])
+  @@index([status])
+}
+
+// Real in-app notifications (PRODUCT_VISION §5) — consent requests/approvals,
+// doc-expiry alerts, etc. `relatedType`/`relatedId` are a lightweight polymorphic
+// pointer to the originating record (e.g. "ConsentGrant" + its id).
+model Notification {
+  id          String   @id @default(cuid())
+  type        String // CONSENT_REQUESTED, CONSENT_APPROVED, DOC_EXPIRING, ...
+  title       String
+  body        String?
+  read        Boolean  @default(false)
+  relatedType String?
+  relatedId   String?
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }
