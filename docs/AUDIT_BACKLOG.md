@@ -93,12 +93,14 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 - **[H] Owner staff management UI** — owner creates staff, picks a preset ("Front desk", "Fleet manager", "Accountant"), edits exact capabilities per member; `DELETE /users/:id`; signed-invite path for staff (no open self-register into an existing agency).
 - Agency catalog: `fleet.view/manage · booking.view/create/manage/return · customer.view/manage · finance.view · payment.record/verify · expense.manage · contract.manage/sign · deposit.manage · trust.report · inspection.perform · reports.view · hub.manage · staff.manage · settings.manage`.
 
-### 5B — Renter portal + Consent/QR subsystem (see PRODUCT_VISION §5)
+### 5B — Renter portal + Consent/QR subsystem ✅ DONE (see PRODUCT_VISION §5)
 
-- **[H] Identity linkage** — `Customer` (per-agency) ↔ `RenterIdentity` (global) ↔ `User(role=RENTER)`. Booking creates/links the global identity and can **invite the renter to claim a portal account** (signed token). No more dead-end `Customer` rows.
-- **[H] Renter portal (real backend)** — profile + trust summary, my-bookings/history, documents shared *to* the renter (their contract, rented car docs, incident dossier), notifications. Wire the mock renter pages to real, self-scoped endpoints.
-- **[C] Consent-grant subsystem** — new `ConsentGrant` model (grantor renter, agency, scope of doc types, expiry, status ACTIVE/APPROVED/REVOKED/EXPIRED, full audit). QR flow: renter shows QR → agency scan creates a scoped consent *request* → renter approves in portal → agency gets a **time-boxed, revocable, audited** view of exactly the approved docs. **No agency sees renter PII without an active grant.** Scheduled expiry job.
-- **[M] Notifications model** — real in-app notification model (+ optional WhatsApp) for return reminders, incidents, document requests, deposit status — not just the cron.
+Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — agency vault read is 403 (no grant) → 200 (renter approves, in-scope docs only) → 403 (renter revokes); non-renter is 403 on the portal. Commits `e5f3474`,`0a742a0` (backend), `7e2bbf9` (renter vault view + demo).
+
+- **[H] Identity linkage ✅** — `User.renterIdentityId` ↔ global `RenterIdentity`, `Customer.userId` ↔ `User(role=RENTER)`. Seed links the demo renter to a TRUSTED identity. (Booking auto-link + signed portal-claim invite = deferred polish, not blocking.)
+- **[H] Renter portal (real backend) ✅** — self-scoped `GET /portal/me` (profile+trust), `/portal/documents` (own vault), `/portal/bookings`, `/portal/notifications` (+`:id/read`), `/portal/consent` (+approve/revoke). `RenterGuard` (renter/root only); every query keyed on JWT `user.id`. UI: My Digital Vault (profile, Trust Network, QR badge, My Documents, Consent Center, notifications).
+- **[C] Consent-grant subsystem ✅** — `ConsentGrant` (grantor/agency/scope[]/status PENDING→APPROVED→REVOKED|EXPIRED/expiresAt). Global renter-owned `RenterDocument` vault is the store consent governs. QR flow live: renter shows `qrHash` → agency `POST /agency/consent/request` (scoped) → renter approves in portal → agency `GET /agency/consent/documents/:renterUserId` returns a **time-boxed (7d), revocable, scope-filtered** view. Verifier-caught & fixed: the gate was decorative (read the agency's own Customer docs) — now reads the distinct global vault. `@Cron` expiry sweep.
+- **[M] Notifications model ✅** — `Notification` model + portal bell/mark-read; consent request/approve/revoke notify the counterparty. (WhatsApp channel = optional later.)
 
 ---
 

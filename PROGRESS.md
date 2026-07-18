@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> Last updated after commit `0a742a0` (Phase 5B backend). Two background workers died on the account **session limit (resets 8am Africa/Casablanca)** — the renter-portal-UI worker and the SaaS-schema worker.
+> Last updated after commit `7e2bbf9` (Phase 5B **fully complete** — renter portal UI verified E2E + document vault view + self-contained consent demo). **Phase 5 (5A capability engine + 5B renter/consent) is DONE.** Next up: **Phase 11 — SaaS Business Layer** (see §1).
 
 ## The goal
 Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the **founder** (ROOT_ADMIN) runs the platform; **agencies** (OWNER + staff) are paying subscribers; **renters** are end users. Three big architectural additions from the vision: (1) capability-based access, (2) SaaS business layer, (3) renter portal + consent/QR. Plus the hardening phases 0–10. Done = the **Market-Ready Checklist** at the bottom of the backlog.
@@ -41,11 +41,12 @@ Logins (password `admin123`): `root@ owner@ manager@ agent@ renter@` `carhub.os`
 
 ## LEFT TO DO (in order)
 
-### 0. IMMEDIATE — finish Phase 5B UI (uncommitted on disk, `tsc`-clean, UNVERIFIED)
-The renter-portal-UI worker died at the browser-verification step. On disk, uncommitted:
-- `frontend/src/app/(renter)/portal/page.tsx` (M), `.../portal/history/page.tsx` (M), `.../portal/types.ts` (??), `.../portal/usePortalData.ts` (??).
-It wires My Vault (profile+trust+consent grants approve/revoke), History (bookings), Notifications to the `/portal/*` endpoints. **Resume:** log in as `renter@carhub.os`, visually verify the pages render + consent approve/revoke works, then commit. `(renter)/layout.tsx` already wraps these (don't double-wrap DashboardLayout).
-- **Backend gap to add:** there is NO `GET /portal/documents` for the renter to view their OWN `RenterDocument` vault (consent only exposes the vault to *agencies* via a grant). Add a self-scoped `GET /portal/documents` (+ optional upload) so "My Vault" can list the renter's own docs. Also the renter's `qrHash` may be null — provision one so the QR/consent-request demo works end-to-end.
+### 0. ✅ DONE — Phase 5B renter portal UI (commit `7e2bbf9`, verified E2E)
+Renter portal fully wired + verified in-browser as `renter@carhub.os`:
+- `GET /portal/documents` added (self-scoped renter view of own `RenterDocument` vault) + "My Documents" card on the portal.
+- Renter `qrHash` provisioned in seed (`FDR-VAULT-SAMI-8F2A4C7E`); seed now also creates a PENDING consent request + notification so the portal opens with something to review.
+- Consent approve (PENDING→ACTIVE) + revoke (ACTIVE→REVOKED) verified in the UI; the invariant holds E2E — agency vault read 403→200 (in-scope only)→403; non-renter 403 on portal. QR badge modal works. No console errors; tsc green, jest 17/17.
+- (Optional later polish: renter document *upload* needs file storage — deferred to Phase 9 infra; booking auto-link + signed portal-claim invite deferred.)
 
 ### 1. Phase 11 — SaaS Business Layer (NOT STARTED; manual billing per founder)
 Spec in `docs/AUDIT_BACKLOG.md` "PHASE 11". Order: (a) **schema** `Plan`/`Subscription`/`PlatformInvoice` + seed a BETA plan (unlimited/free) + `STARTER/PRO/BUSINESS` rows (limits: STARTER 15 cars/2 staff/150 bkg~299 MAD; PRO 50/8/1000~799; BUSINESS unlimited~1999 — config only during beta) + backfill each agency an ACTIVE BETA `Subscription` (trialEndsAt = now+14d); (b) **`EntitlementsService`** the app checks (limits + feature flags) + a plan gate; (c) usage metering + limit enforcement + upgrade prompts; (d) tenant lifecycle/dunning (TRIAL→ACTIVE→PAST_DUE→SUSPENDED→CANCELED; suspend guard); (e) **founder metrics** dashboard (MRR, active tenants, trials, conversion, churn, plan mix); (f) **support/impersonation** — wire the existing `ForensicService` (audited); (g) manual founder console to activate/mark-paid subscriptions + issue `PlatformInvoice`.
