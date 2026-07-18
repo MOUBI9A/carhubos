@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> Last updated after commit `7e2bbf9` (Phase 5B **fully complete** — renter portal UI verified E2E + document vault view + self-contained consent demo). **Phase 5 (5A capability engine + 5B renter/consent) is DONE.** Next up: **Phase 11 — SaaS Business Layer** (see §1).
+> Last updated after commit `50f32df` (Phase 11 **complete** — SaaS business layer, verified E2E). **DONE so far: Phases 0, 1, 2, 5 (5A+5B), 11.** Next up: the remaining hardening — **Phase 3** (financial lifecycle/deposits), then 4, 6, 7, 8, 9(gate), 10, 12.
 > **2026-07-18 addendum:** `docs/DESIGN_VISION.md` added — full audit of the current frontend (generic dark glass-morphism, one neon-purple accent, all-caps headings, zero real imagery anywhere in the product) + the target "lux/humanized" direction + a ready-to-send master prompt for the full frontend rebuild (**Phase 12**, added to `docs/AUDIT_BACKLOG.md`). Read it before starting Phase 12 work.
 
 ## The goal
@@ -15,7 +15,8 @@ Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the
 docker compose up -d db                         # Postgres (root .env has DB_USER/PASSWORD/NAME)
 cd backend && npx prisma migrate deploy
 node -r dotenv/config prisma/seed.js            # base demo (WIPES); then:
-node -r dotenv/config prisma/seed-roles.js      # idempotent: users, memberships, renter vault, (soon) plans/subs
+node -r dotenv/config prisma/seed-roles.js      # idempotent: users, memberships, renter vault + pending consent
+node -r dotenv/config prisma/seed-plans.js      # idempotent: SaaS plan catalog + backfill BETA subscriptions
 npm run start:dev                               # http://localhost:5406/api
 cd frontend && npm run dev                      # http://localhost:3002
 ```
@@ -49,8 +50,15 @@ Renter portal fully wired + verified in-browser as `renter@carhub.os`:
 - Consent approve (PENDING→ACTIVE) + revoke (ACTIVE→REVOKED) verified in the UI; the invariant holds E2E — agency vault read 403→200 (in-scope only)→403; non-renter 403 on portal. QR badge modal works. No console errors; tsc green, jest 17/17.
 - (Optional later polish: renter document *upload* needs file storage — deferred to Phase 9 infra; booking auto-link + signed portal-claim invite deferred.)
 
-### 1. Phase 11 — SaaS Business Layer (NOT STARTED; manual billing per founder)
-Spec in `docs/AUDIT_BACKLOG.md` "PHASE 11". Order: (a) **schema** `Plan`/`Subscription`/`PlatformInvoice` + seed a BETA plan (unlimited/free) + `STARTER/PRO/BUSINESS` rows (limits: STARTER 15 cars/2 staff/150 bkg~299 MAD; PRO 50/8/1000~799; BUSINESS unlimited~1999 — config only during beta) + backfill each agency an ACTIVE BETA `Subscription` (trialEndsAt = now+14d); (b) **`EntitlementsService`** the app checks (limits + feature flags) + a plan gate; (c) usage metering + limit enforcement + upgrade prompts; (d) tenant lifecycle/dunning (TRIAL→ACTIVE→PAST_DUE→SUSPENDED→CANCELED; suspend guard); (e) **founder metrics** dashboard (MRR, active tenants, trials, conversion, churn, plan mix); (f) **support/impersonation** — wire the existing `ForensicService` (audited); (g) manual founder console to activate/mark-paid subscriptions + issue `PlatformInvoice`.
+### 1. ✅ DONE — Phase 11 SaaS Business Layer (commits `7b7a257`→`50f32df`, verified E2E)
+Full manual-billing SaaS engine, free-during-beta with real gating:
+- **Schema+seed**: `Plan`/`Subscription`/`PlatformInvoice` (migration `20260718120401`); catalog `src/common/plans.ts` (+ `prisma/plan-catalog.js` mirror); `prisma/seed-plans.js` backfills all agencies onto ACTIVE BETA (14-day trial). `register()` provisions a BETA sub for new signups.
+- **EntitlementsService** (`src/entitlements/`, @Global): getEntitlements/hasFeature/getUsage/assertWithinLimit/assertOperating; fail-open to BETA. `GET /agency/billing`, `GET /platform/plans`.
+- **Metering+dunning**: wired into cars/staff/bookings create → 403 PLAN_LIMIT_REACHED / SUBSCRIPTION_SUSPENDED (adversarially verified; inert on BETA). Spec: `entitlements.service.spec.ts` (12 tests).
+- **Founder console** (`saas-admin`, ROOT_ADMIN): `GET /metrics` (MRR/ARR/trials/conversion/churn/plan-mix), `PATCH agency/:id/subscription`, `POST agency/:id/invoice`, `PATCH invoice/:id/mark-paid` (audited).
+- **Impersonation**: fixed+wired `ForensicService` (30-min token, isImpersonated/impersonatorId, refuses root); `POST /saas-admin/agency/:id/impersonate` + `POST /auth/exit-impersonation`; sticky banner. Round-trip verified in-browser.
+- **Frontend**: `/dashboard/billing` (plan+usage+invoices), `/admin` Business Metrics band, real `/admin/agencies` console (impersonate + manage modal), `ImpersonationBanner`.
+- Left as non-blocking follow-ups: public pricing on the landing, PLAN_LIMIT_REACHED upgrade-prompt UI, Stripe (post-beta, human-gated).
 
 ### 2. Phase 3 rest — financial lifecycle
 Security **deposits** (capture at contract → HELD at hand-over → RETURNED/refund → CLAIMED + damage charge). Wire owner Finance UI to `/payments/pending` + verify (backlog says backend exists). Partial payments / refunds (`POST /payments`). Leave-a-review prompt on completion.

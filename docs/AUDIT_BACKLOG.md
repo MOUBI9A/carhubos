@@ -162,18 +162,19 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 11 — SaaS Business Layer (the money side; see PRODUCT_VISION §4)
+## PHASE 11 — SaaS Business Layer ✅ DONE (the money side; see PRODUCT_VISION §4)
 
-> Execution order: build BEFORE Phase 9 deploy / Phase 10 final pass. This is what makes it a SaaS, not an app. Live billing-key wiring + production billing are human/gated.
+> Manual billing per founder decision (no Stripe during beta); free-during-beta with the real engine live. Verified E2E in-browser + adversarial API tests. Commits `7b7a257` (schema) · `0f30c70` (entitlements) · `c89566f` (metering) · `4851449` (founder console) · `06e6766` (impersonation) · `88dfeab` (billing UI + banner) · `50f32df` (metrics + agencies console).
 
-- **[C] Subscriptions & billing** — agencies pay a **recurring subscription** (distinct from rental payments). `Subscription` + `Plan` + `PlatformInvoice` models; Stripe Checkout + subscriptions + **webhooks** (source of truth for state); agency-facing billing page (plan, payment method, receipts, proration). *(Founder decision: self-serve Stripe vs manual invoicing. Human: Stripe keys.)*
-- **[C] Plans & entitlements gating** — central `EntitlementsService` the whole app checks; `STARTER/PRO/BUSINESS` actually gate features + limits (max cars, staff seats, bookings/month, Trust Network access, hub, etc.). *(Founder decision: tiers, limits, pricing.)*
-- **[H] Self-serve onboarding funnel** — public signup → **trial** → subscribe → provisioned agency + guided first-run setup. Extends the hardened `/signup`; signed-invite path for staff. *(Founder decision: trial length — default 14 days.)*
-- **[H] Usage metering & limit enforcement** — count usage vs plan limits; block/soft-warn at limit; upgrade prompts.
-- **[H] Tenant lifecycle & dunning** — `TRIAL → ACTIVE → PAST_DUE → SUSPENDED → CANCELED`; suspend service on non-payment (middleware/guard); reactivation flow.
-- **[H] Founder metrics** — platform-owner dashboard: MRR, active tenants, trials, trial→paid conversion, churn, plan distribution (real, not rental GMV).
-- **[H] Support & impersonation** — securely, audited, log into a tenant (wire the existing `ForensicService`); scoped Platform-Staff capability.
-- **[M] Platform-level audit** on all tenant/billing/impersonation actions.
+- ✅ **[C] Subscriptions & billing** — `Plan` / `Subscription` (one per agency, lifecycle TRIAL→ACTIVE→PAST_DUE→SUSPENDED→CANCELED) / `PlatformInvoice`. **Manual** founder invoicing (FIDER-YYYY-#### numbers, issue + mark-paid, audited, double-pay guard) — Stripe deferred. Agency billing page (`/dashboard/billing`): plan, status, usage meters, invoices. *(Live Stripe wiring = future, human-gated.)*
+- ✅ **[C] Plans & entitlements gating** — `EntitlementsService` (`src/entitlements/`) the app checks: `getEntitlements`/`hasFeature`/`getUsage`/`assertWithinLimit`/`assertOperating`; fail-open to BETA. Catalog `src/common/plans.ts` (BETA unlimited/free/all-features; STARTER 15/2/150 ~299; PRO 50/8/1000 ~799; BUSINESS ∞ ~1999 MAD). `GET /platform/plans` public.
+- ✅ **[H] Self-serve onboarding funnel** — `register()` provisions a BETA subscription (14-day trial) in the same txn as the OWNER membership. *(Guided first-run + signed staff-invite = later polish.)*
+- ✅ **[H] Usage metering & limit enforcement** — `assertWithinLimit` wired into cars/staff/bookings create → 403 `PLAN_LIMIT_REACHED` {limit,current,planKey}; unlimited (BETA) no-op. Adversarially verified (STARTER maxCars=3 with 4 cars → 403).
+- ✅ **[H] Tenant lifecycle & dunning** — `assertOperating` blocks SUSPENDED/CANCELED writes (`SUBSCRIPTION_SUSPENDED`); PAST_DUE is a grace window. Founder can force status in the console.
+- ✅ **[H] Founder metrics** — `/admin` Business Metrics band + `GET /saas-admin/metrics`: MRR/ARR, active tenants, trials, trial→paid, churn, plan/status distribution (business, not rental GMV).
+- ✅ **[H] Support & impersonation** — `ForensicService` fixed (was broken: signed `userId`, no expiry, unwired) → proper 30-min token (sub/role/agencyId + isImpersonated/impersonatorId), refuses impersonating a ROOT_ADMIN, audited. `POST /saas-admin/agency/:id/impersonate` + `POST /auth/exit-impersonation` + a sticky support banner. Verified round-trip in-browser.
+- ✅ **[M] Platform-level audit** — SUBSCRIPTION_UPDATE, PLATFORM_INVOICE_ISSUE/PAID, IMPERSONATE_START via `AuditLogsService`.
+- ⬜ *Follow-ups (not blocking):* public pricing section on the landing; upgrade-prompt UI for `PLAN_LIMIT_REACHED` (never fires during beta); Stripe wiring (human-gated, post-beta).
 
 ---
 

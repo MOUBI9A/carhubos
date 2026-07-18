@@ -32,7 +32,8 @@ docker compose up -d db
 cd backend
 npx prisma migrate deploy                    # apply migrations
 node -r dotenv/config prisma/seed.js         # base demo data (WIPES + reseeds)
-node -r dotenv/config prisma/seed-roles.js   # one idempotent login per role
+node -r dotenv/config prisma/seed-roles.js   # idempotent: logins/role, memberships, renter vault + pending consent
+node -r dotenv/config prisma/seed-plans.js   # idempotent: SaaS plan catalog + backfill BETA subscriptions
 npm run start:dev                            # http://localhost:5406/api
 
 # 3. Frontend (separate terminal)
@@ -124,5 +125,6 @@ A **supervisor** decomposes each backlog phase into small tasks with **exact fil
 - **Phase 1** ✅ correctness & authz — throttler, JWT fail-fast, trust role-gating, payments/expenses IDOR, invoice reconciliation, double-booking guard, HMAC identity hash.
 - **Phase 2** ✅ data foundation — Postgres switch, money `Decimal(12,2)` + `DecimalToNumberInterceptor`, `Task.agencyId`, Agency soft-delete + trust-cascade→SetNull, `recompute()` in txn, idempotent seeds.
 - **Phase 5** ✅ roles (mock → real) — **5A Capability Engine** (catalog + `AgencyMembership` + `CapabilitiesGuard` + `@RequireCapabilities` + staff-mgmt API + owner Staff & Access UI; ROLE_PRESETS OWNER=21/MANAGER=19/AGENT=14, ROOT_ADMIN bypass, fail-closed). **5B Renter portal + Consent/QR** (self-scoped `/portal/*`, `ConsentGrant` + global `RenterDocument` vault, invariant: no agency PII read without an active in-scope same-agency time-boxed grant — verified E2E). Landing/rebrand to **Fider** + mobile nav + Modal a11y + inclusive VAT also landed.
-- **Phase 11** 🔄 SaaS business layer (NEXT) — plans/subscriptions/entitlements, manual billing, founder metrics, impersonation. Then remaining hardening: **Phase 3** deposits/refunds, **4** rental lifecycle, **6** perf, **7** i18n FR/AR/EN, **8** tests/CI, **9** deploy (HUMAN GATE), **10** final audit.
+- **Phase 11** ✅ SaaS business layer — `Plan`/`Subscription`/`PlatformInvoice`, `EntitlementsService` (limits + feature flags, fail-open to BETA), usage metering + dunning gates on cars/staff/bookings create, manual founder billing console (metrics/MRR, change plan, extend trial, issue+pay invoice), audited impersonation (`/saas-admin/agency/:id/impersonate` + `/auth/exit-impersonation` + banner). Agency billing page + founder metrics dashboard + real agencies console. Free-during-beta (BETA plan grants all); Stripe deferred (post-beta, human-gated). Seeds: `prisma/seed-plans.js`.
+- **Remaining hardening** ⏳ **Phase 3** deposits/refunds, **4** rental lifecycle, **6** perf, **7** i18n FR/AR/EN + a11y + dead-buttons, **8** tests/CI, **9** deploy (HUMAN GATE), **10** final audit, **12** design/frontend rebuild.
 - **Phase 12** ⬜ **Design & frontend rebuild** (planned, not started) — full presentation-layer redesign replacing the current generic dark glass-morphism/neon-purple/all-caps look (zero real imagery anywhere in the product today) with a warm, premium, photographic "lux/humanized" system across the public site + all 4 portals. Brief + master prompt: `docs/DESIGN_VISION.md`. Checklist: `docs/AUDIT_BACKLOG.md` PHASE 12.
