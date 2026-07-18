@@ -86,7 +86,7 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 - **[M] Vault/Reports/Accidents/Fleet-map need new backends** → build or clearly label demo (no fake success toasts).
 - **[M] Settings staff-removal 404s; Automations & AI-Vision half-real** → users controller (`DELETE /users/:id`); thin `/automations` controller over the cron; real vehicle picker for AI Vision.
 
-### 5A — Capability Engine (replace coarse roles — see PRODUCT_VISION §2–3)
+### 5A — Capability Engine ✅ DONE (catalog + AgencyMembership + CapabilitiesGuard + staff API + owner UI; verified E2E: owner 200/roster, agent 403, register creates membership, anti-escalation) — see PRODUCT_VISION §2–3
 
 - **[H] Capabilities model** — introduce granular `Capability` (const catalog + `@IsIn`) and an `AgencyMembership` join (`userId`+`agencyId`+`capabilities` string[] + `role` preset label). Keep `User.role` as the identity-type/preset seed; enforcement moves to capabilities. Migration + backfill existing users' role→default capability set.
 - **[H] Capability guard** — `@RequireCapabilities('booking.create', …)` + `CapabilitiesGuard` reading the caller's membership for `req.user.agencyId`, server-side, always tenant-scoped. Platform-tier capability set (`tenant.*`, `billing.manage`, `impersonate`, `platform.config`, `support.view`) for ROOT_ADMIN + new Platform Staff. Migrate existing `@Roles()` gates to capabilities (keep role checks only where identity-type is the real gate).
