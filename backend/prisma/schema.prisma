@@ -45,6 +45,8 @@ model Agency {
   blacklistEntries BlacklistEntry[]
   memberships      AgencyMembership[]
   consentGrants    ConsentGrant[]
+  subscription     Subscription?
+  platformInvoices PlatformInvoice[]
 
   @@index([deletedAt])
 }
@@ -606,4 +608,83 @@ model RenterDocument {
   owner       User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   @@index([ownerUserId, type])
+}
+
+// ─── Phase 11 · SaaS business layer ──────────────────────────────────────────
+// The money side: what agencies pay Fider (distinct from rental payments between
+// an agency and its renters). Manual billing during beta (no Stripe): the founder
+// issues + marks invoices paid in the founder console. Money is Decimal MAD,
+// VAT-inclusive per the Moroccan model.
+
+/// A subscription plan (pricing tier). Seeded rows: BETA (internal, unlimited,
+/// free — every agency is on this during the beta) plus the public STARTER / PRO
+/// / BUSINESS tiers. Null limit = unlimited. Prices are editable config; nothing
+/// is charged during beta.
+model Plan {
+  id                  String   @id @default(cuid())
+  key                 String   @unique // BETA | STARTER | PRO | BUSINESS
+  name                String
+  description         String?
+  priceMonthly        Decimal  @default(0) @db.Decimal(12, 2) // MAD, VAT-inclusive
+  currency            String   @default("MAD")
+  maxCars             Int? // null = unlimited
+  maxStaff            Int? // null = unlimited (seats incl. owner)
+  maxBookingsPerMonth Int? // null = unlimited
+  features            String[] // feature flags this plan unlocks, e.g. trust_network, hub, ai_vision
+  isPublic            Boolean  @default(true) // BETA is private (hidden from the public pricing table)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+/// One agency's current subscription — one row per agency (unique agencyId), the
+/// authoritative source of its plan + lifecycle state. `Agency.subscriptionTier`
+/// is kept as a denormalized mirror of the plan key for back-compat.
+model Subscription {
+  id                 String    @id @default(cuid())
+  status             String    @default("TRIAL") // TRIAL -> ACTIVE -> PAST_DUE -> SUSPENDED -> CANCELED
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime?
+  canceledAt         DateTime?
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  planId   String
+  plan     Plan   @relation(fields: [planId], references: [id])
+
+  invoices PlatformInvoice[]
+
+  @@index([status])
+  @@index([planId])
+}
+
+/// A platform invoice the founder issues to an agency for a subscription period.
+/// Manual billing: issued + marked paid in the founder console.
+model PlatformInvoice {
+  id          String    @id @default(cuid())
+  number      String    @unique // human invoice number, e.g. FIDER-2026-0001
+  status      String    @default("ISSUED") // DRAFT | ISSUED | PAID | VOID
+  amount      Decimal   @db.Decimal(12, 2) // MAD, VAT-inclusive
+  currency    String    @default("MAD")
+  periodStart DateTime?
+  periodEnd   DateTime?
+  issuedAt    DateTime  @default(now())
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  agencyId       String
+  agency         Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId])
+  @@index([status])
 }

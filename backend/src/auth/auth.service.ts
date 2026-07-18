@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { ROLE_PRESETS } from '../common/capabilities';
+import { DEFAULT_PLAN_KEY, TRIAL_DAYS } from '../common/plans';
 
 @Injectable()
 export class AuthService {
@@ -39,10 +40,33 @@ export class AuthService {
           data: {
             name: registerDto.agencyName,
             contactEmail: registerDto.email,
-            subscriptionTier: 'STARTER',
+            subscriptionTier: DEFAULT_PLAN_KEY,
           },
         });
         agencyId = agency.id;
+
+        // SaaS lifecycle: put every new agency on the beta plan immediately, or
+        // EntitlementsService would fall back to defaults and the billing page
+        // would show nothing. Best-effort — if plans aren't seeded yet (fresh
+        // DB), skip; entitlements fail open to BETA during the beta anyway.
+        const betaPlan = await tx.plan.findUnique({
+          where: { key: DEFAULT_PLAN_KEY },
+        });
+        if (betaPlan) {
+          const now = new Date();
+          await tx.subscription.create({
+            data: {
+              agencyId,
+              planId: betaPlan.id,
+              status: 'ACTIVE',
+              trialEndsAt: new Date(
+                now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+              ),
+              currentPeriodStart: now,
+              note: 'Auto-provisioned on signup (Fider beta).',
+            },
+          });
+        }
       }
 
       const user = await tx.user.create({
