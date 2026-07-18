@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+// Mirrors src/common/capabilities.ts ROLE_PRESETS — see the sync warning there.
+const { ROLE_PRESETS } = require('./capability-presets');
 
 const prisma = new PrismaClient();
 
@@ -57,6 +59,21 @@ async function main() {
       agencyId: agency.id,
     }
   });
+
+  // Capability memberships — without these, CapabilitiesGuard 403s every
+  // gated endpoint for the seeded users. Idempotent on {userId, agencyId}.
+  for (const [user, role] of [[owner, 'OWNER'], [agent, 'AGENT']]) {
+    await prisma.agencyMembership.upsert({
+      where: { userId_agencyId: { userId: user.id, agencyId: agency.id } },
+      update: { rolePreset: role, capabilities: ROLE_PRESETS[role] },
+      create: {
+        userId: user.id,
+        agencyId: agency.id,
+        rolePreset: role,
+        capabilities: ROLE_PRESETS[role],
+      },
+    });
+  }
 
   // 4. Create Customers
   const customers = await Promise.all([

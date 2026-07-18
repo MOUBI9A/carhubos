@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { ROLE_PRESETS } from '../common/capabilities';
 
 @Injectable()
 export class AuthService {
@@ -54,6 +55,22 @@ export class AuthService {
           agencyId: agencyId,
         },
       });
+
+      // Capability engine: an agencyId here only ever comes from the fresh
+      // agency created above, so the registrant is by construction its
+      // founder/owner — seed the OWNER membership or every gated endpoint
+      // would 403 them (CapabilitiesGuard requires a membership row). Users
+      // registering without an agency get no membership.
+      if (agencyId) {
+        await tx.agencyMembership.create({
+          data: {
+            userId: user.id,
+            agencyId,
+            rolePreset: 'OWNER',
+            capabilities: ROLE_PRESETS['OWNER'],
+          },
+        });
+      }
 
       const payload = {
         sub: user.id,

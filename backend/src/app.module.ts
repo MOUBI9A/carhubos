@@ -34,6 +34,7 @@ import { AiVisionModule } from './ai-vision/ai-vision.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { SearchModule } from './common/search/search.module';
 import { TrustModule } from './trust/trust.module';
+import { AgencyStaffModule } from './agency-staff/agency-staff.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { TrustModule } from './trust/trust.module';
     ExpensesModule,
     SearchModule,
     TrustModule,
+    AgencyStaffModule,
   ],
   controllers: [AppController],
   providers: [

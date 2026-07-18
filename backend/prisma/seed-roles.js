@@ -7,6 +7,8 @@
  */
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+// Mirrors src/common/capabilities.ts ROLE_PRESETS — see the sync warning there.
+const { ROLE_PRESETS } = require('./capability-presets');
 
 const prisma = new PrismaClient();
 
@@ -35,7 +37,7 @@ async function main() {
   ];
 
   for (const a of accounts) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email: a.email },
       update: { password, role: a.role, name: a.name, agencyId: a.agencyId ?? null },
       create: {
@@ -49,6 +51,22 @@ async function main() {
       },
     });
     console.log(`  ✓ ${a.role.padEnd(11)} ${a.email}  /  admin123`);
+
+    // Agency-scoped roles need an AgencyMembership or CapabilitiesGuard 403s
+    // every gated endpoint. Idempotent on the {userId, agencyId} unique key.
+    if (a.agencyId && ROLE_PRESETS[a.role]) {
+      await prisma.agencyMembership.upsert({
+        where: { userId_agencyId: { userId: user.id, agencyId: a.agencyId } },
+        update: { rolePreset: a.role, capabilities: ROLE_PRESETS[a.role] },
+        create: {
+          userId: user.id,
+          agencyId: a.agencyId,
+          rolePreset: a.role,
+          capabilities: ROLE_PRESETS[a.role],
+        },
+      });
+      console.log(`    ↳ membership: ${a.role} preset (${ROLE_PRESETS[a.role].length} capabilities)`);
+    }
   }
 
   // Populate the demo agency with a small fleet + customers so the owner and

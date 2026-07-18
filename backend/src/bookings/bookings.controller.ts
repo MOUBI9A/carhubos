@@ -2,15 +2,18 @@ import { Controller, Get, Post, Body, Param, UseGuards, Patch, Res } from '@nest
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, UpdateBookingStatusDto } from './dto/bookings.dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
+import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { Response } from 'express';
 
 @Controller('bookings')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, CapabilitiesGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @RequireCapabilities('booking.create')
   create(@CurrentUser() user: any, @Body() createBookingDto: CreateBookingDto) {
     return this.bookingsService.create(
       user.agencyId,
@@ -20,16 +23,19 @@ export class BookingsController {
   }
 
   @Get()
+  @RequireCapabilities('booking.view')
   findAll(@CurrentUser() user: any) {
     return this.bookingsService.findAll(user.agencyId);
   }
 
   @Get(':id')
+  @RequireCapabilities('booking.view')
   findOne(@CurrentUser() user: any, @Param('id') id: string) {
     return this.bookingsService.findOne(user.agencyId, id);
   }
 
   @Patch(':id/status')
+  @RequireCapabilities('booking.manage')
   updateStatus(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -39,6 +45,7 @@ export class BookingsController {
   }
 
   @Get(':id/contract')
+  @RequireCapabilities('booking.view')
   async getContract(
     @CurrentUser() user: any,
     @Param('id') id: string,
