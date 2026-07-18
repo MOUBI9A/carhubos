@@ -6,8 +6,9 @@ export class AgenciesService {
   constructor(private prisma: PrismaService) {}
 
   async getMyAgency(agencyId: string) {
-    const agency = await this.prisma.agency.findUnique({
-      where: { id: agencyId },
+    const agency = await this.prisma.agency.findFirst({
+      // A soft-deleted agency is treated as gone — never resolve it.
+      where: { id: agencyId, deletedAt: null },
       include: {
         users: {
           select: {
@@ -35,6 +36,23 @@ export class AgenciesService {
     return this.prisma.agency.update({
       where: { id: agencyId },
       data,
+    });
+  }
+
+  /**
+   * Soft-delete an agency: stamp deletedAt instead of removing the row. This
+   * preserves the cross-tenant trust graph (its authored reviews/flags survive,
+   * anonymized via SetNull) and stops all of its users from operating, since
+   * login and getMyAgency both filter deletedAt: null. NEVER hard-delete.
+   */
+  async softDelete(agencyId: string) {
+    const agency = await this.prisma.agency.findFirst({
+      where: { id: agencyId, deletedAt: null },
+    });
+    if (!agency) throw new NotFoundException('Agency not found');
+    return this.prisma.agency.update({
+      where: { id: agencyId },
+      data: { deletedAt: new Date() },
     });
   }
 

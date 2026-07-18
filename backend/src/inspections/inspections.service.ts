@@ -38,6 +38,7 @@ export class InspectionsService {
           description: `Current: ${data.mileage}km | Service Limit: ${car.nextServiceKm}km. Please schedule vidange and filter inspection.`,
           priority,
           status: 'PENDING',
+          agencyId: car.agencyId,
         },
       });
     }

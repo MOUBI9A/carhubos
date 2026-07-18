@@ -88,6 +88,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // A soft-deleted agency's users can no longer operate. Fail closed with the
+    // same generic message so we don't disclose the agency's deletion state.
+    if (user.agencyId) {
+      const agency = await this.prisma.agency.findFirst({
+        where: { id: user.agencyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!agency) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,

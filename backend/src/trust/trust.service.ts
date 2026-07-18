@@ -103,50 +103,57 @@ export class TrustService {
   // ── Aggregate recomputation ─────────────────────────────────────────
   /** Recency-weighted score + risk level, cached on the identity row. */
   async recompute(identityId: string) {
-    const [reviews, activeFlags] = await Promise.all([
-      this.prisma.renterReview.findMany({
-        where: { identityId, status: 'PUBLISHED' },
-      }),
-      this.prisma.blacklistEntry.findMany({
-        where: { identityId, status: 'ACTIVE' },
-      }),
-    ]);
+    // Read → aggregate → write must be atomic: a concurrent review/blacklist
+    // write between the read and the update would otherwise leave the cached
+    // aggregates stale. Run the whole thing in one interactive transaction.
+    return this.prisma.$transaction(async (tx) => {
+      const [reviews, activeFlags] = await Promise.all([
+        tx.renterReview.findMany({
+          where: { identityId, status: 'PUBLISHED' },
+        }),
+        tx.blacklistEntry.findMany({
+          where: { identityId, status: 'ACTIVE' },
+        }),
+      ]);
 
-    const now = Date.now();
-    const HALF_LIFE_MS = 365 * 24 * 3600 * 1000; // ~12 months
-    let wsum = 0;
-    let wtot = 0;
-    for (const r of reviews) {
-      const ageMs = now - new Date(r.createdAt).getTime();
-      const w = Math.pow(0.5, Math.max(0, ageMs) / HALF_LIFE_MS);
-      wsum += r.rating * w;
-      wtot += w;
-    }
-    const globalScore = wtot > 0 ? +(wsum / wtot).toFixed(2) : 0;
+      const now = Date.now();
+      const HALF_LIFE_MS = 365 * 24 * 3600 * 1000; // ~12 months
+      let wsum = 0;
+      let wtot = 0;
+      for (const r of reviews) {
+        const ageMs = now - new Date(r.createdAt).getTime();
+        const w = Math.pow(0.5, Math.max(0, ageMs) / HALF_LIFE_MS);
+        wsum += r.rating * w;
+        wtot += w;
+      }
+      const globalScore = wtot > 0 ? +(wsum / wtot).toFixed(2) : 0;
 
-    const riskLevel = this.deriveRiskLevel(
-      reviews.length,
-      globalScore,
-      activeFlags,
-    );
-
-    await this.prisma.renterIdentity.update({
-      where: { id: identityId },
-      data: {
+      const riskLevel = this.deriveRiskLevel(
+        reviews.length,
         globalScore,
-        reviewCount: reviews.length,
-        activeFlagCount: activeFlags.length,
-        riskLevel,
-        lastReviewAt: reviews.length
-          ? reviews.reduce(
-              (max, r) =>
-                new Date(r.createdAt) > max ? new Date(r.createdAt) : max,
-              new Date(0),
-            )
-          : undefined,
-      },
+        activeFlags,
+      );
+
+      await tx.renterIdentity.update({
+        where: { id: identityId },
+        data: {
+          globalScore,
+          reviewCount: reviews.length,
+          activeFlagCount: activeFlags.length,
+          riskLevel,
+          // Explicitly clear the timestamp when no reviews remain, rather than
+          // leaving a stale value from a since-retracted review.
+          lastReviewAt: reviews.length
+            ? reviews.reduce(
+                (max, r) =>
+                  new Date(r.createdAt) > max ? new Date(r.createdAt) : max,
+                new Date(0),
+              )
+            : null,
+        },
+      });
+      return riskLevel;
     });
-    return riskLevel;
   }
 
   private deriveRiskLevel(

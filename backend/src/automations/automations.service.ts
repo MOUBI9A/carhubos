@@ -41,6 +41,7 @@ export class AutomationsService {
           description: `Car: ${doc.car.brand} ${doc.car.model} (${doc.car.licensePlate}). Expiry: ${doc.expiryDate.toLocaleDateString()}`,
           priority: 'HIGH',
           status: 'PENDING',
+          agencyId: doc.car.agencyId,
         },
       });
 
@@ -88,6 +89,7 @@ export class AutomationsService {
           description: `Customer ${booking.customer.firstName} ${booking.customer.lastName} was supposed to return the car at ${booking.endDate.toLocaleDateString()}.`,
           priority: 'URGENT',
           status: 'PENDING',
+          agencyId: booking.agencyId,
         },
       });
 

@@ -4,6 +4,8 @@
 > Severity: **C**ritical / **H**igh / **M**edium / **L**ow. Work top-down by phase.
 > Definition of "done" for the program is the **Market-Ready Checklist** at the bottom.
 
+> **FOUNDER DECISIONS (2026-07-18):** VAT **inclusive** (price × 20/120). Subscription billing = **manual invoicing** (no Stripe; founder activates/marks-paid in the founder console). Plans = **free during beta** (build the full entitlements/metering/gating engine; keep limits open + prices as editable config; flip on later). i18n = **FR (default) + AR (RTL) + EN**. Trial = 14 days. Deploy target = deferred to the Phase 9 gate. Workflow = commit verified milestones directly to `main`.
+
 ---
 
 ## ⚠ PHASE 0 — SECURITY INCIDENT (do before anything else; requires human confirmation)

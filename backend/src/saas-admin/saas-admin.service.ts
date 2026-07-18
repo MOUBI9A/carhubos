@@ -7,7 +7,8 @@ export class SaasAdminService {
 
   async getPlatformOverview() {
     const [agenciesCount, activeBookings, totalRevenue] = await Promise.all([
-      this.prisma.agency.count(),
+      // Soft-deleted agencies are excluded from the platform roster.
+      this.prisma.agency.count({ where: { deletedAt: null } }),
       this.prisma.booking.count({ where: { status: 'ACTIVE' } }),
       this.prisma.invoice.aggregate({
         _sum: { amount: true },
@@ -16,6 +17,7 @@ export class SaasAdminService {
     ]);
 
     const agencies = await this.prisma.agency.findMany({
+      where: { deletedAt: null },
       include: {
         _count: {
           select: { cars: true, bookings: true, users: true },
