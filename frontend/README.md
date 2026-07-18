@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fider Frontend (Next.js 16)
 
-## Getting Started
+Frontend app for Fider public pages and role-based dashboards.
 
-First, run the development server:
+- Default URL: `http://localhost:3002`
+- Stack: Next.js 16 + React 19 + Tailwind
+
+## Run locally
 
 ```bash
+cd /home/runner/work/carhubos/carhubos/frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Validate
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd /home/runner/work/carhubos/carhubos/frontend
+npm run lint
+npm run build
+npm run test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Design direction
 
-## Learn More
+Frontend redesign and design-system direction are tracked in:
 
-To learn more about Next.js, take a look at the following resources:
+- `/home/runner/work/carhubos/carhubos/docs/DESIGN_VISION.md`
+- `/home/runner/work/carhubos/carhubos/docs/AUDIT_BACKLOG.md` (PHASE 12)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Source of truth
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Use `/home/runner/work/carhubos/carhubos/CLAUDE.md` for product, architecture, and workflow conventions.
