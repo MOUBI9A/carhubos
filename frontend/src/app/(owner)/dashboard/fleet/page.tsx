@@ -2,18 +2,18 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
+import { CarPhoto, AgencyImage } from '@/components/ui/AgencyImage';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SkeletonCard, Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
-  Car as CarIcon,
   AlertTriangle,
   Plus,
   Search,
   RefreshCw,
-  Gauge,
   TrendingUp,
   SearchX,
 } from 'lucide-react';
@@ -41,11 +41,11 @@ const INITIAL_FORM = {
 };
 
 const FILTERS: Array<{ value: CarStatus | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'All Assets' },
+  { value: 'ALL', label: 'All assets' },
   { value: 'AVAILABLE', label: 'Available' },
   { value: 'RENTED', label: 'Rented' },
   { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'OUT_OF_SERVICE', label: 'Out of Service' },
+  { value: 'OUT_OF_SERVICE', label: 'Out of service' },
 ];
 
 export default function FleetGuardian() {
@@ -136,11 +136,11 @@ export default function FleetGuardian() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-black text-white/80 uppercase tracking-tight">Fleet Offline</p>
-          <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error}</p>
+          <p className="text-base font-semibold text-foreground">Fleet offline</p>
+          <p className="text-sm text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
         </Button>
       </div>
     );
@@ -151,14 +151,14 @@ export default function FleetGuardian() {
       {/* ═══════ Header ═══════ */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white">Fleet Guardian</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">
-            Asset Monitoring & Compliance
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Fleet</h1>
+          <p className="mt-1.5 text-sm text-text-muted">
+            Asset monitoring and compliance across your fleet
           </p>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Vehicle
+          <Plus className="w-4 h-4 me-2" />
+          Add vehicle
         </Button>
       </header>
 
@@ -171,21 +171,22 @@ export default function FleetGuardian() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="glass rounded-2xl p-4">
-            <p className="text-2xl font-black text-white">{stats.total}</p>
-            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-0.5">Total Assets</p>
+          <div className="rounded-2xl bg-surface border border-hairline p-4">
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.total}</p>
+            <p className="eyebrow mt-1">Total assets</p>
           </div>
           {CAR_STATUSES.map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(statusFilter === s ? 'ALL' : s)}
               className={cn(
-                'glass rounded-2xl p-4 text-left transition-all hover:bg-white/[0.07]',
-                statusFilter === s && `ring-1 ${STATUS_STYLES[s].ring}`,
+                'rounded-2xl bg-surface border border-hairline p-4 text-left transition-all hover:bg-surface-raised',
+                statusFilter === s && 'ring-1 ring-primary/40',
               )}
             >
-              <p className={cn('text-2xl font-black', STATUS_STYLES[s].text)}>{stats[s]}</p>
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-0.5">
+              <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats[s]}</p>
+              <p className="eyebrow mt-1 flex items-center gap-1.5">
+                <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_STYLES[s].dot)} />
                 {s.replace(/_/g, ' ')}
               </p>
             </button>
@@ -196,12 +197,12 @@ export default function FleetGuardian() {
       {/* ═══════ Search + filters ═══════ */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search brand, model or plate..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+            className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -210,10 +211,10 @@ export default function FleetGuardian() {
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
               className={cn(
-                'px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border',
+                'px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border',
                 statusFilter === f.value
-                  ? 'bg-primary/10 text-primary border-primary/30'
-                  : 'bg-white/5 text-white/40 border-white/5 hover:text-white/70',
+                  ? 'bg-primary text-primary-foreground border-transparent'
+                  : 'bg-surface text-text-muted border-hairline hover:text-foreground',
               )}
             >
               {f.label}
@@ -230,25 +231,27 @@ export default function FleetGuardian() {
           ))}
         </div>
       ) : (cars?.length ?? 0) === 0 ? (
-        <EmptyState
-          icon={CarIcon}
-          title="No Vehicles Registered"
-          description="Your fleet is empty. Register your first asset to activate Guardian monitoring, compliance tracking and ROI analytics."
-          action={
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Register First Vehicle
-            </Button>
-          }
-        />
+        <Card className="flex flex-col items-center gap-5 py-14 text-center">
+          <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
+          <div>
+            <p className="font-medium text-foreground">No vehicles yet</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
+              Register your first car to start compliance tracking, ROI and bookings.
+            </p>
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 me-2" />
+            Add your first car
+          </Button>
+        </Card>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
-          title="No Matching Assets"
+          title="No matching results"
           description="No vehicles match your current search or filter. Try adjusting the criteria."
           action={
             <Button variant="outline" size="sm" onClick={() => { setQuery(''); setStatusFilter('ALL'); }}>
-              Clear Filters
+              Clear filters
             </Button>
           }
         />
@@ -260,71 +263,55 @@ export default function FleetGuardian() {
             const statusStyle = STATUS_STYLES[car.status];
             return (
               <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
-                <Card className="group cursor-pointer h-full hover:ring-1 ring-white/10 hover:-translate-y-0.5 transition-all">
-                  <CardHeader className="p-0 mb-4">
-                    <div className="flex justify-between items-start w-full">
-                      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors">
-                        <CarIcon className="w-6 h-6 text-white/20 group-hover:text-primary transition-colors" />
+                <Card padding="none" className="group h-full cursor-pointer overflow-hidden">
+                  <CarPhoto
+                    alt={`${car.brand} ${car.model}`}
+                    plate={car.licensePlate}
+                    price={`${car.pricePerDay.toLocaleString()} MAD/day`}
+                    rounded="rounded-none"
+                  />
+                  <div className="space-y-4 p-5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold tracking-tight text-foreground">
+                          {car.brand} {car.model}
+                        </h3>
+                        <p className="mt-0.5 text-xs text-text-muted">
+                          <span className="font-mono tabular">{car.year}</span> ·{' '}
+                          <span className="font-mono tabular">{car.mileage.toLocaleString()}</span> km
+                        </p>
                       </div>
-                      <span
-                        className={cn(
-                          'text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border flex items-center gap-1.5',
-                          statusStyle.text,
-                          statusStyle.bg,
-                          statusStyle.border,
-                        )}
+                      <Badge
+                        variant={car.status === 'AVAILABLE' ? 'outline' : car.status === 'OUT_OF_SERVICE' ? 'destructive' : 'secondary'}
+                        className="shrink-0"
                       >
-                        <span className={cn('w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
-                        {car.status.replace(/_/g, ' ')}
-                      </span>
+                        <span className={cn('me-1 w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
+                        {car.status.replace(/_/g, ' ').toLowerCase()}
+                      </Badge>
                     </div>
-                  </CardHeader>
 
-                  <div className="space-y-1 mb-5">
-                    <h3 className="text-lg font-black text-white leading-tight">
-                      {car.brand} {car.model}
-                    </h3>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                      {car.licensePlate} • {car.year}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
+                    {/* compliance meter */}
                     <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-white/40">Compliance</span>
-                        <span className={HEALTH_STYLES[health].text}>
-                          {car.documents.length === 0 ? 'NO DOCS' : `${score}%`}
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-muted">Compliance</span>
+                        <span className={cn('font-mono tabular', HEALTH_STYLES[health].text)}>
+                          {car.documents.length === 0 ? 'No docs' : `${score}%`}
                         </span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
                         <div
-                          className={cn('h-full transition-all duration-1000', HEALTH_STYLES[health].bar)}
+                          className={cn('h-full transition-all duration-700', HEALTH_STYLES[health].bar)}
                           style={{ width: `${score}%` }}
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                      <div className="flex items-center gap-1.5 text-white/40">
-                        <Gauge className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black tracking-wider">
-                          {car.mileage.toLocaleString()} KM
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <TrendingUp className={cn('w-3.5 h-3.5', car.currentRoi >= 0 ? 'text-success' : 'text-danger')} />
-                        <span className={cn('text-[10px] font-black tracking-wider', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
-                          {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(0)}% ROI
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-black text-white">
-                        {car.pricePerDay.toLocaleString()} <span className="text-[10px] text-white/40">MAD/DAY</span>
-                      </p>
-                      <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-primary transition-colors">
+                    <div className="flex items-center justify-between border-t border-hairline pt-3">
+                      <span className={cn('flex items-center gap-1 text-xs font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(0)}% ROI
+                      </span>
+                      <span className="text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
                         Manage →
                       </span>
                     </div>
@@ -340,54 +327,54 @@ export default function FleetGuardian() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        title="Register Asset"
-        description="Add a vehicle to the fleet ledger"
+        title="Register vehicle"
+        description="Add a vehicle to your fleet ledger"
       >
         <form onSubmit={handleAddVehicle} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Brand *</p>
+              <p className="eyebrow px-1">Brand *</p>
               <input
                 value={form.brand}
                 onChange={setField('brand')}
                 placeholder="Dacia"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
               />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Model *</p>
+              <p className="eyebrow px-1">Model *</p>
               <input
                 value={form.model}
                 onChange={setField('model')}
                 placeholder="Logan"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
               />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Year *</p>
+              <p className="eyebrow px-1">Year *</p>
               <input
                 value={form.year}
                 onChange={setField('year')}
                 type="number"
                 min={1900}
                 max={new Date().getFullYear() + 1}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all"
               />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">License Plate *</p>
+              <p className="eyebrow px-1">License plate *</p>
               <input
                 value={form.licensePlate}
                 onChange={setField('licensePlate')}
                 placeholder="12345-A-1"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Rate (MAD/day) *</p>
+              <p className="eyebrow px-1">Rate (MAD/day) *</p>
               <input
                 value={form.pricePerDay}
                 onChange={setField('pricePerDay')}
@@ -395,15 +382,15 @@ export default function FleetGuardian() {
                 min={0}
                 step="0.01"
                 placeholder="350"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
               />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Fuel</p>
+              <p className="eyebrow px-1">Fuel</p>
               <select
                 value={form.fuelType}
                 onChange={setField('fuelType')}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none appearance-none focus:border-primary transition-all"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
               >
                 <option value="DIESEL">Diesel</option>
                 <option value="PETROL">Petrol</option>
@@ -412,11 +399,11 @@ export default function FleetGuardian() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Gearbox</p>
+              <p className="eyebrow px-1">Gearbox</p>
               <select
                 value={form.gearbox}
                 onChange={setField('gearbox')}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none appearance-none focus:border-primary transition-all"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
               >
                 <option value="MANUAL">Manual</option>
                 <option value="AUTOMATIC">Automatic</option>
@@ -429,7 +416,7 @@ export default function FleetGuardian() {
               Cancel
             </Button>
             <Button type="submit" className="flex-1 py-4" isLoading={isSubmitting}>
-              {isSubmitting ? 'Registering...' : 'Register Asset'}
+              {isSubmitting ? 'Registering...' : 'Register vehicle'}
             </Button>
           </div>
         </form>

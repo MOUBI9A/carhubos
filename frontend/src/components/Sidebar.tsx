@@ -26,6 +26,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -93,23 +94,23 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
   return (
     <aside
       className={cn(
-        "w-64 h-screen glass border-r border-white/10 flex flex-col fixed left-0 top-0 z-50 transform transition-transform duration-300 lg:translate-x-0",
+        "w-64 h-screen glass border-r border-hairline flex flex-col fixed start-0 top-0 z-50 transform transition-transform duration-300 lg:translate-x-0",
         open ? "translate-x-0" : "-translate-x-full",
       )}
     >
       <div className="p-8 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-black tracking-tighter text-primary">
-            Fider<span className="text-white">OS</span>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Fider<span className="text-text-faint">OS</span>
           </h1>
-          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
+          <p className="eyebrow mt-1">
             Fider Edition
           </p>
         </div>
         <button
           onClick={onClose}
           aria-label="Close menu"
-          className="lg:hidden -mr-2 -mt-1 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          className="lg:hidden -me-2 -mt-1 p-1.5 rounded-lg text-text-faint hover:text-foreground hover:bg-surface-raised transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -125,29 +126,27 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
               onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                isActive 
-                  ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-text-muted hover:bg-surface-raised hover:text-foreground"
               )}
             >
               <item.icon className={cn(
                 "w-5 h-5 transition-transform group-hover:scale-110",
-                isActive ? "text-white" : "text-primary"
+                isActive ? "text-primary-foreground" : "text-text-faint"
               )} />
-              <span className="font-bold text-sm tracking-tight">{item.label}</span>
+              <span className="font-medium text-sm tracking-tight">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-hairline">
         <div className="glass-card p-4 mb-4 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">{user?.name?.[0] || 'U'}</span>
-          </div>
+          <Avatar name={user?.name} />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white truncate">{user?.name}</p>
-            <p className="text-[10px] text-white/40 font-bold uppercase truncate">{role.replace('_', ' ')}</p>
+            <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
+            <p className="eyebrow truncate">{role.replace('_', ' ')}</p>
           </div>
         </div>
         <button
@@ -155,7 +154,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-danger hover:bg-danger/10 transition-colors"
         >
           <LogOut className="w-5 h-5" />
-          <span className="font-bold text-sm">Logout</span>
+          <span className="font-medium text-sm">Logout</span>
         </button>
       </div>
     </aside>

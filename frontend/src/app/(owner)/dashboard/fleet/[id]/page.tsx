@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge } from '@/components/ui/badge';
+import { CarPhoto } from '@/components/ui/AgencyImage';
+import { Avatar } from '@/components/ui/Avatar';
+import { TrustSeal } from '@/components/ui/Seal';
 import {
-  Car as CarIcon,
   ShieldCheck,
   Wrench,
   TrendingUp,
@@ -58,15 +61,15 @@ const TABS: Array<{ id: TabId; label: string; icon: React.ElementType }> = [
 ];
 
 const BOOKING_STATUS_STYLES: Record<string, string> = {
-  REQUESTED: 'text-white/40 bg-white/5 border-white/10',
-  APPROVED: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  REQUESTED: 'text-text-faint bg-surface-raised border-hairline',
+  APPROVED: 'text-info bg-info/10 border-info/20',
   ACTIVE: 'text-primary bg-primary/10 border-primary/20',
   COMPLETED: 'text-success bg-success/10 border-success/20',
   CANCELLED: 'text-danger bg-danger/10 border-danger/20',
 };
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20';
+  'w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint';
 
 export default function CarProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -237,7 +240,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           </div>
           <Skeleton className="w-40 h-14 rounded-2xl" />
         </div>
-        <div className="flex gap-8 border-b border-white/5 pb-4">
+        <div className="flex gap-8 border-b border-hairline pb-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="w-24 h-4" />
           ))}
@@ -260,17 +263,17 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-black text-white/80 uppercase tracking-tight">Asset Unreachable</p>
-          <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error || 'Vehicle not found'}</p>
+          <p className="text-base font-semibold tracking-tight text-foreground">Asset unreachable</p>
+          <p className="mt-2 max-w-sm text-sm text-text-muted">{error || 'Vehicle not found'}</p>
         </div>
         <div className="flex gap-3">
           <Link href="/dashboard/fleet">
             <Button variant="outline">
-              <ChevronLeft className="w-4 h-4 mr-2" /> Back to Fleet
+              <ChevronLeft className="w-4 h-4 me-2" /> Back to fleet
             </Button>
           </Link>
           <Button onClick={refetch}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Retry
+            <RefreshCw className="w-4 h-4 me-2" /> Retry
           </Button>
         </div>
       </div>
@@ -287,87 +290,98 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* ═══════ Breadcrumb & Actions ═══════ */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <Link href="/dashboard/fleet" className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group w-fit">
-          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Fleet Assets</span>
+        <Link href="/dashboard/fleet" className="group flex w-fit items-center gap-2 text-text-muted transition-colors hover:text-foreground">
+          <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span className="eyebrow">Fleet assets</span>
         </Link>
         <div className="flex gap-3 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => setIsDeleteModalOpen(true)}>
-            <Trash2 className="w-4 h-4 mr-2 text-danger" />
+            <Trash2 className="w-4 h-4 me-2 text-danger" />
             <span className="text-danger">Decommission</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => setIsStatusModalOpen(true)}>
-            <Zap className="w-4 h-4 mr-2" />
-            Set Status
+            <Zap className="w-4 h-4 me-2" />
+            Set status
           </Button>
           <Button size="sm" onClick={() => setIsMaintenanceModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Log Maintenance
+            <Plus className="w-4 h-4 me-2" />
+            Log maintenance
           </Button>
         </div>
       </div>
 
       {/* ═══════ Hero Card ═══════ */}
-      <Card className="relative overflow-hidden border-primary/20 shadow-2xl">
-        <div className="absolute top-0 right-0 p-8 pointer-events-none">
-          <span className="text-[60px] font-black text-white/[0.03] uppercase select-none leading-none">{car.model}</span>
-        </div>
-        <div className="flex flex-col md:flex-row md:items-center gap-8 relative z-10">
-          <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shrink-0">
-            <CarIcon className="w-12 h-12 text-primary" />
+      <Card padding="none" className="overflow-hidden">
+        <div className="flex flex-col md:flex-row">
+          <div className="md:w-80 lg:w-96 shrink-0">
+            <CarPhoto
+              alt={`${car.brand} ${car.model}`}
+              plate={car.licensePlate}
+              price={`${car.pricePerDay.toLocaleString()} MAD/day`}
+              rounded="rounded-none"
+              className="h-full"
+            />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-3xl font-black text-white uppercase tracking-tight">
-                {car.brand} {car.model}
-              </h1>
-              <span className={cn(
-                'text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1.5',
-                statusStyle.text, statusStyle.bg, statusStyle.border,
-              )}>
-                <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', statusStyle.dot)} />
-                {car.status.replace(/_/g, ' ')}
-              </span>
-            </div>
-            <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
-              {car.licensePlate} • {car.year} Model • {car.mileage.toLocaleString()} km
-            </p>
-          </div>
-          <div className="flex gap-12 md:border-l border-white/5 md:pl-12">
+          <div className="flex flex-1 flex-col justify-between gap-6 p-6 md:p-8">
             <div>
-              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1 md:text-right">Net ROI</p>
-              <p className={cn('text-2xl font-black', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
-                {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(1)}%
+              <div className="mb-1.5 flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                  {car.brand} {car.model}
+                </h1>
+                <span className={cn(
+                  'flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium',
+                  statusStyle.text, statusStyle.bg, statusStyle.border,
+                )}>
+                  <span className={cn('w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
+                  {car.status.replace(/_/g, ' ').toLowerCase()}
+                </span>
+                {score === 100 && <TrustSeal size={30} label="Fully compliant" />}
+              </div>
+              <p className="text-sm text-text-muted">
+                <span className="font-mono tabular">{car.licensePlate}</span>
+                <span className="mx-1.5 text-text-faint">·</span>
+                <span className="font-mono tabular">{car.year}</span>
+                <span className="mx-1.5 text-text-faint">·</span>
+                <span className="font-mono tabular">{car.mileage.toLocaleString()}</span> km
               </p>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1 md:text-right">Verified Revenue</p>
-              <p className="text-2xl font-black text-white">
-                {car.financials.totalRevenue.toLocaleString()} <span className="text-xs text-white/40">MAD</span>
-              </p>
+            <div className="flex gap-10">
+              <div>
+                <p className="eyebrow">Net ROI</p>
+                <p className={cn('mt-1 text-2xl font-semibold tracking-tight font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
+                  {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="eyebrow">Verified revenue</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                  <span className="font-mono tabular">{car.financials.totalRevenue.toLocaleString()}</span>
+                  <span className="ms-1.5 text-sm font-normal text-text-faint">MAD</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
       {/* ═══════ Tabs ═══════ */}
-      <div className="flex gap-8 border-b border-white/5 overflow-x-auto">
+      <div className="flex gap-8 border-b border-hairline overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'flex items-center gap-2 pb-4 text-[10px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap',
-              activeTab === tab.id ? 'text-primary' : 'text-white/40 hover:text-white/60',
+              'relative flex items-center gap-2 whitespace-nowrap pb-4 text-sm font-medium transition-colors',
+              activeTab === tab.id ? 'text-primary' : 'text-text-muted hover:text-foreground',
             )}
           >
-            <tab.icon className="w-3.5 h-3.5" />
+            <tab.icon className="w-4 h-4" />
             {tab.label}
             {tab.id === 'guardian' && car.documents.some((d) => d.status !== 'VALID') && (
-              <span className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-danger" />
             )}
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-primary/40" />
+              <div className="absolute bottom-0 start-0 end-0 h-0.5 rounded-t-full bg-primary" />
             )}
           </button>
         ))}
@@ -386,53 +400,56 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               {car.bookings.length === 0 ? (
                 <EmptyState
                   icon={CalendarDays}
-                  title="No Rentals Yet"
+                  title="No rentals yet"
                   description="This asset has no booking history. Sessions will appear here once the vehicle is reserved."
                 />
               ) : (
                 <div className="space-y-4">
-                  {car.bookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 glass-card group hover:translate-x-1 transition-all">
+                  {car.bookings.map((booking) => {
+                    const renterName = booking.customer
+                      ? `${booking.customer.firstName} ${booking.customer.lastName}`
+                      : 'Unassigned customer';
+                    return (
+                    <div key={booking.id} className="group flex items-center justify-between gap-4 rounded-xl border border-hairline bg-surface p-4 transition-colors hover:bg-surface-raised">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
-                          <History className="w-5 h-5 text-primary" />
-                        </div>
+                        <Avatar name={booking.customer ? renterName : undefined} size={40} />
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-white uppercase tracking-tight truncate">
-                            {booking.customer ? `${booking.customer.firstName} ${booking.customer.lastName}` : 'Unassigned Customer'}
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {renterName}
                           </p>
-                          <p className="text-[10px] font-medium text-white/40">
-                            {formatDate(booking.startDate)} → {formatDate(booking.endDate)}
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            <span className="font-mono tabular">{formatDate(booking.startDate)}</span> → <span className="font-mono tabular">{formatDate(booking.endDate)}</span>
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 shrink-0">
-                        <p className="text-xs font-black text-white hidden sm:block">
-                          {booking.totalPrice.toLocaleString()} <span className="text-white/40 text-[9px]">MAD</span>
+                        <p className="hidden text-xs text-foreground sm:block">
+                          <span className="font-mono tabular font-medium">{booking.totalPrice.toLocaleString()}</span> <span className="text-[10px] text-text-faint">MAD</span>
                         </p>
                         <span className={cn(
-                          'text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border',
+                          'rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]',
                           BOOKING_STATUS_STYLES[booking.status] || BOOKING_STATUS_STYLES.REQUESTED,
                         )}>
-                          {booking.status}
+                          {booking.status.toLowerCase()}
                         </span>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
             <div className="space-y-6">
               <Card>
-                <CardTitle className="mb-4">Compliance Score</CardTitle>
+                <CardTitle className="mb-4">Compliance score</CardTitle>
                 <div className="relative w-32 h-32 mx-auto">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/5" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-hairline" strokeWidth="3" />
                     <circle
                       cx="18" cy="18" r="16" fill="none"
                       className={cn('transition-all duration-1000', {
                         'stroke-success': health === 'success',
-                        'stroke-amber-500': health === 'warning',
+                        'stroke-warning': health === 'warning',
                         'stroke-danger': health === 'danger',
                       })}
                       strokeWidth="3"
@@ -441,31 +458,31 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-black text-white">{score}</span>
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Integrity</span>
+                    <span className="text-3xl font-semibold tracking-tight text-foreground font-mono tabular">{score}</span>
+                    <span className="eyebrow">Integrity</span>
                   </div>
                 </div>
-                <p className="text-[9px] text-white/40 text-center mt-6 uppercase font-bold tracking-widest">
+                <p className="mt-6 text-center text-xs text-text-muted">
                   {car.documents.length === 0
                     ? 'No documents registered yet.'
                     : `${car.documents.filter((d) => d.status === 'VALID').length}/${car.documents.length} documents fully valid.`}
                 </p>
               </Card>
               <Card>
-                <CardTitle className="mb-5">Asset Specs</CardTitle>
+                <CardTitle className="mb-5">Asset specs</CardTitle>
                 <div className="space-y-4">
                   {[
-                    { icon: Fuel, label: 'Fuel Type', value: car.fuelType },
+                    { icon: Fuel, label: 'Fuel type', value: car.fuelType },
                     { icon: Cog, label: 'Gearbox', value: car.gearbox },
                     { icon: Gauge, label: 'Odometer', value: `${car.mileage.toLocaleString()} km` },
-                    { icon: DollarSign, label: 'Daily Rate', value: `${car.pricePerDay.toLocaleString()} MAD` },
+                    { icon: DollarSign, label: 'Daily rate', value: `${car.pricePerDay.toLocaleString()} MAD` },
                   ].map((spec) => (
-                    <div key={spec.label} className="flex items-center justify-between">
+                    <div key={spec.label} className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <spec.icon className="w-4 h-4 text-white/20" />
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{spec.label}</span>
+                        <spec.icon className="w-4 h-4 text-text-faint" />
+                        <span className="eyebrow">{spec.label}</span>
                       </div>
-                      <span className="text-xs font-black text-white uppercase">{spec.value}</span>
+                      <span className="text-sm font-medium text-foreground font-mono tabular">{spec.value}</span>
                     </div>
                   ))}
                 </div>
@@ -479,22 +496,22 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           <div className="lg:col-span-3 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Compliance Vault</CardTitle>
+                <CardTitle>Compliance vault</CardTitle>
                 <CardDescription className="mt-1">Legal documents with live expiry tracking</CardDescription>
               </div>
               <Button size="sm" onClick={() => setIsDocModalOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Register Document
+                <Plus className="w-4 h-4 me-2" />
+                Register document
               </Button>
             </div>
             {car.documents.length === 0 ? (
               <EmptyState
                 icon={ShieldCheck}
-                title="No Documents Tracked"
+                title="No documents tracked"
                 description="Register insurance, carte grise, technical inspection and vignette to activate Guardian hard-lock protection."
                 action={
                   <Button size="sm" onClick={() => setIsDocModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Register First Document
+                    <Plus className="w-4 h-4 me-2" /> Register first document
                   </Button>
                 }
               />
@@ -505,10 +522,10 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                   const days = daysUntil(doc.expiryDate);
                   const timerLabel =
                     days < 0
-                      ? `EXPIRED ${Math.abs(days)}D AGO`
+                      ? `Expired ${Math.abs(days)}d ago`
                       : days === 0
-                        ? 'EXPIRES TODAY'
-                        : `${days} DAYS LEFT`;
+                        ? 'Expires today'
+                        : `${days} days left`;
                   return (
                     <Card
                       key={doc.id}
@@ -518,27 +535,26 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                         <div className={cn(
                           'w-10 h-10 rounded-xl flex items-center justify-center border',
                           docHealth === 'danger' && 'bg-danger/10 text-danger border-danger/20',
-                          docHealth === 'warning' && 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                          docHealth === 'warning' && 'bg-warning/10 text-warning border-warning/20',
                           docHealth === 'success' && 'bg-success/10 text-success border-success/20',
                         )}>
                           <FileText className="w-5 h-5" />
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setRenewingDoc(doc)}>
-                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                          <RefreshCw className="w-3.5 h-3.5 me-1.5" />
                           Renew
                         </Button>
                       </div>
-                      <h3 className="font-black text-white uppercase tracking-tight">{formatDocType(doc.type)}</h3>
-                      <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mt-1">
-                        Expires {formatDate(doc.expiryDate)}{doc.isMandatory ? ' • Mandatory' : ''}
+                      <h3 className="font-semibold tracking-tight text-foreground">{formatDocType(doc.type)}</h3>
+                      <p className="mt-1 text-xs text-text-faint">
+                        Expires <span className="font-mono tabular">{formatDate(doc.expiryDate)}</span>{doc.isMandatory ? ' · Mandatory' : ''}
                       </p>
                       <div className="mt-4 flex items-end justify-between">
                         <div>
-                          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Live Timer</p>
+                          <p className="eyebrow">Live timer</p>
                           <p className={cn(
-                            'text-xl font-black',
+                            'mt-0.5 text-lg font-semibold font-mono tabular',
                             HEALTH_STYLES[docHealth].text,
-                            docHealth === 'danger' && 'animate-pulse',
                           )}>
                             {timerLabel}
                           </p>
@@ -559,58 +575,58 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
             {car.maintenance.length === 0 ? (
               <EmptyState
                 icon={Wrench}
-                title="No Mechanical History"
+                title="No mechanical history"
                 description="Workshop interventions will appear here. Logging maintenance keeps the ROI engine accurate."
                 action={
                   <Button size="sm" onClick={() => setIsMaintenanceModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Log First Intervention
+                    <Plus className="w-4 h-4 me-2" /> Log first intervention
                   </Button>
                 }
               />
             ) : (
-              <Card padding="none" className="overflow-hidden border-white/5">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-white/5 border-b border-white/10">
+              <Card padding="none" className="overflow-hidden">
+                <div className="relative w-full overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-raised border-b border-hairline">
                       <tr>
-                        <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Date</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Intervention</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Garage</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Expenditure</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest text-right">Status</th>
+                        <th className="px-6 py-3 eyebrow">Date</th>
+                        <th className="px-6 py-3 eyebrow">Intervention</th>
+                        <th className="px-6 py-3 eyebrow">Garage</th>
+                        <th className="px-6 py-3 eyebrow">Cost</th>
+                        <th className="px-6 py-3 eyebrow text-right">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-hairline">
                       {car.maintenance.map((record) => (
-                        <tr key={record.id} className="hover:bg-white/5 transition-colors group">
-                          <td className="px-6 py-4 text-xs font-bold text-white/60 whitespace-nowrap">
+                        <tr key={record.id} className="group transition-colors hover:bg-surface-raised">
+                          <td className="px-6 py-4 whitespace-nowrap text-xs text-text-muted font-mono tabular">
                             {formatDate(record.createdAt)}
                           </td>
                           <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-primary transition-colors">
-                              {record.type.replace(/_/g, ' ')}
+                            <p className="text-sm font-medium text-foreground">
+                              {record.type.replace(/_/g, ' ').toLowerCase()}
                             </p>
-                            <p className="text-[9px] font-black text-white/20 uppercase">
+                            <p className="text-xs text-text-faint">
                               {record.description}
-                              {record.mileage ? ` • ${record.mileage.toLocaleString()} km` : ''}
+                              {record.mileage ? <> · <span className="font-mono tabular">{record.mileage.toLocaleString()}</span> km</> : ''}
                             </p>
                           </td>
-                          <td className="px-6 py-4 text-xs font-bold text-white/40 uppercase">
+                          <td className="px-6 py-4 text-xs text-text-muted">
                             {record.garageName || '—'}
                           </td>
-                          <td className="px-6 py-4 text-xs font-black text-white whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground font-mono tabular">
                             {record.cost.toLocaleString()} MAD
                           </td>
                           <td className="px-6 py-4 text-right">
                             <span className={cn(
-                              'text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border',
+                              'rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]',
                               record.status === 'COMPLETED'
                                 ? 'text-success bg-success/10 border-success/20'
                                 : record.status === 'IN_GARAGE'
-                                  ? 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                                  : 'text-white/40 bg-white/5 border-white/10',
+                                  ? 'text-warning bg-warning/10 border-warning/20'
+                                  : 'text-text-faint bg-surface-raised border-hairline',
                             )}>
-                              {record.status.replace(/_/g, ' ')}
+                              {record.status.replace(/_/g, ' ').toLowerCase()}
                             </span>
                           </td>
                         </tr>
@@ -621,34 +637,34 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               </Card>
             )}
 
-            <Card className="bg-primary/5 border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between p-6 gap-4">
+            <Card className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                  <Clock className="w-6 h-6 text-primary" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-hairline bg-surface-raised">
+                  <Clock className="w-6 h-6 text-text-muted" />
                 </div>
                 <div>
-                  <CardTitle className="text-primary text-xs uppercase tracking-tighter">Next Service Predictor</CardTitle>
-                  <p className="text-xs text-white/60 leading-relaxed mt-1">
+                  <CardTitle>Next service predictor</CardTitle>
+                  <p className="mt-1 text-xs leading-relaxed text-text-muted">
                     {car.nextServiceKm !== null ? (
-                      <>Predictive maintenance scheduled at <span className="text-white font-bold">{car.nextServiceKm.toLocaleString()} km</span>.</>
+                      <>Predictive maintenance scheduled at <span className="font-medium text-foreground font-mono tabular">{car.nextServiceKm.toLocaleString()} km</span>.</>
                     ) : (
                       'No service threshold configured for this asset.'
                     )}
                   </p>
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="shrink-0 text-right">
                 {kmToService !== null ? (
                   <>
-                    <p className={cn('text-xl font-black uppercase tracking-tighter', kmToService <= 0 ? 'text-danger' : 'text-white')}>
-                      {kmToService <= 0 ? 'OVERDUE' : `${kmToService.toLocaleString()} KM`}
+                    <p className={cn('text-xl font-semibold tracking-tight', kmToService <= 0 ? 'text-danger' : 'text-foreground')}>
+                      {kmToService <= 0 ? 'Overdue' : <><span className="font-mono tabular">{kmToService.toLocaleString()}</span> km</>}
                     </p>
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                    <p className="eyebrow">
                       {kmToService <= 0 ? 'Service immediately' : 'Until service'}
                     </p>
                   </>
                 ) : (
-                  <p className="text-xl font-black text-white/20 uppercase tracking-tighter">—</p>
+                  <p className="text-xl font-semibold text-text-faint">—</p>
                 )}
               </div>
             </Card>
@@ -658,36 +674,36 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
         {/* ── FINANCIAL ── */}
         {activeTab === 'analytics' && (
           <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="flex flex-col justify-between group hover:ring-1 ring-primary/30 transition-all">
+            <Card className="flex flex-col justify-between">
               <CardHeader className="p-0">
                 <div>
-                  <CardTitle className="uppercase tracking-tight">Verified Cash Flow</CardTitle>
+                  <CardTitle>Verified cash flow</CardTitle>
                   <CardDescription>Real payments only — no quoted prices</CardDescription>
                 </div>
               </CardHeader>
               <div className="grid grid-cols-1 gap-4 mt-8">
-                <div className="p-5 bg-success/5 border border-success/20 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface-raised p-5">
                   <div>
-                    <p className="text-[10px] font-black text-success uppercase tracking-widest mb-1">Verified Revenue</p>
-                    <p className="text-2xl font-black text-white">{car.financials.totalRevenue.toLocaleString()} <span className="text-xs text-white/40">MAD</span></p>
+                    <p className="eyebrow">Verified revenue</p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground"><span className="font-mono tabular">{car.financials.totalRevenue.toLocaleString()}</span> <span className="text-sm font-normal text-text-faint">MAD</span></p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-success/30" />
+                  <TrendingUp className="w-6 h-6 text-text-faint" />
                 </div>
-                <div className="p-5 bg-danger/5 border border-danger/20 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface-raised p-5">
                   <div>
-                    <p className="text-[10px] font-black text-danger uppercase tracking-widest mb-1">Maintenance Spend</p>
-                    <p className="text-2xl font-black text-white">{car.financials.totalMaintenanceCost.toLocaleString()} <span className="text-xs text-white/40">MAD</span></p>
+                    <p className="eyebrow">Maintenance spend</p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground"><span className="font-mono tabular">{car.financials.totalMaintenanceCost.toLocaleString()}</span> <span className="text-sm font-normal text-text-faint">MAD</span></p>
                   </div>
-                  <Wrench className="w-8 h-8 text-danger/30" />
+                  <Wrench className="w-6 h-6 text-text-faint" />
                 </div>
-                <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface-raised p-5">
                   <div>
-                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Net Position</p>
-                    <p className={cn('text-2xl font-black', car.financials.netProfit >= 0 ? 'text-success' : 'text-danger')}>
-                      {car.financials.netProfit >= 0 ? '+' : ''}{car.financials.netProfit.toLocaleString()} <span className="text-xs text-white/40">MAD</span>
+                    <p className="eyebrow">Net position</p>
+                    <p className={cn('mt-1 text-2xl font-semibold tracking-tight', car.financials.netProfit >= 0 ? 'text-success' : 'text-danger')}>
+                      <span className="font-mono tabular">{car.financials.netProfit >= 0 ? '+' : ''}{car.financials.netProfit.toLocaleString()}</span> <span className="text-sm font-normal text-text-faint">MAD</span>
                     </p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-primary/30" />
+                  <DollarSign className="w-6 h-6 text-text-faint" />
                 </div>
               </div>
             </Card>

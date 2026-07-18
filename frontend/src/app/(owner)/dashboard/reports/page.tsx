@@ -17,39 +17,32 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
 
 const REPORTS = [
   {
     id: 'pl-statement',
-    title: 'P&L Statement',
-    description: 'Deep dive into revenue, COGS, and operational expenses.',
+    title: 'P&L statement',
+    description: 'A clear view of revenue, COGS and operating expenses.',
     icon: TrendingUp,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-400/10',
   },
   {
     id: 'fleet-depreciation',
-    title: 'Fleet Depreciation',
-    description: 'Real-time asset value tracking and forensic tax mapping.',
+    title: 'Fleet depreciation',
+    description: 'Asset value tracking and tax-ready depreciation.',
     icon: Activity,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
   },
   {
     id: 'staff-efficiency',
-    title: 'Staff Efficiency',
-    description: 'Granular productivity metrics and KPI audit reports.',
+    title: 'Staff efficiency',
+    description: 'Productivity metrics and KPI summaries per team member.',
     icon: Users,
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
   },
   {
     id: 'compliance-audit',
-    title: 'Compliance Audit',
+    title: 'Compliance audit',
     description: 'Regulatory check for fleet documents and legal liability.',
     icon: ShieldCheck,
-    color: 'text-orange-400',
-    bg: 'bg-orange-400/10',
   }
 ];
 
@@ -88,14 +81,10 @@ export default function ReportsPage() {
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="h-1 w-8 bg-primary rounded-full" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Intelligence Hub</span>
-        </div>
-        <h1 className="text-4xl">Institutional <span className="text-white/40">Report Factory</span></h1>
-        <p className="text-white/40 text-sm max-w-2xl font-medium">
-          Generate high-fidelity business audits and institutional reports. 
-          Our forensic engine processes real-time ERP data for deep strategic insights.
+        <p className="eyebrow">Intelligence hub</p>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Report factory</h1>
+        <p className="text-sm text-text-muted max-w-2xl">
+          Generate business audits and institutional reports from your live ERP data.
         </p>
       </div>
 
@@ -107,37 +96,32 @@ export default function ReportsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card 
-              className="relative overflow-hidden group cursor-pointer hover:border-primary/30 h-full flex flex-col"
+            <Card
+              className="group cursor-pointer h-full flex flex-col"
               padding="lg"
             >
-              <div className={`w-12 h-12 rounded-xl ${report.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500`}>
-                <report.icon className={`w-6 h-6 ${report.color}`} />
+              <div className="w-12 h-12 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-500">
+                <report.icon className="w-6 h-6 text-text-muted" strokeWidth={1.5} />
               </div>
-              
+
               <div className="space-y-2 flex-grow">
-                <h3 className="text-lg font-black">{report.title}</h3>
-                <p className="text-xs text-white/40 leading-relaxed font-medium italic">
-                  "{report.description}"
+                <h3 className="text-lg font-semibold tracking-tight text-foreground">{report.title}</h3>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  {report.description}
                 </p>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                <Badge variant="outline" className="bg-white/5 border-none text-[9px] uppercase tracking-tighter">Forensic Ready</Badge>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
+              <div className="mt-8 pt-6 border-t border-hairline flex items-center justify-between">
+                <Badge variant="outline">Ready</Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
                   className="p-0 h-auto group-hover:text-primary transition-colors"
                   onClick={() => handleGenerate(report.id)}
                 >
-                  <span className="mr-2">Generate</span>
+                  <span className="me-2">Generate</span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-              </div>
-
-              {/* Decorative background element */}
-              <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-700 pointer-events-none">
-                <report.icon size={120} />
               </div>
             </Card>
           </motion.div>
@@ -150,43 +134,43 @@ export default function ReportsPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/70 backdrop-blur-md"
           >
-            <Card className="w-full max-w-md border-primary/20 bg-card/80 shadow-2xl shadow-primary/10" padding="lg">
+            <Card className="w-full max-w-md" padding="lg">
               <div className="flex flex-col items-center text-center space-y-6">
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full border-4 border-white/5 flex items-center justify-center">
-                    <motion.div 
+                  <div className="w-24 h-24 rounded-full border-4 border-hairline flex items-center justify-center">
+                    <motion.div
                       className="absolute inset-0 rounded-full border-t-4 border-primary"
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     />
-                    <FileText className="w-10 h-10 text-primary" />
+                    <FileText className="w-10 h-10 text-text-muted" />
                   </div>
-                  <motion.div 
-                    className="absolute -top-1 -right-1"
+                  <motion.div
+                    className="absolute -top-1 -end-1"
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.5, type: "spring" }}
                   >
-                    <div className="bg-primary px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-lg">Processing</div>
+                    <Badge>Processing</Badge>
                   </motion.div>
                 </div>
 
                 <div className="space-y-2">
-                  <h2 className="text-xl">Institutional <span className="text-primary">PDF</span> Factory</h2>
-                  <p className="text-white/40 text-xs font-medium uppercase tracking-widest">
-                    Assembling Forensic Audit: {REPORTS.find(r => r.id === selectedReport)?.title}
+                  <h2 className="text-xl font-semibold tracking-tight text-foreground">Generating report</h2>
+                  <p className="eyebrow">
+                    Assembling {REPORTS.find(r => r.id === selectedReport)?.title}
                   </p>
                 </div>
 
                 <div className="w-full space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase text-white/40">
-                    <span>Compiling Data</span>
-                    <span>{Math.round(progress)}%</span>
+                  <div className="flex justify-between eyebrow">
+                    <span>Compiling data</span>
+                    <span className="font-mono tabular">{Math.round(progress)}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
+                  <div className="h-1.5 w-full bg-surface-raised rounded-full overflow-hidden">
+                    <motion.div
                       className="h-full bg-primary"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
@@ -194,15 +178,15 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 py-2 px-4 rounded-lg bg-white/5 border border-white/5 w-full overflow-hidden">
+                <div className="flex items-center gap-4 py-2 px-4 rounded-lg bg-surface border border-hairline w-full overflow-hidden">
                    <div className="flex -space-x-2">
                       {[1, 2, 3].map(i => (
-                        <div key={i} className="w-6 h-6 rounded-full bg-white/10 border-2 border-[#050505] flex items-center justify-center">
-                           <div className="w-3 h-3 rounded-full bg-primary/40 animate-pulse" />
+                        <div key={i} className="w-6 h-6 rounded-full bg-surface-raised border-2 border-background flex items-center justify-center">
+                           <div className="w-3 h-3 rounded-full bg-text-faint/40" />
                         </div>
                       ))}
                    </div>
-                   <p className="text-[10px] text-white/40 font-bold uppercase tracking-tighter">Encrypting report layers...</p>
+                   <p className="eyebrow">Finalizing report layers</p>
                 </div>
               </div>
             </Card>
@@ -216,18 +200,18 @@ export default function ReportsPage() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 right-8 z-50"
+            className="fixed bottom-8 end-8 z-50"
           >
-            <div className="glass px-6 py-4 rounded-2xl flex items-center gap-4 border-emerald-500/30 shadow-2xl shadow-emerald-500/10">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+            <div className="glass px-6 py-4 rounded-2xl flex items-center gap-4 border border-success/30 shadow-soft">
+              <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-success" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-black uppercase text-white">Report Generated</span>
-                <span className="text-[10px] text-white/40 font-medium">Institutional audit is ready for download.</span>
+                <span className="text-sm font-medium text-foreground">Report generated</span>
+                <span className="text-xs text-text-muted">Your report is ready to download.</span>
               </div>
-              <Button size="sm" className="ml-4 bg-emerald-500 hover:bg-emerald-600">
-                <Download className="w-3 h-3 mr-2" />
+              <Button size="sm" className="ms-4">
+                <Download className="w-3 h-3 me-2" />
                 Download
               </Button>
             </div>
@@ -236,30 +220,30 @@ export default function ReportsPage() {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8">
-        <Card className="lg:col-span-2 border-white/5" variant="flat">
+        <Card className="lg:col-span-2">
           <CardHeader>
              <div>
-               <CardTitle>Recent Generation History</CardTitle>
-               <CardDescription>Last 5 forensic audits generated</CardDescription>
+               <CardTitle>Recent generation history</CardTitle>
+               <CardDescription>Your last generated reports</CardDescription>
              </div>
-             <Button variant="ghost" size="sm">View All</Button>
+             <Button variant="ghost" size="sm">View all</Button>
           </CardHeader>
           <div className="space-y-4">
              {[1, 2, 3].map((i) => (
-               <div key={i} className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
+               <div key={i} className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-raised transition-colors border border-transparent">
                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                       <FileText className="w-5 h-5 text-white/60" />
+                    <div className="w-10 h-10 rounded-lg bg-surface-raised flex items-center justify-center">
+                       <FileText className="w-5 h-5 text-text-muted" />
                     </div>
                     <div>
-                       <div className="text-xs font-black uppercase tracking-tight">Q{i} Forensic P&L Audit</div>
-                       <div className="text-[10px] text-white/30 font-bold">2 days ago • 14.2 MB • PDF</div>
+                       <div className="text-sm font-medium text-foreground">Q{i} P&amp;L statement</div>
+                       <div className="text-xs text-text-faint">2 days ago • <span className="font-mono tabular">14.2 MB</span> • PDF</div>
                     </div>
                  </div>
                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[9px] uppercase border-white/10 text-white/40">Owner Access</Badge>
+                    <Badge variant="outline">Owner access</Badge>
                     <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
-                       <Download className="w-4 h-4 text-white/40" />
+                       <Download className="w-4 h-4 text-text-faint" />
                     </Button>
                  </div>
                </div>
@@ -267,28 +251,28 @@ export default function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="border-primary/20 bg-primary/5">
+        <Card>
           <div className="space-y-6">
-            <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-              <PieChart className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center">
+              <PieChart className="w-6 h-6 text-text-muted" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-black uppercase italic tracking-tighter">Automated Scheduling</h3>
-              <p className="text-xs text-white/50 leading-relaxed">
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Automated scheduling</h3>
+              <p className="text-xs text-text-muted leading-relaxed">
                 Configure institutional reports to be automatically delivered to your stakeholder board every month.
               </p>
             </div>
-            <Button className="w-full btn-primary-infinity">Configure Schedule</Button>
-            <div className="pt-4 border-t border-white/5">
+            <Button className="w-full">Configure schedule</Button>
+            <div className="pt-4 border-t border-hairline">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-black uppercase text-white/40">Board Members</span>
-                <span className="text-[10px] font-black uppercase text-primary">3 Active</span>
+                <span className="eyebrow">Board members</span>
+                <span className="eyebrow text-text-muted">3 active</span>
               </div>
               <div className="flex -space-x-2">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-white/10 border-2 border-[#080808]" />
+                  <Avatar key={i} name="" size={32} className="ring-2 ring-background" />
                 ))}
-                <div className="w-8 h-8 rounded-full bg-white/5 border-2 border-[#080808] flex items-center justify-center text-[10px] font-bold">+</div>
+                <div className="w-8 h-8 rounded-full bg-surface-raised border-2 border-background flex items-center justify-center text-xs font-medium text-text-faint">+</div>
               </div>
             </div>
           </div>

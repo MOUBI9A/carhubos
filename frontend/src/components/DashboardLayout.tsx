@@ -48,8 +48,8 @@ export function DashboardLayout({
   if (isLoading || !role || blocked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/20 flex items-center justify-center animate-pulse">
-          <div className="w-2 h-2 rounded-full bg-primary animate-ping"></div>
+        <div className="w-12 h-12 rounded-2xl bg-surface border border-hairline flex items-center justify-center">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
         </div>
       </div>
     );
@@ -70,20 +70,20 @@ export function DashboardLayout({
       )}
 
       {/* Mobile top bar with hamburger */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 glass border-b border-white/10">
+      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 glass border-b border-hairline">
         <button
           onClick={() => setSidebarOpen(true)}
           aria-label="Open menu"
-          className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 -ms-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface-raised transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
-        <span className="text-lg font-black tracking-tighter text-primary">
-          Fider<span className="text-white">OS</span>
+        <span className="text-lg font-semibold tracking-tight text-foreground">
+          Fider<span className="text-text-faint">OS</span>
         </span>
       </header>
 
-      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">
+      <main className="lg:ms-64 p-4 lg:p-8 min-h-screen">
         {children}
       </main>
     </div>
