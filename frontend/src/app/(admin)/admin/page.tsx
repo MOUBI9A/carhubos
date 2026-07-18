@@ -14,8 +14,82 @@ import {
   AlertTriangle,
   RefreshCw,
   Plus,
+  Wallet,
+  Rocket,
+  Percent,
 } from 'lucide-react';
-import { useAdminOverview } from './useAdminOverview';
+import { useAdminOverview, useFounderMetrics, type FounderMetrics } from './useAdminOverview';
+
+const PLAN_COLORS: Record<string, string> = {
+  BETA: 'bg-primary',
+  STARTER: 'bg-blue-500',
+  PRO: 'bg-emerald-500',
+  BUSINESS: 'bg-amber-500',
+};
+
+function FounderMetricsBand() {
+  const { data: m } = useFounderMetrics();
+  if (!m) return null;
+
+  const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n);
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const planEntries = Object.entries(m.planDistribution);
+
+  const cells: { icon: React.ElementType; tint: string; value: string; label: string }[] = [
+    { icon: Wallet, tint: 'text-success bg-success/10 border-success/20', value: `${fmt(m.mrr)} MAD`, label: 'MRR (recurring)' },
+    { icon: TrendingUp, tint: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', value: `${fmt(m.arr)} MAD`, label: 'ARR (annualized)' },
+    { icon: Rocket, tint: 'text-blue-400 bg-blue-500/10 border-blue-500/20', value: `${m.trials}`, label: 'Active Trials' },
+    { icon: Percent, tint: 'text-amber-500 bg-amber-500/10 border-amber-500/20', value: pct(m.conversionRate), label: 'Trial → Paid' },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="items-start">
+        <div>
+          <CardTitle>Business Metrics</CardTitle>
+          <CardDescription className="font-bold">
+            The money side — {m.paying} paying · {m.activeTenants} active · {pct(m.churnRate)} churn
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {cells.map((c) => (
+          <div key={c.label} className="glass-card p-4">
+            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center mb-3 ${c.tint}`}>
+              <c.icon className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-white">{c.value}</p>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{c.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {planEntries.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-white/5">
+          <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">Plan Distribution</p>
+          <div className="flex h-3 w-full rounded-full overflow-hidden bg-white/5">
+            {planEntries.map(([key, count]) => (
+              <div
+                key={key}
+                className={PLAN_COLORS[key] ?? 'bg-white/20'}
+                style={{ width: `${(count / m.totalTenants) * 100}%` }}
+                title={`${key}: ${count}`}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+            {planEntries.map(([key, count]) => (
+              <span key={key} className="flex items-center gap-1.5 text-[10px] font-bold text-white/50">
+                <span className={`w-2 h-2 rounded-full ${PLAN_COLORS[key] ?? 'bg-white/20'}`} />
+                {key} · {count}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export default function AdminPulse() {
   const router = useRouter();
@@ -108,6 +182,8 @@ export default function AdminPulse() {
           <CardDescription>Total Fleet (all tenants)</CardDescription>
         </Card>
       </div>
+
+      <FounderMetricsBand />
 
       <Card>
         <CardHeader>
