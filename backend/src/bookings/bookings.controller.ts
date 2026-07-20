@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Patch, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch, Res } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, UpdateBookingStatusDto } from './dto/bookings.dto';
 import { CaptureDepositDto, UpdateDepositDto } from './dto/deposit.dto';
@@ -25,8 +25,23 @@ export class BookingsController {
 
   @Get()
   @RequireCapabilities('booking.view')
-  findAll(@CurrentUser() user: any) {
-    return this.bookingsService.findAll(user.agencyId);
+  findAll(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    // Every param is optional and additive — omitting all of them returns the
+    // same flat array as before (see BookingsService.findAll's doc comment).
+    return this.bookingsService.findAll(user.agencyId, {
+      status,
+      from,
+      to,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get(':id')

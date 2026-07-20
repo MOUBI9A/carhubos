@@ -244,9 +244,32 @@ export class BookingsService {
     return booking;
   }
 
-  async findAll(agencyId: string) {
-    return this.prisma.booking.findMany({
-      where: { agencyId },
+  /**
+   * `status`/`from`/`to`/`page`/`pageSize` are all optional and additive — when
+   * none are supplied this returns the same flat array as before (existing
+   * frontend callers are unaffected). Passing them moves filtering/paging from
+   * in-memory JS to the SQL query, which is the actual perf fix; adopting them
+   * in the UI is a separate follow-up.
+   */
+  async findAll(
+    agencyId: string,
+    query?: { status?: string; from?: string; to?: string; page?: number; pageSize?: number },
+  ) {
+    const where: Prisma.BookingWhereInput = { agencyId };
+    if (query?.status) where.status = query.status;
+    if (query?.from || query?.to) {
+      where.startDate = {
+        ...(query.from ? { gte: new Date(query.from) } : {}),
+        ...(query.to ? { lte: new Date(query.to) } : {}),
+      };
+    }
+
+    const paginate = query?.page !== undefined || query?.pageSize !== undefined;
+    const page = Math.max(1, query?.page ?? 1);
+    const pageSize = Math.min(200, Math.max(1, query?.pageSize ?? 25));
+
+    const findManyArgs: Prisma.BookingFindManyArgs = {
+      where,
       include: {
         car: true,
         customer: true,
@@ -254,7 +277,17 @@ export class BookingsService {
         invoices: { select: { id: true, amount: true, status: true, taxAmount: true } },
       },
       orderBy: { createdAt: 'desc' },
-    });
+    };
+
+    if (!paginate) {
+      return this.prisma.booking.findMany(findManyArgs);
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.booking.findMany({ ...findManyArgs, skip: (page - 1) * pageSize, take: pageSize }),
+      this.prisma.booking.count({ where }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async findOne(agencyId: string, id: string) {
@@ -290,7 +323,7 @@ export class BookingsService {
       );
     }
 
-    const updatedBooking = await this.prisma.$transaction(async (tx) => {
+    const { updated: updatedBooking, lateFee } = await this.prisma.$transaction(async (tx) => {
       // Re-check for a conflicting booking INSIDE the transaction before
       // flipping to APPROVED/ACTIVE. Closes the check-then-act race where
       // two overlapping REQUESTED bookings for the same car both get
@@ -342,10 +375,72 @@ export class BookingsService {
         depositPatch.depositStatus = 'HELD';
       }
 
-      return tx.booking.update({
+      const updated = await tx.booking.update({
         where: { id },
         data: depositPatch,
       });
+
+      // Late fee: an OVERDUE booking being closed out is charged for every day
+      // past its scheduled return, at the car's own daily rate — a real rate
+      // already on the booking, never an invented number. Attached as an
+      // INCOME payment on the latest invoice, same reconciliation pattern used
+      // everywhere else in this codebase (integer cents, tx-scoped). Audit log
+      // happens after the transaction commits (see below), matching this
+      // method's own existing UPDATE_BOOKING_STATUS pattern.
+      let lateFee: { daysLate: number; amount: Prisma.Decimal; invoiceId: string } | null = null;
+      if (booking.status === 'OVERDUE' && status === 'COMPLETED') {
+        const daysLate = Math.max(
+          1,
+          Math.ceil((Date.now() - booking.endDate.getTime()) / 86_400_000),
+        );
+        const latestInvoice = await tx.invoice.findFirst({
+          where: { bookingId: id },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (latestInvoice) {
+          const lateFeeAmount = booking.car.pricePerDay
+            .times(daysLate)
+            .toDecimalPlaces(2);
+
+          await tx.payment.create({
+            data: {
+              amount: lateFeeAmount,
+              type: 'INCOME',
+              method: 'CASH',
+              status: 'VERIFIED',
+              reference: `Late fee — ${daysLate} day${daysLate === 1 ? '' : 's'} overdue @ ${booking.car.pricePerDay.toFixed(2)} MAD/day`.slice(0, 500),
+              verifiedById: actorId,
+              date: new Date(),
+              invoiceId: latestInvoice.id,
+            },
+          });
+
+          const totalCents = latestInvoice.amount.times(100).toNumber();
+          const [incomeAgg, refundAgg] = await Promise.all([
+            tx.payment.aggregate({
+              where: { invoiceId: latestInvoice.id, status: 'VERIFIED', type: 'INCOME' },
+              _sum: { amount: true },
+            }),
+            tx.payment.aggregate({
+              where: { invoiceId: latestInvoice.id, status: 'VERIFIED', type: 'REFUND' },
+              _sum: { amount: true },
+            }),
+          ]);
+          const incomeCents = (incomeAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
+          const refundCents = (refundAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
+          const paidCents = incomeCents - refundCents;
+          await tx.invoice.update({
+            where: { id: latestInvoice.id },
+            data: {
+              status: paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE',
+            },
+          });
+
+          lateFee = { daysLate, amount: lateFeeAmount, invoiceId: latestInvoice.id };
+        }
+      }
+
+      return { updated, lateFee };
     });
 
     // BP Pillar C: Forensic audit of status change
@@ -358,6 +453,22 @@ export class BookingsService {
       { oldStatus: booking.status },
       { newStatus: status }
     );
+
+    if (lateFee) {
+      await this.auditLogs.log(
+        agencyId,
+        actorId,
+        'LATE_FEE_CHARGE',
+        'BOOKING',
+        id,
+        { endDate: booking.endDate },
+        {
+          daysLate: lateFee.daysLate,
+          amount: lateFee.amount.toNumber(),
+          invoiceId: lateFee.invoiceId,
+        },
+      );
+    }
 
     // TRIGGER WEBHOOK
     await this.webhooks.trigger(agencyId, 'BOOKING_STATUS_UPDATED', updatedBooking);
