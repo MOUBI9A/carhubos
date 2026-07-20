@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SkeletonRows } from '@/components/ui/Skeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import {
   Car,
   Users,
@@ -113,7 +113,7 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
         <Card className="lg:col-span-1">
           <CardHeader className="items-start">
             <div className="flex items-center justify-between w-full">
-              <CardTitle>Current Plan</CardTitle>
+              <CardTitle>Current plan</CardTitle>
               <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium', status.chip)}>
                 {status.label}
               </span>
@@ -151,7 +151,7 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
         <Card className="lg:col-span-2">
           <CardHeader className="items-start">
             <div>
-              <CardTitle>Usage This Period</CardTitle>
+              <CardTitle>Usage this period</CardTitle>
               <CardDescription className="normal-case tracking-normal text-text-muted font-medium text-xs mt-1">
                 How much of your plan you&apos;re using right now.
               </CardDescription>
@@ -169,32 +169,36 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-primary" /> Invoices
+            <Receipt className="w-4 h-4 text-text-faint" /> Invoices
           </CardTitle>
         </CardHeader>
         {data.invoices.length === 0 ? (
-          <EmptyState
-            icon={Receipt}
-            title="No Invoices Yet"
-            description="Platform invoices will appear here once the beta ends and billing begins."
-          />
+          <div className="flex flex-col items-center gap-5 py-10 text-center">
+            <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-16" />
+            <div>
+              <p className="font-medium text-foreground">No invoices yet</p>
+              <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
+                Platform invoices will appear here once the beta ends and billing begins.
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-sm min-w-[520px]">
               <thead>
-                <tr className="eyebrow text-left">
-                  <th className="px-2 py-2">Invoice</th>
-                  <th className="px-2 py-2">Amount</th>
-                  <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2">Issued</th>
-                  <th className="px-2 py-2">Paid</th>
+                <tr className="eyebrow text-start">
+                  <th className="px-2 py-2 text-start">Invoice</th>
+                  <th className="px-2 py-2 text-end">Amount</th>
+                  <th className="px-2 py-2 text-start">Status</th>
+                  <th className="px-2 py-2 text-start">Issued</th>
+                  <th className="px-2 py-2 text-start">Paid</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
                 {data.invoices.map((inv) => (
-                  <tr key={inv.id} className="text-text-muted">
+                  <tr key={inv.id} className="text-text-muted hover:bg-surface-raised transition-colors">
                     <td className="px-2 py-3 font-mono tabular text-xs text-foreground">{inv.number}</td>
-                    <td className="px-2 py-3 font-mono tabular font-semibold text-foreground">{fmtMoney(inv.amount)} {inv.currency}</td>
+                    <td className="px-2 py-3 text-end font-mono tabular font-semibold text-foreground">{fmtMoney(inv.amount)} {inv.currency}</td>
                     <td className="px-2 py-3">
                       <span className={cn('px-2 py-0.5 rounded-md text-xs font-medium border', INVOICE_STYLES[inv.status])}>
                         {inv.status.toLowerCase()}
@@ -232,13 +236,13 @@ function UsageMeter({
     <div>
       <div className="flex items-center justify-between mb-2">
         <span className="flex items-center gap-2 text-xs font-medium text-text-muted">
-          <Icon className="w-4 h-4 text-primary" /> {label}
+          <Icon className="w-4 h-4 text-text-faint" /> {label}
         </span>
         <span className="text-xs font-semibold font-mono tabular text-foreground">
           {current} <span className="text-text-faint">/ {unlimited ? '∞' : limit}</span>
         </span>
       </div>
-      <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-surface-raised rounded-full overflow-hidden">
         <div
           className={cn(
             'h-full rounded-full transition-all',
