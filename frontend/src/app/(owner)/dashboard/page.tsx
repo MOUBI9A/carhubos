@@ -124,18 +124,21 @@ export default function OwnerDashboard() {
     }
   };
 
-  // Optimistic booking: the modal closes the instant the form is valid and a
-  // "pulse" toast confirms the request is in flight; success/failure resolves
-  // in the background and resyncs the dashboard via query invalidation.
+  // The modal stays open with the entered data while the request is in flight
+  // (the submit button shows a loading state) and only closes on SUCCESS — so a
+  // failed booking keeps everything the user typed instead of discarding it.
   const bookingMutation = useMutation({
     mutationFn: (payload: {
       carId: string; customerId: string; startDate: string; endDate: string; overrideReason?: string;
     }) => api.post('/bookings', payload),
     onSuccess: () => {
+      closeBookingModal();
       showToast('success', 'Booking Confirmed', 'A new rental session has been instantiated.');
       queryClient.invalidateQueries({ queryKey: commandCentreKeys.all });
     },
     onError: (err: any) => {
+      // Leave the modal open with the form data intact so the user can correct
+      // and retry without re-entering everything.
       const msg = err?.response?.data?.message || 'Failed to create booking';
       showToast('danger', 'Booking Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
       // Resync in case the server partially applied or state drifted.
@@ -176,8 +179,6 @@ export default function OwnerDashboard() {
       endDate,
       ...(risk.data?.blocked && overrideReason.trim() ? { overrideReason: overrideReason.trim() } : {}),
     };
-    closeBookingModal();
-    showToast('pulse', 'Deploying Booking', 'Reserving the asset and generating the contract...');
     bookingMutation.mutate(payload);
   };
 
@@ -740,11 +741,12 @@ export default function OwnerDashboard() {
                   type="submit"
                   variant="danger"
                   className="flex-1 py-4"
+                  isLoading={bookingMutation.isPending}
                 >
                   {overrideReason.trim() ? 'Override & confirm' : 'Booking locked — override required'}
                 </Button>
               ) : (
-                <Button type="submit" className="flex-1 py-4">
+                <Button type="submit" className="flex-1 py-4" isLoading={bookingMutation.isPending}>
                   Confirm booking
                 </Button>
               )}
