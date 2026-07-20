@@ -66,6 +66,17 @@ export class DocumentsService {
     });
   }
 
+  /** Agency-wide compliance view (Guardian Vault) — every document across the fleet. */
+  async findAllForAgency(agencyId: string) {
+    return this.prisma.carDocument.findMany({
+      where: { car: { agencyId } },
+      include: {
+        car: { select: { brand: true, model: true, licensePlate: true } },
+      },
+      orderBy: { expiryDate: 'asc' },
+    });
+  }
+
   /** Renewal: new expiry date recomputes the compliance status. */
   async renew(agencyId: string, documentId: string, dto: RenewCarDocumentDto) {
     await this.findOwnedDocument(agencyId, documentId);

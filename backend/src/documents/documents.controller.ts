@@ -26,6 +26,11 @@ export class DocumentsController {
     return this.documentsService.create(user.agencyId, dto);
   }
 
+  @Get()
+  findAllForAgency(@CurrentUser() user: any) {
+    return this.documentsService.findAllForAgency(user.agencyId);
+  }
+
   @Get('car/:carId')
   findAllForCar(@CurrentUser() user: any, @Param('carId') carId: string) {
     return this.documentsService.findAllForCar(user.agencyId, carId);
