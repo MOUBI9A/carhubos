@@ -58,21 +58,21 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 
 ---
 
-## PHASE 3 — Financial lifecycle (make money real)
+## PHASE 3 — Financial lifecycle (make money real) ✅ DONE (commit `1d4ec95`)
 
-- **[C] Revenue never realized** — every payment stays PENDING; no verify UI; invoice never PAID. → Payment-record/verify UI (owner/manager) + invoice reconciliation.
-- **[C] Security deposits non-functional** — cannot take/hold/return/claim. → Capture at contract; HELD at hand-over; release (→RETURNED/refund) and claim (→CLAIMED + damage charge).
-- **[M] No partial payments or refunds; review UI missing** — schema has PARTIAL/REFUND; `POST /trust/reviews` unused. → `POST /payments` (partial/refund + invoice update); "leave review" prompt on completion.
-- **[M] VAT contradictory** across invoice/contract/payment (`bookings.service.ts:175`, `contracts.service.ts:43`). → Decide inclusive vs exclusive once; make taxAmount + collected Payment consistent.
+- **[C] Revenue never realized** ✅ — Finance UI wired to real `/expenses` + `/payments/pending` + `/payments/recent` + `/expenses/summary`; invoice reconciliation via integer-cents net-verified-income tracking.
+- **[C] Security deposits non-functional** ✅ — `bookings/dto/deposit.dto.ts` + `BookingsService.captureDeposit/updateDeposit`: capture → HOLD (hand-over) → RETURN (release) or CLAIM (+ optional damage charge), `POST`/`PATCH :id/deposit`.
+- **[M] No partial payments or refunds** ✅ — `payments.service.ts` refund reconciliation hardened (a refund can never exceed net verified income), `payments.service.spec.ts`. Review-prompt-on-completion still not wired (small, deferred).
+- **[M] VAT contradictory** ✅ — resolved earlier (inclusive VAT, `taxAmount = total × 20/120`, consistent across invoice/contract/payment).
 
 ---
 
-## PHASE 4 — Rental lifecycle
+## PHASE 4 — Rental lifecycle ✅ mostly DONE (commits `8032b47`, `1d4ec95`)
 
-- **[H] No return/damage flow** — return inspection decorative (`inspections.service.ts`, agent inspections mock). → Require POST_RENTAL inspection to complete; diff vs PRE_RENTAL; auto-charge mileage/fuel/damage.
-- **[H] Contract e-sign unreachable/unguarded** — `contracts.controller.ts:24` no AuthGuard; UI labels unsigned as "signed". → Guard+scope; real signature-capture UI (schema has `signatureData`); gate ACTIVE on SIGNED.
-- **[H] Overdue cron spams hourly WhatsApp + tasks, no late fee** (`automations.service.ts:65`). → OVERDUE state / notify once; append late-day charges; honor AutomationRule toggles; single-instance guard.
-- **[M] Flat day-count pricing** — no tiers/discounts/seasonality/add-ons/km; partial days round up. → Rate tiers + seasonal windows + itemized extras on invoice/contract.
+- **[H] No return/damage flow** ✅ — `inspections.service.ts` now diffs POST_RENTAL vs PRE_RENTAL (new damage entries + material fuel drop) and auto-raises a conservative damage charge on the invoice ONLY when a real cost signal exists on the damage entry (else a placeholder + explicit `MANUAL REVIEW REQUIRED` flag in the payment reference + AuditLog — never fabricates an amount). New booking-diff endpoint. `inspections.service.spec.ts` covers the key cases.
+- **[H] Contract e-sign unreachable/unguarded** ✅ — `SignContractDto`, `contract.sign` capability, gate ACTIVE on SIGNED.
+- **[H] Overdue cron spams hourly WhatsApp + tasks, no late fee** 🔄 — spam already fixed (the `status:'ACTIVE'` update-guard means it only fires once per booking); **late fee itself still NOT implemented** — needs `bookings.service.ts` (see `PROGRESS.md` §2 for why it was deferred this session).
+- **[M] Flat day-count pricing** ⬜ — rate tiers/seasonality/extras not started; lower priority, not in the Market-Ready Checklist verbatim.
 
 ---
 
@@ -104,15 +104,15 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 6 — Performance & scalability
+## PHASE 6 — Performance & scalability 🔄 mostly DONE (commit `1d4ec95`)
 
-- **[C] Bookings list has no pagination** — loads bookings+cars+customers whole, filters in memory (`bookings.service.ts:217`, `useBookings`). → Server-side page/limit/status/date; lean selects; typeahead pickers; react-query.
-- **[C] Analytics sum whole row-sets in JS; ERP loads ALL payments unbounded** (`analytics.service.ts:198`). → `prisma.aggregate`/`groupBy` in SQL.
-- **[H] Command Centre embeds the whole customer directory** in the hottest endpoint (`analytics.service.ts:766`). → Dedicated paginated/typeahead endpoint; dashboard returns counts only.
-- **[H] `trust.assess()` recomputes + writes on every read** (6 queries + a write) (`trust.service.ts:167`). → Drop recompute-on-read; trust cached aggregates.
-- **[M] ~13 sequential awaited queries + unused eager includes** → batch in `Promise.all`; drop unused `maintenance:true`.
-- **[M] Global search leading-wildcard LIKE, no index** (`search.service.ts:15`). → `startsWith` / FTS5 (SQLite) / trigram (Postgres).
-- **[M] Missing indexes** — Payment `(invoiceId,status)` + date; Booking start/endDate.
+- **[C] Bookings list has no pagination** ⬜ — still loads bookings+cars+customers whole, filters in memory. Deferred: same hot file (`bookings.service.ts`) as the late-fee work, see `PROGRESS.md` §2.
+- **[C] Analytics sum whole row-sets in JS; ERP loads ALL payments unbounded** ✅ — `analytics.service.ts` converted to `prisma.aggregate()`/`groupBy()` across the hot paths (command centre, financial pulse, ERP dashboard); same response shape.
+- **[H] Command Centre embeds the whole customer directory** ⬜ — not addressed this pass (was scoped as part of the broader analytics rewrite but not explicitly verified — check on resume).
+- **[H] `trust.assess()` recomputes + writes on every read** ✅ — removed; every mutation already keeps the cached aggregates fresh, `assess()` now reads them directly.
+- **[M] ~13 sequential awaited queries + unused eager includes** ⬜ — not addressed this pass.
+- **[M] Global search leading-wildcard LIKE, no index** ✅ — `search.service.ts` now uses `startsWith`.
+- **[M] Missing indexes** ✅ — migration `20260720125819_hot_path_indexes`: `Payment(invoiceId,status)`, `Payment(date)`, `Booking(startDate,endDate)`.
 
 ---
 
@@ -178,17 +178,17 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 12 — Design & Frontend Rebuild 🔄 IN PROGRESS ("Fider Lux"; see `docs/DESIGN_VISION.md`)
+## PHASE 12 — Design & Frontend Rebuild ✅ essentially DONE ("Fider Lux"; see `docs/DESIGN_VISION.md`)
 
-> Presentation-layer only — no backend, schema, or business-logic changes. Direction chosen via a 4-proposal design judge panel → synthesis ("Graphite & Brass — Concierge", 9.3). Method: restyle the `@theme` tokens + shared kit (propagates app-wide with stable APIs), then fan out per-portal restyle workflows (playbook → per-file → consistency critic), browser-verifying each portal.
+> Presentation-layer only — no backend, schema, or business-logic changes. Direction chosen via a 4-proposal design judge panel → synthesis ("Graphite & Brass — Concierge", 9.3). Method: restyle the `@theme` tokens + shared kit (propagates app-wide with stable APIs), then fan out per-portal restyle workflows (playbook → per-file → consistency critic).
 
 - ✅ **[H] Design system foundation** (commit `46968f1`) — `globals.css` @theme: warm graphite surfaces, cream text, restrained violet + brass `metal` accent; Fraunces (display) + Hanken Grotesk (UI) + IBM Plex Mono via next/font; killed the global `uppercase font-black` heading rule → `.display`/`.eyebrow`; retuned `.glass`→warm solid (42 files inherit); `.document`/`.scrim`/`.seal-rule`/`.paper-grain`/`.metal-*`. Kit: Button cream primary + brass `premium`, CardTitle sentence-case, Badge `trust`.
-- ✅ **[H] Imagery kit + swap slots** — `Avatar` (warm monogram, brass verified ring), `AgencyImage`/`CarPhoto` (warm placeholder + real-photo `src` slot + `fill`), `TrustSeal`/`SealDivider`. Real AI/stock photos drop into the slots later without layout changes.
-- ✅ **[M] Brand-name cleanup** — `.btn-infinity*` + `.text-glow` retired to inert aliases (only 1 file referenced them).
-- ✅ **[H] Public marketing + auth** (commit `44a59ef`) — editorial Fraunces hero + brass CTA, `.scrim` nav, warm pricing (featured tier brass), TrustConsole/Solutions token-cohered, photographic split-panel login/signup. Verified in-browser.
-- 🔄 **[H] Owner dashboard (18 sections)** — restyle workflow running: calm sentence-case headings, warm KPI cards/tables, `CarPhoto` in fleet, `Avatar` for people, violet charts, ≤1 brass/viewport.
-- ⬜ **[H] Agent / Admin / Renter portals** — same system; renter portal gets the `.document` cream trust-surface for consent/QR.
-- ⬜ **[M] RTL-safe** — logical props (`ms-`/`me-`/`ps-`/`pe-`) baked in as each file is touched (for Phase 7 AR/RTL).
+- ✅ **[H] Imagery kit + swap slots** — `Avatar` (warm monogram, brass verified ring), `AgencyImage`/`CarPhoto` (warm placeholder + real-photo `src` slot + `fill`), `TrustSeal`/`SealDivider`. Real AI-generated hero photography dropped in (commit `10fddb0`).
+- ✅ **[M] Brand-name cleanup** — `.btn-infinity*` + `.text-glow` retired to inert aliases.
+- ✅ **[H] Public marketing + auth** (commits `44a59ef`, `10fddb0`) — editorial Fraunces hero + brass CTA + real photography, `.scrim` nav, warm pricing, photographic split-panel login/signup. The public-site **footer** was missed in this pass and found/fixed in a later audit (`19ef4fd`).
+- ✅ **[H] Owner dashboard + Agent/Admin/Renter portals** (commits `bce191e`, `19ef4fd`, `78aa8fd`) — **`font-black` is 0 files app-wide**, confirmed by grep sweep after all work landed. Flagship renter portal page done (was the hardest file, failed twice on earlier attempts): calm heading, `Avatar verified`, QR/documents on the cream `.document` trust surface, `TrustSeal` as the one brass mark.
+- 🔄 **[M] 3 small style-map files still have raw colors** — `bookings/types.ts`, `staff/capabilities.ts`, `(renter)/portal/types.ts` export `Record<Status,{className}>` maps with a few un-migrated `text-white`/`bg-white/` strings (not JSX, low risk). Plus 2 cosmetic `text-white` spots in `finance/page.tsx` (should be `text-primary-foreground`) reintroduced by a later unrelated edit to that file. ~15 min to close — see `PROGRESS.md` §1.
+- ✅ **[M] RTL-safe** — logical props (`ms-`/`me-`/`ps-`/`pe-`/`start-`/`end-`) applied throughout as files were touched.
 
 ---
 
