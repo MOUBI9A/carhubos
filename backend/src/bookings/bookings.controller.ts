@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Patch, Res } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, UpdateBookingStatusDto } from './dto/bookings.dto';
+import { CaptureDepositDto, UpdateDepositDto } from './dto/deposit.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
@@ -42,6 +43,28 @@ export class BookingsController {
     @Body() dto: UpdateBookingStatusDto,
   ) {
     return this.bookingsService.updateStatus(user.agencyId, id, dto.status, user.id);
+  }
+
+  /** Set deposit amount while still PENDING (contract-time capture). */
+  @Post(':id/deposit')
+  @RequireCapabilities('deposit.manage')
+  captureDeposit(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: CaptureDepositDto,
+  ) {
+    return this.bookingsService.captureDeposit(user.agencyId, id, user.id, dto);
+  }
+
+  /** HOLD / RETURN / CLAIM deposit transitions. */
+  @Patch(':id/deposit')
+  @RequireCapabilities('deposit.manage')
+  updateDeposit(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateDepositDto,
+  ) {
+    return this.bookingsService.updateDeposit(user.agencyId, id, user.id, dto);
   }
 
   @Get(':id/contract')

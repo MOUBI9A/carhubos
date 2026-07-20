@@ -12,15 +12,23 @@ export class SearchService {
 
     const q = query.trim();
 
+    // Prefix-based (startsWith) matching, not leading-wildcard contains: a
+    // leading '%' LIKE can't use a btree index on these columns and would
+    // force a sequential scan as data grows. startsWith compiles to a
+    // sargable `col LIKE 'q%'`, which the existing indexes can serve.
+    // This narrows mid-string matches (e.g. searching "corolla" won't find
+    // "Toyota Corolla" via model alone, only via a field that starts with
+    // it) — acceptable for a global quick-search UX; each field is still
+    // agencyId-scoped with a take:5 cap per entity.
     const [cars, customers, bookings] = await Promise.all([
       // Cars — brand, model, licensePlate
       this.prisma.car.findMany({
         where: {
           agencyId,
           OR: [
-            { brand: { contains: q } },
-            { model: { contains: q } },
-            { licensePlate: { contains: q } },
+            { brand: { startsWith: q, mode: 'insensitive' } },
+            { model: { startsWith: q, mode: 'insensitive' } },
+            { licensePlate: { startsWith: q, mode: 'insensitive' } },
           ],
         },
         select: {
@@ -40,10 +48,10 @@ export class SearchService {
         where: {
           agencyId,
           OR: [
-            { firstName: { contains: q } },
-            { lastName: { contains: q } },
-            { phone: { contains: q } },
-            { identityNumber: { contains: q } },
+            { firstName: { startsWith: q, mode: 'insensitive' } },
+            { lastName: { startsWith: q, mode: 'insensitive' } },
+            { phone: { startsWith: q } },
+            { identityNumber: { startsWith: q, mode: 'insensitive' } },
           ],
         },
         select: {
@@ -63,12 +71,12 @@ export class SearchService {
         where: {
           agencyId,
           OR: [
-            { id: { contains: q } },
-            { status: { contains: q } },
-            { car: { brand: { contains: q } } },
-            { car: { model: { contains: q } } },
-            { customer: { firstName: { contains: q } } },
-            { customer: { lastName: { contains: q } } },
+            { id: { startsWith: q } },
+            { status: { startsWith: q, mode: 'insensitive' } },
+            { car: { brand: { startsWith: q, mode: 'insensitive' } } },
+            { car: { model: { startsWith: q, mode: 'insensitive' } } },
+            { customer: { firstName: { startsWith: q, mode: 'insensitive' } } },
+            { customer: { lastName: { startsWith: q, mode: 'insensitive' } } },
           ],
         },
         select: {

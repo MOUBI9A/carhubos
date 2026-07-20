@@ -5,8 +5,10 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto, UpdateBookingDto } from './dto/bookings.dto';
+import { UpdateDepositDto, CaptureDepositDto } from './dto/deposit.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
@@ -34,7 +36,8 @@ export class BookingsService {
     await this.entitlements.assertOperating(agencyId);
     await this.entitlements.assertWithinLimit(agencyId, 'bookings');
 
-    const { carId, customerId, startDate, endDate } = createBookingDto;
+    const { carId, customerId, startDate, endDate, depositAmount, depositMethod } =
+      createBookingDto;
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -175,11 +178,20 @@ export class BookingsService {
 
     // 7. Create booking, invoice, and initial PENDING payment in a transaction
     const booking = await this.prisma.$transaction(async (tx) => {
+      const deposit = new Prisma.Decimal(depositAmount ?? 0).toDecimalPlaces(2);
+      if (deposit.lt(0)) {
+        throw new BadRequestException('depositAmount cannot be negative.');
+      }
+
       const b = await tx.booking.create({
         data: {
           startDate: start,
           endDate: end,
           totalPrice,
+          depositAmount: deposit,
+          depositMethod: depositMethod ?? 'CASH',
+          // Deposit starts PENDING until hand-over (ACTIVE) holds it.
+          depositStatus: 'PENDING',
           agencyId,
           carId,
           customerId,
@@ -235,7 +247,12 @@ export class BookingsService {
   async findAll(agencyId: string) {
     return this.prisma.booking.findMany({
       where: { agencyId },
-      include: { car: true, customer: true },
+      include: {
+        car: true,
+        customer: true,
+        // Finance UI needs invoice ids/status for partial payment recording.
+        invoices: { select: { id: true, amount: true, status: true, taxAmount: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -315,9 +332,19 @@ export class BookingsService {
         });
       }
 
+      // Hand-over: auto-hold any captured security deposit (PENDING → HELD).
+      const depositPatch: Prisma.BookingUpdateInput = { status };
+      if (
+        status === 'ACTIVE' &&
+        booking.depositStatus === 'PENDING' &&
+        booking.depositAmount.gt(0)
+      ) {
+        depositPatch.depositStatus = 'HELD';
+      }
+
       return tx.booking.update({
         where: { id },
-        data: { status },
+        data: depositPatch,
       });
     });
 
@@ -355,9 +382,218 @@ export class BookingsService {
     // Prepare default data for missing fields if any
     const enrichedBooking = {
       ...booking,
-      depositAmount: (booking as any).depositAmount || 0,
+      depositAmount: booking.depositAmount || 0,
     };
 
     return this.pdfEngine.generateContract(enrichedBooking);
+  }
+
+  /**
+   * Capture (set amount) a security deposit while still PENDING.
+   * Used when deposit was 0 at booking create and is collected later at contract.
+   */
+  async captureDeposit(
+    agencyId: string,
+    bookingId: string,
+    actorId: string,
+    dto: CaptureDepositDto,
+  ) {
+    const booking = await this.findOne(agencyId, bookingId);
+    if (booking.depositStatus !== 'PENDING') {
+      throw new ConflictException(
+        `Cannot capture deposit while status is ${booking.depositStatus}.`,
+      );
+    }
+    if (['COMPLETED', 'CANCELLED'].includes(booking.status)) {
+      throw new ConflictException('Cannot capture deposit on a closed booking.');
+    }
+
+    const amount = new Prisma.Decimal(dto.amount).toDecimalPlaces(2);
+    const updated = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        depositAmount: amount,
+        depositMethod: dto.method ?? booking.depositMethod,
+        depositStatus: 'PENDING',
+      },
+    });
+
+    await this.auditLogs.log(
+      agencyId,
+      actorId,
+      'CAPTURE_DEPOSIT',
+      'BOOKING',
+      bookingId,
+      { depositAmount: booking.depositAmount, depositStatus: booking.depositStatus },
+      { depositAmount: amount, depositStatus: 'PENDING' },
+    );
+
+    return updated;
+  }
+
+  /**
+   * Deposit lifecycle transitions:
+   *   HOLD   — PENDING → HELD (hand-over capture)
+   *   RETURN — HELD → RETURNED (full release; no payment row — deposit is off-books)
+   *   CLAIM  — HELD → CLAIMED + optional damage INCOME on the invoice
+   */
+  async updateDeposit(
+    agencyId: string,
+    bookingId: string,
+    actorId: string,
+    dto: UpdateDepositDto,
+  ) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, agencyId },
+      include: {
+        invoices: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    const before = {
+      depositStatus: booking.depositStatus,
+      depositAmount: booking.depositAmount,
+      depositMethod: booking.depositMethod,
+    };
+
+    if (dto.action === 'HOLD') {
+      if (booking.depositStatus !== 'PENDING') {
+        throw new ConflictException(
+          `HOLD requires depositStatus PENDING (got ${booking.depositStatus}).`,
+        );
+      }
+      if (!booking.depositAmount.gt(0)) {
+        throw new BadRequestException(
+          'Cannot hold a zero deposit — capture an amount first.',
+        );
+      }
+      const updated = await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          depositStatus: 'HELD',
+          ...(dto.method ? { depositMethod: dto.method } : {}),
+        },
+      });
+      await this.auditLogs.log(
+        agencyId,
+        actorId,
+        'HOLD_DEPOSIT',
+        'BOOKING',
+        bookingId,
+        before,
+        { depositStatus: 'HELD', note: dto.note },
+      );
+      return updated;
+    }
+
+    if (dto.action === 'RETURN') {
+      if (booking.depositStatus !== 'HELD') {
+        throw new ConflictException(
+          `RETURN requires depositStatus HELD (got ${booking.depositStatus}).`,
+        );
+      }
+      const updated = await this.prisma.booking.update({
+        where: { id: bookingId },
+        data: { depositStatus: 'RETURNED' },
+      });
+      await this.auditLogs.log(
+        agencyId,
+        actorId,
+        'RETURN_DEPOSIT',
+        'BOOKING',
+        bookingId,
+        before,
+        { depositStatus: 'RETURNED', note: dto.note },
+      );
+      return updated;
+    }
+
+    // CLAIM
+    if (booking.depositStatus !== 'HELD') {
+      throw new ConflictException(
+        `CLAIM requires depositStatus HELD (got ${booking.depositStatus}).`,
+      );
+    }
+
+    const claimExtra = new Prisma.Decimal(dto.claimAmount ?? 0).toDecimalPlaces(2);
+    if (claimExtra.lt(0)) {
+      throw new BadRequestException('claimAmount cannot be negative.');
+    }
+
+    const invoice = booking.invoices[0];
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const b = await tx.booking.update({
+        where: { id: bookingId },
+        data: { depositStatus: 'CLAIMED' },
+      });
+
+      // Optional extra damage charge beyond the forfeited deposit — booked as
+      // verified INCOME so invoice reconciliation reflects the real total due.
+      // The deposit itself is retained off-invoice (agency keeps the caution).
+      if (claimExtra.gt(0) && invoice) {
+        await tx.payment.create({
+          data: {
+            amount: claimExtra,
+            type: 'INCOME',
+            method: booking.depositMethod || 'CASH',
+            status: 'VERIFIED',
+            reference: dto.note
+              ? `DEPOSIT_CLAIM:${dto.note}`.slice(0, 120)
+              : 'DEPOSIT_CLAIM',
+            verifiedById: actorId,
+            date: new Date(),
+            invoiceId: invoice.id,
+          },
+        });
+
+        // Reconcile: net verified income vs invoice amount (integer cents).
+        const totalCents = invoice.amount.times(100).toNumber();
+        const [incomeAgg, refundAgg] = await Promise.all([
+          tx.payment.aggregate({
+            where: { invoiceId: invoice.id, status: 'VERIFIED', type: 'INCOME' },
+            _sum: { amount: true },
+          }),
+          tx.payment.aggregate({
+            where: { invoiceId: invoice.id, status: 'VERIFIED', type: 'REFUND' },
+            _sum: { amount: true },
+          }),
+        ]);
+        const incomeCents = (incomeAgg._sum.amount ?? new Prisma.Decimal(0))
+          .times(100)
+          .toNumber();
+        const refundCents = (refundAgg._sum.amount ?? new Prisma.Decimal(0))
+          .times(100)
+          .toNumber();
+        const paidCents = incomeCents - refundCents;
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status:
+              paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE',
+          },
+        });
+      }
+
+      return b;
+    });
+
+    await this.auditLogs.log(
+      agencyId,
+      actorId,
+      'CLAIM_DEPOSIT',
+      'BOOKING',
+      bookingId,
+      before,
+      {
+        depositStatus: 'CLAIMED',
+        claimAmount: claimExtra,
+        note: dto.note,
+      },
+    );
+
+    return updated;
   }
 }

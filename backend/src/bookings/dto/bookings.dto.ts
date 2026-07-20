@@ -2,9 +2,11 @@ import {
   IsDateString,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
@@ -16,6 +18,8 @@ export const BOOKING_STATUSES = [
   'COMPLETED',
   'CANCELLED',
 ] as const;
+
+export const DEPOSIT_METHODS = ['CASH', 'TRANSFER', 'CHEQUE', 'CARD'] as const;
 
 export class UpdateBookingStatusDto {
   @IsString()
@@ -58,6 +62,16 @@ export class CreateBookingDto {
   @IsString()
   @IsOptional()
   overrideReason?: string;
+
+  /** Security deposit captured at booking/contract time (MAD). Defaults to 0. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  depositAmount?: number;
+
+  @IsOptional()
+  @IsIn([...DEPOSIT_METHODS])
+  depositMethod?: (typeof DEPOSIT_METHODS)[number];
 }
 
 export class UpdateBookingDto extends PartialType(CreateBookingDto) {

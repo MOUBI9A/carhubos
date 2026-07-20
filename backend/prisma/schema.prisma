@@ -263,6 +263,7 @@ model Booking {
   @@index([customerId])
   @@index([agencyId])
   @@index([status])
+  @@index([startDate, endDate])
 }
 
 model Invoice {
@@ -303,6 +304,8 @@ model Payment {
 
   @@index([invoiceId])
   @@index([status])
+  @@index([invoiceId, status])
+  @@index([date])
 }
 
 model Expense {

@@ -12,39 +12,29 @@ export class AnalyticsService {
    * Logic: (Total Revenue - Total Maintenance Costs - Depreciation Estimate) / Age in Fleet
    */
   async calculateCarRoi(carId: string) {
-    const car = await this.prisma.car.findUnique({
-      where: { id: carId },
-      include: {
-        bookings: {
-          where: { status: 'COMPLETED' },
-          include: { invoices: { include: { payments: true } } },
-        },
-        maintenance: {
-          where: { status: 'COMPLETED' },
-        },
-      },
-    });
+    const car = await this.prisma.car.findUnique({ where: { id: carId } });
 
     if (!car) return 0;
 
-    // 1. Calculate Total Revenue
-    let totalRevenue = 0;
-    for (const booking of car.bookings) {
-      for (const invoice of booking.invoices) {
-        for (const payment of invoice.payments) {
-          if (payment.type === 'INCOME' && payment.status === 'VERIFIED') {
-            // amount is Prisma.Decimal — coerce per addend (ROI is a Float score).
-            totalRevenue += payment.amount.toNumber();
-          }
-        }
-      }
-    }
+    // 1. Calculate Total Revenue — DB-side sum instead of loading every
+    // booking → invoice → payment row for this car.
+    const revenueAgg = await this.prisma.payment.aggregate({
+      where: {
+        invoice: { booking: { carId, status: 'COMPLETED' } },
+        type: 'INCOME',
+        status: 'VERIFIED',
+      },
+      _sum: { amount: true },
+    });
+    // amount is Prisma.Decimal — coerce (ROI is a Float score).
+    const totalRevenue = revenueAgg._sum.amount?.toNumber() ?? 0;
 
     // 2. Calculate Total Maintenance Costs
-    const totalMaintenance = car.maintenance.reduce(
-      (sum, record) => sum + record.cost.toNumber(),
-      0,
-    );
+    const maintenanceAgg = await this.prisma.maintenanceRecord.aggregate({
+      where: { carId, status: 'COMPLETED' },
+      _sum: { cost: true },
+    });
+    const totalMaintenance = maintenanceAgg._sum.cost?.toNumber() ?? 0;
 
     // 3. Simple ROI Calculation (Percentage)
     // Formula: ((Revenue - Costs) / Costs) * 100
@@ -65,41 +55,51 @@ export class AnalyticsService {
    * Generates a demand report based on Refusal Logs
    */
   async getDemandIntelligence(agencyId: string) {
-    const logs = await this.prisma.refusalLog.findMany({
-      where: { agencyId, status: 'WAITING' },
-    });
+    const [agg, byTypeGroups] = await Promise.all([
+      this.prisma.refusalLog.aggregate({
+        where: { agencyId, status: 'WAITING' },
+        _sum: { potentialRevenue: true },
+        _count: { _all: true },
+      }),
+      // Group-by-car-type counts computed in the DB instead of loading every
+      // waiting refusal row and bucketing in JS.
+      this.prisma.refusalLog.groupBy({
+        by: ['requestedCarType'],
+        where: { agencyId, status: 'WAITING' },
+        _count: { requestedCarType: true },
+      }),
+    ]);
 
-    const potentialRevenue = logs.reduce(
-      (sum, log) => sum + log.potentialRevenue.toNumber(),
-      0,
-    );
+    const potentialRevenue = agg._sum.potentialRevenue?.toNumber() ?? 0;
 
-    // Group by car type
-    const byType = logs.reduce(
-      (acc, log) => {
-        acc[log.requestedCarType] = (acc[log.requestedCarType] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const highDemandType =
+      byTypeGroups.length > 0
+        ? byTypeGroups.reduce((best, g) =>
+            g._count.requestedCarType > best._count.requestedCarType
+              ? g
+              : best,
+          ).requestedCarType
+        : 'NONE';
 
     return {
       potentialRevenue,
-      refusalCount: logs.length,
-      highDemandType:
-        Object.entries(byType).sort((a, b) => b[1] - a[1])[0]?.[0] || 'NONE',
+      refusalCount: agg._count._all,
+      highDemandType,
     };
   }
 
   async getAgencyInsights(agencyId: string) {
     const demand = await this.getDemandIntelligence(agencyId);
-    const cars = await this.prisma.car.findMany({ where: { agencyId } });
+    const carAgg = await this.prisma.car.aggregate({
+      where: { agencyId },
+      _count: { _all: true },
+      _avg: { currentRoi: true },
+    });
 
     return {
       demand,
-      fleetSize: cars.length,
-      avgRoi:
-        cars.reduce((sum, car) => sum + car.currentRoi, 0) / (cars.length || 1),
+      fleetSize: carAgg._count._all,
+      avgRoi: carAgg._count._all > 0 ? (carAgg._avg.currentRoi ?? 0) : 0,
     };
   }
 
@@ -135,10 +135,13 @@ export class AnalyticsService {
         },
       },
       orderBy: { date: 'asc' },
+      // A true month-bucket groupBy isn't practical without raw SQL — keep
+      // this findMany, but tightly scoped (6 months) and column-limited.
+      select: { amount: true, date: true },
     });
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     const monthlyData = payments.reduce((acc, payment) => {
       const month = months[new Date(payment.date).getMonth()];
       acc[month] = (acc[month] || 0) + payment.amount.toNumber();
@@ -159,12 +162,16 @@ export class AnalyticsService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const cars = await this.prisma.car.count({ where: { agencyId } });
+    // Day-diff math needs per-row start/end dates and can't be expressed as
+    // a single SQL aggregate — keep the findMany, but tightly scoped
+    // (30-day window) and column-limited instead of loading full rows.
     const activeBookings = await this.prisma.booking.findMany({
       where: {
         agencyId,
         status: { in: ['ACTIVE', 'COMPLETED'] },
         startDate: { gte: thirtyDaysAgo },
       },
+      select: { startDate: true, endDate: true },
     });
 
     const totalFleetDays = cars * 30;
@@ -196,24 +203,30 @@ export class AnalyticsService {
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
     // ── 1. GMV (Total Verified Revenue) ────────────────────────────
-    const allPayments = await this.prisma.payment.findMany({
-      where: {
-        invoice: { agencyId },
-        type: 'INCOME',
-        status: 'VERIFIED',
-      },
-    });
-    // Money fields are Prisma.Decimal — coerce each addend to a number.
-    const gmvTotal = allPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
-
-    // Calculate last-year comparison
-    const lastYearPayments = allPayments.filter(
-      (p) => p.date < twelveMonthsAgo,
-    );
-    const lastYearGmv = lastYearPayments.reduce(
-      (sum, p) => sum + p.amount.toNumber(),
-      0,
-    );
+    // Previously loaded every verified INCOME payment ever made for the
+    // agency (unbounded) just to sum it in JS — now two DB-side sums.
+    const [gmvAgg, lastYearGmvAgg] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: {
+          invoice: { agencyId },
+          type: 'INCOME',
+          status: 'VERIFIED',
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: {
+          invoice: { agencyId },
+          type: 'INCOME',
+          status: 'VERIFIED',
+          date: { lt: twelveMonthsAgo },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+    // Money fields are Prisma.Decimal — coerce the aggregate sum to a number.
+    const gmvTotal = gmvAgg._sum.amount?.toNumber() ?? 0;
+    const lastYearGmv = lastYearGmvAgg._sum.amount?.toNumber() ?? 0;
     const gmvChange = lastYearGmv > 0
       ? ((gmvTotal - lastYearGmv) / lastYearGmv) * 100
       : gmvTotal > 0 ? 100 : 0;
@@ -252,6 +265,8 @@ export class AnalyticsService {
     );
 
     // ── 5. Monthly Revenue & Expenses (12 months) ──────────────────
+    // No clean SQL month-trunc groupBy without raw SQL — keep these
+    // findManys, but tightly scoped (12 months) and column-limited.
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const recentPayments = await this.prisma.payment.findMany({
       where: {
@@ -260,6 +275,7 @@ export class AnalyticsService {
         status: 'VERIFIED',
         date: { gte: twelveMonthsAgo },
       },
+      select: { amount: true, date: true },
     });
 
     const expenses = await this.prisma.expense.findMany({
@@ -267,6 +283,7 @@ export class AnalyticsService {
         agencyId,
         date: { gte: twelveMonthsAgo },
       },
+      select: { amount: true, date: true },
     });
 
     const maintenanceCosts = await this.prisma.maintenanceRecord.findMany({
@@ -275,6 +292,7 @@ export class AnalyticsService {
         status: 'COMPLETED',
         createdAt: { gte: twelveMonthsAgo },
       },
+      select: { cost: true, createdAt: true },
     });
 
     const monthlyRevenue: Record<string, number> = {};
@@ -390,62 +408,66 @@ export class AnalyticsService {
     }
 
     // ── 8. Forecast ────────────────────────────────────────────────
-    const futureBookings = await this.prisma.booking.findMany({
+    // None of these rows are ever displayed individually — only the sum
+    // (and, for a couple, the count) — so aggregate in the DB.
+    const futureBookingsAgg = await this.prisma.booking.aggregate({
       where: {
         agencyId,
         status: { in: ['APPROVED', 'ACTIVE'] },
         endDate: { gte: now },
       },
-      include: { car: true, customer: true },
+      _sum: { totalPrice: true },
     });
 
     const inflows = [
       {
         source: 'Active & Confirmed Bookings',
-        amount: futureBookings.reduce((sum, b) => sum + b.totalPrice.toNumber(), 0),
+        amount: futureBookingsAgg._sum.totalPrice?.toNumber() ?? 0,
         date: 'Ongoing',
       },
     ];
 
     // Add pending payments as inflow
-    const pendingPayments = await this.prisma.payment.findMany({
+    const pendingPaymentsAgg = await this.prisma.payment.aggregate({
       where: {
         invoice: { agencyId },
         status: 'PENDING',
         type: 'INCOME',
       },
+      _sum: { amount: true },
+      _count: { _all: true },
     });
-    if (pendingPayments.length > 0) {
+    if (pendingPaymentsAgg._count._all > 0) {
       inflows.push({
         source: 'Pending Payment Verifications',
-        amount: pendingPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0),
+        amount: pendingPaymentsAgg._sum.amount?.toNumber() ?? 0,
         date: 'Awaiting Verification',
       });
     }
 
     // Refusal logs as potential
-    const refusalPotential = await this.prisma.refusalLog.findMany({
+    const refusalPotentialAgg = await this.prisma.refusalLog.aggregate({
       where: { agencyId, status: 'WAITING' },
+      _sum: { potentialRevenue: true },
+      _count: { _all: true },
     });
-    if (refusalPotential.length > 0) {
+    if (refusalPotentialAgg._count._all > 0) {
       inflows.push({
-        source: `Recoverable Demand (${refusalPotential.length} leads)`,
-        amount: refusalPotential.reduce(
-          (sum, r) => sum + r.potentialRevenue.toNumber(),
-          0,
-        ),
+        source: `Recoverable Demand (${refusalPotentialAgg._count._all} leads)`,
+        amount: refusalPotentialAgg._sum.potentialRevenue?.toNumber() ?? 0,
         date: 'If Recovered',
       });
     }
 
-    const pendingExpenses = await this.prisma.expense.findMany({
+    const pendingExpensesAgg = await this.prisma.expense.aggregate({
       where: { agencyId, status: 'PENDING' },
+      _sum: { amount: true },
     });
 
     const outflows = [
       {
         source: 'Pending Expenses',
-        amount: pendingExpenses.reduce((sum, e) => sum + e.amount.toNumber(), 0),
+        amount: pendingExpensesAgg._sum.amount?.toNumber() ?? 0,
         date: 'Scheduled',
       },
     ];
@@ -535,26 +557,31 @@ export class AnalyticsService {
     const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // ── 1. Revenue MTD ──────────────────────────────────────────────
-    const mtdPayments = await this.prisma.payment.findMany({
-      where: {
-        invoice: { agencyId },
-        type: 'INCOME',
-        status: 'VERIFIED',
-        date: { gte: startOfMonth },
-      },
-    });
-    const revenueMtd = mtdPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
-
-    // Previous month for comparison
-    const prevPayments = await this.prisma.payment.findMany({
-      where: {
-        invoice: { agencyId },
-        type: 'INCOME',
-        status: 'VERIFIED',
-        date: { gte: prevMonthStart, lte: prevMonthEnd },
-      },
-    });
-    const prevRevenue = prevPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+    // Previously two unbounded-shaped findManys just to sum in JS — this is
+    // the endpoint behind the owner dashboard's skeleton-hang, so both are
+    // now DB-side sums.
+    const [mtdPaymentsAgg, prevPaymentsAgg] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: {
+          invoice: { agencyId },
+          type: 'INCOME',
+          status: 'VERIFIED',
+          date: { gte: startOfMonth },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: {
+          invoice: { agencyId },
+          type: 'INCOME',
+          status: 'VERIFIED',
+          date: { gte: prevMonthStart, lte: prevMonthEnd },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+    const revenueMtd = mtdPaymentsAgg._sum.amount?.toNumber() ?? 0;
+    const prevRevenue = prevPaymentsAgg._sum.amount?.toNumber() ?? 0;
     const revenueGrowth = prevRevenue > 0
       ? Math.round(((revenueMtd - prevRevenue) / prevRevenue) * 100)
       : revenueMtd > 0 ? 100 : 0;
@@ -610,11 +637,13 @@ export class AnalyticsService {
     });
 
     // ── 4. Refusal / Demand Intelligence ────────────────────────────
-    const waitingRefusals = await this.prisma.refusalLog.findMany({
+    const waitingRefusalsAgg = await this.prisma.refusalLog.aggregate({
       where: { agencyId, status: 'WAITING' },
+      _sum: { potentialRevenue: true },
+      _count: { _all: true },
     });
-    const refusalRecoverable = waitingRefusals.reduce((sum, r) => sum + r.potentialRevenue.toNumber(), 0);
-    const refusalCount = waitingRefusals.length;
+    const refusalRecoverable = waitingRefusalsAgg._sum.potentialRevenue?.toNumber() ?? 0;
+    const refusalCount = waitingRefusalsAgg._count._all;
 
     // ── 5. Daily Intensity (bookings + verified cash flow, last 14 days) ─────────
     // Revenue = actual VERIFIED income payments (cash flow), NOT quoted booking
@@ -684,14 +713,15 @@ export class AnalyticsService {
       allCars[0]);
 
       // Calculate total revenue for this car
-      const carPayments = await this.prisma.payment.findMany({
+      const carRevenueAgg = await this.prisma.payment.aggregate({
         where: {
           invoice: { booking: { carId: bestCar.id } },
           type: 'INCOME',
           status: 'VERIFIED',
         },
+        _sum: { amount: true },
       });
-      const carRevenue = carPayments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
+      const carRevenue = carRevenueAgg._sum.amount?.toNumber() ?? 0;
 
       starAsset = {
         id: bestCar.id,

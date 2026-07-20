@@ -205,15 +205,12 @@ export class TrustService {
       }),
     ]);
 
-    // Keep the cached aggregates honest on every assessment.
-    await this.recompute(identity.id);
-    const fresh = await this.prisma.renterIdentity.findUnique({
-      where: { id: identity.id },
-    });
-
+    // The cached aggregates on `identity` are kept fresh by recompute() calls
+    // triggered from every mutation that can change them (review create,
+    // blacklist add/lift, expiry) — no need to recompute on every read.
     const status = this.statusFromRisk(
-      fresh!.riskLevel,
-      fresh!.reviewCount,
+      identity.riskLevel,
+      identity.reviewCount,
     );
     const hardBlock = this.isHardBlock(activeFlags);
 
@@ -256,10 +253,10 @@ export class TrustService {
         type: identity.identityType,
       },
       status,
-      riskLevel: fresh!.riskLevel,
+      riskLevel: identity.riskLevel,
       blocked: hardBlock,
-      globalScore: fresh!.globalScore,
-      reviewCount: fresh!.reviewCount,
+      globalScore: identity.globalScore,
+      reviewCount: identity.reviewCount,
       agencyCount,
       activeFlagCount: activeFlags.length,
       depositMultiplier,

@@ -1,32 +1,134 @@
-import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { CreatePaymentDto } from './dto/payments.dto';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private prisma: PrismaService,
-    private analytics: AnalyticsService
+    private analytics: AnalyticsService,
   ) {}
 
   async findAllPending(agencyId: string) {
     return this.prisma.payment.findMany({
       where: {
         status: 'PENDING',
-        invoice: { agencyId }
+        invoice: { agencyId },
       },
       include: {
         invoice: {
           include: {
             booking: {
-              include: { customer: true, car: true }
-            }
-          }
-        }
+              include: { customer: true, car: true },
+            },
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Recent verified payments (income + refunds) for the finance ledger.
+   * Caps at 100 rows so the UI stays snappy; full history is a later reports job.
+   */
+  async findRecent(agencyId: string, limit = 100) {
+    return this.prisma.payment.findMany({
+      where: {
+        status: 'VERIFIED',
+        invoice: { agencyId },
+      },
+      include: {
+        invoice: {
+          include: {
+            booking: {
+              include: { customer: true, car: true },
+            },
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+      take: Math.min(Math.max(limit, 1), 200),
+    });
+  }
+
+  /**
+   * Record a partial/full income payment or a refund against an invoice.
+   * Reconciles the invoice when the payment is VERIFIED (auto-verify or explicit).
+   */
+  async create(
+    agencyId: string,
+    userId: string,
+    role: string,
+    dto: CreatePaymentDto,
+  ) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: dto.invoiceId, agencyId },
+      include: { booking: true },
+    });
+    if (!invoice) {
+      throw new NotFoundException('Invoice not found.');
+    }
+    if (invoice.status === 'CANCELLED') {
+      throw new ConflictException('Cannot record payments against a cancelled invoice.');
+    }
+
+    const amount = new Prisma.Decimal(dto.amount).toDecimalPlaces(2);
+    if (amount.lte(0)) {
+      throw new BadRequestException('Amount must be greater than zero.');
+    }
+
+    // OWNER/MANAGER may auto-verify; agents recording cash land as PENDING.
+    const canAutoVerify = role === 'OWNER' || role === 'MANAGER';
+    const autoVerify = dto.autoVerify !== false && canAutoVerify;
+    const status = autoVerify ? 'VERIFIED' : 'PENDING';
+
+    if (dto.type === 'REFUND') {
+      // Refunds cannot exceed net verified income already on this invoice.
+      const netCents = await this.netVerifiedIncomeCents(invoice.id);
+      const refundCents = amount.times(100).toNumber();
+      if (refundCents > netCents) {
+        throw new BadRequestException(
+          `Refund of ${amount.toFixed(2)} MAD exceeds net verified income ` +
+            `(${(netCents / 100).toFixed(2)} MAD) on this invoice.`,
+        );
+      }
+    }
+
+    const payment = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          amount,
+          type: dto.type,
+          method: dto.method ?? 'CASH',
+          reference: dto.reference,
+          status,
+          verifiedById: autoVerify ? userId : null,
+          date: new Date(),
+          invoiceId: invoice.id,
+        },
+      });
+
+      if (autoVerify) {
+        await this.reconcileInvoice(tx, invoice.id, invoice.amount);
+      }
+
+      return created;
+    });
+
+    if (autoVerify && dto.type === 'INCOME' && invoice.booking?.carId) {
+      await this.analytics.calculateCarRoi(invoice.booking.carId);
+    }
+
+    return payment;
   }
 
   async verify(paymentId: string, userId: string, role: string, agencyId: string) {
@@ -36,7 +138,7 @@ export class PaymentsService {
 
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
-      include: { invoice: { include: { booking: true } } }
+      include: { invoice: { include: { booking: true } } },
     });
 
     // Tenant scope (IDOR): a payment whose invoice belongs to another agency is
@@ -50,12 +152,18 @@ export class PaymentsService {
       throw new ConflictException('Only pending payments can be verified.');
     }
 
-    const invoiceId = payment.invoiceId;
-    // Money is Prisma.Decimal (see @db.Decimal(12,2)). Reconcile on EXACT
-    // integer cents: a (_,2) column can hold at most 2 fraction digits, so
-    // `.times(100)` yields a whole-number Decimal and `.toNumber()` is lossless.
-    // Integer comparison then avoids any binary-float drift.
-    const totalCents = payment.invoice.amount.times(100).toNumber();
+    if (payment.type === 'REFUND') {
+      // When verifying a pending refund, ensure net income still covers it
+      // (excluding this payment which is still PENDING).
+      const netCents = await this.netVerifiedIncomeCents(payment.invoiceId);
+      const refundCents = payment.amount.times(100).toNumber();
+      if (refundCents > netCents) {
+        throw new BadRequestException(
+          `Refund of ${payment.amount.toFixed(2)} MAD exceeds net verified income ` +
+            `(${(netCents / 100).toFixed(2)} MAD) on this invoice.`,
+        );
+      }
+    }
 
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
       const verified = await tx.payment.update({
@@ -63,34 +171,77 @@ export class PaymentsService {
         data: {
           status: 'VERIFIED',
           verifiedById: userId,
-          date: new Date()
-        }
+          date: new Date(),
+        },
       });
 
-      // Reconcile the invoice: sum every VERIFIED income payment (includes the
-      // one just verified above, same transaction) and compare to the total.
-      const agg = await tx.payment.aggregate({
-        where: { invoiceId, status: 'VERIFIED', type: 'INCOME' },
-        _sum: { amount: true }
-      });
-      const paidCents = (agg._sum.amount ?? new Prisma.Decimal(0))
-        .times(100)
-        .toNumber();
-
-      const invoiceStatus =
-        paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE';
-
-      await tx.invoice.update({
-        where: { id: invoiceId },
-        data: { status: invoiceStatus }
-      });
+      await this.reconcileInvoice(tx, payment.invoiceId, payment.invoice.amount);
 
       return verified;
     });
 
     // BP Pillar C: Trigger ROI recalculation as new real liquidity entered the system
-    await this.analytics.calculateCarRoi(payment.invoice.booking.carId);
+    if (payment.type === 'INCOME') {
+      await this.analytics.calculateCarRoi(payment.invoice.booking.carId);
+    }
 
     return updatedPayment;
+  }
+
+  /** Net verified INCOME − REFUND in integer cents for an invoice. */
+  private async netVerifiedIncomeCents(invoiceId: string): Promise<number> {
+    const [incomeAgg, refundAgg] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: { invoiceId, status: 'VERIFIED', type: 'INCOME' },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: { invoiceId, status: 'VERIFIED', type: 'REFUND' },
+        _sum: { amount: true },
+      }),
+    ]);
+    const income = (incomeAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
+    const refund = (refundAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
+    return income - refund;
+  }
+
+  /**
+   * Reconcile invoice status from verified payments.
+   * Net paid = VERIFIED INCOME − VERIFIED REFUND (integer cents).
+   * PAID when net ≥ invoice.amount; PARTIAL when net > 0; else DUE.
+   */
+  private async reconcileInvoice(
+    tx: Prisma.TransactionClient,
+    invoiceId: string,
+    invoiceAmount: Prisma.Decimal,
+  ) {
+    const totalCents = invoiceAmount.times(100).toNumber();
+
+    const [incomeAgg, refundAgg] = await Promise.all([
+      tx.payment.aggregate({
+        where: { invoiceId, status: 'VERIFIED', type: 'INCOME' },
+        _sum: { amount: true },
+      }),
+      tx.payment.aggregate({
+        where: { invoiceId, status: 'VERIFIED', type: 'REFUND' },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const incomeCents = (incomeAgg._sum.amount ?? new Prisma.Decimal(0))
+      .times(100)
+      .toNumber();
+    const refundCents = (refundAgg._sum.amount ?? new Prisma.Decimal(0))
+      .times(100)
+      .toNumber();
+    const paidCents = incomeCents - refundCents;
+
+    const invoiceStatus =
+      paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE';
+
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { status: invoiceStatus },
+    });
   }
 }

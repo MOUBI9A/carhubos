@@ -1,5 +1,6 @@
-import { Controller, Get, Patch, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Param, Post, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { CreatePaymentDto } from './dto/payments.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
@@ -14,6 +15,18 @@ export class PaymentsController {
   @RequireCapabilities('payment.verify')
   findAllPending(@CurrentUser() user: any) {
     return this.paymentsService.findAllPending(user.agencyId);
+  }
+
+  @Get('recent')
+  @RequireCapabilities('finance.view')
+  findRecent(@CurrentUser() user: any) {
+    return this.paymentsService.findRecent(user.agencyId);
+  }
+
+  @Post()
+  @RequireCapabilities('payment.record')
+  create(@CurrentUser() user: any, @Body() dto: CreatePaymentDto) {
+    return this.paymentsService.create(user.agencyId, user.id, user.role, dto);
   }
 
   @Patch(':id/verify')

@@ -64,4 +64,10 @@ export class InspectionsController {
   findByBooking(@CurrentUser() user: any, @Param('bookingId') bookingId: string) {
     return this.inspectionsService.findByBooking(user.agencyId, bookingId);
   }
+
+  @Get('booking/:bookingId/diff')
+  @RequireCapabilities('booking.view')
+  getBookingDiff(@CurrentUser() user: any, @Param('bookingId') bookingId: string) {
+    return this.inspectionsService.findBookingDiff(user.agencyId, bookingId);
+  }
 }
