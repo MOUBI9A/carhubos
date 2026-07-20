@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
       "@next/next/no-img-element": "off",
       "jsx-a11y/alt-text": "off",
       "react-hooks/exhaustive-deps": "off",
-      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/set-state-in-effect": "off",
     }
   },

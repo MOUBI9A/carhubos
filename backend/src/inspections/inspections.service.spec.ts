@@ -37,10 +37,7 @@ function makePrisma(overrides: any = {}) {
             (!where.carId || x.carId === where.carId),
         );
         if (!b) return null;
-        if (where.include || true) {
-          return { ...b, invoices: state.invoices.filter((i) => i.bookingId === b.id) };
-        }
-        return b;
+        return { ...b, invoices: state.invoices.filter((i) => i.bookingId === b.id) };
       }),
     },
     inspection: {

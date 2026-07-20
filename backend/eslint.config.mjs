@@ -6,7 +6,11 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    // dist/ is a gitignored local build artifact, never linted; prisma/*.js
+    // (seed + catalog scripts) are plain Node scripts outside the tsconfig
+    // "include" — they run standalone via `node -r dotenv/config`, so
+    // type-aware linting doesn't apply to them.
+    ignores: ['eslint.config.mjs', 'dist/**', 'prisma/**/*.js'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -27,7 +31,7 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
