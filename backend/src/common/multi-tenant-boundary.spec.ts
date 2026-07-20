@@ -3,6 +3,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { CustomersService } from '../customers/customers.service';
 import { DocumentsService } from '../documents/documents.service';
 import { InspectionsService } from '../inspections/inspections.service';
+import { ExpensesService } from '../expenses/expenses.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -65,6 +66,21 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
 
     await expect(svc.findAllForCar(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
     await expect(svc.findAllForCar(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('ExpensesService.update/remove 404 across tenants', async () => {
+    const prisma = {
+      expense: {
+        findFirst: agencyScopedFindFirst(),
+        update: jest.fn().mockResolvedValue({}),
+        delete: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const svc = new ExpensesService(prisma as any);
+
+    await expect(svc.update(AGENCY_A, RESOURCE_ID, {})).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.remove(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.update(AGENCY_B, RESOURCE_ID, {})).resolves.toBeDefined();
   });
 
   it('InspectionsService.findByCar/findByBooking scope every read by agencyId in the WHERE clause', async () => {
