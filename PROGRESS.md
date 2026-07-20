@@ -1,16 +1,16 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **STOPPED CLEANLY on user request at commit `78aa8fd`.** Tree is 100% clean (`git status` empty), `backend` tsc clean + jest **7 suites/43 tests green**, `frontend` tsc clean + vitest **9/9 green**. Say "keep going" to resume — this file has the exact punch-list.
+> **Last updated at commit `656bc40`.** Tree is 100% clean, `backend` tsc clean + jest **12 suites/74 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 
-## ⚠️ Important: another AI is also working this repo
+## ⚠️ Important: another AI may also work this repo
 
-`.codex/agents/*.toml` + root `AGENTS.md` + `GEMINI.md` show a **Codex CLI worker fleet** (mirroring this project's own supervisor→worker→verifier model) is being run against this same repo, likely by the user in a separate terminal. During this session it was **actively, live-editing `backend/src/bookings/*` and `backend/src/payments/*`** (building the deposit lifecycle + refund reconciliation) while this session worked — confirmed by watching files change mid-read. Its output was reviewed and is included in commit `1d4ec95` (verified: tsc clean, jest green, money-safety spot-checked).
+`.codex/agents/*.toml` + root `AGENTS.md` + `GEMINI.md` show a **Codex CLI worker fleet** (mirroring this project's own supervisor→worker→verifier model) can be run against this same repo, likely by the user in a separate terminal. It was actively live-editing `backend/src/bookings/*` and `backend/src/payments/*` in a prior session (deposit lifecycle + refund reconciliation — reviewed and committed). It was quiet for the whole of this session.
 
-**Before writing to `backend/src/bookings/*`, `backend/src/payments/*`, or any file, run `git status` first** — if it shows unexpected modifications not from this session, another process may be active. Don't blind-edit a file that's mid-write elsewhere; `tsc`/`jest`/`vitest` all green is a fast way to confirm the tree is currently stable before continuing.
+**Before writing to any file, run `git status` first** — if it shows unexpected modifications not from this session, another process may be active. Don't blind-edit a file that's mid-write elsewhere; `tsc`/`jest`/`vitest` all green is a fast way to confirm the tree is currently stable before continuing.
 
 ## The goal
-Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the **founder** (ROOT_ADMIN) runs the platform; **agencies** (OWNER + staff) are paying subscribers; **renters** are end users. Plus the hardening phases 0–10 and the Phase 12 design rebuild. Done = the **Market-Ready Checklist** at the bottom of `docs/AUDIT_BACKLOG.md`.
+Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the **founder** (ROOT_ADMIN) runs the platform; **agencies** (OWNER + staff) are paying subscribers; **renters** are end users. Done = the **Market-Ready Checklist** at the bottom of `docs/AUDIT_BACKLOG.md`.
 
 ## Founder decisions (locked)
 VAT inclusive · Billing = manual invoicing (no Stripe) · Plans free during beta (BETA plan grants all) · i18n FR (default) + AR (RTL) + EN · Trial 14 days · Deploy target deferred to the Phase 9 gate · Commit verified milestones directly to `main` (no phase branches).
@@ -26,58 +26,46 @@ npm run start:dev                               # http://localhost:5406/api
 cd frontend && npm run dev                      # http://localhost:3002
 ```
 Logins (password `admin123`): `root@ owner@ manager@ agent@ renter@` `carhub.os`.
-**Backend tests run via `jest`** (`cd backend && npx jest`) — **frontend tests run via `vitest`, NOT jest** (`cd frontend && npx vitest run`) — running `jest` in `frontend/` gives a misleading babel parse error, not a clear "wrong runner" message.
+**Backend tests run via `jest`** (`cd backend && npx jest`) — **frontend tests run via `vitest`, NOT jest** (`cd frontend && npx vitest run`) — running `jest` in `frontend/` gives a misleading babel parse error, not a clear "wrong runner" message. Lint: `npx eslint .` in either dir (both `react-hooks/rules-of-hooks` and `no-floating-promises` are now hard errors, not warnings).
 
-## DONE (committed to `main`, verified — tsc/jest/vitest green at every commit)
-- **Phase 0** security — secrets purged/rotated, history scrubbed, register privilege-escalation closed.
+## DONE (committed to `main`, verified — tsc/jest/vitest/eslint green at every commit)
+
+- **Phase 0** security — secrets purged/rotated, history scrubbed, register privilege-escalation closed (now regression-tested, see Phase 8).
 - **Phase 1** correctness/authz — throttling, JWT fail-fast, trust role-gating, payments/expenses IDOR fixes, invoice reconciliation, double-booking guard, HMAC identity hash.
 - **Phase 2** data foundation — Postgres, money Decimal(12,2) + interceptor, soft-delete, trust-cascade, idempotent seeds.
-- **Phase 3 — financial lifecycle** ✅ (commit `1d4ec95`): security deposits (capture → HOLD at hand-over → RETURN/CLAIM with optional damage charge, `backend/src/bookings/dto/deposit.dto.ts` + `BookingsService.captureDeposit/updateDeposit`, `POST`/`PATCH :id/deposit`); partial-payment/refund reconciliation hardened (refund can never exceed net verified income, integer-cents math, `payments.service.spec.ts`). Finance UI (`(owner)/dashboard/finance/page.tsx`) wired to real `/expenses` + `/payments/pending` + `/payments/recent` + `/expenses/summary` (was hardcoded mock data — fixed in `6b6fdfa`/`66c2095`, extended further by the concurrent Codex process).
-- **Phase 4 — rental lifecycle** ✅ mostly (commits `8032b47`, `1d4ec95`): OVERDUE booking state + legal transitions + hourly cron (spam-guarded via the `status:'ACTIVE'` update guard), contract e-sign (`SignContractDto`, `contract.sign` capability, gate on SIGNED), **inspection return/damage flow** — `backend/src/inspections/inspections.service.ts` now diffs POST_RENTAL vs PRE_RENTAL (new damage entries + material fuel drop) and auto-raises a conservative damage charge on the invoice **only when a real cost signal exists** on the damage entry, else charges a placeholder (default 0) and flags `MANUAL REVIEW REQUIRED` in the payment reference + AuditLog — money is never fabricated. New `GET` booking-diff endpoint. `inspections.service.spec.ts` covers no-baseline / clean / new-damage / tenant-scoping.
-  - **Still open**: **late fees** (not implemented — needs `bookings.service.ts`, which was the concurrent process's hot file all session; safe to tackle now that it's stable/committed). Rate tiers/seasonality/extras — not started, lower priority (not in the Market-Ready Checklist verbatim).
-- **Phase 5A/5B** ✅ capability engine + renter portal/consent (see backlog for detail — unchanged this session).
-- **Phase 6 — performance** ✅ (commit `1d4ec95`): `trust.service.ts` no longer recomputes-on-read in `assess()` (every mutation already keeps the cached aggregates fresh — removed the redundant 3-query transaction per read); `analytics.service.ts` converted ~15 unbounded `findMany`+JS-`.reduce()` sums to `prisma.aggregate()`/`groupBy()` across the hot paths (command centre, financial pulse, ERP dashboard — same response shape, no full-table loads); `common/search/search.service.ts` now uses `startsWith`; new migration `20260720125819_hot_path_indexes` (additive-only: `Booking(startDate,endDate)`, `Payment(invoiceId,status)`, `Payment(date)`).
-  - **Still open**: bookings-list server-side pagination (`bookings.service.ts` still loads all + filters in memory) — deliberately deferred, same collision-risk file as above.
-- **Phase 7 — i18n** ✅ foundation (commit `322e6a5`): next-intl FR(default)/AR(RTL)/EN, `messages/{fr,ar,en}.json`, `LocaleSwitcher`, Noto Sans Arabic, `html lang/dir` driven by locale, Intl date/currency helpers (`lib/format.ts`/`useFormat.ts`). Login's false "AES-256 JWT ENCRYPTION" claim was already gone; found and softened a second unverifiable claim on `/admin/provision` (commit `19ef4fd`).
-  - **Still open**: contrast floor audit, dead-button fake-success-toast audit (found one on `vault/page.tsx` — see below), chart tap/focus + SR table — not verified this session.
-- **Phase 11 — SaaS Business Layer** ✅ complete (see backlog — unchanged this session).
-- **Phase 12 — Design & Frontend Rebuild "Fider Lux"** ✅ essentially complete:
-  - Foundation (`46968f1`) — warm graphite/cream `@theme` tokens, Fraunces/Hanken/Plex Mono, killed the blanket `uppercase font-black` rule, imagery kit (`Avatar`/`AgencyImage`/`CarPhoto`/`TrustSeal`/`SealDivider`).
-  - Public marketing + auth (`44a59ef`) + real AI-generated hero photography (`10fddb0`).
-  - Owner dashboard + agent/admin/renter portals (`bce191e`, `19ef4fd`, `78aa8fd`) — **font-black is now 0 files app-wide** (confirmed by grep sweep, twice, after all workflows landed). The flagship renter portal page (failed twice on earlier attempts) is done: calm heading, `Avatar verified`, the QR badge/My-Documents cards on the cream `.document` trust surface with `TrustSeal` as the one brass mark. The public-site **footer** (`(public)/layout.tsx`) was found still fully on the old system in this session's audit and fixed. Billing page got a final polish pass (sentence-case titles, decorative violet → neutral, photographic empty state).
-  - **Still open (small, ~15 min of work)**: 3 style-map `.ts` files still carry a few raw-color classNames (not JSX, just exported `Record<Status,{className}>` maps) — `frontend/src/app/(owner)/dashboard/bookings/types.ts`, `frontend/src/app/(owner)/dashboard/staff/capabilities.ts`, `frontend/src/app/(renter)/portal/types.ts`. Also `finance/page.tsx` has 2 `text-white` (should be `text-primary-foreground`) on the ledger/pending tab pills — cosmetic, reintroduced by the concurrent process's later edit to that file, harmless.
-  - The whole-frontend **completeness critic pass never ran** (workflow was stopped before that stage) — worth a final look before declaring Phase 12 100% done, though the grep sweep above is a strong signal it's clean.
+- **Phase 3 — financial lifecycle** ✅ — security deposits (capture → HOLD → RETURN/CLAIM + damage charge), partial-payment/refund reconciliation (integer cents, refund can never exceed net verified income), Finance UI wired to real `/expenses` + `/payments/pending|recent` + `/expenses/summary`.
+- **Phase 4 — rental lifecycle** ✅ — OVERDUE state + legal transitions + spam-guarded hourly cron, contract e-sign gated on SIGNED, inspection return/damage flow (PRE vs POST_RENTAL diff, conservative auto-charge — never fabricates an amount, flags manual review when there's no real cost signal), **and now late fees**: `BookingsService.updateStatus()` charges every day past the scheduled return at the car's own `pricePerDay` (a real rate, not invented) when an OVERDUE booking is closed out, same integer-cents reconciliation pattern, audited (`bookings.service.spec.ts`).
+  - **Left**: rate tiers/seasonality/extras — not started, lower priority (not in the Market-Ready Checklist verbatim).
+- **Phase 5A/5B** ✅ capability engine + renter portal/consent.
+- **Phase 6 — performance** ✅ — `trust.assess()` no longer recomputes-on-read; `analytics.service.ts` converted to SQL aggregates; `search.service.ts` uses `startsWith`; hot-path indexes added (migration `20260720125819_hot_path_indexes`); **and now bookings pagination**: `GET /bookings` accepts optional `status/from/to/page/pageSize` — omitting all of them returns the exact same flat array as before (zero risk to today's frontend), passing them moves filtering to a SQL `WHERE` + `skip/take` and returns `{items,total,page,pageSize}`. Adopting the paginated shape in the UI is a separate follow-up.
+- **Phase 7 — UX/a11y/i18n** ✅ mostly — next-intl FR(default)/AR(RTL)/EN foundation; the false "AES-256 JWT ENCRYPTION" claim (already gone) and a second one on `/admin/provision` (softened to something honest); contrast-floor grep sweep came back clean (Phase 12's token migration already fixed it); **all three known fake-success toasts removed** — `admin/provision`'s "Instantiate tenant" and `accidents`' "Report incident"/"Export PDF" now show honest "not wired yet" info toasts instead of fabricating success (verified `admin/agencies`'s subscription/invoice toasts are real — they call genuine `/saas-admin/*` endpoints).
+  - **Left**: chart tap/focus + screen-reader table equivalents — a genuinely separate, larger a11y feature, not attempted.
+- **Phase 8 — tests + CI** ✅ mostly — this was "not started" at the top of this session, now substantially done:
+  - `react-hooks/rules-of-hooks` (frontend) and `no-floating-promises` (backend) flipped from `off` to `error`. Real fallout after excluding lint noise from gitignored `dist/` and the standalone `prisma/*.js` seed scripts: **0** and **1** (a single unawaited `bootstrap()` in `main.ts`, now `.catch()`-handled). Both clean.
+  - New unit tests: `capabilities.guard.spec.ts` (9 tests — the fail-closed capability enforcement point: ROOT_ADMIN bypass, membership-scoping, missing-capability Forbidden, etc.), `auth.guard.spec.ts` (6 tests — JWT cookie/Bearer extraction, invalid-token handling), `auth.service.spec.ts` (9 tests — regression-proves the Phase 0 fix: `RegisterDto` structurally has no `agencyId` field, `role` is `@IsIn`-constrained to OWNER/AGENT/RENTER), `common/multi-tenant-boundary.spec.ts` (4 tests — cross-cutting: bookings/customers/documents/inspections all 404 across tenants), `bookings.service.spec.ts` (3, late fee), `inspections.service.spec.ts` (existing, extended).
+  - `.github/workflows/ci.yml` — two parallel jobs (backend: `prisma generate`→tsc→jest→eslint; frontend: tsc→vitest→eslint), `pull_request`+`push:main`, cancel-in-progress. Every step verified green locally with the exact same commands.
+  - **Left**: making the CI workflow a *required* status check needs a repo-admin action (GitHub Settings → Branches → protection rule) — a shared-infrastructure change, flagged for the founder rather than done silently. Playwright e2e / a live-DB multi-tenant E2E suite isn't wired into CI (needs a Postgres service container — bigger infra lift). The multi-tenant boundary test covers a representative sample, not every domain exhaustively.
+- **Phase 11 — SaaS Business Layer** ✅ complete.
+- **Phase 12 — Design & Frontend Rebuild "Fider Lux"** ✅ complete — `font-black`/`text-white`/`bg-white/`/raw semantic colors (`amber-400/500`, `red-500`, `green-500`) are **0 app-wide**, confirmed by a final grep sweep across the whole frontend (globals.css's inert legacy aliases excepted). The 4 style-map `.ts` files (bookings, staff, renter-portal, fleet types) and the public-site footer that were still on the old system are now fixed. The flagship renter portal page (failed twice on earlier attempts) is done.
+- **Guardian Vault** ✅ — closed a genuine "mock page + fake toast" gap outside the original phase list: was a hardcoded array with a fake "AES-256 encryption applied" success toast, now wired to a real (new) `GET /documents` (agency-wide) endpoint + `GET /cars` for the upload picker, real HUD counts, real search/filter, and honest states throughout (no fake success, explicit "file upload isn't wired yet" note — the metadata is real, the file-storage piece is a separate infra decision).
 
 ## LEFT TO DO (in order)
 
-### 1. Quick Phase 12 cleanup (~15 min)
-Fix the 3 style-map `.ts` files + the 2 `text-white` spots in `finance/page.tsx` listed above. Then run one whole-frontend critic pass (grep for `font-black|text-white\b|bg-white/|amber-[45]00|red-500|green-500` across `frontend/src/app` — should return 0 outside `globals.css`'s inert legacy aliases) to formally close Phase 12.
+### 1. Phase 9 — deploy (HUMAN GATE — do not start without the founder)
+Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF engine runtime (Puppeteer needs a real server, not serverless), error tracking/healthchecks. Also: ask the founder whether to make the new CI workflow a required PR check (repo Settings → Branches).
 
-### 2. Phase 4 remainder — late fees + bookings pagination
-Both need `backend/src/bookings/bookings.service.ts`, which is now stable/committed (safe to touch). Add: OVERDUE→COMPLETED late-fee calculation (days overdue × a rate — mirror the deposit-CLAIM / inspection-auto-charge money pattern: transaction, integer cents, AuditLog, never fabricate an amount without a real rate signal) and server-side pagination on the bookings list (currently loads all + filters in memory).
+### 2. Phase 10 — final pass (do last, once everything above is solid)
+`/security-review` + `/code-review` on the full diff since Phase 0; re-run the market-readiness checklist end to end; close or explicitly defer every remaining item.
 
-### 3. Vault page — still mock data
-`frontend/src/app/(owner)/dashboard/vault/page.tsx` renders a hardcoded `useState([...])` array, not real data, and its upload handler fires a fake success toast. The backend `documents`/`CarDocument` model+module already exists — wire this page to it (same pattern as the `finance` page fix in `6b6fdfa`: real `useEffect`+`api.get`, real mutations, remove the fake toast). This is a genuine "mock page" / "fake toast" Market-Ready Checklist item.
-
-### 4. Phase 7 rest — verify, don't assume
-Contrast floor, remaining dead-button fake toasts (admin/finance/accidents were the other flagged pages — finance is now real; check admin + accidents), chart tap/focus + screen-reader table equivalents. i18n foundation is solid; this is about the smaller a11y/honesty items around it.
-
-### 5. Phase 8 — tests + CI (not started)
-Backend unit tests on auth + capability guard specifically (money/trust/consent/deposits/inspections now have decent coverage — see `*.spec.ts` files). Multi-tenant authz E2E (agency A → 403/404 on agency B's resources, for every domain). Re-enable ESLint `react-hooks/rules-of-hooks` + `no-floating-promises` as errors, fix fallout. GitHub Actions CI (tsc + jest + vitest + lint) blocking on PR.
-
-### 6. Phase 9 — deploy (HUMAN GATE — do not start without the founder)
-Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF engine runtime (Puppeteer needs a real server, not serverless), error tracking/healthchecks.
-
-### 7. Phase 10 — final pass (do last, once 4/6/7/8 above are done)
-`/security-review` + `/code-review` on the full diff since Phase 0; re-run the market-readiness checklist; close or explicitly defer every remaining item.
-
-## Workflow-tool runs this session (for reference — none need resuming)
-Three Workflow-tool runs happened this session; all their substantive output is already committed:
-- **Frontend Phase-12-finish** (`wf_2bf50d32-1a9`) — stopped via `TaskStop` mid-flight; 10/15 files landed + committed in `19ef4fd`. Only the 3 type-map files + a final critic pass never ran — see §1 above (15-min manual fix, simpler than resuming).
-- **Backend hardening** (`wf_7b9d62fd-bff`) — stopped via `TaskStop` mid-flight; all 5 implement tasks landed + committed in `1d4ec95`. Only the adversarial-verify/critic stages never ran — this session hand-verified the two risky pieces (inspection auto-charge, trust fix) directly instead.
-- **Agent/admin/renter portals** (`wf_77b83d3c-cd3`) — this one was a *straggler*: launched much earlier in the session (during the "Try again" resume), it kept running in the background through the entire subsequent investigation and was never explicitly stopped. It **completed naturally** (13/13 agents, 0 errors) and its notification arrived after everything else was already committed — one leftover file (`billing/page.tsx` polish) was verified and committed separately in `78aa8fd`. Nothing to resume.
-
-**Lesson for next time**: `TaskStop` only stops workflows you still have the task ID for. If a workflow's completion notification hasn't arrived yet, it's still running even if you've moved on to other work — check for older un-processed task IDs before assuming everything is stopped.
+### 3. Smaller follow-ups (not blocking, pick up opportunistically)
+- Rate tiers/seasonality/extras on bookings (Phase 4).
+- Adopt the new paginated `GET /bookings` shape in the frontend bookings page (currently still fetches the full flat array).
+- Chart tap/focus + screen-reader table equivalents (Phase 7 a11y).
+- Extend the multi-tenant boundary test to more domains (payments, contracts, expenses, hub, staff, ...) one at a time.
+- A live-DB Playwright/e2e CI job (needs a Postgres service container in `ci.yml`).
+- Real file storage for Guardian Vault uploads (currently metadata-only).
+- A real "founder provisions a tenant" backend endpoint for `admin/provision`'s wizard, or repurpose the page.
+- A real Accident/incident backend model, or repurpose `accidents/page.tsx`.
 
 ## Open questions / mid-debugging
-- None blocking — tree is clean, both test suites green. The only genuine ambiguity is whether the Codex CLI process is still running when a future session resumes; check `git status` first.
+None blocking — tree is clean, all four verification commands (backend tsc/jest/eslint, frontend tsc/vitest/eslint) are green. The only genuine ambiguity is whether the Codex CLI process might resume in a future session; check `git status` first per the note above.

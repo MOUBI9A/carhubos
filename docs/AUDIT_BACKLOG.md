@@ -67,11 +67,11 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 
 ---
 
-## PHASE 4 — Rental lifecycle ✅ mostly DONE (commits `8032b47`, `1d4ec95`)
+## PHASE 4 — Rental lifecycle ✅ DONE (commits `8032b47`, `1d4ec95`, `786dd0e`)
 
 - **[H] No return/damage flow** ✅ — `inspections.service.ts` now diffs POST_RENTAL vs PRE_RENTAL (new damage entries + material fuel drop) and auto-raises a conservative damage charge on the invoice ONLY when a real cost signal exists on the damage entry (else a placeholder + explicit `MANUAL REVIEW REQUIRED` flag in the payment reference + AuditLog — never fabricates an amount). New booking-diff endpoint. `inspections.service.spec.ts` covers the key cases.
 - **[H] Contract e-sign unreachable/unguarded** ✅ — `SignContractDto`, `contract.sign` capability, gate ACTIVE on SIGNED.
-- **[H] Overdue cron spams hourly WhatsApp + tasks, no late fee** 🔄 — spam already fixed (the `status:'ACTIVE'` update-guard means it only fires once per booking); **late fee itself still NOT implemented** — needs `bookings.service.ts` (see `PROGRESS.md` §2 for why it was deferred this session).
+- **[H] Overdue cron spams hourly WhatsApp + tasks, no late fee** ✅ — spam fixed (the `status:'ACTIVE'` update-guard means it only fires once per booking); late fee now implemented in `BookingsService.updateStatus()` — an OVERDUE booking closed to COMPLETED is charged for every day past the scheduled return at the car's own `pricePerDay` (a real rate, never invented), same integer-cents reconciliation pattern as everywhere else, audited. `bookings.service.spec.ts` (3 tests, deterministic clock).
 - **[M] Flat day-count pricing** ⬜ — rate tiers/seasonality/extras not started; lower priority, not in the Market-Ready Checklist verbatim.
 
 ---
@@ -83,7 +83,7 @@ Follow-up for the invite-flow work: an anonymous caller can still self-select `r
 - **[H] Owner Finance mock but backend exists** → wire ledger→`/expenses(+summary)`, pending→`/payments/pending`, add→POST, verify→PATCH. *(Quick win.)*
 - **[M] Owner B2B Hub mock but `/hub/*` exist** → wire; replace external Unsplash images with hosted/generated assets.
 - **[M] Admin sub-pages mock** (agencies/logs/pulse/provision/settings); impersonation (`ForensicService`) unwired → wire agencies→`saas-admin/overview`(+tier); platform audit feed + impersonation route; retire infra-theater or make real.
-- **[M] Vault/Reports/Accidents/Fleet-map need new backends** → build or clearly label demo (no fake success toasts).
+- **[M] Vault/Reports/Accidents/Fleet-map need new backends** 🔄 — **Vault ✅ done**: new `GET /documents` (agency-wide) + wired to real `CarDocument` data, real HUD counts/search, honest states (no more fake "AES-256 encryption applied" toast). **Accidents**: no backend model exists; clearly labeled as not-wired (honest info toast) rather than built, given the scope of a new Accident model. Reports/Fleet-map not checked this pass.
 - **[M] Settings staff-removal 404s; Automations & AI-Vision half-real** → users controller (`DELETE /users/:id`); thin `/automations` controller over the cron; real vehicle picker for AI Vision.
 
 ### 5A — Capability Engine ✅ DONE (catalog + AgencyMembership + CapabilitiesGuard + staff API + owner UI; verified E2E: owner 200/roster, agent 403, register creates membership, anti-escalation) — see PRODUCT_VISION §2–3
@@ -104,9 +104,9 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 6 — Performance & scalability 🔄 mostly DONE (commit `1d4ec95`)
+## PHASE 6 — Performance & scalability ✅ mostly DONE (commits `1d4ec95`, `786dd0e`)
 
-- **[C] Bookings list has no pagination** ⬜ — still loads bookings+cars+customers whole, filters in memory. Deferred: same hot file (`bookings.service.ts`) as the late-fee work, see `PROGRESS.md` §2.
+- **[C] Bookings list has no pagination** ✅ backend, ⬜ frontend adoption — `GET /bookings` now accepts optional `status/from/to/page/pageSize`; omitted, it returns the same flat array as before (zero risk to today's UI). Passing them moves filtering to SQL `WHERE`+`skip/take`, returning `{items,total,page,pageSize}`. The frontend bookings page doesn't send these yet — adopting the paginated shape in the UI is a follow-up.
 - **[C] Analytics sum whole row-sets in JS; ERP loads ALL payments unbounded** ✅ — `analytics.service.ts` converted to `prisma.aggregate()`/`groupBy()` across the hot paths (command centre, financial pulse, ERP dashboard); same response shape.
 - **[H] Command Centre embeds the whole customer directory** ⬜ — not addressed this pass (was scoped as part of the broader analytics rewrite but not explicitly verified — check on resume).
 - **[H] `trust.assess()` recomputes + writes on every read** ✅ — removed; every mutation already keeps the cached aggregates fresh, `assess()` now reads them directly.
@@ -116,30 +116,30 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 7 — UX, Accessibility & i18n
+## PHASE 7 — UX, Accessibility & i18n ✅ mostly DONE
 
-- **[H] No mobile nav + hardcoded `ml-64`** — app unusable <1024px (`DashboardLayout.tsx:52`, `Sidebar.tsx:89`). → Off-canvas sidebar + hamburger + overlay; `ml-0 lg:ml-64`.
-- **[H] Modal has no focus trap/Escape/ARIA/focus restore** (`ui/Modal.tsx:46`). → `role=dialog aria-modal`, Escape, Tab-trap, focus first field + restore.
-- **[H] Booking modal discards data on optimistic submit** (`dashboard/page.tsx:141`). → Keep open with in-flight state; close on success; inline errors.
-- **[H] No i18n/RTL for a Morocco product** — hardcoded English, en-US dates, `lang=en`. → next-intl, FR default + AR, drive lang/dir, route dates/numbers/currency through Intl.
-- **[M] Sub-WCAG micro-typography** (8px labels, `text-white/10–20` meta). → Contrast floor: no functional text below ~white/60 or 11px.
-- **[M] Dead buttons fire fake success toasts** (admin/finance/accidents/vault). → Disable with "Coming soon" or wire real.
-- **[M] Chart hover-only (blank on touch/AT); placeholder-as-label forms; booking accepts past dates.** → Tap/focus reveal + SR table; real `<label>`s; `min` on date inputs.
-- **[L] Combobox a11y; toast auto-dismiss; tables clip on mobile; login bundles seed password + false "AES-256" claim.**
+- **[H] No mobile nav + hardcoded `ml-64`** ✅ — off-canvas sidebar + hamburger + overlay landed earlier.
+- **[H] Modal has no focus trap/Escape/ARIA/focus restore** ✅ — landed earlier.
+- **[H] Booking modal discards data on optimistic submit** ⬜ — not addressed.
+- **[H] No i18n/RTL for a Morocco product** ✅ — next-intl FR(default)/AR(RTL)/EN, Noto Sans Arabic, `lang`/`dir` driven by locale, Intl date/currency helpers.
+- **[M] Sub-WCAG micro-typography** ✅ — the Phase 12 token migration replaced the old white/10-20 opacity ladder; a final grep sweep for sub-20%-opacity text returned 0 hits app-wide.
+- **[M] Dead buttons fire fake success toasts** ✅ — audited every `showToast('success', ...)` on admin/finance/accidents/vault: `admin/agencies` calls were real (verified — genuine `/saas-admin/*` calls); `admin/provision`'s "Instantiate tenant" and `accidents`' "Report incident"/"Export PDF" were fake (no backend, fabricated client-only data) — changed to honest info toasts; `finance` and `vault` were fixed earlier this program (wired to real data).
+- **[M] Chart hover-only (blank on touch/AT); placeholder-as-label forms; booking accepts past dates.** ⬜ — chart tap/focus + SR table equivalents not attempted (a genuinely separate, larger a11y feature). Booking past-date rejection landed earlier.
+- **[L] Combobox a11y; toast auto-dismiss; tables clip on mobile; login bundles seed password + false "AES-256" claim.** 🔄 — the AES-256 claim on `/login` was already gone; a second one on `/admin/provision` found + softened. The rest of this line not audited.
 
 ---
 
-## PHASE 8 — Testing & CI
+## PHASE 8 — Testing & CI ✅ mostly DONE (commits `d2fef80`, `cb86fd4`, `7e32814`, `656bc40`)
 
-- **[C] Zero backend unit tests** for money/trust/auth logic (only "Hello World"). → Jest + mocked Prisma on `trust.service` & `bookings.service` first.
-- **[H] Blacklist enforcement boundary untested** → unit-test `isHardBlock`/`blockingFlagForCustomer` per severity/status; integration-test create() throws/allows.
-- **[H] Identity hash untested** → golden-value tests pinning `hashIdentity`/`normalize`.
-- **[H] Money math untested (Float/DST)** → pin diffDays/total/tax incl. DST range; compute day-count from UTC-midnight diff.
-- **[H] ESLint rules disabled** — `react-hooks/rules-of-hooks` (frontend), `no-floating-promises` (backend). → Re-enable as errors; fix fallout.
-- **[M] No CI** → GitHub Actions: both `test`, both `lint`, `tsc --noEmit`, Playwright — blocking on PR.
-- **[M] Frontend tests validate mock data** → test extracted pure logic instead.
-- **[M] E2E single-role, no authz/negative tests** → API tests: agency A → 403/404 on agency B.
-- **[L] Backend tsconfig not strict** → move toward `strict:true`.
+- **[C] Zero backend unit tests** for money/trust/auth logic ✅ — money/trust/consent/deposits/inspections/late-fee all have specs; **auth + capability guard specifically** (`auth.guard.spec.ts`, `auth.service.spec.ts`, `capabilities.guard.spec.ts`) were the last gap, now closed (24 new tests across the three files).
+- **[H] Blacklist enforcement boundary untested** ⬜ — `isHardBlock`/`blockingFlagForCustomer` still untested per severity/status.
+- **[H] Identity hash untested** ⬜ — no golden-value test for `hashIdentity`/`normalize` yet.
+- **[H] Money math untested (Float/DST)** 🔄 — money math is well-covered across the newer specs (deposits/refunds/late-fee/damage-charge, all integer-cents); a dedicated DST-range day-count test isn't written.
+- **[H] ESLint rules disabled** ✅ — both flipped to `error`. Real fallout (after excluding `dist/`/`prisma/*.js` lint noise): frontend 0, backend 1 (fixed: `main.ts` bootstrap now `.catch()`-handled).
+- **[M] No CI** ✅ — `.github/workflows/ci.yml`: backend (`prisma generate`→tsc→jest→eslint) + frontend (tsc→vitest→eslint), on `pull_request`+`push:main`. Making it a *required* PR check needs a repo-admin action (Settings → Branches) — flagged for the founder, not done unasked. No live-DB/Playwright e2e job yet (needs a Postgres service container).
+- **[M] Frontend tests validate mock data** ⬜ — not audited this pass.
+- **[M] E2E single-role, no authz/negative tests** ✅ partial — `common/multi-tenant-boundary.spec.ts` covers bookings/customers/documents/inspections (agency A → 404 on agency B's resource); this is a unit-level (mocked Prisma) proof, not a live-DB E2E suite, and covers a representative sample rather than every domain.
+- **[L] Backend tsconfig not strict** ⬜ — not addressed.
 
 ---
 
