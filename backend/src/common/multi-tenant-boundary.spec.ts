@@ -4,6 +4,7 @@ import { CustomersService } from '../customers/customers.service';
 import { DocumentsService } from '../documents/documents.service';
 import { InspectionsService } from '../inspections/inspections.service';
 import { ExpensesService } from '../expenses/expenses.service';
+import { ContractsService } from '../contracts/contracts.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -66,6 +67,25 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
 
     await expect(svc.findAllForCar(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
     await expect(svc.findAllForCar(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('ContractsService.sign 404s across tenants', async () => {
+    const prisma = {
+      contract: {
+        findFirst: jest.fn(({ where }: any) =>
+          Promise.resolve(
+            where.id === RESOURCE_ID && where.agencyId === AGENCY_B
+              ? { id: RESOURCE_ID, status: 'SENT' }
+              : null,
+          ),
+        ),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const svc = new ContractsService(prisma as any);
+
+    await expect(svc.sign(AGENCY_A, RESOURCE_ID, 'sig')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.sign(AGENCY_B, RESOURCE_ID, 'sig')).resolves.toBeDefined();
   });
 
   it('ExpensesService.update/remove 404 across tenants', async () => {
