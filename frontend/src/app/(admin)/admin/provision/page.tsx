@@ -332,7 +332,7 @@ export default function ProvisionPage() {
           ) : (
             <Button
               className="px-8"
-              onClick={() => showToast('success', 'Tenant Provisioned', 'Infrastructure and databases have been initialized.')}
+              onClick={() => showToast('info', 'Not wired yet', 'Founder-initiated tenant provisioning isn’t connected to the backend yet — new agencies are created via /signup for now.')}
             >
               <Zap className="w-3 h-3 me-2 fill-current" />
               Instantiate tenant

@@ -73,19 +73,10 @@ export default function AccidentsPage() {
 
   const handleReportIncident = (e: React.FormEvent) => {
     e.preventDefault();
-    const newAccident = {
-      id: `ACC-2024-00${accidents.length + 1}`,
-      vehicle: 'Reported Vehicle',
-      plate: 'PENDING',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      severity: 'CRITICAL',
-      status: 'Claim Filed',
-      description: 'New incident report submitted for investigation.',
-      claimStatus: 0,
-    };
-    setAccidents([newAccident, ...accidents]);
+    // There is no backend Accident/incident model yet — do not fabricate a
+    // record or claim success. Be honest that this form isn't wired up.
     setIsReportModalOpen(false);
-    showToast('success', 'Incident reported', 'Your report has been logged and dispatched for review.');
+    showToast('info', 'Not wired yet', 'Incident reporting isn’t connected to the backend yet — nothing was saved.');
   };
 
   const getSeverityColor = (severity: string) => {
@@ -191,7 +182,7 @@ export default function AccidentsPage() {
                       <CardTitle className="text-xl font-mono tabular">{selectedAccident.id}</CardTitle>
                       <CardDescription className="text-primary normal-case tracking-normal font-medium text-xs">Protocol active</CardDescription>
                    </div>
-                   <Button variant="outline" size="sm" onClick={() => showToast('info', 'Exporting...', 'Generating incident dossier PDF.')}>Export PDF</Button>
+                   <Button variant="outline" size="sm" onClick={() => showToast('info', 'Not available yet', 'Incident dossier export isn’t built yet.')}>Export PDF</Button>
                 </CardHeader>
 
                 <p className="text-sm text-text-muted leading-relaxed mb-8 border-s-2 border-primary/30 ps-4 py-1">
