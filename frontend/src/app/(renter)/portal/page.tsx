@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Avatar } from '@/components/ui/Avatar';
+import { TrustSeal } from '@/components/ui/Seal';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -23,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
+import { useTranslations } from 'next-intl';
 import api from '@/lib/api';
 import {
   usePortalMe,
@@ -42,6 +45,7 @@ import {
 } from './types';
 
 export default function RenterPortal() {
+  const t = useTranslations('renterPortal');
   const { showToast } = useToast();
   const { me, isLoading: meLoading, error: meError, refetch: refetchMe } = usePortalMe();
   const {
@@ -149,19 +153,19 @@ export default function RenterPortal() {
       {/* ═══════ Header ═══════ */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">My Digital Vault</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1 flex items-center gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
+          <p className="mt-1.5 flex items-center gap-2 eyebrow">
             {meLoading ? (
-              <span className="inline-block w-40 h-3 bg-white/5 rounded animate-pulse" />
+              <span className="inline-block w-40 h-3 bg-surface rounded animate-pulse" />
             ) : me?.isVerified ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                Verified Renter
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                {t('verified')}
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-white/20" />
-                Verification Pending
+                <span className="w-1.5 h-1.5 rounded-full bg-text-faint/50" />
+                {t('pendingVerification')}
               </>
             )}
           </p>
@@ -172,13 +176,13 @@ export default function RenterPortal() {
           <div className="relative">
             <button
               onClick={() => setIsNotifOpen((o) => !o)}
-              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+              aria-label={unreadCount > 0 ? `${t('notifications')}, ${unreadCount} ${t('unread')}` : t('notifications')}
               aria-expanded={isNotifOpen}
-              className="relative w-11 h-11 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-colors"
+              className="relative w-11 h-11 rounded-xl glass flex items-center justify-center text-text-muted hover:text-foreground transition-colors"
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[9px] font-black flex items-center justify-center border-2 border-background">
+                <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-foreground text-[9px] font-semibold flex items-center justify-center border-2 border-background">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -189,17 +193,17 @@ export default function RenterPortal() {
                 <button
                   className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setIsNotifOpen(false)}
-                  aria-label="Close notifications"
+                  aria-label={t('close')}
                 />
                 <div
                   role="dialog"
-                  aria-label="Notifications"
-                  className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] overflow-y-auto glass rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+                  aria-label={t('notifications')}
+                  className="absolute end-0 top-full mt-2 w-80 max-h-[70vh] overflow-y-auto glass rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200"
                 >
-                  <div className="p-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-card/80 backdrop-blur-sm">
-                    <p className="text-xs font-black text-white uppercase tracking-widest">Notifications</p>
+                  <div className="p-4 border-b border-hairline flex items-center justify-between sticky top-0 bg-surface-raised">
+                    <p className="eyebrow">{t('notifications')}</p>
                     {unreadCount > 0 && (
-                      <span className="text-[10px] font-bold text-primary">{unreadCount} unread</span>
+                      <span className="text-[10px] font-semibold text-primary">{unreadCount} {t('unread')}</span>
                     )}
                   </div>
                   {notifLoading ? (
@@ -208,18 +212,20 @@ export default function RenterPortal() {
                     </div>
                   ) : notifError ? (
                     <div className="p-6 text-center">
-                      <p className="text-[11px] text-white/40">{notifError}</p>
+                      <p className="text-[11px] text-text-faint">{notifError}</p>
                       <Button variant="ghost" size="sm" className="mt-2" onClick={refetchNotifications}>
-                        <RefreshCw className="w-3 h-3 mr-1.5" /> Retry
+                        <RefreshCw className="w-3 h-3 me-1.5" /> {t('retry')}
                       </Button>
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="p-8 text-center">
-                      <Bell className="w-8 h-8 text-white/10 mx-auto mb-2" />
-                      <p className="text-xs text-white/30 font-medium">You&apos;re all caught up</p>
+                      <div className="w-12 h-12 rounded-2xl bg-surface border border-hairline flex items-center justify-center mx-auto mb-3">
+                        <Bell className="w-5 h-5 text-text-faint" />
+                      </div>
+                      <p className="text-xs text-text-faint font-medium">{t('caughtUp')}</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-hairline">
                       {notifications.map((n) => (
                         <NotificationRow
                           key={n.id}
@@ -236,8 +242,8 @@ export default function RenterPortal() {
           </div>
 
           <Button onClick={() => setIsQrModalOpen(true)}>
-            <QrCode className="w-4 h-4 mr-2" />
-            My Badge
+            <QrCode className="w-4 h-4 me-2" />
+            {t('myBadge')}
           </Button>
         </div>
       </header>
@@ -249,24 +255,24 @@ export default function RenterPortal() {
             <>
               <Card className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+                  <Skeleton className="w-14 h-14 rounded-full shrink-0" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="w-2/3 h-4" />
                     <Skeleton className="w-1/2 h-3" />
                   </div>
                 </div>
               </Card>
-              <Card variant="outline" className="space-y-3">
+              <Card className="space-y-3">
                 <Skeleton className="w-1/3 h-3" />
                 <Skeleton className="w-2/3 h-8" />
                 <Skeleton className="w-full h-1.5 rounded-full" />
               </Card>
-              <Card variant="outline">
+              <Card>
                 <Skeleton className="w-full h-16 rounded-2xl" />
               </Card>
             </>
           ) : meError ? (
-            <Card variant="outline">
+            <Card>
               <SectionError message={meError} onRetry={refetchMe} />
             </Card>
           ) : (
@@ -274,64 +280,60 @@ export default function RenterPortal() {
               {/* Profile card */}
               <Card className="relative overflow-hidden">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg font-black text-primary shrink-0">
-                    {me?.name?.[0]?.toUpperCase() ?? 'R'}
-                  </div>
+                  <Avatar name={me?.name} verified={me?.isVerified} size={56} className="shrink-0" />
                   <div className="min-w-0">
-                    <h2 className="text-lg font-black text-white truncate">{me?.name}</h2>
-                    <p className="text-xs text-white/40 font-medium truncate">{me?.email}</p>
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground truncate">{me?.name}</h2>
+                    <p className="text-xs text-text-faint font-medium truncate">{me?.email}</p>
                   </div>
                 </div>
-                <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between gap-2">
+                <div className="mt-6 pt-6 border-t border-hairline flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     {me?.isVerified ? (
-                      <ShieldCheck className="w-4 h-4 text-success shrink-0" />
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-success shrink-0" />
+                        <span className="eyebrow text-success truncate">Identity verified</span>
+                      </>
                     ) : (
-                      <ShieldAlert className="w-4 h-4 text-white/30 shrink-0" />
+                      <>
+                        <ShieldAlert className="w-4 h-4 text-text-faint shrink-0" />
+                        <span className="eyebrow truncate">Not verified yet</span>
+                      </>
                     )}
-                    <span
-                      className={cn(
-                        'text-[10px] font-black uppercase tracking-widest truncate',
-                        me?.isVerified ? 'text-success' : 'text-white/40',
-                      )}
-                    >
-                      {me?.isVerified ? 'Identity Verified' : 'Not Verified Yet'}
-                    </span>
                   </div>
-                  <span className="text-[9px] font-bold text-white/30 shrink-0">
+                  <span className="text-[10px] font-medium text-text-faint shrink-0">
                     Since {formatDate(me?.createdAt)}
                   </span>
                 </div>
               </Card>
 
               {/* Trust summary card */}
-              <Card variant="outline">
+              <Card>
                 <CardHeader>
-                  <CardTitle>Trust Network</CardTitle>
+                  <CardTitle>Trust network</CardTitle>
                 </CardHeader>
                 {me?.trustSummary.linked ? (
                   <>
                     <div className="flex items-end justify-between gap-3 mb-4">
                       <div>
-                        <p className="text-3xl font-black text-white">
-                          {me.trustSummary.globalScore.toFixed(1)}
-                          <span className="text-sm text-white/30 font-bold">/5</span>
+                        <p className="text-3xl font-semibold tracking-tight text-foreground">
+                          <span className="font-mono tabular">{me.trustSummary.globalScore.toFixed(1)}</span>
+                          <span className="text-sm text-text-faint font-normal">/5</span>
                         </p>
-                        <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-1">
+                        <p className="eyebrow mt-1">
                           {me.trustSummary.reviewCount} review{me.trustSummary.reviewCount !== 1 ? 's' : ''} across
                           agencies
                         </p>
                       </div>
                       <span
                         className={cn(
-                          'shrink-0 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border',
+                          'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border',
                           RISK_LEVEL_STYLES[me.trustSummary.riskLevel].chip,
                         )}
                       >
                         {RISK_LEVEL_STYLES[me.trustSummary.riskLevel].label}
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
                       <div
                         className="h-full bg-primary rounded-full transition-all"
                         style={{ width: `${Math.min(100, (me.trustSummary.globalScore / 5) * 100)}%` }}
@@ -340,10 +342,12 @@ export default function RenterPortal() {
                   </>
                 ) : (
                   <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-white/20 shrink-0 mt-0.5" />
+                    <div className="w-9 h-9 rounded-xl bg-surface border border-hairline flex items-center justify-center shrink-0">
+                      <Info className="w-4 h-4 text-text-faint" />
+                    </div>
                     <div>
-                      <p className="text-sm font-bold text-white/60">No network history yet</p>
-                      <p className="text-[11px] text-white/30 mt-1 leading-relaxed">
+                      <p className="text-sm font-semibold text-foreground">No network history yet</p>
+                      <p className="text-xs text-text-faint mt-1 leading-relaxed">
                         Once agencies review your rentals, your cross-agency trust score builds here.
                       </p>
                     </div>
@@ -351,29 +355,28 @@ export default function RenterPortal() {
                 )}
               </Card>
 
-              {/* My QR card */}
-              <Card variant="outline">
+              {/* My QR card — the physical-badge preview; opens the full ceremonial view */}
+              <Card>
                 <CardHeader>
                   <CardTitle>My QR</CardTitle>
                 </CardHeader>
                 {me?.qrHash ? (
-                  <button onClick={() => setIsQrModalOpen(true)} className="w-full text-left group">
-                    <div className="w-full bg-white/[0.03] p-5 rounded-2xl border border-white/5 group-hover:border-primary/30 group-hover:bg-white/[0.05] transition-all">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                          <QrCode className="w-5 h-5 text-primary" />
-                        </div>
-                        <p className="font-mono text-xs text-white/70 tracking-wider truncate">
-                          {me.qrHash.slice(0, 8)}…{me.qrHash.slice(-6)}
-                        </p>
+                  <button onClick={() => setIsQrModalOpen(true)} className="w-full text-start group">
+                    <div className="document w-full p-5 rounded-2xl transition-transform duration-300 group-hover:-translate-y-0.5">
+                      <div className="flex items-center gap-2.5 opacity-60">
+                        <QrCode className="w-4 h-4" strokeWidth={1.75} />
+                        <span className="text-[10px] font-semibold uppercase tracking-wide">Trust vault code</span>
                       </div>
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                      <p className="mt-4 font-mono tabular text-sm tracking-[0.08em] truncate">
+                        {me.qrHash.slice(0, 8)}…{me.qrHash.slice(-6)}
+                      </p>
+                      <p className="mt-3 text-[11px] font-medium opacity-50">
                         Show this at the agency counter
                       </p>
                     </div>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 py-1 text-white/30">
+                  <div className="flex items-center gap-3 py-1 text-text-faint">
                     <QrCode className="w-5 h-5 shrink-0" />
                     <p className="text-xs font-medium">QR not yet provisioned</p>
                   </div>
@@ -384,51 +387,49 @@ export default function RenterPortal() {
 
           {/* Vault documents — its own loading state, so a slow docs fetch never
               blanks the profile / trust / QR cards above it. */}
-          <Card variant="outline">
+          <Card>
             <CardHeader>
-              <CardTitle>My Documents</CardTitle>
+              <CardTitle>{t('documents')}</CardTitle>
             </CardHeader>
             {docsLoading ? (
               <SkeletonRows rows={2} />
             ) : docsError ? (
               <SectionError message={docsError} onRetry={refetchDocs} />
             ) : documents.length === 0 ? (
-              <div className="flex items-start gap-3 py-1 text-white/30">
+              <div className="flex items-start gap-3 py-1 text-text-faint">
                 <FileText className="w-5 h-5 shrink-0" />
-                <p className="text-xs font-medium">No documents in your vault yet.</p>
+                <p className="text-xs font-medium">{t('noDocuments')}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-hairline"
                   >
                     <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-white truncate">
+                      <p className="text-xs font-semibold text-foreground truncate">
                         {doc.label ?? scopeLabel(doc.type)}
                       </p>
-                      <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest truncate">
-                        {scopeLabel(doc.type)}
-                      </p>
+                      <p className="eyebrow truncate mt-0.5">{scopeLabel(doc.type)}</p>
                     </div>
                     {doc.verified ? (
-                      <span className="shrink-0 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-success">
+                      <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-success">
                         <ShieldCheck className="w-3.5 h-3.5" /> Verified
                       </span>
                     ) : (
-                      <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-white/30">
+                      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-faint">
                         Pending
                       </span>
                     )}
                   </div>
                 ))}
-                <div className="flex items-center gap-2 pt-2 text-white/30">
+                <div className="flex items-center gap-2 pt-2 text-text-faint">
                   <Lock className="w-3 h-3 shrink-0" />
-                  <p className="text-[10px] font-medium leading-relaxed">
+                  <p className="text-[11px] font-medium leading-relaxed">
                     Private to you. Agencies only see these after you approve a request in the Consent Center.
                   </p>
                 </div>
@@ -442,11 +443,11 @@ export default function RenterPortal() {
           <Card>
             <CardHeader className="items-start">
               <div>
-                <CardTitle className="text-white text-sm flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-primary" />
-                  Consent Center
+                  {t('consentRequests')}
                 </CardTitle>
-                <CardDescription className="mt-2 normal-case tracking-normal text-white/40 font-medium text-xs">
+                <CardDescription className="mt-2 normal-case tracking-normal font-medium text-xs">
                   You control who sees your documents. Nothing is shared with an agency until you approve it here.
                 </CardDescription>
               </div>
@@ -459,15 +460,15 @@ export default function RenterPortal() {
             ) : grants.length === 0 ? (
               <EmptyState
                 icon={ShieldCheck}
-                title="No Consent Requests Yet"
+                title={t('noConsent')}
                 description="When an agency requests access to your documents, it will show up here for your approval — and only your approval."
               />
             ) : (
               <div className="space-y-6">
                 {pendingGrants.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5" /> Needs Your Review
+                    <p className="eyebrow text-warning flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" /> Needs your review
                     </p>
                     {pendingGrants.map((g) => (
                       <ConsentGrantCard
@@ -484,9 +485,7 @@ export default function RenterPortal() {
                 {otherGrants.length > 0 && (
                   <div className="space-y-3">
                     {pendingGrants.length > 0 && (
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest pt-2 border-t border-white/5">
-                        Grant History
-                      </p>
+                      <p className="eyebrow pt-2 border-t border-hairline">Grant history</p>
                     )}
                     {otherGrants.map((g) => (
                       <ConsentGrantCard
@@ -504,7 +503,7 @@ export default function RenterPortal() {
         </div>
       </div>
 
-      {/* ═══════ QR Modal ═══════ */}
+      {/* ═══════ QR Modal — the ceremonial, physical-badge reveal ═══════ */}
       <Modal
         isOpen={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}
@@ -513,16 +512,20 @@ export default function RenterPortal() {
       >
         {me?.qrHash ? (
           <div className="space-y-6 flex flex-col items-center">
-            <div className="w-full p-8 bg-white/[0.03] border border-white/10 rounded-[2rem] flex flex-col items-center gap-4">
-              <QrCode className="w-16 h-16 text-primary" strokeWidth={1.5} />
-              <p className="font-mono text-sm text-white tracking-[0.15em] break-all text-center">{me.qrHash}</p>
+            <div className="document w-full p-8 rounded-[2rem] flex flex-col items-center gap-4 text-center">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-50">Fider trust vault</span>
+                <TrustSeal size={32} label="Identity verified" />
+              </div>
+              <QrCode className="w-16 h-16" strokeWidth={1.5} />
+              <p className="font-mono tabular text-sm tracking-[0.15em] break-all">{me.qrHash}</p>
             </div>
             <Button variant="outline" className="w-full" onClick={handleCopyQr}>
-              <Copy className="w-4 h-4 mr-2" /> {copied ? 'Copied' : 'Copy Code'}
+              <Copy className="w-4 h-4 me-2" /> {copied ? 'Copied' : 'Copy Code'}
             </Button>
-            <div className="w-full p-4 glass rounded-2xl border-white/10 flex items-center gap-4">
-              <Info className="w-5 h-5 text-white/40 shrink-0" />
-              <p className="text-[10px] font-medium text-white/60 leading-relaxed uppercase tracking-wider">
+            <div className="w-full p-4 bg-surface border border-hairline rounded-2xl flex items-center gap-4">
+              <Info className="w-5 h-5 text-text-faint shrink-0" />
+              <p className="text-[11px] font-medium text-text-muted leading-relaxed">
                 Agency staff scan or enter this code to request access to your documents — nothing is shared until
                 you approve it in the Consent Center.
               </p>
@@ -530,9 +533,11 @@ export default function RenterPortal() {
           </div>
         ) : (
           <div className="flex flex-col items-center text-center gap-4 py-6">
-            <QrCode className="w-12 h-12 text-white/15" />
-            <p className="text-sm font-bold text-white/50">QR not yet provisioned</p>
-            <p className="text-xs text-white/30 max-w-xs">
+            <div className="w-14 h-14 rounded-2xl bg-surface border border-hairline flex items-center justify-center">
+              <QrCode className="w-6 h-6 text-text-faint" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">QR not yet provisioned</p>
+            <p className="text-xs text-text-faint max-w-xs">
               Your Trust Vault code will appear here once your agency verifies your identity.
             </p>
           </div>
@@ -545,14 +550,15 @@ export default function RenterPortal() {
 // ── Local presentational helpers ────────────────────────────────────────────
 
 function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const t = useTranslations('renterPortal');
   return (
     <div className="flex flex-col items-center text-center gap-3 py-10">
       <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center border border-danger/20">
         <AlertTriangle className="w-5 h-5 text-danger" />
       </div>
-      <p className="text-xs font-medium text-white/40 max-w-xs">{message}</p>
+      <p className="text-xs font-medium text-text-faint max-w-xs">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
-        <RefreshCw className="w-3.5 h-3.5 mr-2" /> Retry
+        <RefreshCw className="w-3.5 h-3.5 me-2" /> {t('retry')}
       </Button>
     </div>
   );
@@ -569,6 +575,7 @@ function ConsentGrantCard({
   onApprove?: () => void;
   onRevoke: () => void;
 }) {
+  const t = useTranslations('renterPortal');
   const style = CONSENT_STATUS_STYLES[grant.status];
   const isPending = grant.status === 'PENDING';
   const isApproved = grant.status === 'APPROVED';
@@ -576,25 +583,28 @@ function ConsentGrantCard({
   return (
     <Card
       variant="outline"
-      className={cn('flex flex-col gap-4', isPending && 'border-amber-500/30 bg-amber-500/[0.03]')}
+      className={cn('flex flex-col gap-4 border-hairline', isPending && 'border-warning/30 bg-warning/10')}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-sm font-black text-white truncate">{grant.agencyName ?? 'Unknown Agency'}</p>
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {grant.scope.map((s) => (
-              <span
-                key={s}
-                className="text-[9px] font-bold uppercase tracking-wider text-white/50 bg-white/5 border border-white/10 px-2 py-1 rounded-md"
-              >
-                {scopeLabel(s)}
-              </span>
-            ))}
+        <div className="flex items-start gap-3 min-w-0">
+          <Avatar name={grant.agencyName ?? 'Unknown agency'} size={36} className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{grant.agencyName ?? 'Unknown Agency'}</p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {grant.scope.map((s) => (
+                <span
+                  key={s}
+                  className="eyebrow rounded-md border border-hairline bg-surface px-2 py-1"
+                >
+                  {scopeLabel(s)}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
         <span
           className={cn(
-            'shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border',
+            'shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide border',
             style.chip,
           )}
         >
@@ -603,8 +613,8 @@ function ConsentGrantCard({
         </span>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/5">
-        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-hairline">
+        <p className="eyebrow">
           {grant.status === 'PENDING' && `Requested ${formatDate(grant.requestedAt)}`}
           {grant.status === 'APPROVED' &&
             `Active until ${formatDate(grant.expiresAt)} · ${formatRelativeToNow(grant.expiresAt)}`}
@@ -621,10 +631,10 @@ function ConsentGrantCard({
               onClick={onRevoke}
               className="border-danger/20 text-danger hover:bg-danger/5"
             >
-              <X className="w-3.5 h-3.5 mr-1.5" /> Deny
+              <X className="w-3.5 h-3.5 me-1.5" /> {t('deny')}
             </Button>
             <Button size="sm" isLoading={busy} onClick={onApprove}>
-              <Check className="w-3.5 h-3.5 mr-1.5" /> Approve
+              <Check className="w-3.5 h-3.5 me-1.5" /> {t('approve')}
             </Button>
           </div>
         )}
@@ -636,7 +646,7 @@ function ConsentGrantCard({
             onClick={onRevoke}
             className="shrink-0 border-danger/20 text-danger hover:bg-danger/5 self-start sm:self-auto"
           >
-            Revoke Access
+            {t('revoke')}
           </Button>
         )}
       </div>
@@ -658,31 +668,31 @@ function NotificationRow({
       onClick={onRead}
       disabled={notification.read || busy}
       className={cn(
-        'w-full text-left p-4 flex items-start gap-3 transition-colors hover:bg-white/[0.03] disabled:cursor-default disabled:hover:bg-transparent',
-        !notification.read && 'bg-primary/[0.03]',
+        'w-full text-start p-4 flex items-start gap-3 transition-colors hover:bg-surface-raised disabled:cursor-default disabled:hover:bg-transparent',
+        !notification.read && 'bg-primary/[0.06]',
       )}
     >
       <span
         className={cn('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', notification.read ? 'bg-transparent' : 'bg-primary')}
       />
       <div className="flex-1 min-w-0">
-        <p className={cn('text-xs font-bold truncate', notification.read ? 'text-white/50' : 'text-white')}>
+        <p className={cn('text-xs font-semibold truncate', notification.read ? 'text-text-muted' : 'text-foreground')}>
           {notification.title}
         </p>
         {notification.body && (
-          <p className="text-[11px] text-white/30 mt-0.5 line-clamp-2">{notification.body}</p>
+          <p className="text-[11px] text-text-faint mt-0.5 line-clamp-2">{notification.body}</p>
         )}
-        <p className="text-[9px] text-white/20 font-bold uppercase tracking-widest mt-1">
+        <p className="eyebrow mt-1">
           {formatDateTime(notification.createdAt)}
         </p>
       </div>
       {!notification.read && !busy && (
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest shrink-0 mt-1">
-          Mark Read
+        <span className="text-[9px] font-semibold text-primary uppercase tracking-wide shrink-0 mt-1">
+          Mark read
         </span>
       )}
       {busy && (
-        <div className="w-3 h-3 border-2 border-white/20 border-t-white/60 rounded-full animate-spin shrink-0 mt-1" />
+        <div className="w-3 h-3 border-2 border-hairline border-t-text-muted rounded-full animate-spin shrink-0 mt-1" />
       )}
     </button>
   );

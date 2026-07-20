@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -72,6 +73,7 @@ const inputCls =
   'w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint';
 
 export default function CarProfile({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('ownerPages');
   const { id } = use(params);
   const router = useRouter();
   const { showToast } = useToast();
@@ -232,7 +234,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
             <Skeleton className="w-36 h-9 rounded-xl" />
           </div>
         </div>
-        <div className="glass rounded-2xl p-6 flex items-center gap-8">
+        <div className="rounded-2xl bg-surface border border-hairline p-6 flex items-center gap-8">
           <Skeleton className="w-24 h-24 rounded-3xl shrink-0" />
           <div className="flex-1 space-y-3">
             <Skeleton className="w-1/2 h-7" />
@@ -246,7 +248,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 glass rounded-2xl p-6">
+          <div className="lg:col-span-2 rounded-2xl bg-surface border border-hairline p-6">
             <SkeletonRows rows={5} />
           </div>
           <Skeleton className="h-64 rounded-2xl" />
@@ -324,6 +326,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="flex flex-1 flex-col justify-between gap-6 p-6 md:p-8">
             <div>
+              <p className="eyebrow mb-2">{t('fleet')}</p>
               <div className="mb-1.5 flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
                   {car.brand} {car.model}
@@ -355,7 +358,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               <div>
                 <p className="eyebrow">Verified revenue</p>
                 <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-                  <span className="font-mono tabular">{car.financials.totalRevenue.toLocaleString()}</span>
+                  <span className="font-mono tabular metal-text">{car.financials.totalRevenue.toLocaleString()}</span>
                   <span className="ms-1.5 text-sm font-normal text-text-faint">MAD</span>
                 </p>
               </div>
@@ -394,7 +397,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           <>
             <div className="lg:col-span-2 space-y-6">
               <CardHeader className="px-0">
-                <CardTitle>Rental History</CardTitle>
+                <CardTitle>Rental history</CardTitle>
                 <CardDescription>{car.bookings.length} recent session{car.bookings.length !== 1 ? 's' : ''}</CardDescription>
               </CardHeader>
               {car.bookings.length === 0 ? (
@@ -427,7 +430,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                           <span className="font-mono tabular font-medium">{booking.totalPrice.toLocaleString()}</span> <span className="text-[10px] text-text-faint">MAD</span>
                         </p>
                         <span className={cn(
-                          'rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]',
+                          'rounded-md border px-2 py-0.5 text-xs font-medium',
                           BOOKING_STATUS_STYLES[booking.status] || BOOKING_STATUS_STYLES.REQUESTED,
                         )}>
                           {booking.status.toLowerCase()}
@@ -586,14 +589,14 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
             ) : (
               <Card padding="none" className="overflow-hidden">
                 <div className="relative w-full overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-start text-sm">
                     <thead className="bg-surface-raised border-b border-hairline">
                       <tr>
                         <th className="px-6 py-3 eyebrow">Date</th>
                         <th className="px-6 py-3 eyebrow">Intervention</th>
                         <th className="px-6 py-3 eyebrow">Garage</th>
                         <th className="px-6 py-3 eyebrow">Cost</th>
-                        <th className="px-6 py-3 eyebrow text-right">Status</th>
+                        <th className="px-6 py-3 eyebrow text-end">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
@@ -617,9 +620,9 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground font-mono tabular">
                             {record.cost.toLocaleString()} MAD
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-6 py-4 text-end">
                             <span className={cn(
-                              'rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]',
+                              'rounded-md border px-2 py-0.5 text-xs font-medium',
                               record.status === 'COMPLETED'
                                 ? 'text-success bg-success/10 border-success/20'
                                 : record.status === 'IN_GARAGE'
@@ -653,7 +656,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                   </p>
                 </div>
               </div>
-              <div className="shrink-0 text-right">
+              <div className="shrink-0 text-end">
                 {kmToService !== null ? (
                   <>
                     <p className={cn('text-xl font-semibold tracking-tight', kmToService <= 0 ? 'text-danger' : 'text-foreground')}>
@@ -708,43 +711,45 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               </div>
             </Card>
 
-            <Card className="bg-white/[0.02] border-white/5">
+            <Card>
               <CardHeader className="p-0 mb-8">
                 <div>
-                  <CardTitle className="uppercase tracking-tighter">Asset Intelligence</CardTitle>
+                  <CardTitle>Asset intelligence</CardTitle>
                   <CardDescription>ROI engine classification</CardDescription>
                 </div>
               </CardHeader>
               <div className="space-y-8">
-                <div className="p-5 bg-primary/5 rounded-2xl border border-primary/20 relative overflow-hidden">
-                  <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 text-primary opacity-10" />
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">
-                    {car.currentRoi >= 50 ? 'Alpha Performance' : car.currentRoi >= 0 ? 'Stable Asset' : 'Underperforming'}
+                <div className="p-5 rounded-2xl border border-hairline bg-surface-raised">
+                  <p className={cn(
+                    'text-[11px] font-semibold uppercase tracking-[0.08em] mb-2',
+                    car.currentRoi >= 50 ? 'text-success' : car.currentRoi >= 0 ? 'text-text-muted' : 'text-danger',
+                  )}>
+                    {car.currentRoi >= 50 ? 'Alpha performance' : car.currentRoi >= 0 ? 'Stable asset' : 'Underperforming'}
                   </p>
-                  <p className="text-xs text-white/70 leading-relaxed font-medium">
+                  <p className="text-xs text-text-muted leading-relaxed">
                     {car.currentRoi >= 50 ? (
-                      <>This vehicle is a <span className="text-white font-black italic">Star Asset</span> — it returns {car.currentRoi.toFixed(0)}% over its maintenance base with strong turnaround.</>
+                      <>This vehicle is a <span className="font-medium text-foreground">star asset</span> — it returns <span className="font-mono tabular text-foreground">{car.currentRoi.toFixed(0)}%</span> over its maintenance base with strong turnaround.</>
                     ) : car.currentRoi >= 0 ? (
-                      <>This vehicle is profitable at <span className="text-white font-black">{car.currentRoi.toFixed(1)}%</span> ROI. Increase utilization or optimize rates to reach Star Asset tier.</>
+                      <>This vehicle is profitable at <span className="font-mono tabular text-foreground">{car.currentRoi.toFixed(1)}%</span> ROI. Increase utilization or optimize rates to reach star-asset tier.</>
                     ) : (
-                      <>This vehicle is running at a <span className="text-danger font-black">negative ROI</span>. Review maintenance costs and pricing before the next rental cycle.</>
+                      <>This vehicle is running at a <span className="font-medium text-danger">negative ROI</span>. Review maintenance costs and pricing before the next rental cycle.</>
                     )}
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-[0.1em]">
-                    <span className="text-white/40">ROI Score</span>
-                    <span className={car.currentRoi >= 0 ? 'text-success' : 'text-danger'}>
+                  <div className="flex items-center justify-between">
+                    <span className="eyebrow">ROI score</span>
+                    <span className={cn('text-xs font-medium font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
                       {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                  <div className="h-2 w-full rounded-full overflow-hidden border border-hairline bg-surface-raised">
                     <div
-                      className={cn('h-full transition-all duration-1000', car.currentRoi >= 0 ? 'bg-success shadow-[0_0_12px_rgba(34,197,94,0.4)]' : 'bg-danger')}
+                      className={cn('h-full transition-all duration-1000', car.currentRoi >= 0 ? 'bg-success' : 'bg-danger')}
                       style={{ width: `${Math.min(Math.max(car.currentRoi, 0), 100)}%` }}
                     />
                   </div>
-                  <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">
+                  <p className="text-xs text-text-faint">
                     Based on {car.bookings.length} recent session{car.bookings.length !== 1 ? 's' : ''} and {car.maintenance.length} maintenance record{car.maintenance.length !== 1 ? 's' : ''}
                   </p>
                 </div>
@@ -758,12 +763,12 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       <Modal
         isOpen={isMaintenanceModalOpen}
         onClose={() => setIsMaintenanceModalOpen(false)}
-        title="Record Mechanical Intervention"
+        title="Record mechanical intervention"
         description="Sync workshop bill to asset ledger"
       >
         <form onSubmit={handleLogMaintenance} className="space-y-6">
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Intervention Type</p>
+            <p className="eyebrow px-1">Intervention type</p>
             <select name="type" className={cn(inputCls, 'appearance-none')}>
               {MAINTENANCE_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -771,24 +776,24 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
             </select>
           </div>
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Description *</p>
+            <p className="eyebrow px-1">Description *</p>
             <input name="description" required placeholder="e.g. Full synthetic oil change + filter" className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Cost (MAD) *</p>
+              <p className="eyebrow px-1">Cost (MAD) *</p>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
-                <input name="cost" type="number" min={0} step="0.01" required placeholder="0.00" className={cn(inputCls, 'pl-11')} />
+                <DollarSign className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
+                <input name="cost" type="number" min={0} step="0.01" required placeholder="0.00" className={cn(inputCls, 'ps-11')} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Odometer (km)</p>
+              <p className="eyebrow px-1">Odometer (km)</p>
               <input name="mileage" type="number" min={0} placeholder={car.mileage.toLocaleString()} className={inputCls} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Garage Entity</p>
+            <p className="eyebrow px-1">Garage</p>
             <input name="garage" placeholder="Workshop name" className={inputCls} />
           </div>
           <div className="flex gap-4">
@@ -796,7 +801,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               Cancel
             </Button>
             <Button type="submit" className="flex-1" isLoading={isMutating}>
-              {isMutating ? 'Syncing...' : 'Sync Mechanical Data'}
+              {isMutating ? 'Syncing...' : 'Sync mechanical data'}
             </Button>
           </div>
         </form>
@@ -806,7 +811,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       <Modal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
-        title="Asset Status Control"
+        title="Asset status control"
         description="Manually override vehicle availability"
       >
         <div className="grid grid-cols-2 gap-4">
@@ -822,10 +827,10 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                   'p-5 rounded-2xl border transition-all hover:scale-[1.03] active:scale-[0.98] text-center disabled:opacity-50',
                   isActive
                     ? cn(style.bg, style.border, 'ring-1', style.ring)
-                    : 'bg-white/5 border-white/5 hover:border-white/10',
+                    : 'bg-surface border-hairline hover:border-border',
                 )}
               >
-                <p className={cn('text-[10px] font-black uppercase tracking-[0.2em]', isActive ? style.text : 'text-white/20')}>
+                <p className={cn('text-[11px] font-semibold uppercase tracking-[0.08em]', isActive ? style.text : 'text-text-faint')}>
                   {status.replace(/_/g, ' ')}
                 </p>
               </button>
@@ -838,12 +843,12 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       <Modal
         isOpen={isDocModalOpen}
         onClose={() => setIsDocModalOpen(false)}
-        title="Register Document"
+        title="Register document"
         description="Track a legal document in the Guardian vault"
       >
         <form onSubmit={handleAddDocument} className="space-y-6">
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Document Type</p>
+            <p className="eyebrow px-1">Document type</p>
             <select name="type" className={cn(inputCls, 'appearance-none')}>
               {DOC_TYPES.map((t) => (
                 <option key={t} value={t}>{formatDocType(t)}</option>
@@ -852,11 +857,11 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Issue Date</p>
+              <p className="eyebrow px-1">Issue date</p>
               <input name="issueDate" type="date" className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Expiry Date *</p>
+              <p className="eyebrow px-1">Expiry date *</p>
               <input name="expiryDate" type="date" required className={inputCls} />
             </div>
           </div>
@@ -865,7 +870,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               Cancel
             </Button>
             <Button type="submit" className="flex-1" isLoading={isMutating}>
-              {isMutating ? 'Registering...' : 'Activate Tracking'}
+              {isMutating ? 'Registering...' : 'Activate tracking'}
             </Button>
           </div>
         </form>
@@ -875,17 +880,17 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       <Modal
         isOpen={renewingDoc !== null}
         onClose={() => setRenewingDoc(null)}
-        title="Renew Document"
+        title="Renew document"
         description={renewingDoc ? `Extend ${formatDocType(renewingDoc.type)} compliance window` : ''}
       >
         {renewingDoc && (
           <form onSubmit={handleRenewDocument} className="space-y-6">
-            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Current Expiry</p>
-              <p className="text-sm font-black text-white mt-1">{formatDate(renewingDoc.expiryDate)}</p>
+            <div className="p-4 rounded-2xl border border-hairline bg-surface-raised">
+              <p className="eyebrow">Current expiry</p>
+              <p className="mt-1 text-sm font-medium text-foreground font-mono tabular">{formatDate(renewingDoc.expiryDate)}</p>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">New Expiry Date *</p>
+              <p className="eyebrow px-1">New expiry date *</p>
               <input name="expiryDate" type="date" required className={inputCls} />
             </div>
             <div className="flex gap-4">
@@ -893,7 +898,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                 Cancel
               </Button>
               <Button type="submit" className="flex-1" isLoading={isMutating}>
-                {isMutating ? 'Renewing...' : 'Confirm Renewal'}
+                {isMutating ? 'Renewing...' : 'Confirm renewal'}
               </Button>
             </div>
           </form>
@@ -904,25 +909,25 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Decommission Asset"
+        title="Decommission asset"
         description="This action is permanent"
         size="sm"
       >
         <div className="space-y-6">
           <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl">
-            <p className="text-xs text-white/70 leading-relaxed">
-              You are about to permanently remove <strong className="text-white">{car.brand} {car.model} ({car.licensePlate})</strong> from
-              your fleet. Vehicles with booking history cannot be deleted — set them to <strong className="text-white">OUT OF SERVICE</strong> instead
+            <p className="text-xs text-text-muted leading-relaxed">
+              You are about to permanently remove <strong className="font-medium text-foreground">{car.brand} {car.model} (<span className="font-mono tabular">{car.licensePlate}</span>)</strong> from
+              your fleet. Vehicles with booking history cannot be deleted — set them to <strong className="font-medium text-foreground">out of service</strong> instead
               to preserve financial records.
             </p>
           </div>
           <div className="flex gap-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDeleteModalOpen(false)} disabled={isMutating}>
-              Keep Asset
+              Keep asset
             </Button>
             <Button type="button" variant="danger" className="flex-1" onClick={handleDelete} isLoading={isMutating}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              {isMutating ? 'Removing...' : 'Delete Forever'}
+              <Trash2 className="w-4 h-4 me-2" />
+              {isMutating ? 'Removing...' : 'Delete forever'}
             </Button>
           </div>
         </div>

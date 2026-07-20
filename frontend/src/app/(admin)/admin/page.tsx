@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Ca
 import { Button } from '@/components/ui/Button';
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
+import { Avatar } from '@/components/ui/Avatar';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import { useRouter } from 'next/navigation';
 import {
   Globe,
@@ -19,16 +21,19 @@ import {
   Percent,
 } from 'lucide-react';
 import { useFormat } from '@/lib/useFormat';
+import { useTranslations } from 'next-intl';
 import { useAdminOverview, useFounderMetrics, type FounderMetrics } from './useAdminOverview';
 
+/* Data viz stays violet — a single sequential ramp, no rainbow. */
 const PLAN_COLORS: Record<string, string> = {
   BETA: 'bg-primary',
-  STARTER: 'bg-blue-500',
-  PRO: 'bg-emerald-500',
-  BUSINESS: 'bg-amber-500',
+  STARTER: 'bg-primary/75',
+  PRO: 'bg-primary/50',
+  BUSINESS: 'bg-primary/30',
 };
 
 function FounderMetricsBand() {
+  const t = useTranslations('adminPages');
   const { data: m } = useFounderMetrics();
   const { money } = useFormat();
   if (!m) return null;
@@ -36,20 +41,21 @@ function FounderMetricsBand() {
   const pct = (n: number) => `${Math.round(n * 100)}%`;
   const planEntries = Object.entries(m.planDistribution);
 
-  const cells: { icon: React.ElementType; tint: string; value: string; label: string }[] = [
-    { icon: Wallet, tint: 'text-success bg-success/10 border-success/20', value: money(m.mrr, { compact: true }), label: 'MRR (recurring)' },
-    { icon: TrendingUp, tint: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', value: money(m.arr, { compact: true }), label: 'ARR (annualized)' },
-    { icon: Rocket, tint: 'text-blue-400 bg-blue-500/10 border-blue-500/20', value: `${m.trials}`, label: 'Active Trials' },
-    { icon: Percent, tint: 'text-amber-500 bg-amber-500/10 border-amber-500/20', value: pct(m.conversionRate), label: 'Trial → Paid' },
+  /* MRR is the ONE brass mark on this page (hero figure, .metal-text). */
+  const cells: { icon: React.ElementType; tint: string; value: string; label: string; hero?: boolean }[] = [
+    { icon: Wallet, tint: 'text-text-muted bg-surface-raised border-hairline', value: money(m.mrr, { compact: true }), label: t('mrr'), hero: true },
+    { icon: TrendingUp, tint: 'text-success bg-success/10 border-success/20', value: money(m.arr, { compact: true }), label: t('arr') },
+    { icon: Rocket, tint: 'text-info bg-info/10 border-info/20', value: `${m.trials}`, label: t('activeTrials') },
+    { icon: Percent, tint: 'text-warning bg-warning/10 border-warning/20', value: pct(m.conversionRate), label: t('trialPaid') },
   ];
 
   return (
     <Card>
       <CardHeader className="items-start">
         <div>
-          <CardTitle>Business Metrics</CardTitle>
-          <CardDescription className="font-bold">
-            The money side — {m.paying} paying · {m.activeTenants} active · {pct(m.churnRate)} churn
+          <CardTitle>{t('businessMetrics')}</CardTitle>
+          <CardDescription>
+            {t('payingActiveChurn', { paying: m.paying, active: m.activeTenants, churn: pct(m.churnRate) })}
           </CardDescription>
         </div>
       </CardHeader>
@@ -59,20 +65,20 @@ function FounderMetricsBand() {
             <div className={`w-9 h-9 rounded-xl border flex items-center justify-center mb-3 ${c.tint}`}>
               <c.icon className="w-4 h-4" />
             </div>
-            <p className="text-xl font-black text-white">{c.value}</p>
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{c.label}</p>
+            <p className={c.hero ? 'text-2xl font-semibold font-mono tabular metal-text' : 'text-xl font-semibold font-mono tabular text-foreground'}>{c.value}</p>
+            <p className="eyebrow mt-1">{c.label}</p>
           </div>
         ))}
       </div>
 
       {planEntries.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-white/5">
-          <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">Plan Distribution</p>
-          <div className="flex h-3 w-full rounded-full overflow-hidden bg-white/5">
+        <div className="mt-6 pt-6 border-t border-hairline">
+          <p className="eyebrow mb-3">{t('planDistribution')}</p>
+          <div className="flex h-3 w-full rounded-full overflow-hidden bg-surface-raised">
             {planEntries.map(([key, count]) => (
               <div
                 key={key}
-                className={PLAN_COLORS[key] ?? 'bg-white/20'}
+                className={PLAN_COLORS[key] ?? 'bg-primary/15'}
                 style={{ width: `${(count / m.totalTenants) * 100}%` }}
                 title={`${key}: ${count}`}
               />
@@ -80,9 +86,9 @@ function FounderMetricsBand() {
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
             {planEntries.map(([key, count]) => (
-              <span key={key} className="flex items-center gap-1.5 text-[10px] font-bold text-white/50">
-                <span className={`w-2 h-2 rounded-full ${PLAN_COLORS[key] ?? 'bg-white/20'}`} />
-                {key} · {count}
+              <span key={key} className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
+                <span className={`w-2 h-2 rounded-full ${PLAN_COLORS[key] ?? 'bg-primary/15'}`} />
+                {key} · <span className="font-mono tabular">{count}</span>
               </span>
             ))}
           </div>
@@ -93,6 +99,7 @@ function FounderMetricsBand() {
 }
 
 export default function AdminPulse() {
+  const t = useTranslations('adminPages');
   const router = useRouter();
   const { data, isLoading, error, refetch } = useAdminOverview();
 
@@ -118,10 +125,10 @@ export default function AdminPulse() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-black text-white/80 uppercase tracking-tight">Platform Data Offline</p>
-          <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error}</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">{t('platformOffline')}</p>
+          <p className="text-xs text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()}><RefreshCw className="w-4 h-4 mr-2" /> Retry</Button>
+        <Button variant="outline" onClick={() => refetch()}><RefreshCw className="w-4 h-4 me-2" /> {t('retry')}</Button>
       </div>
     );
   }
@@ -133,12 +140,12 @@ export default function AdminPulse() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">Global Pulse</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">SaaS Platform Health &amp; GMV</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('globalPulse')}</h1>
+          <p className="text-sm text-text-muted mt-1">{t('platformHealth')}</p>
         </div>
         <Button onClick={() => router.push('/admin/agencies')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Manage Agencies
+          <Plus className="w-4 h-4 me-2" />
+          {t('manageAgencies')}
         </Button>
       </header>
 
@@ -149,8 +156,8 @@ export default function AdminPulse() {
               <Globe className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl"><AnimatedNumber value={data.stats.totalAgencies} /></CardTitle>
-          <CardDescription>Active Agencies</CardDescription>
+          <CardTitle className="text-2xl font-mono tabular"><AnimatedNumber value={data.stats.totalAgencies} /></CardTitle>
+          <CardDescription>{t('activeAgencies')}</CardDescription>
         </Card>
 
         <Card>
@@ -159,28 +166,28 @@ export default function AdminPulse() {
               <TrendingUp className="w-5 h-5 text-success" />
             </div>
           </div>
-          <CardTitle className="text-2xl"><AnimatedNumber value={data.stats.platformGMV} /> <span className="text-xs text-white/40">MAD</span></CardTitle>
-          <CardDescription>Total Platform GMV</CardDescription>
+          <CardTitle className="text-2xl"><AnimatedNumber value={data.stats.platformGMV} className="font-mono tabular" /> <span className="text-xs text-text-faint">MAD</span></CardTitle>
+          <CardDescription>{t('platformGmv')}</CardDescription>
         </Card>
 
         <Card>
           <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-xl bg-info/10 border border-info/20 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-info" />
             </div>
           </div>
-          <CardTitle className="text-2xl"><AnimatedNumber value={data.stats.liveBookings} /></CardTitle>
-          <CardDescription>Live Bookings</CardDescription>
+          <CardTitle className="text-2xl font-mono tabular"><AnimatedNumber value={data.stats.liveBookings} /></CardTitle>
+          <CardDescription>{t('liveBookings')}</CardDescription>
         </Card>
 
         <Card>
           <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-purple-500" />
+            <div className="w-10 h-10 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-text-muted" />
             </div>
           </div>
-          <CardTitle className="text-2xl"><AnimatedNumber value={totalFleet} /></CardTitle>
-          <CardDescription>Total Fleet (all tenants)</CardDescription>
+          <CardTitle className="text-2xl font-mono tabular"><AnimatedNumber value={totalFleet} /></CardTitle>
+          <CardDescription>{t('totalFleet')}</CardDescription>
         </Card>
       </div>
 
@@ -188,12 +195,15 @@ export default function AdminPulse() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Top Performing Agencies</CardTitle>
-          <CardDescription className="font-bold">Ranked by lifetime bookings</CardDescription>
+          <CardTitle>{t('topAgencies')}</CardTitle>
+          <CardDescription>{t('rankedBookings')}</CardDescription>
         </CardHeader>
         <div className="space-y-4">
           {ranked.length === 0 ? (
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest py-8 text-center">No agencies yet</p>
+            <div className="py-10 flex flex-col items-center text-center gap-4">
+              <AgencyImage alt="" slot="agency" ratio="5 / 3" rounded="rounded-xl" className="w-40" />
+              <p className="text-sm font-medium text-text-muted">{t('noAgencies')}</p>
+            </div>
           ) : ranked.map((agency) => (
             <div
               key={agency.id}
@@ -201,17 +211,15 @@ export default function AdminPulse() {
               className="flex items-center justify-between p-4 glass-card group cursor-pointer"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold text-white/40">
-                  {agency.name?.[0] || 'A'}
-                </div>
+                <Avatar name={agency.name || 'A'} size={40} />
                 <div>
-                  <h4 className="font-bold text-sm text-white group-hover:text-primary transition-colors">{agency.name}</h4>
-                  <p className="text-[10px] font-bold text-white/40 uppercase">{agency.tier} • {agency.fleetSize} CARS</p>
+                  <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{agency.name}</h4>
+                  <p className="eyebrow mt-0.5">{agency.tier} • <span className="font-mono tabular">{agency.fleetSize}</span> cars</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-black text-white">{agency.totalBookings} bookings</p>
-                <p className={`text-[10px] font-black uppercase ${agency.status === 'ACTIVE' ? 'text-success' : 'text-danger'}`}>{agency.status}</p>
+              <div className="text-end">
+                <p className="text-xs font-semibold text-foreground"><span className="font-mono tabular">{agency.totalBookings}</span> bookings</p>
+                <p className={`text-[11px] font-medium ${agency.status === 'ACTIVE' ? 'text-success' : 'text-danger'}`}>{agency.status}</p>
               </div>
             </div>
           ))}

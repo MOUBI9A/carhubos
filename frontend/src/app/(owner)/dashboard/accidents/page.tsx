@@ -1,24 +1,23 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/badge';
-import { 
-  AlertOctagon, 
-  Camera, 
-  FileText, 
-  Users, 
-  ChevronRight, 
-  Clock, 
-  CheckCircle2, 
+import { AgencyImage } from '@/components/ui/AgencyImage';
+import {
+  AlertOctagon,
+  Camera,
+  FileText,
+  Users,
+  ChevronRight,
+  CheckCircle2,
   Search,
   Filter,
   Plus,
   ShieldAlert,
-  ShieldCheck,
-  Zap,
   Hammer,
   CreditCard
 } from 'lucide-react';
@@ -59,13 +58,14 @@ const INITIAL_ACCIDENTS = [
 ];
 
 const CLAIM_STEPS = [
-  { label: 'Claim Filed', icon: FileText },
+  { label: 'Claim filed', icon: FileText },
   { label: 'Investigation', icon: ShieldAlert },
-  { label: 'Repair Quote', icon: Hammer },
+  { label: 'Repair quote', icon: Hammer },
   { label: 'Payment', icon: CreditCard },
 ];
 
 export default function AccidentsPage() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [accidents, setAccidents] = useState(INITIAL_ACCIDENTS);
@@ -85,81 +85,97 @@ export default function AccidentsPage() {
     };
     setAccidents([newAccident, ...accidents]);
     setIsReportModalOpen(false);
-    showToast('success', 'Protocol Initiated', 'Incident report has been serialized and dispatched.');
+    showToast('success', 'Incident reported', 'Your report has been logged and dispatched for review.');
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'LOW': return 'bg-success/20 text-success border-success/20';
-      case 'MEDIUM': return 'bg-amber-500/20 text-amber-500 border-amber-500/20';
-      case 'CRITICAL': return 'bg-danger/20 text-danger border-danger/20';
-      default: return 'bg-white/10 text-white border-white/10';
+      case 'LOW': return 'text-success bg-success/10 border-success/20';
+      case 'MEDIUM': return 'text-warning bg-warning/10 border-warning/20';
+      case 'CRITICAL': return 'text-danger bg-danger/10 border-danger/20';
+      default: return 'text-text-muted bg-surface-raised border-hairline';
     }
   };
+
+  const getSeverityDot = (severity: string) => {
+    switch (severity) {
+      case 'LOW': return 'bg-success';
+      case 'MEDIUM': return 'bg-warning';
+      case 'CRITICAL': return 'bg-danger';
+      default: return 'bg-text-faint';
+    }
+  };
+
+  const formatSeverity = (severity: string) =>
+    severity.charAt(0) + severity.slice(1).toLowerCase();
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">Accident Dossier</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1 flex items-center gap-2">
-          <ShieldAlert className="w-3 h-3 text-danger" />
-          Active Incident Protocols: {accidents.length}
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('accidents')}</h1>
+          <p className="mt-1.5 text-sm text-text-muted flex items-center gap-2">
+            <ShieldAlert className="w-3.5 h-3.5 text-danger" />
+            {accidents.length} active incident{accidents.length !== 1 ? 's' : ''} across your fleet
           </p>
-          </div>
-          <Button onClick={() => setIsReportModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Report New Incident
-          </Button>
-          </header>
+        </div>
+        <Button onClick={() => setIsReportModalOpen(true)}>
+          <Plus className="w-4 h-4 me-2" />
+          Report new incident
+        </Button>
+      </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Incident List */}
-          <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between mb-4">
-           <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-              <input className="w-full bg-white/5 border border-white/5 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-white outline-none focus:border-primary/50 transition-all uppercase tracking-widest" placeholder="Search Dossier..." />
-           </div>
-           <Button variant="ghost" size="sm" className="ml-4">
-              <Filter className="w-4 h-4 mr-2" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Incident List */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
+              <input
+                className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                placeholder="Search dossiers..."
+              />
+            </div>
+            <Button variant="ghost" size="sm">
+              <Filter className="w-4 h-4 me-2" />
               Filter
-           </Button>
+            </Button>
           </div>
 
           {accidents.map((accident) => (
-
-            <Card 
-              key={accident.id} 
+            <Card
+              key={accident.id}
+              padding="none"
               className={cn(
-                "group cursor-pointer hover:ring-1 ring-white/10 transition-all overflow-hidden",
-                selectedAccident?.id === accident.id && "ring-primary/50 bg-primary/[0.02]"
+                'group cursor-pointer transition-all overflow-hidden',
+                selectedAccident?.id === accident.id ? 'ring-1 ring-primary/40' : 'hover:bg-surface-raised',
               )}
               onClick={() => setSelectedAccident(accident)}
             >
-              <div className="p-6 flex items-center gap-6">
+              <div className="p-6 flex items-center gap-5">
                 <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center border transition-transform group-hover:scale-110 duration-500",
+                  'w-14 h-14 rounded-2xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 duration-300',
                   getSeverityColor(accident.severity)
                 )}>
-                  <AlertOctagon className="w-7 h-7" />
+                  <AlertOctagon className="w-6 h-6" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    <h3 className="text-lg font-black text-white uppercase tracking-tighter">{accident.vehicle}</h3>
-                    <Badge variant="outline" className={cn("text-[9px] font-black uppercase tracking-[0.2em] py-0", getSeverityColor(accident.severity))}>
-                      {accident.severity}
+                    <h3 className="font-semibold tracking-tight text-foreground truncate">{accident.vehicle}</h3>
+                    <Badge variant="outline" className={cn('shrink-0', getSeverityColor(accident.severity))}>
+                      <span className={cn('me-1 w-1.5 h-1.5 rounded-full', getSeverityDot(accident.severity))} />
+                      {formatSeverity(accident.severity)}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-[10px] font-black text-white/40 uppercase tracking-widest">
-                    <span>{accident.plate}</span>
-                    <span className="w-1 h-1 rounded-full bg-white/20" />
+                  <div className="flex items-center gap-3 text-xs text-text-muted">
+                    <span className="font-mono tabular">{accident.plate}</span>
+                    <span className="w-1 h-1 rounded-full bg-text-faint" />
                     <span>{accident.date}</span>
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end gap-2">
-                   <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{accident.status}</p>
-                   <ChevronRight className="w-4 h-4 text-white/20 group-hover:translate-x-1 transition-transform" />
+                <div className="text-end flex flex-col items-end gap-1.5 shrink-0">
+                   <p className="text-xs font-medium text-primary">{accident.status}</p>
+                   <ChevronRight className="w-4 h-4 text-text-faint group-hover:translate-x-0.5 group-hover:text-primary transition-all" />
                 </div>
               </div>
             </Card>
@@ -169,82 +185,80 @@ export default function AccidentsPage() {
         {/* Claim Tracker Panel */}
         <div className="lg:col-span-5">
            {selectedAccident ? (
-             <Card className="sticky top-24 border-primary/20 bg-primary/[0.02] animate-in fade-in slide-in-from-right-4 duration-500">
-                <CardHeader>
-                   <div className="flex justify-between items-start mb-6">
-                      <div>
-                         <CardTitle className="text-2xl font-black uppercase italic tracking-tighter">{selectedAccident.id}</CardTitle>
-                         <CardDescription className="font-bold uppercase text-[10px] tracking-widest text-primary">Protocol Active</CardDescription>
-                      </div>
-                      <Button variant="outline" size="sm" className="h-8 text-[9px] uppercase font-black" onClick={() => showToast('info', 'Exporting...', 'Generating incident dossier PDF.')}>Export PDF</Button>
+             <Card className="sticky top-24 animate-in fade-in slide-in-from-right-4 duration-500">
+                <CardHeader className="items-start">
+                   <div>
+                      <CardTitle className="text-xl font-mono tabular">{selectedAccident.id}</CardTitle>
+                      <CardDescription className="text-primary normal-case tracking-normal font-medium text-xs">Protocol active</CardDescription>
                    </div>
-                   
-                   <p className="text-sm font-bold text-white/70 leading-relaxed mb-8 border-l-2 border-primary/30 pl-4 py-1 italic">
-                     "{selectedAccident.description}"
-                   </p>
-
-                   <div className="space-y-8">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Insurance Claim Progress</h4>
-                      
-                      <div className="relative">
-                         {/* Progress Line */}
-                         <div className="absolute left-[19px] top-0 bottom-0 w-[2px] bg-white/5" />
-                         <div 
-                           className="absolute left-[19px] top-0 w-[2px] bg-primary transition-all duration-1000" 
-                           style={{ height: `${(selectedAccident.claimStatus / (CLAIM_STEPS.length - 1)) * 100}%` }}
-                         />
-
-                         <div className="space-y-10 relative">
-                            {CLAIM_STEPS.map((step, idx) => {
-                               const isActive = idx <= selectedAccident.claimStatus;
-                               const isCurrent = idx === selectedAccident.claimStatus;
-                               const StepIcon = step.icon;
-                               
-                               return (
-                                 <div key={idx} className="flex items-center gap-6">
-                                    <div className={cn(
-                                      "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10",
-                                      isActive ? "bg-primary border-primary shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "bg-black border-white/10 text-white/20"
-                                    )}>
-                                       {isActive && !isCurrent ? (
-                                         <CheckCircle2 className="w-5 h-5 text-white" />
-                                       ) : (
-                                         <StepIcon className={cn("w-5 h-5", isActive ? "text-white" : "text-white/20")} />
-                                       )}
-                                    </div>
-                                    <div className="flex-1">
-                                       <p className={cn(
-                                         "text-[11px] font-black uppercase tracking-[0.2em]",
-                                         isActive ? "text-white" : "text-white/20"
-                                       )}>
-                                         {step.label}
-                                       </p>
-                                       {isCurrent && (
-                                         <p className="text-[9px] font-bold text-primary uppercase mt-0.5 animate-pulse">Action Required</p>
-                                       )}
-                                    </div>
-                                 </div>
-                               );
-                            })}
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="mt-12 space-y-3">
-                      <Button className="w-full py-6 group">
-                        Update Claim Status
-                        <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                      <Button variant="ghost" className="w-full text-white/40 text-[10px] font-black uppercase tracking-widest">Mark as Resolved</Button>
-                   </div>
+                   <Button variant="outline" size="sm" onClick={() => showToast('info', 'Exporting...', 'Generating incident dossier PDF.')}>Export PDF</Button>
                 </CardHeader>
+
+                <p className="text-sm text-text-muted leading-relaxed mb-8 border-s-2 border-primary/30 ps-4 py-1">
+                  &ldquo;{selectedAccident.description}&rdquo;
+                </p>
+
+                <div className="space-y-6">
+                   <p className="eyebrow">Insurance claim progress</p>
+
+                   <div className="relative">
+                      {/* Progress Line */}
+                      <div className="absolute start-[19px] top-0 bottom-0 w-px bg-hairline" />
+                      <div
+                        className="absolute start-[19px] top-0 w-px bg-primary transition-all duration-1000"
+                        style={{ height: `${(selectedAccident.claimStatus / (CLAIM_STEPS.length - 1)) * 100}%` }}
+                      />
+
+                      <div className="space-y-8 relative">
+                         {CLAIM_STEPS.map((step, idx) => {
+                            const isActive = idx <= selectedAccident.claimStatus;
+                            const isCurrent = idx === selectedAccident.claimStatus;
+                            const StepIcon = step.icon;
+
+                            return (
+                              <div key={idx} className="flex items-center gap-5">
+                                 <div className={cn(
+                                   'w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-500 z-10 shrink-0',
+                                   isActive ? 'bg-primary border-primary text-primary-foreground' : 'bg-surface border-hairline text-text-faint'
+                                 )}>
+                                    {isActive && !isCurrent ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      <StepIcon className="w-5 h-5" />
+                                    )}
+                                 </div>
+                                 <div className="flex-1">
+                                    <p className={cn(
+                                      'text-sm font-medium',
+                                      isActive ? 'text-foreground' : 'text-text-faint'
+                                    )}>
+                                      {step.label}
+                                    </p>
+                                    {isCurrent && (
+                                      <p className="text-xs text-primary mt-0.5">Action required</p>
+                                    )}
+                                 </div>
+                              </div>
+                            );
+                         })}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="mt-10 space-y-3">
+                   <Button className="w-full group">
+                     Update claim status
+                     <ChevronRight className="w-4 h-4 ms-2 group-hover:translate-x-0.5 transition-transform" />
+                   </Button>
+                   <Button variant="ghost" className="w-full">Mark as resolved</Button>
+                </div>
              </Card>
            ) : (
-             <div className="h-full min-h-[400px] rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center p-8 bg-white/[0.01]">
-                <ShieldCheck className="w-16 h-16 text-white/5 mb-6" />
-                <h3 className="text-xl font-black text-white/20 uppercase tracking-tighter">Select an Incident</h3>
-                <p className="text-[10px] font-black text-white/10 uppercase tracking-[0.2em] mt-2">Dossier information will be populated here</p>
-             </div>
+             <Card padding="none" className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8">
+                <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20 mb-6" />
+                <h3 className="font-medium text-foreground">Select an incident</h3>
+                <p className="text-sm text-text-muted mt-1.5 max-w-xs">Dossier information will appear here once you choose a record.</p>
+             </Card>
            )}
         </div>
       </div>
@@ -253,56 +267,56 @@ export default function AccidentsPage() {
       <Modal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
-        title="Incident Protocol"
-        description="Forensic Reporting Matrix"
+        title="Report an incident"
+        description="Guided incident report"
       >
         <div className="space-y-8">
            {/* Guided Checklist */}
            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: '360 Photos', icon: Camera, status: 'REQUIRED' },
-                { label: 'Constat', icon: FileText, status: 'REQUIRED' },
-                { label: 'Witnesses', icon: Users, status: 'OPTIONAL' },
+                { label: '360° photos', icon: Camera, status: 'Required' },
+                { label: 'Constat', icon: FileText, status: 'Required' },
+                { label: 'Witnesses', icon: Users, status: 'Optional' },
               ].map((item, i) => (
-                <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center group hover:border-primary/50 transition-all cursor-pointer">
-                   <item.icon className="w-6 h-6 mx-auto mb-3 text-white/40 group-hover:text-primary transition-colors" />
-                   <p className="text-[9px] font-black uppercase tracking-widest text-white mb-1">{item.label}</p>
-                   <p className="text-[8px] font-bold text-white/20 uppercase">{item.status}</p>
+                <div key={i} className="p-4 rounded-2xl bg-surface border border-hairline text-center group hover:border-primary/40 transition-all cursor-pointer">
+                   <item.icon className="w-5 h-5 mx-auto mb-2.5 text-text-muted group-hover:text-primary transition-colors" />
+                   <p className="text-xs font-medium text-foreground mb-0.5">{item.label}</p>
+                   <p className="text-[10px] text-text-faint">{item.status}</p>
                 </div>
               ))}
            </div>
 
            <form className="space-y-6" onSubmit={handleReportIncident}>
-              <div className="space-y-2">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Asset in Incident</p>
-                 <select className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none appearance-none focus:border-primary transition-all">
-                    <option>Select Vehicle...</option>
+              <div className="space-y-1.5">
+                 <p className="eyebrow px-1">Vehicle involved</p>
+                 <select className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
+                    <option>Select vehicle...</option>
                     <option>Dacia Logan (12345-A-1)</option>
                     <option>Renault Clio (98765-B-4)</option>
                  </select>
               </div>
 
-              <div className="space-y-2">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Incident Narration</p>
-                 <textarea 
+              <div className="space-y-1.5">
+                 <p className="eyebrow px-1">Incident narration</p>
+                 <textarea
                    required
-                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all min-h-[120px]" 
+                   className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all min-h-[120px] placeholder:text-text-faint"
                    placeholder="Describe the sequence of events..."
                  />
               </div>
 
-              <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl flex items-start gap-4">
+              <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl flex items-start gap-3">
                  <ShieldAlert className="w-5 h-5 text-danger shrink-0 mt-0.5" />
                  <div>
-                    <p className="text-[10px] font-black text-danger uppercase tracking-widest mb-1">Guardian Alert</p>
-                    <p className="text-[10px] font-bold text-white/60 leading-relaxed uppercase">Submission will trigger immediate asset lockout and insurance carrier notification.</p>
+                    <p className="text-xs font-semibold text-danger mb-1">Heads up</p>
+                    <p className="text-xs text-text-muted leading-relaxed">Submitting will lock this vehicle and notify your insurance carrier.</p>
                  </div>
               </div>
 
-              <div className="flex gap-4">
-                 <Button type="button" variant="outline" className="flex-1 py-4" onClick={() => setIsReportModalOpen(false)}>Abort</Button>
-                 <Button type="submit" className="flex-1 py-4 bg-danger hover:bg-danger/80 border-none shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                   Dispatch Report
+              <div className="flex gap-3">
+                 <Button type="button" variant="outline" className="flex-1" onClick={() => setIsReportModalOpen(false)}>Cancel</Button>
+                 <Button type="submit" variant="danger" className="flex-1">
+                   Submit report
                  </Button>
               </div>
            </form>

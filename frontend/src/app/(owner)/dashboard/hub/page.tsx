@@ -1,15 +1,16 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 import { useToast } from '@/lib/contexts/ToastContext';
-import { 
-  Search, 
-  Filter, 
-  ArrowUpRight, 
-  Car, 
-  ShieldCheck, 
-  Zap, 
-  Users, 
+import {
+  Search,
+  Filter,
+  ArrowUpRight,
+  Car,
+  ShieldCheck,
+  Zap,
+  Users,
   BarChart3,
   Plus,
   ArrowRight
@@ -19,7 +20,8 @@ import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/input';
+import { AgencyImage, CarPhoto } from '@/components/ui/AgencyImage';
+import { Badge } from '@/components/ui/badge';
 
 const INITIAL_MARKETPLACE_CARS = [
   {
@@ -65,6 +67,7 @@ const INITIAL_MARKETPLACE_CARS = [
 ];
 
 export default function HubPage() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'my-fleet'>('marketplace');
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
@@ -98,54 +101,53 @@ export default function HubPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white uppercase italic">
-            B2B Hub <span className="text-primary">Marketplace</span>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t('hubMarketplace')}
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-2">
-            Global Enterprise Network & Fleet Liquidity
+          <p className="mt-1.5 text-sm text-text-muted">
+            Global enterprise network & fleet liquidity
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            className="glass h-12"
+          <Button
+            variant="outline"
             onClick={() => {}}
           >
-            <Filter className="w-4 h-4 mr-2" />
+            <Filter className="w-4 h-4 me-2" />
             Filters
           </Button>
-          <Button 
-            className="h-12 bg-primary text-white"
+          <Button
             onClick={() => setIsListingModalOpen(true)}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            List on Hub
+            <Plus className="w-4 h-4 me-2" />
+            List on hub
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Active Listings', value: '1,284', icon: Car, color: 'text-primary' },
-          { label: 'Network Agencies', value: '42', icon: Users, color: 'text-blue-400' },
-          { label: 'Avg Daily Rate', value: '$420', icon: BarChart3, color: 'text-green-400' },
-          { label: 'B2B Liquidity', value: '$4.2M', icon: Zap, color: 'text-amber-400' },
+          { label: 'Active listings', value: '1,284', icon: Car },
+          { label: 'Network agencies', value: '42', icon: Users },
+          { label: 'Avg daily rate', value: '420', unit: 'MAD', icon: BarChart3 },
+          { label: 'B2B liquidity', value: '4.2M', unit: 'MAD', icon: Zap },
         ].map((stat, i) => (
-          <Card key={i} className="glass border-white/5">
-            <div className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-                  <p className="text-2xl font-black text-white">{stat.value}</p>
-                </div>
-                <div className={cn("p-3 rounded-2xl bg-white/5", stat.color)}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
+          <Card key={i}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="eyebrow">{stat.label}</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground font-mono tabular">
+                  {stat.value}
+                  {stat.unit && <span className="ms-1 text-xs font-normal text-text-faint">{stat.unit}</span>}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center text-text-muted shrink-0">
+                <stat.icon className="w-5 h-5" />
               </div>
             </div>
           </Card>
@@ -153,12 +155,12 @@ export default function HubPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl w-fit">
+      <div className="flex gap-1 p-1 bg-surface rounded-2xl w-fit border border-hairline">
         <button
           onClick={() => setActiveTab('marketplace')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all",
-            activeTab === 'marketplace' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:text-white/60"
+            "px-5 py-2 rounded-xl text-xs font-medium transition-all",
+            activeTab === 'marketplace' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground"
           )}
         >
           Marketplace
@@ -166,21 +168,21 @@ export default function HubPage() {
         <button
           onClick={() => setActiveTab('my-fleet')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all",
-            activeTab === 'my-fleet' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:text-white/60"
+            "px-5 py-2 rounded-xl text-xs font-medium transition-all",
+            activeTab === 'my-fleet' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground"
           )}
         >
-          My Fleet Listings
+          My fleet listings
         </button>
       </div>
 
       {/* Search and results */}
       <div className="space-y-6">
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
-          <Input 
-            placeholder="Search enterprise network (Model, Agency, Location)..." 
-            className="pl-12 h-14 bg-white/5 border-white/10 rounded-2xl focus:ring-primary focus:border-primary transition-all text-sm italic"
+        <div className="relative">
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
+          <input
+            placeholder="Search enterprise network (model, agency, location)..."
+            className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
           />
         </div>
 
@@ -192,42 +194,39 @@ export default function HubPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className="glass-card overflow-hidden group border-white/5">
-                <div className="aspect-[16/10] relative overflow-hidden">
-                  <img 
-                    src={car.image} 
-                    alt={car.name}
-                    className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
-                  <div className="absolute top-4 right-4 bg-primary/20 backdrop-blur-md border border-primary/30 px-3 py-1 rounded-full">
-                    <p className="text-[10px] font-black text-primary uppercase">Trust: {car.trustScore}</p>
-                  </div>
-                  <div className="absolute bottom-4 left-4">
-                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{car.type}</p>
-                    <h3 className="text-white font-black text-lg -mt-1 uppercase italic">{car.name}</h3>
-                  </div>
-                </div>
+              <Card padding="none" className="group h-full overflow-hidden">
+                <CarPhoto
+                  src={car.image}
+                  alt={car.name}
+                  price={`${car.dailyRate.toLocaleString()} MAD/day`}
+                  rounded="rounded-none"
+                />
                 <div className="p-5 space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                      </div>
-                      <p className="text-[11px] font-bold text-white/80 uppercase">{car.agency}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="eyebrow">{car.type}</p>
+                      <h3 className="mt-0.5 truncate font-semibold tracking-tight text-foreground">{car.name}</h3>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-white/40 uppercase">B2B Rate</p>
-                      <p className="text-xl font-black text-white italic">${car.dailyRate}<span className="text-[10px] text-white/40">/DAY</span></p>
-                    </div>
+                    <Badge variant="outline" className="shrink-0">
+                      <span className="me-1 w-1.5 h-1.5 rounded-full bg-success" />
+                      Trust <span className="ms-1 font-mono tabular">{car.trustScore}</span>
+                    </Badge>
                   </div>
+
+                  <div className="flex items-center gap-2 border-t border-hairline pt-4">
+                    <div className="w-8 h-8 rounded-full bg-surface-raised border border-hairline flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4 text-text-muted" />
+                    </div>
+                    <p className="truncate text-xs font-medium text-foreground">{car.agency}</p>
+                  </div>
+
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 h-10 glass">
+                    <Button variant="outline" size="sm" className="flex-1">
                       Details
                     </Button>
-                    <Button size="sm" className="flex-1 h-10 bg-primary group/btn">
+                    <Button size="sm" className="flex-1 group/btn">
                       Request
-                      <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
                     </Button>
                   </div>
                 </div>
@@ -241,51 +240,56 @@ export default function HubPage() {
       <Modal
         isOpen={isListingModalOpen}
         onClose={() => setIsListingModalOpen(false)}
-        title="List Fleet on Hub"
+        title="List fleet on hub"
         description="Release your idle fleet for B2B liquidity"
         size="lg"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-white/40 tracking-widest ml-1">Select Vehicle</label>
-              <div className="glass p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors">
+              <label className="eyebrow px-1">Select vehicle</label>
+              <div className="glass p-4 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-surface-raised transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-8 rounded bg-white/10 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" />
-                  </div>
-                  <p className="text-xs font-bold text-white uppercase italic">Ferrari F8 Tributo</p>
+                  <AgencyImage
+                    slot="car"
+                    alt="Ferrari F8 Tributo"
+                    src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200"
+                    ratio="3 / 2"
+                    rounded="rounded-lg"
+                    className="w-12"
+                  />
+                  <p className="text-xs font-medium text-foreground">Ferrari F8 Tributo</p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-white/20" />
+                <ArrowRight className="w-4 h-4 text-text-faint" />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-white/40 tracking-widest ml-1">B2B Daily Rate ($)</label>
-              <Input 
-                placeholder="Enter rate..." 
-                className="glass h-14" 
+              <label className="eyebrow px-1">B2B daily rate (MAD)</label>
+              <input
+                placeholder="Enter rate..."
                 type="number"
                 value={newListingRate}
                 onChange={(e) => setNewListingRate(e.target.value)}
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
               />
             </div>
           </div>
 
-          <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl space-y-4">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <Card>
+            <div className="flex items-start gap-4">
+              <ShieldCheck className="w-5 h-5 text-info shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-black text-white uppercase italic">Enterprise Shield Protection</h4>
-                <p className="text-[10px] text-white/50 leading-relaxed mt-1">
-                  When listing on B2B Hub, your vehicle is covered by our $10M liability umbrella and smart contract insurance.
+                <p className="eyebrow">Enterprise shield protection</p>
+                <p className="text-sm text-text-muted leading-relaxed mt-2">
+                  When listing on B2B Hub, your vehicle is covered by our <span className="font-mono tabular text-foreground">10M MAD</span> liability umbrella and smart contract insurance.
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
 
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="ghost" onClick={() => setIsListingModalOpen(false)}>Cancel</Button>
-            <Button className="bg-primary px-10" onClick={handleListVehicle}>Confirm Listing</Button>
+            <Button className="px-10" onClick={handleListVehicle}>Confirm listing</Button>
           </div>
         </div>
       </Modal>

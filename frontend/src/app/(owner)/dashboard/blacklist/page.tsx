@@ -1,17 +1,21 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { AgencyImage } from '@/components/ui/AgencyImage';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
-  ShieldAlert,
   UserX,
   Search,
+  SearchX,
   Globe,
-  Lock,
   ShieldCheck,
-  Ban,
   Loader2,
   RefreshCw,
   CheckCircle2,
@@ -46,7 +50,11 @@ const BLACKLIST_REASONS = [
   'OTHER',
 ];
 
+const inputCls =
+  'w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-danger transition-all placeholder:text-text-faint';
+
 export default function NetworkBlacklist() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [blacklist, setBlacklist] = useState<BlacklistedCustomer[]>([]);
@@ -119,135 +127,155 @@ export default function NetworkBlacklist() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">
-            Network <span className="text-danger">Blacklist</span>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t('networkBlacklist')}
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-1 flex items-center gap-2">
+          <p className="mt-1.5 flex items-center gap-2 eyebrow">
             <Globe className="w-3 h-3 text-danger" />
-            Renter Risk Registry — Tenant Scope
+            Renter risk registry · Tenant scope
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={fetchBlacklist}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 me-2" />
             Sync
           </Button>
-          <Button onClick={() => setIsReportModalOpen(true)} variant="danger" className="h-12 px-8">
-            <UserX className="w-4 h-4 mr-2" />
-            Flag Bad Actor
+          <Button onClick={() => setIsReportModalOpen(true)} variant="danger">
+            <UserX className="w-4 h-4 me-2" />
+            Flag bad actor
           </Button>
         </div>
       </header>
 
       {/* Stats HUD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-danger/5 border-danger/20 relative overflow-hidden group">
-          <ShieldAlert className="absolute -right-4 -bottom-4 w-32 h-32 text-danger opacity-5 group-hover:scale-110 transition-transform" />
-          <p className="text-[10px] font-black text-danger uppercase tracking-[0.2em] mb-4">Flagged Actors</p>
-          <CardTitle className="text-3xl font-black text-white italic">{blacklist.length}</CardTitle>
-          <p className="text-[9px] font-bold text-white/20 uppercase mt-1 tracking-widest">Active blacklist entries</p>
+        <Card className="bg-danger/5 border-danger/20">
+          <p className="eyebrow text-danger">Flagged actors</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground font-mono tabular">
+            {blacklist.length}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">Active blacklist entries</p>
         </Card>
-        <Card className="border-white/5 shadow-2xl relative overflow-hidden group">
-          <Globe className="absolute -right-4 -bottom-4 w-32 h-32 text-white opacity-5 group-hover:scale-110 transition-transform" />
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Registry Coverage</p>
-          <CardTitle className="text-3xl font-black text-white italic">Agency</CardTitle>
-          <p className="text-[9px] font-bold text-white/20 uppercase mt-1 tracking-widest">Tenant-scoped blacklist</p>
+        <Card>
+          <p className="eyebrow">Registry coverage</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">Agency</p>
+          <p className="mt-1 text-xs text-text-muted">Tenant-scoped blacklist</p>
         </Card>
-        <Card className="bg-primary/5 border-primary/20 relative overflow-hidden group">
-          <Lock className="absolute -right-4 -bottom-4 w-32 h-32 text-primary opacity-5 group-hover:scale-110 transition-transform" />
-          <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Network Status</p>
-          <CardTitle className="text-3xl font-black text-white italic">Active</CardTitle>
-          <p className="text-[9px] font-bold text-white/20 uppercase mt-1 tracking-widest">Auto-block on booking</p>
+        <Card className="bg-primary/5 border-primary/20">
+          <p className="eyebrow text-primary">Network status</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">Active</p>
+          <p className="mt-1 text-xs text-text-muted">Auto-block on booking</p>
         </Card>
       </div>
 
-      {/* Blacklist Table */}
-      <Card padding="none" className="overflow-hidden border-white/5 shadow-2xl">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-          <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <Search className="w-5 h-5 text-white/20 shrink-0" />
-            <input
-              placeholder="Search by name, ID, or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm font-bold text-white w-full placeholder:text-white/20"
-            />
-          </div>
-          <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">
-            {filtered.length} Record{filtered.length !== 1 ? 's' : ''}
-          </span>
+      {/* Search */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
+          <input
+            placeholder="Search by name, ID, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+          />
         </div>
+        <span className="eyebrow shrink-0">
+          {filtered.length} record{filtered.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
-        {isLoading ? (
-          <div className="py-20 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-20 flex flex-col items-center gap-4">
-            <ShieldCheck className="w-16 h-16 text-success/20" />
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-              {searchQuery ? 'No matching records found' : 'Blacklist is Empty'}
+      {/* Blacklist directory */}
+      {isLoading ? (
+        <Card padding="none" className="p-6 space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <Skeleton className="w-11 h-11 rounded-full shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="w-1/3 h-4" />
+                <Skeleton className="w-1/4 h-3" />
+              </div>
+              <Skeleton className="w-20 h-6 rounded-lg shrink-0" />
+            </div>
+          ))}
+        </Card>
+      ) : blacklist.length === 0 ? (
+        <Card className="flex flex-col items-center gap-5 py-14 text-center">
+          <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
+          <div>
+            <p className="font-medium text-foreground">Blacklist is empty</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
+              No actors have been flagged in this agency.
             </p>
-            <p className="text-[9px] text-white/10">
-              {searchQuery ? 'Try a different search term' : 'No actors have been flagged in this agency'}
-            </p>
           </div>
-        ) : (
-          <div className="divide-y divide-white/5">
+        </Card>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={SearchX}
+          title="No matching records"
+          description="Try a different search term."
+        />
+      ) : (
+        <Card padding="none" className="overflow-hidden">
+          <div className="hidden sm:flex items-center gap-5 px-5 py-3 border-b border-hairline">
+            <p className="eyebrow flex-1">Actor</p>
+            <p className="eyebrow w-32 text-end">Flagged</p>
+            <span className="w-24 shrink-0" aria-hidden />
+          </div>
+          <div className="divide-y divide-hairline">
             {filtered.map((customer) => (
-              <div key={customer.id} className="p-6 flex items-center justify-between hover:bg-danger/[0.02] transition-colors group">
-                <div className="flex items-center gap-6">
-                  <div className="w-12 h-12 rounded-2xl bg-danger/10 text-danger border border-danger/20 flex items-center justify-center">
-                    <Ban className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h4 className="text-base font-black text-white uppercase tracking-tight italic">
+              <div
+                key={customer.id}
+                className="flex items-center gap-5 px-5 py-4 hover:bg-surface-raised transition-colors group"
+              >
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <Avatar name={`${customer.firstName} ${customer.lastName}`} size={44} />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="truncate text-sm font-medium text-foreground">
                         {customer.firstName} {customer.lastName}
                       </h4>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded tracking-widest border bg-danger/10 text-danger border-danger/20">
-                        BLACKLISTED
-                      </span>
+                      <Badge variant="destructive">
+                        <span className="me-1 w-1.5 h-1.5 rounded-full bg-danger" />
+                        Blacklisted
+                      </Badge>
                     </div>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">
-                      {customer.identityType}: <span className="text-white/60">{customer.identityNumber}</span> •&nbsp;
-                      {customer.phone}
+                    <p className="mt-0.5 text-xs text-text-muted">
+                      {customer.identityType}: <span className="font-mono tabular text-text-faint">{customer.identityNumber}</span> · {customer.phone}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-8 text-right">
-                  <div>
-                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Flagged</p>
-                    <p className="text-xs font-bold text-white/60">
-                      {new Date(customer.updatedAt).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity border-success/20 text-success hover:bg-success/10"
-                    onClick={() => handleUnblacklist(customer.id, `${customer.firstName} ${customer.lastName}`)}
-                    disabled={removingId === customer.id}
-                  >
-                    {removingId === customer.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
-                    Restore
-                  </Button>
+                <div className="hidden sm:block w-32 text-end shrink-0">
+                  <p className="eyebrow">Flagged</p>
+                  <p className="mt-0.5 text-xs font-mono tabular text-text-muted">
+                    {new Date(customer.updatedAt).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-24 justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity border-success/20 text-success hover:bg-success/10"
+                  onClick={() => handleUnblacklist(customer.id, `${customer.firstName} ${customer.lastName}`)}
+                  disabled={removingId === customer.id}
+                >
+                  {removingId === customer.id ? <Loader2 className="w-3 h-3 animate-spin me-1" /> : <CheckCircle2 className="w-3 h-3 me-1" />}
+                  Restore
+                </Button>
               </div>
             ))}
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* Network immunity info */}
       <Card className="bg-primary/5 border-primary/20">
         <div className="flex items-start gap-4">
           <ShieldCheck className="w-6 h-6 text-primary shrink-0 mt-1" />
           <div>
-            <CardTitle className="text-primary text-xs uppercase tracking-widest">Blacklist Enforcement Protocol</CardTitle>
-            <p className="text-xs text-white/60 leading-relaxed mt-2 font-medium">
-              Blacklisted customers are automatically blocked during the booking creation flow. 
+            <CardTitle className="text-primary">Blacklist enforcement protocol</CardTitle>
+            <p className="text-sm text-text-muted leading-relaxed mt-2">
+              Blacklisted customers are automatically blocked during the booking creation flow.
               The Guardian system checks identity status in real-time. Future upgrade: cross-agency network sync.
             </p>
           </div>
@@ -258,39 +286,39 @@ export default function NetworkBlacklist() {
       <Modal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
-        title="Flag Bad Actor"
+        title="Flag bad actor"
         description="Add a customer to the agency blacklist"
       >
         <form className="space-y-6" onSubmit={handleBlacklist}>
           <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
-            <p className="text-xs text-white/60 font-medium leading-relaxed">
+            <p className="text-xs text-text-muted leading-relaxed">
               This action immediately prevents the customer from making new bookings. Requires the customer to already exist in your CRM.
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Customer ID</p>
+            <p className="eyebrow px-1">Customer ID</p>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+              <User className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint" />
               <input
                 name="customerId"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-danger transition-all"
+                className={cn(inputCls, 'ps-11')}
                 placeholder="Customer UUID from CRM..."
               />
             </div>
-            <p className="text-[9px] text-white/20 px-1">Find the customer ID in the Customer CRM module.</p>
+            <p className="px-1 text-xs text-text-faint">Find the customer ID in the Customer CRM module.</p>
           </div>
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Reason for Flag</p>
-            <select name="reason" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none appearance-none focus:border-danger transition-all">
+            <p className="eyebrow px-1">Reason for flag</p>
+            <select name="reason" className={cn(inputCls, 'appearance-none')}>
               {BLACKLIST_REASONS.map(r => (
                 <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
               ))}
             </select>
           </div>
-          <Button type="submit" variant="danger" className="w-full py-5 font-black uppercase tracking-[0.2em] shadow-2xl shadow-danger/20">
-            Execute Flag
+          <Button type="submit" variant="danger" className="w-full">
+            Flag this actor
           </Button>
         </form>
       </Modal>

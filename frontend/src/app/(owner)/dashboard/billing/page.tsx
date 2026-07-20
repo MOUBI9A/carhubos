@@ -1,12 +1,12 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
-  CreditCard,
   Car,
   Users,
   CalendarCheck,
@@ -21,18 +21,18 @@ import { useFormat } from '@/lib/useFormat';
 import { useBilling, type BillingSnapshot } from './useBilling';
 
 const STATUS_STYLES: Record<string, { chip: string; label: string }> = {
-  TRIAL: { chip: 'text-blue-400 bg-blue-500/10 border-blue-500/20', label: 'Trial' },
+  TRIAL: { chip: 'text-info bg-info/10 border-info/20', label: 'Trial' },
   ACTIVE: { chip: 'text-success bg-success/10 border-success/20', label: 'Active' },
-  PAST_DUE: { chip: 'text-amber-500 bg-amber-500/10 border-amber-500/20', label: 'Past Due' },
+  PAST_DUE: { chip: 'text-warning bg-warning/10 border-warning/20', label: 'Past Due' },
   SUSPENDED: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Suspended' },
-  CANCELED: { chip: 'text-white/40 bg-white/5 border-white/10', label: 'Canceled' },
+  CANCELED: { chip: 'text-text-faint bg-surface border-hairline', label: 'Canceled' },
 };
 
 const INVOICE_STYLES: Record<string, string> = {
   PAID: 'text-success bg-success/10 border-success/20',
-  ISSUED: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-  DRAFT: 'text-white/50 bg-white/5 border-white/10',
-  VOID: 'text-white/30 bg-white/5 border-white/10 line-through',
+  ISSUED: 'text-warning bg-warning/10 border-warning/20',
+  DRAFT: 'text-text-muted bg-surface border-hairline',
+  VOID: 'text-text-faint bg-surface border-hairline line-through',
 };
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -52,17 +52,17 @@ function daysLeft(iso: string | null): number | null {
 }
 
 export default function BillingPage() {
+  const t = useTranslations('ownerPages');
   const { data, isLoading, error, refetch } = useBilling();
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-5xl">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase flex items-center gap-3">
-            <CreditCard className="w-7 h-7 text-primary" />
-            Billing &amp; Plan
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t('billing')}
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">
+          <p className="mt-1.5 text-sm text-text-muted">
             Your Fider subscription, usage &amp; invoices
           </p>
         </div>
@@ -76,9 +76,9 @@ export default function BillingPage() {
             <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center border border-danger/20">
               <AlertTriangle className="w-5 h-5 text-danger" />
             </div>
-            <p className="text-xs font-medium text-white/40 max-w-xs">{error}</p>
+            <p className="text-xs font-medium text-text-muted max-w-xs">{error}</p>
             <Button variant="outline" size="sm" onClick={refetch}>
-              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Retry
+              <RefreshCw className="w-3.5 h-3.5 me-2" /> Retry
             </Button>
           </div>
         </Card>
@@ -97,14 +97,16 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
   return (
     <div className="space-y-8">
       {/* Beta notice */}
-      <div className="glass-card p-4 flex items-start gap-3 border-primary/20">
-        <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-        <p className="text-xs text-white/60 leading-relaxed">
-          You&apos;re on the <span className="font-bold text-white">Fider beta</span> — every plan is
-          free while we build. Your plan limits and features below are already live; billing starts
-          when the beta ends. To change your plan, just reach out.
-        </p>
-      </div>
+      <Card>
+        <div className="flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-info shrink-0 mt-0.5" />
+          <p className="text-sm text-text-muted leading-relaxed">
+            You&apos;re on the <span className="font-semibold text-foreground">Fider beta</span> — every plan is
+            free while we build. Your plan limits and features below are already live; billing starts
+            when the beta ends. To change your plan, just reach out.
+          </p>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Plan card */}
@@ -112,26 +114,32 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
           <CardHeader className="items-start">
             <div className="flex items-center justify-between w-full">
               <CardTitle>Current Plan</CardTitle>
-              <span className={cn('px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border', status.chip)}>
+              <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium', status.chip)}>
                 {status.label}
               </span>
             </div>
           </CardHeader>
           <div className="flex items-end gap-2">
-            <p className="text-4xl font-black text-white">{data.planName}</p>
+            <p className="metal-text text-4xl font-semibold tracking-tight">{data.planName}</p>
           </div>
-          <p className="text-sm text-white/40 font-bold mt-1">
-            {data.priceMonthly > 0 ? `${fmtMoney(data.priceMonthly)} / month` : 'Free during beta'}
+          <p className="text-sm text-text-muted font-medium mt-1">
+            {data.priceMonthly > 0 ? (
+              <>
+                <span className="font-mono tabular text-foreground">{fmtMoney(data.priceMonthly)}</span> / month
+              </>
+            ) : (
+              'Free during beta'
+            )}
           </p>
           {trial !== null && (
-            <p className="text-[11px] text-white/40 mt-3 font-medium">
+            <p className="text-xs text-text-muted mt-3">
               {trial > 0 ? `Trial ends in ${trial} day${trial !== 1 ? 's' : ''} (${fmtDate(data.trialEndsAt)})` : 'Trial ended'}
             </p>
           )}
-          <div className="mt-6 pt-6 border-t border-white/5 space-y-2">
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-3">Included</p>
+          <div className="mt-6 pt-6 border-t border-hairline space-y-2">
+            <p className="eyebrow mb-3">Included</p>
             {data.features.map((f) => (
-              <div key={f} className="flex items-center gap-2 text-xs text-white/70">
+              <div key={f} className="flex items-center gap-2 text-xs text-text-muted">
                 <Check className="w-3.5 h-3.5 text-success shrink-0" />
                 {FEATURE_LABELS[f] ?? f}
               </div>
@@ -141,11 +149,13 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
 
         {/* Usage meters */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Usage This Period</CardTitle>
-            <CardDescription className="normal-case tracking-normal text-white/40 font-medium text-xs mt-1">
-              How much of your plan you&apos;re using right now.
-            </CardDescription>
+          <CardHeader className="items-start">
+            <div>
+              <CardTitle>Usage This Period</CardTitle>
+              <CardDescription className="normal-case tracking-normal text-text-muted font-medium text-xs mt-1">
+                How much of your plan you&apos;re using right now.
+              </CardDescription>
+            </div>
           </CardHeader>
           <div className="space-y-6 mt-2">
             <UsageMeter icon={Car} label="Fleet vehicles" current={data.usage.cars} limit={data.limits.maxCars} />
@@ -172,7 +182,7 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
           <div className="overflow-x-auto -mx-2">
             <table className="w-full text-sm min-w-[520px]">
               <thead>
-                <tr className="text-[10px] font-black text-white/30 uppercase tracking-widest text-left">
+                <tr className="eyebrow text-left">
                   <th className="px-2 py-2">Invoice</th>
                   <th className="px-2 py-2">Amount</th>
                   <th className="px-2 py-2">Status</th>
@@ -180,18 +190,18 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
                   <th className="px-2 py-2">Paid</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-hairline">
                 {data.invoices.map((inv) => (
-                  <tr key={inv.id} className="text-white/70">
-                    <td className="px-2 py-3 font-mono text-xs text-white">{inv.number}</td>
-                    <td className="px-2 py-3 font-bold text-white">{fmtMoney(inv.amount)} {inv.currency}</td>
+                  <tr key={inv.id} className="text-text-muted">
+                    <td className="px-2 py-3 font-mono tabular text-xs text-foreground">{inv.number}</td>
+                    <td className="px-2 py-3 font-mono tabular font-semibold text-foreground">{fmtMoney(inv.amount)} {inv.currency}</td>
                     <td className="px-2 py-3">
-                      <span className={cn('px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border', INVOICE_STYLES[inv.status])}>
-                        {inv.status}
+                      <span className={cn('px-2 py-0.5 rounded-md text-xs font-medium border', INVOICE_STYLES[inv.status])}>
+                        {inv.status.toLowerCase()}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-[11px]">{fmtDate(inv.issuedAt)}</td>
-                    <td className="px-2 py-3 text-[11px]">{fmtDate(inv.paidAt)}</td>
+                    <td className="px-2 py-3 text-xs">{fmtDate(inv.issuedAt)}</td>
+                    <td className="px-2 py-3 text-xs">{fmtDate(inv.paidAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -221,24 +231,24 @@ function UsageMeter({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="flex items-center gap-2 text-xs font-bold text-white/70">
+        <span className="flex items-center gap-2 text-xs font-medium text-text-muted">
           <Icon className="w-4 h-4 text-primary" /> {label}
         </span>
-        <span className="text-xs font-black text-white">
-          {current} <span className="text-white/30">/ {unlimited ? '∞' : limit}</span>
+        <span className="text-xs font-semibold font-mono tabular text-foreground">
+          {current} <span className="text-text-faint">/ {unlimited ? '∞' : limit}</span>
         </span>
       </div>
-      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
         <div
           className={cn(
             'h-full rounded-full transition-all',
-            unlimited ? 'bg-primary/40' : near ? 'bg-amber-500' : 'bg-primary',
+            unlimited ? 'bg-primary/40' : near ? 'bg-warning' : 'bg-primary',
           )}
           style={{ width: `${pct}%` }}
         />
       </div>
       {unlimited && (
-        <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-1">Unlimited on your plan</p>
+        <p className="eyebrow mt-1">Unlimited on your plan</p>
       )}
     </div>
   );

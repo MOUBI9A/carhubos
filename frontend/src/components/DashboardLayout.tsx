@@ -65,14 +65,14 @@ export function DashboardLayout({
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden
         />
       )}
 
       {/* Mobile top bar with hamburger */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 glass border-b border-hairline">
+      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 bg-surface border-b border-hairline">
         <button
           onClick={() => setSidebarOpen(true)}
           aria-label={tc('openMenu')}
@@ -80,7 +80,7 @@ export function DashboardLayout({
         >
           <Menu className="w-6 h-6" />
         </button>
-        <span className="text-lg font-semibold tracking-tight text-foreground">
+        <span className="text-base font-medium tracking-tight text-foreground">
           {tc('brand')}<span className="text-text-faint">OS</span>
         </span>
       </header>

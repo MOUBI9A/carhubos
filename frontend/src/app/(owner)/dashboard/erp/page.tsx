@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -33,6 +34,7 @@ import { useToast } from '@/lib/contexts/ToastContext';
 import { useErpData } from './useErpData';
 
 export default function TitanERP() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const router = useRouter();
   const { data, isLoading, error, refetch, exportPnL } = useErpData();
@@ -45,13 +47,13 @@ export default function TitanERP() {
   };
 
   const handleAudit = () => {
-    showToast('pulse', 'Running Audit...', 'Scanning fleet health, document compliance, and financial records.');
+    showToast('pulse', 'Running audit…', 'Scanning fleet health, document compliance, and financial records.');
     refetch();
   };
 
   const handleExportPnL = () => {
     exportPnL();
-    showToast('success', 'P&L Exported', 'Your institutional P&L statement has been downloaded as CSV.');
+    showToast('success', 'P&L exported', 'Your institutional P&L statement has been downloaded as CSV.');
   };
 
   if (isLoading) {
@@ -97,7 +99,7 @@ export default function TitanERP() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Titan ERP console</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('titanErp')}</h1>
           <p className="mt-1.5 text-sm text-text-muted">Strategic business intelligence across your network</p>
         </div>
         <div className="flex gap-3">
@@ -270,9 +272,9 @@ export default function TitanERP() {
                            if (data.advisor.action === 'EXPAND_FLEET') {
                              router.push('/dashboard/fleet');
                            } else if (data.advisor.action === 'BOOST_MARKETING') {
-                             showToast('info', 'Marketing Campaign', 'Consider launching promotions to boost fleet utilization.');
+                             showToast('info', 'Marketing campaign', 'Consider launching promotions to boost fleet utilization.');
                            } else {
-                             showToast('success', 'Pricing Optimized', 'Review peak-period pricing in your fleet settings.');
+                             showToast('success', 'Pricing optimized', 'Review peak-period pricing in your fleet settings.');
                            }
                          }}
                        >
@@ -513,7 +515,7 @@ export default function TitanERP() {
                   <p className="mt-1 font-mono tabular text-xl font-semibold text-success">+{data.forecast.inflows.reduce((s, i) => s + i.amount, 0).toLocaleString()} MAD</p>
                 </div>
                 <div className="eyebrow px-6">vs</div>
-                <div className="text-right">
+                <div className="text-end">
                   <p className="eyebrow">Total projected outflows</p>
                   <p className="mt-1 font-mono tabular text-xl font-semibold text-danger">−{data.forecast.outflows.reduce((s, o) => s + o.amount, 0).toLocaleString()} MAD</p>
                 </div>

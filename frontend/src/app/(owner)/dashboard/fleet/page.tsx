@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
@@ -49,6 +50,7 @@ const FILTERS: Array<{ value: CarStatus | 'ALL'; label: string }> = [
 ];
 
 export default function FleetGuardian() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const { data: cars, isLoading, error, refetch } = useFleet();
 
@@ -151,7 +153,7 @@ export default function FleetGuardian() {
       {/* ═══════ Header ═══════ */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Fleet</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('fleet')}</h1>
           <p className="mt-1.5 text-sm text-text-muted">
             Asset monitoring and compliance across your fleet
           </p>
@@ -180,7 +182,7 @@ export default function FleetGuardian() {
               key={s}
               onClick={() => setStatusFilter(statusFilter === s ? 'ALL' : s)}
               className={cn(
-                'rounded-2xl bg-surface border border-hairline p-4 text-left transition-all hover:bg-surface-raised',
+                'rounded-2xl bg-surface border border-hairline p-4 text-start transition-all hover:bg-surface-raised',
                 statusFilter === s && 'ring-1 ring-primary/40',
               )}
             >

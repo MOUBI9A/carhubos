@@ -2,10 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
 import { Plus, LogIn, SlidersHorizontal, AlertTriangle, RefreshCw, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
@@ -16,15 +19,16 @@ const PLANS = ['BETA', 'STARTER', 'PRO', 'BUSINESS'];
 const STATUSES = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED', 'CANCELED'];
 
 const STATUS_CHIP: Record<string, string> = {
-  TRIAL: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  TRIAL: 'bg-info/10 text-info border-info/20',
   ACTIVE: 'bg-success/10 text-success border-success/20',
-  PAST_DUE: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+  PAST_DUE: 'bg-warning/10 text-warning border-warning/20',
   SUSPENDED: 'bg-danger/10 text-danger border-danger/20',
-  CANCELED: 'bg-white/5 text-white/40 border-white/10',
-  NONE: 'bg-white/5 text-white/40 border-white/10',
+  CANCELED: 'bg-surface text-text-faint border-hairline',
+  NONE: 'bg-surface text-text-faint border-hairline',
 };
 
 export default function AgencyManagement() {
+  const t = useTranslations('adminPages');
   const router = useRouter();
   const { showToast } = useToast();
   const { data, isLoading, error, refetch } = useAdminOverview();
@@ -48,14 +52,14 @@ export default function AgencyManagement() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">Agency Management</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('agencyManagement')}</h1>
+          <p className="text-sm text-text-muted mt-1">
             Tenants, subscriptions &amp; support
           </p>
         </div>
         <Button onClick={() => router.push('/admin/provision')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Provision Agency
+          <Plus className="w-4 h-4 me-2" />
+          {t('provision')}
         </Button>
       </header>
 
@@ -67,60 +71,60 @@ export default function AgencyManagement() {
             <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center border border-danger/20">
               <AlertTriangle className="w-5 h-5 text-danger" />
             </div>
-            <p className="text-xs font-medium text-white/40">{error || 'No data'}</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Retry</Button>
+            <p className="text-sm text-text-muted">{error || 'No data'}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}><RefreshCw className="w-3.5 h-3.5 me-2" /> Retry</Button>
           </div>
         </Card>
       ) : (
-        <Card padding="none" className="overflow-hidden border-white/5 shadow-2xl">
+        <Card padding="none" className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[720px]">
+            <table className="w-full text-start border-collapse min-w-[720px]">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02]">
-                  <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Agency</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Plan</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Fleet · Seats</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-white/40 uppercase tracking-widest text-right">Control</th>
+                <tr className="border-b border-hairline bg-surface-raised">
+                  <th className="px-6 py-3 eyebrow text-start">Agency</th>
+                  <th className="px-6 py-3 eyebrow text-start">Plan</th>
+                  <th className="px-6 py-3 eyebrow text-start">Fleet · Seats</th>
+                  <th className="px-6 py-3 eyebrow text-start">Status</th>
+                  <th className="px-6 py-3 eyebrow text-end">Control</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-hairline">
                 {data.agencies.map((agency) => (
-                  <tr key={agency.id} className="hover:bg-white/5 transition-colors group">
+                  <tr key={agency.id} className="hover:bg-surface-raised/60 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                          {agency.name?.[0] || 'A'}
-                        </div>
-                        <p className="text-sm font-bold text-white uppercase tracking-tight">{agency.name}</p>
+                        <Avatar name={agency.name} size={40} />
+                        <p className="text-sm font-semibold text-foreground">{agency.name}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-md text-white/60 tracking-widest">
-                        {agency.tier}
-                      </span>
+                      {agency.tier === 'BUSINESS' ? (
+                        <Badge variant="trust">{agency.tier}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-text-muted">{agency.tier}</Badge>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-xs font-bold text-white/70">
+                    <td className="px-6 py-4 text-sm font-mono tabular text-text-muted">
                       {agency.fleetSize} · {agency.seats}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn('text-[9px] font-black px-2 py-1 rounded-md tracking-widest border', STATUS_CHIP[agency.subscriptionStatus] ?? STATUS_CHIP.NONE)}>
+                      <Badge variant="outline" className={cn(STATUS_CHIP[agency.subscriptionStatus] ?? STATUS_CHIP.NONE)}>
                         {agency.subscriptionStatus}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-end">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-[9px] h-auto py-1.5"
+                          className="text-xs h-auto py-1.5"
                           isLoading={busyId === agency.id}
                           onClick={() => impersonate(agency)}
                         >
-                          <LogIn className="w-3.5 h-3.5 mr-1" /> Impersonate
+                          <LogIn className="w-3.5 h-3.5 me-1" /> Impersonate
                         </Button>
-                        <Button variant="outline" size="sm" className="text-[9px] h-auto py-1.5" onClick={() => setManaged(agency)}>
-                          <SlidersHorizontal className="w-3.5 h-3.5 mr-1" /> Manage
+                        <Button variant="outline" size="sm" className="text-xs h-auto py-1.5" onClick={() => setManaged(agency)}>
+                          <SlidersHorizontal className="w-3.5 h-3.5 me-1" /> Manage
                         </Button>
                       </div>
                     </td>
@@ -197,14 +201,14 @@ function ManageModal({
     <Modal isOpen onClose={onClose} title={`Manage — ${agency.name}`} description="Subscription & billing">
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Plan</p>
+          <p className="eyebrow px-1">Plan</p>
           <div className="grid grid-cols-4 gap-2">
             {PLANS.map((p) => (
               <button
                 key={p}
                 onClick={() => setPlanKey(p)}
-                className={cn('p-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all',
-                  planKey === p ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20')}
+                className={cn('p-2.5 rounded-xl border text-[10px] font-semibold tracking-wide transition-all',
+                  planKey === p ? 'border-primary bg-primary/10 text-foreground' : 'border-hairline bg-surface text-text-muted hover:bg-surface-raised')}
               >
                 {p}
               </button>
@@ -213,14 +217,14 @@ function ManageModal({
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Lifecycle Status</p>
+          <p className="eyebrow px-1">Lifecycle status</p>
           <div className="flex flex-wrap gap-2">
             {STATUSES.map((s) => (
               <button
                 key={s}
                 onClick={() => setStatus(s)}
-                className={cn('px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest transition-all',
-                  status === s ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20')}
+                className={cn('px-3 py-1.5 rounded-lg border text-[10px] font-semibold tracking-wide transition-all',
+                  status === s ? 'border-primary bg-primary/10 text-foreground' : 'border-hairline bg-surface text-text-muted hover:bg-surface-raised')}
               >
                 {s}
               </button>
@@ -229,13 +233,13 @@ function ManageModal({
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Extend trial (days, optional)</p>
+          <p className="eyebrow px-1">Extend trial (days, optional)</p>
           <input
             type="number"
             min={1}
             value={extendDays}
             onChange={(e) => setExtendDays(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-colors"
+            className="w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-colors"
             placeholder="e.g. 14"
           />
         </div>
@@ -244,8 +248,8 @@ function ManageModal({
           Save Subscription
         </Button>
 
-        <div className="pt-6 border-t border-white/10 space-y-1.5">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1 flex items-center gap-1.5">
+        <div className="pt-6 border-t border-hairline space-y-1.5">
+          <p className="eyebrow px-1 flex items-center gap-1.5">
             <Receipt className="w-3.5 h-3.5" /> Issue a platform invoice (MAD)
           </p>
           <div className="flex gap-2">
@@ -254,7 +258,7 @@ function ManageModal({
               min={1}
               value={invoiceAmount}
               onChange={(e) => setInvoiceAmount(e.target.value)}
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-colors"
+              className="flex-1 bg-surface border border-hairline rounded-xl px-4 py-3 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-colors"
               placeholder="799"
             />
             <Button variant="outline" isLoading={invoicing} onClick={issueInvoice}>Issue</Button>

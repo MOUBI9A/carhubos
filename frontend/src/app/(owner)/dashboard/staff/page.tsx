@@ -1,8 +1,8 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useMemo, useState } from 'react';
 import {
-  UserCog,
   Plus,
   Trash2,
   Pencil,
@@ -17,9 +17,11 @@ import {
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import { Modal } from '@/components/ui/Modal';
 import { SkeletonRows } from '@/components/ui/Skeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
 import { useStaff } from './useStaff';
@@ -35,9 +37,9 @@ import {
 } from './capabilities';
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-primary transition-colors placeholder:text-white/20';
+  'w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors placeholder:text-text-faint';
 
-const labelCls = 'block text-[10px] font-black text-white/40 uppercase tracking-widest px-1 mb-1.5';
+const labelCls = 'eyebrow block px-1 mb-1.5';
 
 const INITIAL_CREATE_FORM = {
   name: '',
@@ -53,6 +55,7 @@ function errorMessage(err: any, fallback: string) {
 }
 
 export default function StaffPage() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const { data: staff, isLoading, error, refetch } = useStaff();
 
@@ -209,11 +212,11 @@ export default function StaffPage() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-black text-white/80 uppercase tracking-tight">Staff Directory Offline</p>
-          <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error}</p>
+          <p className="text-sm font-medium text-foreground">Staff directory offline</p>
+          <p className="text-xs text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
         </Button>
       </div>
     );
@@ -222,87 +225,98 @@ export default function StaffPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* ═══════ Header ═══════ */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white uppercase italic">
-            Staff <span className="text-primary">& Access</span>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t('teamAccess')}
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-2">
-            Team Roles & Capability Management
-          </p>
+          <p className="mt-1.5 text-sm text-text-muted">Team roles and capability management</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="glass h-12" onClick={refetch}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={refetch}>
+            <RefreshCw className="w-4 h-4 me-2" />
             Refresh
           </Button>
-          <Button className="h-12" onClick={() => setIsAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Staff
+          <Button onClick={() => setIsAddOpen(true)}>
+            <Plus className="w-4 h-4 me-2" />
+            Add staff
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* ═══════ Directory ═══════ */}
       {isLoading ? (
-        <Card padding="lg" className="glass border-white/5">
+        <Card padding="lg">
           <SkeletonRows rows={5} />
         </Card>
       ) : sorted.length === 0 ? (
-        <EmptyState
-          icon={UserCog}
-          title="No Staff Yet"
-          description="Add your first teammate to start delegating fleet, booking and finance work."
-          action={
-            <Button onClick={() => setIsAddOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Add Your First Teammate
-            </Button>
-          }
-        />
+        <Card className="flex flex-col items-center gap-5 py-14 text-center">
+          <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
+          <div>
+            <p className="font-medium text-foreground">No staff yet</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
+              Add your first teammate to start delegating fleet, booking and finance work.
+            </p>
+          </div>
+          <Button onClick={() => setIsAddOpen(true)}>
+            <Plus className="w-4 h-4 me-2" /> Add your first teammate
+          </Button>
+        </Card>
       ) : (
-        <Card padding="none" className="glass border-white/5 divide-y divide-white/5 overflow-hidden">
+        <Card padding="none" className="divide-y divide-hairline overflow-hidden">
           {sorted.map((member) => {
             const style = ROLE_STYLES[member.role] ?? DEFAULT_ROLE_STYLE;
+            const orderedCaps = AGENCY_CAPABILITIES.filter((cap) => member.capabilities.includes(cap));
+            const visibleCaps = orderedCaps.slice(0, 4);
+            const overflowCaps = orderedCaps.slice(4);
             return (
               <div
                 key={member.userId}
-                className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 group hover:bg-white/[0.02] transition-colors"
+                className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 group hover:bg-surface-raised transition-colors"
               >
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-sm font-black text-white/40 uppercase shrink-0">
-                  {member.name?.[0] || '?'}
-                </div>
+                <Avatar name={member.name} size={44} />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-black text-white uppercase tracking-tight truncate">{member.name}</p>
-                    <span
-                      className={cn(
-                        'text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border flex items-center gap-1.5 shrink-0',
-                        style.chip,
-                      )}
-                    >
-                      <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />
+                    <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
+                    <Badge variant="outline" className="gap-1.5 shrink-0">
+                      <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} aria-hidden />
                       {member.rolePreset}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="text-[11px] text-white/30 font-medium mt-0.5 truncate">{member.email}</p>
+                  <p className="text-xs text-text-muted mt-0.5 truncate">{member.email}</p>
+
+                  {visibleCaps.length > 0 ? (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {visibleCaps.map((cap) => (
+                        <Badge key={cap} variant="outline" className="font-normal text-text-muted">
+                          {CAPABILITY_LABELS[cap] ?? cap}
+                        </Badge>
+                      ))}
+                      {overflowCaps.length > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="font-normal text-text-faint"
+                          title={overflowCaps.map((cap) => CAPABILITY_LABELS[cap] ?? cap).join(', ')}
+                        >
+                          +{overflowCaps.length} more
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2.5 text-xs text-text-faint">No capabilities assigned</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
-                  <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-center">
-                    <p className="text-xs font-black text-white">{member.capabilities.length}</p>
-                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">
-                      {member.capabilities.length === 1 ? 'Capability' : 'Capabilities'}
-                    </p>
-                  </div>
                   <Button variant="outline" size="sm" onClick={() => openEdit(member)}>
-                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                    <Pencil className="w-3.5 h-3.5 me-2" />
                     Edit
                   </Button>
                   <button
                     onClick={() => setRemovingMember(member)}
                     aria-label={`Remove ${member.name}`}
-                    className="p-2.5 text-white/20 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"
+                    className="p-2.5 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -314,11 +328,11 @@ export default function StaffPage() {
       )}
 
       {/* ═══════ Add Staff Modal ═══════ */}
-      <Modal isOpen={isAddOpen} onClose={closeAddModal} title="Add Staff" description="Create a teammate account">
+      <Modal isOpen={isAddOpen} onClose={closeAddModal} title="Add staff" description="Create a teammate account">
         <form onSubmit={handleCreate} className="space-y-5">
           <div>
             <label htmlFor="staff-name" className={labelCls}>
-              Full Name
+              Full name
             </label>
             <input
               id="staff-name"
@@ -334,11 +348,11 @@ export default function StaffPage() {
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
+              <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
               <input
                 id="staff-email"
                 type="email"
-                className={cn(inputCls, 'pl-11')}
+                className={cn(inputCls, 'ps-11')}
                 value={createForm.email}
                 onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="name@agency.ma"
@@ -348,14 +362,14 @@ export default function StaffPage() {
           </div>
           <div>
             <label htmlFor="staff-password" className={labelCls}>
-              Temporary Password
+              Temporary password
             </label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
+              <Lock className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
               <input
                 id="staff-password"
                 type="password"
-                className={cn(inputCls, 'pl-11')}
+                className={cn(inputCls, 'ps-11')}
                 value={createForm.password}
                 onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
                 placeholder="Min. 8 characters"
@@ -380,7 +394,7 @@ export default function StaffPage() {
                 </option>
               ))}
             </select>
-            <p className="text-[10px] text-white/25 font-medium mt-1.5 px-1">
+            <p className="text-xs text-text-faint mt-1.5 px-1">
               Sets starting capabilities — edit exact access anytime after.
             </p>
           </div>
@@ -389,8 +403,8 @@ export default function StaffPage() {
               Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={isCreating}>
-              {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {isCreating ? 'Adding...' : 'Add Staff'}
+              {isCreating ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
+              {isCreating ? 'Adding...' : 'Add staff'}
             </Button>
           </div>
         </form>
@@ -400,7 +414,7 @@ export default function StaffPage() {
       <Modal
         isOpen={!!editingMember}
         onClose={closeEdit}
-        title="Edit Capabilities"
+        title="Edit capabilities"
         description={editingMember ? `${editingMember.name} · ${editingMember.email}` : undefined}
         size="xl"
         footer={
@@ -410,11 +424,11 @@ export default function StaffPage() {
             </Button>
             <Button onClick={handleSaveCaps} disabled={isSavingCaps}>
               {isSavingCaps ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 me-2 animate-spin" />
               ) : (
-                <ShieldCheck className="w-4 h-4 mr-2" />
+                <ShieldCheck className="w-4 h-4 me-2" />
               )}
-              {isSavingCaps ? 'Saving...' : 'Save Capabilities'}
+              {isSavingCaps ? 'Saving...' : 'Save capabilities'}
             </Button>
           </>
         }
@@ -422,14 +436,14 @@ export default function StaffPage() {
         {editingMember && (
           <div className="space-y-6">
             <div>
-              <p className={labelCls}>Quick Fill From Preset</p>
+              <p className={labelCls}>Quick fill from preset</p>
               <div className="flex flex-wrap gap-2">
                 {CREATE_STAFF_PRESETS.map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[10px] font-black text-white/60 uppercase tracking-widest hover:border-primary/50 hover:text-primary transition-colors"
+                    className="px-3 py-1.5 rounded-lg border border-hairline bg-surface text-xs font-medium text-text-muted hover:border-primary/50 hover:text-primary transition-colors"
                   >
                     {preset}
                   </button>
@@ -437,9 +451,9 @@ export default function StaffPage() {
                 <button
                   type="button"
                   onClick={() => setEditCaps(new Set())}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[10px] font-black text-white/40 uppercase tracking-widest hover:border-danger/50 hover:text-danger transition-colors"
+                  className="px-3 py-1.5 rounded-lg border border-hairline bg-surface text-xs font-medium text-text-faint hover:border-danger/50 hover:text-danger transition-colors"
                 >
-                  Clear All
+                  Clear all
                 </button>
               </div>
             </div>
@@ -460,7 +474,7 @@ export default function StaffPage() {
                             'flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-colors',
                             checked
                               ? 'border-primary/40 bg-primary/10'
-                              : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+                              : 'border-hairline bg-surface hover:bg-surface-raised',
                           )}
                         >
                           <input
@@ -473,13 +487,20 @@ export default function StaffPage() {
                           <span
                             className={cn(
                               'w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-colors',
-                              checked ? 'bg-primary border-primary' : 'border-white/20',
+                              checked ? 'bg-primary border-primary' : 'border-border',
                             )}
                             aria-hidden
                           >
-                            {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                            {checked && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
                           </span>
-                          <span className="text-xs font-bold text-white/80">{CAPABILITY_LABELS[cap]}</span>
+                          <span
+                            className={cn(
+                              'text-xs font-medium',
+                              checked ? 'text-foreground' : 'text-text-muted',
+                            )}
+                          >
+                            {CAPABILITY_LABELS[cap]}
+                          </span>
                         </label>
                       );
                     })}
@@ -488,7 +509,7 @@ export default function StaffPage() {
               ))}
             </div>
 
-            <p className="text-[10px] text-white/25 font-medium">
+            <p className="text-xs text-text-faint">
               {editCaps.size} of {AGENCY_CAPABILITIES.length} capabilities selected. You can only grant capabilities
               you hold yourself.
             </p>
@@ -500,15 +521,15 @@ export default function StaffPage() {
       <Modal
         isOpen={!!removingMember}
         onClose={() => setRemovingMember(null)}
-        title="Remove Staff"
+        title="Remove staff"
         description="This revokes their access immediately"
       >
         {removingMember && (
           <div className="space-y-6">
             <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl flex items-start gap-4">
               <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
-              <p className="text-xs text-white/60 leading-relaxed font-medium">
-                <span className="text-white font-bold">{removingMember.name}</span> ({removingMember.email}) will
+              <p className="text-xs text-text-muted leading-relaxed">
+                <span className="text-foreground font-medium">{removingMember.name}</span> ({removingMember.email}) will
                 permanently lose access to this agency. This cannot be undone.
               </p>
             </div>
@@ -517,8 +538,8 @@ export default function StaffPage() {
                 Cancel
               </Button>
               <Button variant="danger" className="flex-1" onClick={handleConfirmRemove} disabled={isRemoving}>
-                {isRemoving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                {isRemoving ? 'Removing...' : 'Remove Staff'}
+                {isRemoving ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Trash2 className="w-4 h-4 me-2" />}
+                {isRemoving ? 'Removing...' : 'Remove staff'}
               </Button>
             </div>
           </div>

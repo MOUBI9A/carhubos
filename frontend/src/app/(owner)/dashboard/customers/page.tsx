@@ -1,11 +1,10 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
-  Users,
-  ShieldCheck,
   AlertTriangle,
   Phone,
   Mail,
@@ -13,7 +12,6 @@ import {
   Plus,
   Download,
   RefreshCw,
-  CalendarDays,
   SearchX,
   Fingerprint,
 } from 'lucide-react';
@@ -23,13 +21,15 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { AgencyImage } from '@/components/ui/AgencyImage';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
 import { useCustomers } from './useCustomers';
 import {
   CUSTOMER_STATUS_STYLES,
   fullName,
-  initials,
   type CustomerStatus,
 } from './types';
 
@@ -44,9 +44,10 @@ const INITIAL_FORM = {
 };
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20';
+  'w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint';
 
 export default function CustomersPage() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const { data: customers, isLoading, error, refetch } = useCustomers();
 
@@ -158,11 +159,11 @@ export default function CustomersPage() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-black text-white/80 uppercase tracking-tight">Directory Offline</p>
-          <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error}</p>
+          <p className="text-base font-semibold text-foreground">Directory offline</p>
+          <p className="text-sm text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
         </Button>
       </div>
     );
@@ -171,104 +172,90 @@ export default function CustomersPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* ═══════ Header ═══════ */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white uppercase italic">
-            Customer <span className="text-primary">CRM</span>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {t('customerDirectory')}
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-2">
-            Identity Registry & Rental Relationship Intelligence
+          <p className="mt-1.5 text-sm text-text-muted">
+            Directory, rental history and trust signals
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="glass h-12" onClick={exportCsv}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={exportCsv}>
+            <Download className="w-4 h-4 me-2" />
             Export CSV
           </Button>
-          <Button className="h-12 bg-primary" onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Client
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 me-2" />
+            Add customer
           </Button>
         </div>
-      </div>
+      </header>
 
-      {/* ═══════ Stats row ═══════ */}
+      {/* ═══════ Stats strip ═══════ */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
+            <Skeleton key={i} className="h-20 rounded-2xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="glass border-white/5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Directory Size</p>
-                <p className="text-2xl font-black text-white">{stats.total}</p>
-              </div>
-              <Users className="w-6 h-6 text-primary/40" />
-            </div>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-2xl bg-surface border border-hairline p-4">
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.total}</p>
+            <p className="eyebrow mt-1">Directory size</p>
+          </div>
           <button
             className={cn(
-              'glass border-white/5 rounded-2xl p-6 text-left transition-all hover:bg-white/[0.07]',
-              statusFilter === 'ACTIVE' && 'ring-1 ring-success/30',
+              'rounded-2xl bg-surface border border-hairline p-4 text-start transition-all hover:bg-surface-raised',
+              statusFilter === 'ACTIVE' && 'ring-1 ring-primary/40',
             )}
             onClick={() => setStatusFilter(statusFilter === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Active Clients</p>
-                <p className="text-2xl font-black text-success">{stats.active}</p>
-              </div>
-              <ShieldCheck className="w-6 h-6 text-success/40" />
-            </div>
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.active}</p>
+            <p className="eyebrow mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              Active clients
+            </p>
           </button>
           <button
             className={cn(
-              'glass border-white/5 rounded-2xl p-6 text-left transition-all hover:bg-white/[0.07]',
-              statusFilter === 'BLACKLISTED' && 'ring-1 ring-danger/30',
+              'rounded-2xl bg-surface border border-hairline p-4 text-start transition-all hover:bg-surface-raised',
+              statusFilter === 'BLACKLISTED' && 'ring-1 ring-primary/40',
             )}
             onClick={() => setStatusFilter(statusFilter === 'BLACKLISTED' ? 'ALL' : 'BLACKLISTED')}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Blacklisted</p>
-                <p className="text-2xl font-black text-danger">{stats.blacklisted}</p>
-              </div>
-              <AlertTriangle className="w-6 h-6 text-danger/40" />
-            </div>
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.blacklisted}</p>
+            <p className="eyebrow mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-danger" />
+              Blacklisted
+            </p>
           </button>
-          <Card className="glass border-white/5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Total Rentals</p>
-                <p className="text-2xl font-black text-white">{stats.totalBookings}</p>
-              </div>
-              <CalendarDays className="w-6 h-6 text-primary/40" />
-            </div>
-          </Card>
+          <div className="rounded-2xl bg-surface border border-hairline p-4">
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.totalBookings}</p>
+            <p className="eyebrow mt-1">Total rentals</p>
+          </div>
         </div>
       )}
 
       {/* ═══════ Search ═══════ */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" />
+        <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search name, phone, email or identity number..."
-          className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-white outline-none focus:border-primary transition-all placeholder:text-white/20"
+          className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
         />
       </div>
 
       {/* ═══════ Directory ═══════ */}
       {isLoading ? (
-        <Card padding="none" className="glass border-white/5 p-6 space-y-4">
+        <Card padding="none" className="p-6 space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4">
-              <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+              <Skeleton className="w-10 h-10 rounded-full shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="w-1/3 h-4" />
                 <Skeleton className="w-1/4 h-3" />
@@ -278,68 +265,75 @@ export default function CustomersPage() {
           ))}
         </Card>
       ) : (customers?.length ?? 0) === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No Clients Registered"
-          description="Your customer directory is empty. Register your first client to start booking rentals and building trust history."
-          action={
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Register First Client
-            </Button>
-          }
-        />
+        <Card className="flex flex-col items-center gap-5 py-14 text-center">
+          <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
+          <div>
+            <p className="font-medium text-foreground">No customers yet</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
+              Register your first client to start booking rentals and building trust history.
+            </p>
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 me-2" /> Add customer
+          </Button>
+        </Card>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
-          title="No Matching Clients"
+          title="No matching clients"
           description="No clients match your current search or filter."
           action={
             <Button variant="outline" size="sm" onClick={() => { setQuery(''); setStatusFilter('ALL'); }}>
-              Clear Filters
+              Clear filters
             </Button>
           }
         />
       ) : (
-        <Card padding="none" className="glass border-white/5 overflow-hidden">
-          <div className="divide-y divide-white/5">
+        <Card padding="none" className="overflow-hidden">
+          {/* Column headers */}
+          <div className="hidden sm:flex items-center gap-5 px-5 py-3 border-b border-hairline">
+            <p className="eyebrow flex-1">Client</p>
+            <p className="eyebrow w-16 text-end">Rentals</p>
+            <p className="eyebrow w-24 text-end">Status</p>
+            <span className="w-4 shrink-0" aria-hidden />
+          </div>
+          <div className="divide-y divide-hairline">
             {filtered.map((customer) => {
               const style = CUSTOMER_STATUS_STYLES[customer.status];
               return (
                 <Link key={customer.id} href={`/dashboard/customers/${customer.id}`}>
-                  <div className="flex items-center gap-5 px-6 py-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <span className="text-sm font-black text-primary">{initials(customer)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">
-                        {fullName(customer)}
-                      </p>
-                      <div className="flex items-center gap-4 mt-1 flex-wrap">
-                        <span className="text-[10px] font-bold text-white/40 flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {customer.phone}
-                        </span>
-                        {customer.email && (
-                          <span className="text-[10px] font-bold text-white/40 items-center gap-1 hidden sm:flex">
-                            <Mail className="w-3 h-3" /> {customer.email}
+                  <div className="flex items-center gap-5 px-5 py-4 hover:bg-surface-raised transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <Avatar name={fullName(customer)} size={40} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                          {fullName(customer)}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-3 flex-wrap text-xs text-text-muted">
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {customer.phone}
                           </span>
-                        )}
-                        <span className="text-[10px] font-bold text-white/25 items-center gap-1 hidden md:flex">
-                          <Fingerprint className="w-3 h-3" /> {customer.identityType} • {customer.identityNumber}
-                        </span>
+                          {customer.email && (
+                            <span className="hidden sm:flex items-center gap-1">
+                              <Mail className="w-3 h-3" /> {customer.email}
+                            </span>
+                          )}
+                          <span className="hidden md:flex items-center gap-1 font-mono tabular text-text-faint">
+                            <Fingerprint className="w-3 h-3" /> {customer.identityType} · {customer.identityNumber}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right hidden sm:block shrink-0">
-                      <p className="text-sm font-black text-white">{customer._count?.bookings ?? 0}</p>
-                      <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Rentals</p>
+                    <div className="hidden sm:block w-16 text-end shrink-0">
+                      <p className="text-sm font-mono tabular text-foreground">{customer._count?.bookings ?? 0}</p>
                     </div>
-                    <span className={cn(
-                      'text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border flex items-center gap-1.5 shrink-0',
-                      style.chip,
-                    )}>
-                      <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />
-                      {style.label}
+                    <span className="flex sm:w-24 justify-end shrink-0">
+                      <Badge variant={customer.status === 'BLACKLISTED' ? 'destructive' : 'outline'}>
+                        <span className={cn('me-1 w-1.5 h-1.5 rounded-full', style.dot)} />
+                        {style.label}
+                      </Badge>
                     </span>
-                    <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-text-faint group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
                   </div>
                 </Link>
               );
@@ -352,42 +346,42 @@ export default function CustomersPage() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        title="Register Client"
+        title="Register client"
         description="Add a customer to the identity registry"
       >
         <form onSubmit={handleAddCustomer} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">First Name *</p>
+              <p className="eyebrow px-1">First name *</p>
               <input value={form.firstName} onChange={setField('firstName')} placeholder="Ahmed" className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Last Name *</p>
+              <p className="eyebrow px-1">Last name *</p>
               <input value={form.lastName} onChange={setField('lastName')} placeholder="Benali" className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Phone *</p>
+              <p className="eyebrow px-1">Phone *</p>
               <input value={form.phone} onChange={setField('phone')} placeholder="+212 6..." className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Email</p>
+              <p className="eyebrow px-1">Email</p>
               <input value={form.email} onChange={setField('email')} type="email" placeholder="Optional" className={inputCls} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">ID Type</p>
+              <p className="eyebrow px-1">ID type</p>
               <select value={form.identityType} onChange={setField('identityType')} className={cn(inputCls, 'appearance-none')}>
                 <option value="CIN">CIN</option>
                 <option value="PASSPORT">Passport</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">ID Number *</p>
-              <input value={form.identityNumber} onChange={setField('identityNumber')} placeholder="AB123456" className={inputCls} />
+              <p className="eyebrow px-1">ID number *</p>
+              <input value={form.identityNumber} onChange={setField('identityNumber')} placeholder="AB123456" className={cn(inputCls, 'font-mono tabular')} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Nationality</p>
+              <p className="eyebrow px-1">Nationality</p>
               <input value={form.nationality} onChange={setField('nationality')} placeholder="MA" className={inputCls} />
             </div>
           </div>
@@ -396,7 +390,7 @@ export default function CustomersPage() {
               Cancel
             </Button>
             <Button type="submit" className="flex-1 py-4" isLoading={isSubmitting}>
-              {isSubmitting ? 'Registering...' : 'Register Client'}
+              {isSubmitting ? 'Registering...' : 'Register client'}
             </Button>
           </div>
         </form>

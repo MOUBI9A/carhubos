@@ -25,12 +25,33 @@ const mockPendingPayment = {
   id: 'pay-1',
   amount: 1050,
   method: 'CASH',
+  type: 'INCOME',
   invoice: {
     booking: {
       customer: { firstName: 'Sara', lastName: 'L.' },
       car: { brand: 'Renault', model: 'Clio' },
     },
   },
+};
+
+const mockRecentPayment = {
+  id: 'pay-2',
+  amount: 800,
+  method: 'TRANSFER',
+  type: 'INCOME',
+  status: 'VERIFIED',
+  invoice: {
+    booking: {
+      customer: { firstName: 'Omar', lastName: 'B.' },
+      car: { brand: 'Dacia', model: 'Logan' },
+    },
+  },
+};
+
+const mockSummary = {
+  total: 5000,
+  byCategory: { RENT: 5000 },
+  count: 1,
 };
 
 const renderWithProviders = (ui: React.ReactElement) => {
@@ -48,6 +69,9 @@ describe('FinancialBrain Page', () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/expenses') return Promise.resolve({ data: [mockExpense] });
       if (url === '/payments/pending') return Promise.resolve({ data: [mockPendingPayment] });
+      if (url === '/payments/recent') return Promise.resolve({ data: [mockRecentPayment] });
+      if (url === '/expenses/summary') return Promise.resolve({ data: mockSummary });
+      if (url === '/bookings') return Promise.resolve({ data: [] });
       return Promise.reject(new Error(`unexpected GET ${url}`));
     });
     vi.mocked(api.post).mockResolvedValue({ data: {} });
@@ -58,6 +82,8 @@ describe('FinancialBrain Page', () => {
     expect(await screen.findByText('Office rent')).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith('/expenses');
     expect(api.get).toHaveBeenCalledWith('/payments/pending');
+    expect(api.get).toHaveBeenCalledWith('/payments/recent');
+    expect(api.get).toHaveBeenCalledWith('/expenses/summary');
   });
 
   it('submits a new expense and reloads the ledger', async () => {

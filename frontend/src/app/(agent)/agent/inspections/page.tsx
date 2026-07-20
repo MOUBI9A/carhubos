@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, Camera, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Camera, FileText, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { AgencyImage, CarPhoto } from '@/components/ui/AgencyImage';
+import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
@@ -100,7 +102,7 @@ export default function Inspections() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
-          <p className="text-text-muted font-medium text-xs mt-1">{t('subtitle')}</p>
+          <p className="mt-1 text-sm text-text-muted">{t('subtitle')}</p>
         </div>
         <Button onClick={() => setIsInspectionModalOpen(true)}>
           <Camera className="w-4 h-4 me-2" />
@@ -127,23 +129,36 @@ export default function Inspections() {
               const damages = damageCount(item.damages);
               return (
                 <Card key={item.id} className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                  <div className="flex items-center gap-5 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center border bg-success/10 text-success border-success/20 shrink-0">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <CarPhoto
+                      alt={`${item.car?.brand || ''} ${item.car?.model || ''}`.trim() || t('vehicle')}
+                      className="w-24 shrink-0"
+                    />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <h4 className="font-semibold text-foreground truncate">{item.car?.brand} {item.car?.model}</h4>
-                        <span className="text-[8px] font-semibold bg-surface-raised px-1.5 py-0.5 rounded-sm tracking-widest text-text-muted">{item.car?.licensePlate}</span>
+                        <span className="font-mono tabular text-[10px] text-text-faint bg-surface-raised border border-hairline px-1.5 py-0.5 rounded-sm shrink-0">{item.car?.licensePlate}</span>
                       </div>
-                      <p className="text-xs text-text-muted font-medium mt-0.5">
-                        {item.type === 'PRE_RENTAL' ? t('preRental') : t('postRental')} · {item.inspector?.name || '—'}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 text-xs text-text-muted min-w-0">
+                        <span className="shrink-0">{item.type === 'PRE_RENTAL' ? t('preRental') : t('postRental')}</span>
+                        <span className="text-text-faint">·</span>
+                        {item.inspector?.name ? (
+                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                            <Avatar name={item.inspector.name} size={18} />
+                            <span className="truncate">{item.inspector.name}</span>
+                          </span>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-5">
-                    {damages > 0 && <span className="text-[9px] font-semibold text-danger uppercase">{damages} {t('damages')}</span>}
-                    <span className="text-[10px] font-semibold text-success uppercase">{t('validity')}: {t('completed')}</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <PassFailPill
+                      damages={damages}
+                      passLabel={`${t('validity')}: ${t('completed')}`}
+                      failLabel={`${damages} ${t('damages')}`}
+                    />
                     <Button size="sm" variant="outline" onClick={() => setSelectedReport(item)}>
                       {t('review')}
                       <ArrowRight className="ms-2 w-3 h-3" />
@@ -152,17 +167,37 @@ export default function Inspections() {
                 </Card>
               );
             })}
-            {!inspections.length && <p className="text-sm text-text-muted">{t('noInspections')}</p>}
+            {!inspections.length && (
+              <Card padding="none" className="overflow-hidden">
+                <AgencyImage
+                  src="/img/car-street.webp"
+                  alt=""
+                  slot="car"
+                  ratio="21 / 9"
+                  rounded="rounded-none"
+                />
+                <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-semibold text-foreground">{t('noInspections')}</h4>
+                    <p className="text-xs text-text-muted mt-1">{t('subtitle')}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setIsInspectionModalOpen(true)}>
+                    <Camera className="w-4 h-4 me-2" />
+                    {t('initialize')}
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
         </>
       )}
 
-      <Card className="bg-primary/5 border-primary/20">
+      <Card>
         <div className="flex items-start gap-4">
-          <ShieldCheck className="w-6 h-6 text-primary shrink-0 mt-1" />
+          <ShieldCheck className="w-5 h-5 text-metal shrink-0 mt-0.5" />
           <div>
-            <CardTitle className="text-primary text-xs">{t('protocol')}</CardTitle>
-            <p className="text-[11px] text-text-muted leading-relaxed mt-1 italic">{t('protocolBody')}</p>
+            <CardTitle className="text-sm">{t('protocol')}</CardTitle>
+            <p className="text-xs text-text-muted leading-relaxed mt-1">{t('protocolBody')}</p>
           </div>
         </div>
       </Card>
@@ -171,7 +206,7 @@ export default function Inspections() {
         <form onSubmit={handleStartInspection} className="space-y-6">
           <label className="space-y-1.5 block">
             <span className="eyebrow px-1">{t('vehicle')}</span>
-            <select name="carId" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground">
+            <select name="carId" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors">
               <option value="">{t('selectVehicle')}</option>
               {cars.map((car) => <option key={car.id} value={car.id}>{car.brand} {car.model} · {car.licensePlate}</option>)}
             </select>
@@ -181,21 +216,21 @@ export default function Inspections() {
             <div className="grid grid-cols-2 gap-4">
               <label className="cursor-pointer">
                 <input type="radio" name="type" value="PRE_RENTAL" defaultChecked className="sr-only peer" />
-                <span className="block p-4 rounded-xl border border-hairline bg-surface-raised text-center peer-checked:border-primary peer-checked:bg-violet-soft">
+                <span className="block p-4 rounded-xl border border-hairline bg-surface-raised text-center transition-all peer-checked:border-primary peer-checked:bg-violet-soft">
                   <strong className="text-xs font-semibold block">{t('preRental')}</strong><small className="text-[9px] text-text-muted">{t('checkout')}</small>
                 </span>
               </label>
               <label className="cursor-pointer">
                 <input type="radio" name="type" value="POST_RENTAL" className="sr-only peer" />
-                <span className="block p-4 rounded-xl border border-hairline bg-surface-raised text-center peer-checked:border-primary peer-checked:bg-violet-soft">
+                <span className="block p-4 rounded-xl border border-hairline bg-surface-raised text-center transition-all peer-checked:border-primary peer-checked:bg-violet-soft">
                   <strong className="text-xs font-semibold block">{t('postRental')}</strong><small className="text-[9px] text-text-muted">{t('checkin')}</small>
                 </span>
               </label>
             </div>
           </fieldset>
           <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1.5 block"><span className="eyebrow">{t('fuel')}</span><input name="fuelLevel" type="number" min="0" max="8" defaultValue="8" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground" /></label>
-            <label className="space-y-1.5 block"><span className="eyebrow">{t('mileage')}</span><input name="mileage" type="number" min="0" defaultValue="0" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground" /></label>
+            <label className="space-y-1.5 block"><span className="eyebrow px-1">{t('fuel')}</span><input name="fuelLevel" type="number" min="0" max="8" defaultValue="8" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors" /></label>
+            <label className="space-y-1.5 block"><span className="eyebrow px-1">{t('mileage')}</span><input name="mileage" type="number" min="0" defaultValue="0" required className="w-full bg-surface-raised border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors" /></label>
           </div>
           <p className="text-[10px] font-medium text-text-muted">{t('enabled')}</p>
           <Button type="submit" className="w-full">{t('launch')}</Button>
@@ -205,8 +240,22 @@ export default function Inspections() {
       <Modal isOpen={!!selectedReport} onClose={() => setSelectedReport(null)} title={t('reviewTitle')} description={`${selectedReport?.car?.brand || ''} ${selectedReport?.car?.model || ''}`}>
         {selectedReport && (
           <div className="space-y-6">
+            <CarPhoto
+              alt={`${selectedReport.car?.brand || ''} ${selectedReport.car?.model || ''}`.trim() || t('vehicle')}
+              plate={selectedReport.car?.licensePlate}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <PassFailPill
+                damages={damageCount(selectedReport.damages)}
+                passLabel={`${t('validity')}: ${t('completed')}`}
+                failLabel={`${damageCount(selectedReport.damages)} ${t('damages')}`}
+              />
+              <span className="font-mono tabular text-[11px] text-text-faint">
+                {new Date(selectedReport.createdAt).toLocaleDateString()}
+              </span>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4].map((index) => <div key={index} className="aspect-video bg-surface-raised rounded-xl border border-hairline flex items-center justify-center"><Camera className="w-6 h-6 text-text-faint" /></div>)}
+              {[1, 2, 3, 4].map((index) => <AgencyImage key={index} alt="" slot="car" ratio="16 / 9" />)}
             </div>
             <div className="p-4 glass-card">
               <p className="eyebrow mb-2">{t('internalNote')}</p>
@@ -220,6 +269,22 @@ export default function Inspections() {
         )}
       </Modal>
     </div>
+  );
+}
+
+function PassFailPill({ damages, passLabel, failLabel }: { damages: number; passLabel: string; failLabel: string }) {
+  const passed = damages === 0;
+  const Icon = passed ? ShieldCheck : ShieldAlert;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
+        passed ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger',
+      )}
+    >
+      <Icon className="w-3.5 h-3.5 shrink-0" />
+      {passed ? passLabel : failLabel}
+    </span>
   );
 }
 

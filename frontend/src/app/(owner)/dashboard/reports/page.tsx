@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -47,6 +48,7 @@ const REPORTS = [
 ];
 
 export default function ReportsPage() {
+  const t = useTranslations('ownerPages');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export default function ReportsPage() {
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col gap-2">
         <p className="eyebrow">Intelligence hub</p>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Report factory</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('reportFactory')}</h1>
         <p className="text-sm text-text-muted max-w-2xl">
           Generate business audits and institutional reports from your live ERP data.
         </p>

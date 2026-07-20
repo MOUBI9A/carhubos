@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +23,7 @@ import { useToast } from '@/lib/contexts/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function FleetMap() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [selectedCar, setSelectedCar] = useState<any>(null);
 
@@ -35,7 +37,7 @@ export default function FleetMap() {
     <div className="h-[calc(100vh-140px)] flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Fleet map</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('fleetMap')}</h1>
           <p className="mt-1.5 flex items-center gap-2 eyebrow">
             <Signal className="w-3 h-3 text-success" />
             Live telemetry · <span className="font-mono tabular">14</span> active nodes
@@ -131,7 +133,7 @@ export default function FleetMap() {
                              <p className="eyebrow">Speed</p>
                              <p className="text-sm font-mono tabular text-foreground">{car.speed}</p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-end">
                              <p className="eyebrow">Energy</p>
                              <p className={cn("text-sm font-mono tabular", car.fuel === '10%' ? 'text-danger' : 'text-foreground')}>{car.fuel}</p>
                           </div>
@@ -148,7 +150,7 @@ export default function FleetMap() {
                  <div>
                     <p className="eyebrow">Prediction</p>
                     <p className="text-xs text-text-muted leading-relaxed mt-2">
-                       Vehicle <span className="font-mono tabular text-foreground">#Clio-987</span> is entering a high-traffic zone. ETA delay projected: **14 mins**.
+                       Vehicle <span className="font-mono tabular text-foreground">#Clio-987</span> is entering a high-traffic zone. ETA delay projected: <span className="font-medium text-foreground">14 mins</span>.
                     </p>
                  </div>
               </div>

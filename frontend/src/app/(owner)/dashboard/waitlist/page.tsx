@@ -1,15 +1,15 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
-  Users,
-  Clock,
   MessageSquare,
-  AlertCircle,
-  TrendingDown,
   Plus,
   Phone,
   Zap,
@@ -35,7 +35,14 @@ interface RefusalLog {
   createdAt: string;
 }
 
+const STATUS_META: Record<RefusalLog['status'], { label: string; dot: string }> = {
+  WAITING: { label: 'Waiting', dot: 'bg-warning' },
+  RECOVERED: { label: 'Recovered', dot: 'bg-success' },
+  LOST: { label: 'Lost', dot: 'bg-danger' },
+};
+
 export default function WaitlistRefusals() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [isRefusalModalOpen, setIsRefusalModalOpen] = useState(false);
   const [refusals, setRefusals] = useState<RefusalLog[]>([]);
@@ -124,155 +131,163 @@ export default function WaitlistRefusals() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white uppercase">Waitlist & Refusals</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">Demand Capture & Revenue Recovery</p>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('waitlist')}</h1>
+          <p className="mt-1.5 text-sm text-text-muted">Demand capture and revenue recovery</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <Button variant="outline" onClick={fetchRefusals}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 me-2" />
             Refresh
           </Button>
-          <div className="hidden md:flex bg-danger/10 border border-danger/20 px-4 py-2 rounded-xl items-center gap-3">
-            <TrendingDown className="w-4 h-4 text-danger" />
-            <div>
-              <p className="text-[8px] font-black text-danger uppercase tracking-widest">Aggregate Opportunity Loss</p>
-              <p className="text-xs font-black text-white">{totalOpportunityLoss.toLocaleString()} MAD</p>
-            </div>
-          </div>
           <Button onClick={() => setIsRefusalModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Log Refusal
+            <Plus className="w-4 h-4 me-2" />
+            Log refusal
           </Button>
         </div>
       </header>
 
-      {/* Recovery metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="bg-primary/5 border-primary/20 relative overflow-hidden group">
-          <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 transition-transform" />
-          <div className="flex items-start gap-4 relative z-10">
-            <AlertCircle className="w-6 h-6 text-primary shrink-0 mt-1" />
-            <div>
-              <CardTitle className="text-primary uppercase tracking-tighter">Acquisition Intelligence</CardTitle>
-              <p className="text-xs text-white/60 leading-relaxed mt-2 font-medium">
-                You have <span className="text-white font-bold">{waitingRefusals.length} open demand signals</span> this period. 
-                Aggregate opportunity: <span className="text-white font-bold">{totalOpportunityLoss.toLocaleString()} MAD</span>.
-              </p>
-            </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-2xl bg-surface border border-hairline p-4">
+          <p className="text-2xl font-semibold text-foreground font-mono tabular">{waitingRefusals.length}</p>
+          <p className="eyebrow mt-1 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+            Open signals
+          </p>
+        </div>
+        <div className="rounded-2xl bg-surface border border-hairline p-4">
+          <p className="text-2xl font-semibold text-foreground font-mono tabular">
+            {totalOpportunityLoss.toLocaleString()}
+          </p>
+          <p className="eyebrow mt-1 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-danger" />
+            MAD at risk
+          </p>
+        </div>
+        <div className="rounded-2xl bg-surface border border-hairline p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{recoveryRate}%</p>
+            <Zap className="w-4 h-4 text-success" />
           </div>
-        </Card>
-
-        <Card className="border-white/5 flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle className="uppercase tracking-widest text-[10px] text-white/40">Recovery Intensity</CardTitle>
-            <Zap className="w-4 h-4 text-success animate-pulse" />
+          <p className="eyebrow mt-1">Recovery rate</p>
+          <div className="h-1 w-full bg-surface-raised rounded-full overflow-hidden mt-3">
+            <div
+              className="h-full bg-success rounded-full transition-all duration-700"
+              style={{ width: `${recoveryRate}%` }}
+            />
           </div>
-          <div className="space-y-3">
-            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-              <div
-                className="h-full bg-success shadow-[0_0_12px_rgba(34,197,94,0.4)] transition-all duration-1000"
-                style={{ width: `${recoveryRate}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-              <span className="text-success">{recoveryRate}% RECOVERED</span>
-              <span className="text-white/20">{refusals.length} Total Logged</span>
-            </div>
-          </div>
-        </Card>
+        </div>
       </div>
 
       {/* Queue */}
-      <div className="space-y-6">
-        <CardHeader className="px-0">
-          <CardTitle className="uppercase tracking-widest text-white/60">Forensic Demand Queue</CardTitle>
-          <CardDescription>{waitingRefusals.length} active signal{waitingRefusals.length !== 1 ? 's' : ''} awaiting recovery</CardDescription>
-        </CardHeader>
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Demand queue</h2>
+          <p className="mt-0.5 text-sm text-text-muted">
+            {waitingRefusals.length} active signal{waitingRefusals.length !== 1 ? 's' : ''} awaiting recovery
+          </p>
+        </div>
 
         {waitingRefusals.length === 0 ? (
-          <Card className="py-16 flex flex-col items-center justify-center">
-            <CheckCircle2 className="w-12 h-12 text-success/20 mb-4" />
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No Pending Demand Signals</p>
-            <p className="text-[9px] text-white/10 mt-1">All waitlist entries have been resolved</p>
-          </Card>
+          <EmptyState
+            icon={CheckCircle2}
+            title="No pending demand"
+            description="All waitlist entries have been resolved."
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {waitingRefusals.map((item) => (
-              <Card key={item.id} variant="outline" className="flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:border-primary/50 transition-all relative overflow-hidden">
-                <div className="flex items-center gap-6">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center transition-transform group-hover:scale-110">
-                    <Clock className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-bold text-white uppercase tracking-tight">{item.customerName}</h4>
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded-sm tracking-widest uppercase border bg-amber-500/10 text-amber-500 border-amber-500/20">
-                        WAITING
-                      </span>
+          <Card padding="none" className="overflow-hidden">
+            <div className="hidden sm:flex items-center gap-5 px-5 py-3 border-b border-hairline">
+              <p className="eyebrow flex-1">Customer</p>
+              <p className="eyebrow w-28 text-end">Value</p>
+              <p className="eyebrow w-24 text-end">Status</p>
+              <span className="w-[120px] shrink-0" aria-hidden />
+            </div>
+            <div className="divide-y divide-hairline">
+              {waitingRefusals.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 px-5 py-4 hover:bg-surface-raised transition-colors"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <Avatar name={item.customerName} size={40} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{item.customerName}</p>
+                      <div className="mt-0.5 flex items-center gap-3 flex-wrap text-xs text-text-muted">
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> {item.customerPhone}
+                        </span>
+                        <span className="text-text-faint">{item.requestedCarType}</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-white/40 font-medium">
-                      {item.customerPhone} • <span className="text-primary/60 font-black uppercase tracking-widest text-[9px]">{item.requestedCarType}</span>
+                  </div>
+
+                  <div className="sm:w-28 sm:text-end shrink-0">
+                    <p className="text-sm font-mono tabular text-foreground">
+                      {item.potentialRevenue.toLocaleString()} MAD
                     </p>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between md:justify-end gap-6 md:gap-12 border-t md:border-t-0 border-white/5 pt-4 md:pt-0 w-full md:w-auto">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-danger uppercase tracking-widest">Value Delta</p>
-                    <p className="text-sm font-black text-white">{item.potentialRevenue.toLocaleString()} MAD</p>
-                  </div>
-                  <div className="flex gap-2">
+                  <span className="flex sm:w-24 justify-end shrink-0">
+                    <Badge variant="outline">
+                      <span className={cn('me-1 w-1.5 h-1.5 rounded-full', STATUS_META[item.status].dot)} />
+                      {STATUS_META[item.status].label}
+                    </Badge>
+                  </span>
+
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
                       size="sm"
-                      variant="primary"
                       onClick={() => markRecovered(item.id)}
                       disabled={updatingId === item.id}
                     >
-                      {updatingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Zap className="w-3.5 h-3.5 mr-2" />}
+                      {updatingId === item.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin me-1.5" />
+                      ) : (
+                        <Zap className="w-3.5 h-3.5 me-1.5" />
+                      )}
                       Recover
                     </Button>
                     <button
                       onClick={() => markLost(item.id)}
                       disabled={updatingId === item.id}
-                      className="p-2 text-white/10 hover:text-danger hover:bg-danger/10 rounded-lg transition-all disabled:opacity-50"
+                      aria-label="Mark as lost"
+                      className="p-2 text-text-faint hover:text-danger hover:bg-danger/10 rounded-lg transition-all disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Card>
         )}
 
         {/* Recovered entries */}
         {recoveredRefusals.length > 0 && (
-          <>
-            <CardHeader className="px-0 pt-4">
-              <CardTitle className="uppercase tracking-widest text-success/60 text-sm">Recovered Signals</CardTitle>
-            </CardHeader>
-            <div className="grid grid-cols-1 gap-3">
-              {recoveredRefusals.map((item) => (
-                <Card key={item.id} variant="outline" className="flex items-center justify-between gap-4 opacity-60 border-success/20">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center">
-                      <CheckCircle2 className="w-5 h-5 text-success" />
+          <div className="space-y-3 pt-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              Recovered
+            </h2>
+            <Card padding="none" className="overflow-hidden">
+              <div className="divide-y divide-hairline">
+                {recoveredRefusals.map((item) => (
+                  <div key={item.id} className="flex items-center gap-4 px-5 py-3.5">
+                    <Avatar name={item.customerName} size={32} />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{item.customerName}</p>
+                      <p className="text-xs text-text-muted">{item.requestedCarType}</p>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-white text-sm uppercase tracking-tight">{item.customerName}</h4>
-                      <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest">{item.requestedCarType}</p>
-                    </div>
+                    <p className="text-sm font-mono tabular text-text-muted">
+                      {item.potentialRevenue.toLocaleString()} MAD
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-success uppercase tracking-widest">Recovered</p>
-                    <p className="text-sm font-black text-white/60">{item.potentialRevenue.toLocaleString()} MAD</p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </>
+                ))}
+              </div>
+            </Card>
+          </div>
         )}
       </div>
 
@@ -280,46 +295,66 @@ export default function WaitlistRefusals() {
       <Modal
         isOpen={isRefusalModalOpen}
         onClose={() => setIsRefusalModalOpen(false)}
-        title="Log Rental Refusal"
+        title="Log rental refusal"
         description="Quantify demand for fleet optimization"
       >
-        <form onSubmit={handleAddRefusal} className="space-y-8">
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Customer Identity</p>
-            <input name="name" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" placeholder="Enter full name..." />
+        <form onSubmit={handleAddRefusal} className="space-y-6">
+          <div className="space-y-1.5">
+            <p className="eyebrow px-1">Customer name</p>
+            <input
+              name="name"
+              required
+              className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+              placeholder="Enter full name..."
+            />
           </div>
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Contact Number</p>
+          <div className="space-y-1.5">
+            <p className="eyebrow px-1">Contact number</p>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-              <input name="phone" required className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" placeholder="+212 6..." />
+              <Phone className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint" />
+              <input
+                name="phone"
+                required
+                className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                placeholder="+212 6..."
+              />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Desired Tier</p>
-              <select name="carType" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none appearance-none focus:border-primary transition-all">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <p className="eyebrow px-1">Desired tier</p>
+              <select
+                name="carType"
+                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
+              >
                 <option>ECONOMY</option>
                 <option>COMPACT</option>
                 <option>SUV</option>
                 <option>LUXURY</option>
               </select>
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Opportunity Value (MAD)</p>
+            <div className="space-y-1.5">
+              <p className="eyebrow px-1">Opportunity value (MAD)</p>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                <input name="value" type="number" className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary transition-all" placeholder="0" />
+                <DollarSign className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint" />
+                <input
+                  name="value"
+                  type="number"
+                  className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                  placeholder="0"
+                />
               </div>
             </div>
           </div>
-          <div className="p-5 glass rounded-3xl border-primary/20 bg-primary/[0.03] flex items-center gap-4">
-            <MessageSquare className="w-5 h-5 text-primary" />
-            <p className="text-[10px] font-bold text-white/60 uppercase leading-relaxed">Demand signal will be logged and tracked for fleet optimization analytics.</p>
+          <div className="flex items-center gap-3.5 rounded-2xl border border-hairline bg-surface p-4">
+            <MessageSquare className="w-4 h-4 text-text-muted shrink-0" />
+            <p className="text-xs leading-relaxed text-text-muted">
+              Demand signal will be logged and tracked for fleet optimization analytics.
+            </p>
           </div>
-          <Button type="submit" className="w-full py-4 font-black uppercase tracking-widest" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            {isSubmitting ? 'Logging...' : 'Instantiate Demand Log'}
+          <Button type="submit" className="w-full py-3.5" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
+            {isSubmitting ? 'Logging...' : 'Log demand'}
           </Button>
         </form>
       </Modal>

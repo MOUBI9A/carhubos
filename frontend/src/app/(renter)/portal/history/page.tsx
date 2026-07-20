@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { History, Calendar, Car, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
+import { AgencyImage, CarPhoto } from '@/components/ui/AgencyImage';
+import { History, Calendar, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
-import { BOOKING_STATUS_STYLES, formatDate, type PortalBooking } from '../types';
+import { useTranslations } from 'next-intl';
+import { useFormat } from '@/lib/useFormat';
+import { BOOKING_STATUS_STYLES, type PortalBooking } from '../types';
 
 function errMessage(err: any, fallback: string): string {
   return err?.response?.data?.message || err?.message || fallback;
@@ -41,6 +43,8 @@ function useRenterBookings() {
 }
 
 export default function RentalHistory() {
+  const t = useTranslations('renterHistory');
+  const { date, money } = useFormat();
   const { bookings, isLoading, error, refetch } = useRenterBookings();
   const completedCount = bookings.filter((b) => b.status === 'COMPLETED').length;
 
@@ -48,15 +52,15 @@ export default function RentalHistory() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white">Rental History</h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs mt-1">
-            Your Journey Ledger & Receipts
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
+          <p className="text-sm text-text-muted mt-1">
+            {t('subtitle')}
           </p>
         </div>
         <Link href="/portal/book">
           <Button variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Book a Car
+            <Plus className="w-4 h-4 me-2" />
+            {t('bookCar')}
           </Button>
         </Link>
       </header>
@@ -64,10 +68,11 @@ export default function RentalHistory() {
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} variant="outline" className="flex items-center gap-6">
-              <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+            <Card key={i} className="flex items-center gap-6">
+              <Skeleton className="w-24 h-16 rounded-lg shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="w-1/3 h-4" />
+                <Skeleton className="w-1/5 h-2.5" />
                 <Skeleton className="w-1/2 h-3" />
               </div>
               <Skeleton className="w-20 h-8 rounded-lg shrink-0" />
@@ -80,26 +85,34 @@ export default function RentalHistory() {
             <AlertTriangle className="w-8 h-8 text-danger" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-black text-white/80 uppercase tracking-tight">History Unavailable</p>
-            <p className="text-xs font-medium text-white/40 mt-2 max-w-sm">{error}</p>
+            <p className="text-sm font-semibold text-foreground">{t('historyUnavailable')}</p>
+            <p className="text-xs text-text-muted mt-2 max-w-sm leading-relaxed">{error}</p>
           </div>
           <Button variant="outline" onClick={refetch}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Retry
+            <RefreshCw className="w-4 h-4 me-2" /> {t('retry')}
           </Button>
         </div>
       ) : bookings.length === 0 ? (
-        <EmptyState
-          icon={History}
-          title="No Rentals Yet"
-          description="Your completed and upcoming rentals will appear here once you book your first car."
-          action={
-            <Link href="/portal/book">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" /> Book Your First Car
-              </Button>
-            </Link>
-          }
-        />
+        <Card padding="none" className="overflow-hidden animate-in fade-in duration-500">
+          <AgencyImage
+            src="/img/car-street.webp"
+            alt=""
+            slot="car"
+            ratio="21 / 9"
+            rounded="rounded-none"
+          />
+          <div className="px-8 py-10 flex flex-col items-center text-center">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">{t('noRentals')}</h3>
+            <p className="text-sm text-text-muted mt-2 max-w-sm leading-relaxed">{t('noRentalsBody')}</p>
+            <div className="mt-6">
+              <Link href="/portal/book">
+                <Button>
+                  <Plus className="w-4 h-4 me-2" /> {t('bookFirst')}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {bookings.map((item) => {
@@ -107,28 +120,32 @@ export default function RentalHistory() {
             return (
               <Card
                 key={item.id}
-                variant="outline"
-                className="flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/50 transition-colors"
+                className="flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
-                <div className="flex items-center gap-6 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
-                    <Car className="w-6 h-6 text-white/40" />
-                  </div>
+                <div className="flex items-center gap-5 min-w-0">
+                  <CarPhoto
+                    alt={`${item.car.brand} ${item.car.model}`}
+                    className="w-24 shrink-0"
+                    rounded="rounded-lg"
+                  />
                   <div className="min-w-0">
-                    <h4 className="font-bold text-lg text-white truncate">
+                    <h4 className="font-semibold text-lg tracking-tight text-foreground truncate">
                       {item.car.brand} {item.car.model}{' '}
-                      <span className="text-white/30 text-sm font-medium">{item.car.year}</span>
+                      <span className="text-text-faint text-sm font-normal">{item.car.year}</span>
                     </h4>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
+                    <p className="font-mono tabular text-[11px] text-text-faint tracking-wide mt-0.5">
+                      {item.car.licensePlate}
+                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1.5">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3 text-white/20 shrink-0" />
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                          {formatDate(item.startDate)} – {formatDate(item.endDate)}
+                        <Calendar className="w-3.5 h-3.5 text-text-faint shrink-0" />
+                        <span className="text-xs text-text-muted">
+                          {date(item.startDate)} – {date(item.endDate)}
                         </span>
                       </div>
                       <span
                         className={cn(
-                          'w-fit flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border',
+                          'w-fit flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border',
                           style.chip,
                         )}
                       >
@@ -138,10 +155,10 @@ export default function RentalHistory() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-white/5 pt-4 md:pt-0 shrink-0">
-                  <div className="text-left md:text-right">
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Price</p>
-                    <p className="text-lg font-black text-white">{item.totalPrice.toLocaleString()} MAD</p>
+                <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-hairline pt-4 md:pt-0 shrink-0">
+                  <div className="text-start md:text-end">
+                    <p className="eyebrow text-text-faint">{t('totalPrice')}</p>
+                    <p className="text-lg font-semibold font-mono tabular text-foreground mt-0.5">{money(item.totalPrice)}</p>
                   </div>
                 </div>
               </Card>
@@ -151,17 +168,15 @@ export default function RentalHistory() {
       )}
 
       {!isLoading && !error && bookings.length > 0 && (
-        <Card className="bg-emerald-500/5 border-emerald-500/20">
+        <Card variant="outline" className="border-success/20 bg-success/10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center shrink-0">
               <History className="w-6 h-6 text-success" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-white uppercase tracking-tight">Rental Summary</h4>
-              <p className="text-xs text-white/60 mt-1 leading-relaxed">
-                You have <span className="text-white font-bold">{bookings.length}</span> rental
-                {bookings.length !== 1 ? 's' : ''} on record, <span className="text-success font-bold">{completedCount}</span>{' '}
-                completed.
+              <h4 className="text-sm font-semibold text-foreground">{t('summary')}</h4>
+              <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                <span className="text-foreground font-semibold">{bookings.length}</span> {bookings.length === 1 ? t('rentalSingular') : t('rentalPlural')} · <span className="text-success font-semibold">{completedCount}</span> {t('completed')}.
               </p>
             </div>
           </div>

@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Check, Clock, Filter, Plus } from 'lucide-react';
+import { ArrowUpRight, Check, Clock, Filter, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
@@ -30,6 +32,14 @@ const columns: Array<{ status: TaskStatus; key: 'pending' | 'inProgress' | 'comp
   { status: 'IN_PROGRESS', key: 'inProgress' },
   { status: 'COMPLETED', key: 'completed' },
 ];
+
+// Column-level semantic tone: pending stays neutral, in-progress reads as
+// active/info, completed reads as success — distinct from per-card priority.
+const statusTone: Record<TaskStatus, string> = {
+  PENDING: 'bg-surface-raised text-text-muted border-hairline',
+  IN_PROGRESS: 'bg-info/10 text-info border-info/20',
+  COMPLETED: 'bg-success/10 text-success border-success/20',
+};
 
 export default function TaskBoard() {
   const t = useTranslations('agentTasks');
@@ -94,10 +104,7 @@ export default function TaskBoard() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
-          <p className="text-text-muted font-medium text-xs mt-1 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary" />
-            {t('subtitle')}
-          </p>
+          <p className="text-sm text-text-muted mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={() => void loadTasks()}>
@@ -121,22 +128,27 @@ export default function TaskBoard() {
               <div key={column.status} className="space-y-4">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="eyebrow">{t(column.key)}</h2>
-                  <span className="text-[10px] font-semibold text-text-faint bg-surface-raised px-2 py-0.5 rounded-full">
+                  <Badge
+                    variant="outline"
+                    className={cn('text-[10px] font-semibold tabular-nums', statusTone[column.status])}
+                  >
                     {columnTasks.length}
-                  </span>
+                  </Badge>
                 </div>
-                <div className="space-y-4 min-h-[360px] p-2 bg-surface/60 rounded-3xl border border-hairline">
+                <div className="space-y-4 min-h-[360px] p-3 bg-surface rounded-3xl border border-hairline">
                   {columnTasks.map((task) => (
                     <Card key={task.id} className="hover:border-primary/50 transition-all group relative overflow-hidden">
                       <div className="flex justify-between items-start mb-3">
-                        <span className={cn(
-                          'text-[9px] font-semibold px-1.5 py-0.5 rounded-sm tracking-widest uppercase border',
-                          task.priority === 'URGENT' ? 'bg-danger/20 text-danger border-danger/20' :
-                            task.priority === 'HIGH' ? 'bg-warning/10 text-warning border-warning/20' :
-                              'bg-surface-raised text-text-muted border-hairline',
-                        )}>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            task.priority === 'URGENT' ? 'bg-danger/10 text-danger border-danger/20' :
+                              task.priority === 'HIGH' ? 'bg-warning/10 text-warning border-warning/20' :
+                                'bg-surface-raised text-text-muted border-hairline',
+                          )}
+                        >
                           {t(task.priority.toLowerCase() as 'low' | 'medium' | 'high' | 'urgent')}
-                        </span>
+                        </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {column.status !== 'PENDING' && (
                             <button aria-label={t('pending')} onClick={() => void moveTask(task.id, 'PENDING')} className="p-1 hover:bg-surface-raised rounded text-text-muted">
@@ -145,7 +157,7 @@ export default function TaskBoard() {
                           )}
                           {column.status !== 'IN_PROGRESS' && (
                             <button aria-label={t('inProgress')} onClick={() => void moveTask(task.id, 'IN_PROGRESS')} className="p-1 hover:bg-surface-raised rounded text-text-muted">
-                              <span className="text-xs">↗</span>
+                              <ArrowUpRight className="w-3 h-3" />
                             </button>
                           )}
                           {column.status !== 'COMPLETED' && (
@@ -157,17 +169,27 @@ export default function TaskBoard() {
                       </div>
                       <h4 className="text-sm font-semibold text-foreground mb-1">{task.title}</h4>
                       {task.description && <p className="text-[11px] font-medium text-text-muted mb-4">{task.description}</p>}
-                      <div className="flex items-center justify-between pt-3 border-t border-hairline">
-                        <span className="text-[10px] font-medium text-text-muted">{task.assignee?.name || '—'}</span>
-                        <span className="text-[9px] font-medium text-text-faint">
+                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-hairline">
+                        {task.assignee?.name ? (
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <Avatar name={task.assignee.name} size={20} />
+                            <span className="text-[10px] font-medium text-text-muted truncate">{task.assignee.name}</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-text-faint">—</span>
+                        )}
+                        <span className="text-[9px] font-medium text-text-faint shrink-0">
                           {dateTime(task.dueDate || task.createdAt)}
                         </span>
                       </div>
                     </Card>
                   ))}
                   {!columnTasks.length && (
-                    <div className="border-2 border-dashed border-hairline rounded-3xl h-32 flex items-center justify-center">
-                      <span className="text-[10px] font-semibold text-text-faint uppercase tracking-widest">{t('noTasks')}</span>
+                    <div className="border border-dashed border-hairline rounded-3xl h-32 flex flex-col items-center justify-center gap-2 bg-surface-raised/40">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-surface-raised text-text-faint">
+                        <Check className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="eyebrow text-text-faint">{t('noTasks')}</span>
                     </div>
                   )}
                 </div>
@@ -198,7 +220,7 @@ export default function TaskBoard() {
               {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as TaskPriority[]).map((priority) => (
                 <label key={priority} className="cursor-pointer">
                   <input type="radio" name="priority" value={priority} defaultChecked={priority === 'MEDIUM'} className="sr-only peer" />
-                  <span className="block p-3 rounded-xl border border-hairline bg-surface-raised text-center peer-checked:border-primary peer-checked:bg-violet-soft transition-all text-[9px] font-semibold uppercase">
+                  <span className="block p-3 rounded-xl border border-hairline bg-surface-raised text-center peer-checked:border-primary peer-checked:bg-violet-soft transition-all text-[11px] font-semibold text-text-muted peer-checked:text-foreground">
                     {t(priority.toLowerCase() as 'low' | 'medium' | 'high' | 'urgent')}
                   </span>
                 </label>

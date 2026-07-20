@@ -1,8 +1,10 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Search,
+  SearchX,
   Car,
   Users,
   Calendar,
@@ -12,6 +14,10 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { CarPhoto, AgencyImage } from '@/components/ui/AgencyImage';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -49,26 +55,27 @@ interface SearchResults {
 const CAR_STATUS_COLOR: Record<string, string> = {
   AVAILABLE: 'text-success bg-success/10 border-success/20',
   RENTED: 'text-primary bg-primary/10 border-primary/20',
-  MAINTENANCE: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  MAINTENANCE: 'text-warning bg-warning/10 border-warning/20',
   OUT_OF_SERVICE: 'text-danger bg-danger/10 border-danger/20',
 };
 
 const BOOKING_STATUS_COLOR: Record<string, string> = {
-  REQUESTED: 'text-white/60 bg-white/10 border-white/20',
-  APPROVED: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  REQUESTED: 'text-text-muted bg-surface-raised border-hairline',
+  APPROVED: 'text-info bg-info/10 border-info/20',
   ACTIVE: 'text-success bg-success/10 border-success/20',
-  COMPLETED: 'text-white/40 bg-white/5 border-white/10',
+  COMPLETED: 'text-text-faint bg-surface border-hairline',
   CANCELLED: 'text-danger bg-danger/10 border-danger/20',
 };
 
 const CATEGORIES = [
-  { id: 'all', label: 'All Results' },
+  { id: 'all', label: 'All results' },
   { id: 'cars', label: 'Fleet' },
   { id: 'customers', label: 'Clients' },
   { id: 'bookings', label: 'Bookings' },
 ];
 
 export default function SearchPage() {
+  const t = useTranslations('ownerPages');
   const router = useRouter();
   const { showToast } = useToast();
   const [activeCategory, setActiveCategory] = useState('all');
@@ -116,29 +123,25 @@ export default function SearchPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="h-1 w-8 bg-primary rounded-full" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Forensic Engine</span>
-        </div>
-        <h1 className="text-4xl font-black tracking-tighter text-white uppercase">
-          Global <span className="text-white/40">Search</span>
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+          {t('searchEngine')}
         </h1>
-        <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
-          Search across fleet, clients, and bookings in real-time
+        <p className="text-sm text-text-muted">
+          Search across fleet, clients, and bookings in real time
         </p>
       </div>
 
       {/* Search Input */}
       <div className="relative group">
-        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 start-5 flex items-center pointer-events-none">
           {isSearching
-            ? <Loader2 className="w-5 h-5 text-primary animate-spin" />
-            : <Search className="w-5 h-5 text-white/20 group-focus-within:text-primary transition-colors" />
+            ? <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            : <Search className="w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
           }
         </div>
         <input
-          className="w-full h-16 pl-14 pr-14 bg-white/5 border border-white/10 rounded-2xl text-base font-bold text-white outline-none focus:border-primary/40 transition-all placeholder:text-white/20"
+          className="w-full h-14 ps-12 pe-12 bg-surface border border-hairline rounded-2xl text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
           placeholder="Search by name, plate, ID, or booking status..."
           value={query}
           onChange={handleQueryChange}
@@ -146,25 +149,25 @@ export default function SearchPage() {
         />
         {query && (
           <button
-            className="absolute inset-y-0 right-5 flex items-center text-white/20 hover:text-white transition-colors"
+            className="absolute inset-y-0 end-5 flex items-center text-text-faint hover:text-foreground transition-colors"
             onClick={() => { setQuery(''); setResults(null); }}
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {/* Category Filter */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={cn(
-              'px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap',
+              'px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap border',
               activeCategory === cat.id
-                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                ? 'bg-primary text-primary-foreground border-transparent'
+                : 'bg-surface text-text-muted border-hairline hover:text-foreground'
             )}
           >
             {cat.label}
@@ -174,36 +177,34 @@ export default function SearchPage() {
 
       {/* Results */}
       {!query || query.length < 2 ? (
-        <div className="py-20 flex flex-col items-center gap-4">
-          <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-center">
-            <Search className="w-10 h-10 text-white/10" />
+        <Card className="flex flex-col items-center gap-4 py-16 text-center">
+          <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
+          <div>
+            <p className="text-sm font-medium text-text-muted">Type at least 2 characters to search</p>
+            <p className="mt-1 text-xs text-text-faint">Searches cars, customers, and bookings simultaneously</p>
           </div>
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Type at least 2 characters to search</p>
-          <p className="text-[9px] text-white/10">Searches cars, customers, and bookings simultaneously</p>
-        </div>
+        </Card>
       ) : isSearching ? (
         <div className="py-20 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : totalShown === 0 ? (
-        <div className="py-20 flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center">
-            <Search className="w-8 h-8 text-white/10" />
-          </div>
-          <h3 className="text-sm font-black text-white/40 uppercase">No Records Found</h3>
-          <p className="text-xs text-white/20 max-w-xs mx-auto text-center">
-            No matches found for &ldquo;{query}&rdquo; in {activeCategory === 'all' ? 'any category' : activeCategory}.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => { setQuery(''); setResults(null); }}>
-            Clear Search
-          </Button>
-        </div>
+        <EmptyState
+          icon={SearchX}
+          title="No matching results"
+          description={`No matches found for "${query}" in ${activeCategory === 'all' ? 'any category' : activeCategory}.`}
+          action={
+            <Button variant="outline" size="sm" onClick={() => { setQuery(''); setResults(null); }}>
+              Clear search
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-8">
           {/* Summary */}
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">
-              {totalShown} Result{totalShown !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+            <span className="eyebrow">
+              {totalShown} result{totalShown !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
             </span>
           </div>
 
@@ -211,33 +212,33 @@ export default function SearchPage() {
           {displayedCars.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Car className="w-4 h-4 text-primary" />
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white/60">Fleet</h2>
-                <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[9px] font-black text-white/20">{displayedCars.length}</span>
+                <Car className="w-4 h-4 text-text-muted" />
+                <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
+                <div className="flex-1 h-px bg-hairline" />
+                <span className="text-xs font-mono tabular text-text-faint">{displayedCars.length}</span>
               </div>
               {displayedCars.map((car) => (
                 <Card
                   key={car.id}
-                  className="group cursor-pointer hover:border-primary/30 border-white/5 transition-all duration-300"
+                  className="group cursor-pointer hover:border-primary/30 transition-all duration-300"
                   onClick={() => router.push(`/dashboard/fleet/${car.id}`)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <Car className="w-6 h-6 text-white/40 group-hover:text-primary transition-colors" />
+                    <div className="w-20 shrink-0">
+                      <CarPhoto alt={`${car.brand} ${car.model}`} rounded="rounded-lg" />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-sm font-black text-white/90 uppercase">{car.brand} {car.model}</h3>
-                        <span className={cn('text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-widest', CAR_STATUS_COLOR[car.status] || 'text-white/40 bg-white/5 border-white/10')}>
-                          {car.status}
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-medium text-foreground truncate">{car.brand} {car.model}</h3>
+                        <Badge variant="outline" className={CAR_STATUS_COLOR[car.status] || 'text-text-muted bg-surface border-hairline'}>
+                          {car.status.replace(/_/g, ' ').toLowerCase()}
+                        </Badge>
                       </div>
-                      <p className="text-[11px] text-white/30 font-medium mt-0.5">
-                        {car.licensePlate} • {car.pricePerDay.toLocaleString()} MAD/day
+                      <p className="text-xs text-text-muted mt-0.5">
+                        <span className="font-mono tabular">{car.licensePlate}</span> · <span className="font-mono tabular">{car.pricePerDay.toLocaleString()}</span> MAD/day
                       </p>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </Card>
               ))}
@@ -248,37 +249,33 @@ export default function SearchPage() {
           {displayedCustomers.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-blue-400" />
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white/60">Clients</h2>
-                <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[9px] font-black text-white/20">{displayedCustomers.length}</span>
+                <Users className="w-4 h-4 text-text-muted" />
+                <h2 className="text-sm font-semibold text-foreground">Clients</h2>
+                <div className="flex-1 h-px bg-hairline" />
+                <span className="text-xs font-mono tabular text-text-faint">{displayedCustomers.length}</span>
               </div>
               {displayedCustomers.map((customer) => (
                 <Card
                   key={customer.id}
-                  className="group cursor-pointer hover:border-blue-500/30 border-white/5 transition-all duration-300"
+                  className="group cursor-pointer hover:border-primary/30 transition-all duration-300"
                   onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                      <Users className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-sm font-black text-white/90 uppercase">
+                    <Avatar name={`${customer.firstName} ${customer.lastName}`} size={44} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-medium text-foreground truncate">
                           {customer.firstName} {customer.lastName}
                         </h3>
                         {customer.status === 'BLACKLISTED' && (
-                          <span className="text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-widest text-danger bg-danger/10 border-danger/20">
-                            BLACKLISTED
-                          </span>
+                          <Badge variant="destructive">Blacklisted</Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-white/30 font-medium mt-0.5">
-                        {customer.phone} • {customer.identityNumber}
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {customer.phone} · <span className="font-mono tabular">{customer.identityNumber}</span>
                       </p>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </Card>
               ))}
@@ -289,37 +286,38 @@ export default function SearchPage() {
           {displayedBookings.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-amber-400" />
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-white/60">Bookings</h2>
-                <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[9px] font-black text-white/20">{displayedBookings.length}</span>
+                <Calendar className="w-4 h-4 text-text-muted" />
+                <h2 className="text-sm font-semibold text-foreground">Bookings</h2>
+                <div className="flex-1 h-px bg-hairline" />
+                <span className="text-xs font-mono tabular text-text-faint">{displayedBookings.length}</span>
               </div>
               {displayedBookings.map((booking) => (
                 <Card
                   key={booking.id}
-                  className="group cursor-pointer hover:border-amber-500/30 border-white/5 transition-all duration-300"
+                  className="group cursor-pointer hover:border-primary/30 transition-all duration-300"
                   onClick={() => router.push('/dashboard/bookings')}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                      <Calendar className="w-6 h-6 text-amber-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-sm font-black text-white/90 uppercase font-mono">
+                    <Avatar
+                      name={booking.customer ? `${booking.customer.firstName} ${booking.customer.lastName}` : undefined}
+                      size={44}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-medium text-foreground font-mono tabular truncate">
                           {booking.id.slice(0, 8).toUpperCase()}
                         </h3>
-                        <span className={cn('text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-widest', BOOKING_STATUS_COLOR[booking.status] || 'text-white/40 bg-white/5 border-white/10')}>
-                          {booking.status}
-                        </span>
+                        <Badge variant="outline" className={BOOKING_STATUS_COLOR[booking.status] || 'text-text-muted bg-surface border-hairline'}>
+                          {booking.status.toLowerCase()}
+                        </Badge>
                       </div>
-                      <p className="text-[11px] text-white/30 font-medium mt-0.5">
+                      <p className="text-xs text-text-muted mt-0.5 truncate">
                         {booking.customer ? `${booking.customer.firstName} ${booking.customer.lastName}` : 'Unknown'} •&nbsp;
                         {booking.car ? `${booking.car.brand} ${booking.car.model}` : 'N/A'} •&nbsp;
-                        {booking.totalPrice.toLocaleString()} MAD
+                        <span className="font-mono tabular">{booking.totalPrice.toLocaleString()}</span> MAD
                       </p>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </Card>
               ))}

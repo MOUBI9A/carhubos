@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { LogOut, User, Car, History, Shield } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/Avatar';
 
 export default function RenterLayout({ children }: { children: React.ReactNode }) {
   const { role, isLoading, logout, user } = useAuth();
@@ -39,29 +41,27 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="glass border-b border-white/10 sticky top-0 z-50">
+      <header className="glass border-b border-hairline sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/portal" className="flex items-center gap-2">
-            <h1 className="text-xl font-black tracking-tighter text-primary">
-              {tc('brand')}<span className="text-white">OS</span>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              {tc('brand')}<span className="text-text-faint">OS</span>
             </h1>
-            <span className="bg-primary/20 text-primary text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest">{tc('portal')}</span>
+            <Badge variant="outline" className="text-[10px]">{tc('portal')}</Badge>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/portal" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('vault')}</Link>
-            <Link href="/portal/book" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('book')}</Link>
-            <Link href="/portal/history" className="text-sm font-bold text-white/60 hover:text-white transition-colors">{t('history')}</Link>
+            <Link href="/portal" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('vault')}</Link>
+            <Link href="/portal/book" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('book')}</Link>
+            <Link href="/portal/history" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('history')}</Link>
           </nav>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 glass-card rounded-full">
-               <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                 {user?.name?.[0] || 'U'}
-               </div>
-               <span className="text-xs font-bold">{user?.name}</span>
+               <Avatar name={user?.name} size={24} />
+               <span className="text-xs font-medium text-foreground">{user?.name}</span>
             </div>
-            <button onClick={logout} className="p-2 text-white/40 hover:text-danger transition-colors">
+            <button onClick={logout} className="p-2 text-text-faint hover:text-danger transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
             <LocaleSwitcher variant="pills" />

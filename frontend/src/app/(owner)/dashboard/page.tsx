@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -43,6 +44,7 @@ import { useCustomerRisk } from './useCustomerRisk';
 import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
 
 export default function OwnerDashboard() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -243,7 +245,7 @@ export default function OwnerDashboard() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 text-foreground">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">Command center</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('commandCenter')}</h1>
           <p className="mt-1.5 flex items-center gap-2 eyebrow">
             <span className={cn("w-1.5 h-1.5 rounded-full", healthColor)} />
             System health · {healthStatus}
@@ -430,7 +432,7 @@ export default function OwnerDashboard() {
                            <p className="text-[11px] text-text-muted">{block.type} · <span className="font-mono tabular">{block.plate}</span></p>
                         </div>
                      </div>
-                     <div className="text-right">
+                     <div className="text-end">
                         <p className={cn("text-[11px] font-medium", block.severity === 'danger' ? 'text-danger' : 'text-warning')}>
                           {block.risk}
                         </p>
@@ -719,7 +721,7 @@ export default function OwnerDashboard() {
                    <span className="font-mono tabular">{bookingPrice > 0 ? `${bookingPrice.toLocaleString()}` : '—'}</span> <span className="text-sm font-normal text-text-faint">MAD/day</span>
                  </p>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                  <p className="eyebrow">Tax & escrow included</p>
                  {risk.data && risk.data.depositMultiplier && risk.data.depositMultiplier > 1 ? (
                    <p className="text-[11px] font-medium text-warning mt-1 border border-warning/25 px-2 py-0.5 rounded-full inline-block">
