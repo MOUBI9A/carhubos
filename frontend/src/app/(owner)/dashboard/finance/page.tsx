@@ -308,11 +308,11 @@ export default function FinancialBrain() {
               <div className="flex gap-1 p-1 bg-surface rounded-xl border border-hairline">
                  <button
                   onClick={() => setActiveTab('ledger')}
-                  className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === 'ledger' ? "bg-primary text-white" : "text-text-muted hover:text-foreground")}
+                  className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === 'ledger' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground")}
                  >History</button>
                  <button
                   onClick={() => setActiveTab('pending')}
-                  className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all relative", activeTab === 'pending' ? "bg-primary text-white" : "text-text-muted hover:text-foreground")}
+                  className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all relative", activeTab === 'pending' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground")}
                  >
                    Pending
                    {pendingPayments.length > 0 && <span className="absolute -top-1 -end-1 w-2 h-2 bg-danger rounded-full" />}

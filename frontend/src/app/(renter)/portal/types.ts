@@ -90,8 +90,8 @@ export const CONSENT_STATUS_STYLES: Record<
   { chip: string; dot: string; label: string }
 > = {
   PENDING: {
-    chip: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    dot: 'bg-amber-500 animate-pulse',
+    chip: 'text-warning bg-warning/10 border-warning/20',
+    dot: 'bg-warning animate-pulse',
     label: 'Awaiting Your Review',
   },
   APPROVED: {
@@ -105,8 +105,8 @@ export const CONSENT_STATUS_STYLES: Record<
     label: 'Revoked',
   },
   EXPIRED: {
-    chip: 'text-white/40 bg-white/5 border-white/10',
-    dot: 'bg-white/30',
+    chip: 'text-text-faint bg-surface border-hairline',
+    dot: 'bg-text-faint/70',
     label: 'Expired',
   },
 };
@@ -115,17 +115,17 @@ export const RISK_LEVEL_STYLES: Record<
   RiskLevel,
   { chip: string; label: string }
 > = {
-  UNKNOWN: { chip: 'text-white/50 bg-white/5 border-white/10', label: 'Not Yet Reviewed' },
+  UNKNOWN: { chip: 'text-text-faint bg-surface border-hairline', label: 'Not Yet Reviewed' },
   TRUSTED: { chip: 'text-success bg-success/10 border-success/20', label: 'Trusted' },
-  LOW: { chip: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', label: 'Low Risk' },
-  MEDIUM: { chip: 'text-amber-500 bg-amber-500/10 border-amber-500/20', label: 'Medium Risk' },
-  HIGH: { chip: 'text-orange-500 bg-orange-500/10 border-orange-500/20', label: 'High Risk' },
+  LOW: { chip: 'text-success/80 bg-success/5 border-success/10', label: 'Low Risk' },
+  MEDIUM: { chip: 'text-warning bg-warning/10 border-warning/20', label: 'Medium Risk' },
+  HIGH: { chip: 'text-danger/80 bg-danger/5 border-danger/10', label: 'High Risk' },
   CRITICAL: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Critical' },
 };
 
 export const BOOKING_STATUS_STYLES: Record<BookingStatus, { chip: string; label: string }> = {
-  REQUESTED: { chip: 'text-white/60 bg-white/5 border-white/10', label: 'Requested' },
-  APPROVED: { chip: 'text-blue-400 bg-blue-500/10 border-blue-500/20', label: 'Approved' },
+  REQUESTED: { chip: 'text-text-muted bg-surface border-hairline', label: 'Requested' },
+  APPROVED: { chip: 'text-info bg-info/10 border-info/20', label: 'Approved' },
   ACTIVE: { chip: 'text-primary bg-primary/10 border-primary/20', label: 'Active' },
   COMPLETED: { chip: 'text-success bg-success/10 border-success/20', label: 'Completed' },
   CANCELLED: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Cancelled' },

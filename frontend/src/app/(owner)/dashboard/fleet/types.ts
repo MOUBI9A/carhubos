@@ -121,11 +121,11 @@ export const STATUS_STYLES: Record<
     ring: 'ring-primary/30',
   },
   MAINTENANCE: {
-    text: 'text-amber-500',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-    dot: 'bg-amber-500',
-    ring: 'ring-amber-500/30',
+    text: 'text-warning',
+    bg: 'bg-warning/10',
+    border: 'border-warning/20',
+    dot: 'bg-warning',
+    ring: 'ring-warning/30',
   },
   OUT_OF_SERVICE: {
     text: 'text-danger',
@@ -138,7 +138,7 @@ export const STATUS_STYLES: Record<
 
 export const HEALTH_STYLES: Record<Health, { text: string; bar: string; borderL: string }> = {
   success: { text: 'text-success', bar: 'bg-success', borderL: 'border-l-success' },
-  warning: { text: 'text-amber-500', bar: 'bg-amber-500', borderL: 'border-l-amber-500' },
+  warning: { text: 'text-warning', bar: 'bg-warning', borderL: 'border-l-warning' },
   danger: { text: 'text-danger', bar: 'bg-danger', borderL: 'border-l-danger' },
 };
 

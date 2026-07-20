@@ -157,9 +157,9 @@ export interface StaffMember {
 /** Visual treatment for the role/preset chip on each staff row. */
 export const ROLE_STYLES: Record<string, { chip: string; dot: string }> = {
   OWNER: { chip: 'text-primary bg-primary/10 border-primary/20', dot: 'bg-primary' },
-  MANAGER: { chip: 'text-blue-400 bg-blue-500/10 border-blue-500/20', dot: 'bg-blue-400' },
-  AGENT: { chip: 'text-white/60 bg-white/10 border-white/10', dot: 'bg-white/40' },
-  ROOT_ADMIN: { chip: 'text-amber-400 bg-amber-500/10 border-amber-500/20', dot: 'bg-amber-400' },
+  MANAGER: { chip: 'text-info bg-info/10 border-info/20', dot: 'bg-info' },
+  AGENT: { chip: 'text-text-muted bg-surface-raised border-hairline', dot: 'bg-text-faint' },
+  ROOT_ADMIN: { chip: 'text-metal bg-metal/10 border-metal/20', dot: 'bg-metal' },
 };
 
-export const DEFAULT_ROLE_STYLE = { chip: 'text-white/60 bg-white/10 border-white/10', dot: 'bg-white/40' };
+export const DEFAULT_ROLE_STYLE = { chip: 'text-text-muted bg-surface-raised border-hairline', dot: 'bg-text-faint' };

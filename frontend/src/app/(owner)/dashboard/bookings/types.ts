@@ -78,32 +78,32 @@ export const BOOKING_STATUS_STYLES: Record<
   { chip: string; block: string; dot: string; label: string }
 > = {
   REQUESTED: {
-    chip: 'text-white/60 bg-white/5 border-white/10',
-    block: 'bg-white/10 border-white/20 text-white/70',
-    dot: 'bg-white/40',
+    chip: 'text-text-muted bg-surface border-hairline',
+    block: 'bg-surface-raised border-hairline text-text-muted',
+    dot: 'bg-text-faint',
     label: 'Requested',
   },
   APPROVED: {
-    chip: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    block: 'bg-blue-500/80 border-blue-400/50 text-white',
-    dot: 'bg-blue-500',
+    chip: 'text-info bg-info/10 border-info/20',
+    block: 'bg-info/80 border-info/50 text-cream',
+    dot: 'bg-info',
     label: 'Approved',
   },
   ACTIVE: {
     chip: 'text-primary bg-primary/10 border-primary/20',
-    block: 'bg-primary/90 border-primary/50 text-white',
+    block: 'bg-primary/90 border-primary/50 text-cream',
     dot: 'bg-primary',
     label: 'Active',
   },
   COMPLETED: {
     chip: 'text-success bg-success/10 border-success/20',
-    block: 'bg-white/5 border-white/10 text-white/40',
+    block: 'bg-surface border-hairline text-text-faint',
     dot: 'bg-success',
     label: 'Completed',
   },
   CANCELLED: {
     chip: 'text-danger bg-danger/10 border-danger/20',
-    block: 'bg-danger/20 border-danger/20 text-white/40 line-through',
+    block: 'bg-danger/20 border-danger/20 text-text-faint line-through',
     dot: 'bg-danger',
     label: 'Cancelled',
   },
