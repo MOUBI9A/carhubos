@@ -95,7 +95,8 @@ export class PdfEngineService {
       
       return Buffer.from(pdfBuffer);
     } catch (error) {
-      this.logger.error(`[PUPPETEER ERROR] Failed to generate PDF: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`[PUPPETEER ERROR] Failed to generate PDF: ${message}`);
       throw new Error('PDF Generation failed');
     }
   }

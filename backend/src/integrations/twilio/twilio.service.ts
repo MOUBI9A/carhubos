@@ -34,8 +34,9 @@ export class TwilioService {
         });
         return { success: true, sid: result.sid };
       } catch (error) {
-        this.logger.error(`[TWILIO ERROR] Failed to send message: ${error.message}`);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`[TWILIO ERROR] Failed to send message: ${message}`);
+        return { success: false, error: message };
       }
     } else {
       this.logger.log(`[TWILIO MOCK] WhatsApp message to ${formattedTo}: ${message}`);
