@@ -798,14 +798,18 @@ export class AnalyticsService {
     });
 
     // ── 10. Customer directory (count + bookable options for modal) ──
-    // All customers are offered in the booking selector — the Pillar 6 Trust
-    // Network risk panel surfaces any cross-agency flag and the booking flow
-    // hard-locks (with manager override) if the renter is blacklisted.
+    // Bounded to the 200 most-recent customers so this hot dashboard endpoint
+    // never loads an unbounded directory. `totalCustomers` stays the true
+    // count; the booking modal's picker uses these for the common case and can
+    // fall back to the paginated/searchable `GET /customers?search=` typeahead
+    // for agencies with a larger book. (Perf fix — Phase 6.)
+    const CUSTOMER_OPTION_CAP = 200;
     const [totalCustomers, allCustomers] = await Promise.all([
       this.prisma.customer.count({ where: { agencyId } }),
       this.prisma.customer.findMany({
         where: { agencyId },
         orderBy: { createdAt: 'desc' },
+        take: CUSTOMER_OPTION_CAP,
         select: { id: true, firstName: true, lastName: true, phone: true, status: true },
       }),
     ]);
