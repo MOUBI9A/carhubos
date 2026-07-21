@@ -118,7 +118,7 @@ A **supervisor** decomposes each backlog phase into small tasks with **exact fil
 - **Branch/commit:** currently working directly on `main` (per owner's choice). Keep `tsc --noEmit` + `jest` green at every commit. Conventional, descriptive commit messages.
 - **Human gates:** Phase 0 (secret rotation / history rewrite — done), Phase 2 (destructive migration — done), Phase 9 (deploy target + go-live), and any product decision (DB host, VAT model, i18n scope).
 - **Docs:** update `CLAUDE.md` + the backlog + any stale doc at the end of every phase.
-- **Two AI agents share this checkout** (a Lead Developer and a Co-Developer, plus possibly the Codex fleet in §10). **[docs/CO_DEV_HANDOFF.md](docs/CO_DEV_HANDOFF.md) is the async channel between them** — read it before your first write of a session, claim contended work in its "In flight" table, and check its "Open findings" list for cross-cutting issues one agent flagged for the other to own. Neither agent sees the other's conversation; anything the other needs to know goes in that file, not in chat.
+- **Two AI agents share this checkout** (a Lead Developer and a Co-Developer, plus possibly the Codex fleet in §10). **[COORDINATION.md](COORDINATION.md) is the async channel between them (protocol, live status board, open lanes)** — read it before your first write of a session, claim contended work in its "Live status board", and check its "Open findings" list for cross-cutting issues one agent flagged for the other to own. Neither agent sees the other's conversation; anything the other needs to know goes in that file, not in chat.
 
 ---
 
