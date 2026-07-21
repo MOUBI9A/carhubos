@@ -138,7 +138,7 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 - **[H] ESLint rules disabled** ✅ — both flipped to `error`. Real fallout (after excluding `dist/`/`prisma/*.js` lint noise): frontend 0, backend 1 (fixed: `main.ts` bootstrap now `.catch()`-handled).
 - **[M] No CI** ✅ — `.github/workflows/ci.yml`: backend (`prisma generate`→tsc→jest→eslint) + frontend (tsc→vitest→eslint), on `pull_request`+`push:main`. Making it a *required* PR check needs a repo-admin action (Settings → Branches) — flagged for the founder, not done unasked. No live-DB/Playwright e2e job yet (needs a Postgres service container).
 - **[M] Frontend tests validate mock data** ⬜ — not audited this pass.
-- **[M] E2E single-role, no authz/negative tests** ✅ partial — `common/multi-tenant-boundary.spec.ts` covers bookings/customers/documents/inspections/expenses/contracts/hub (agency A → 404 on agency B's resource); unit-level (mocked Prisma), not a live-DB E2E suite.
+- **[M] E2E single-role, no authz/negative tests** ✅ partial — `common/multi-tenant-boundary.spec.ts` covers **10 domains**: bookings/customers/documents/inspections/expenses/contracts/hub/cars/maintenance + **payments.verify** (the load-then-check IDOR variant — find by id alone, then scope by invoice.agencyId), agency A → 404 on agency B's resource; unit-level (mocked Prisma), not a live-DB E2E suite.
 - **[L] Backend tsconfig not strict** ✅ (commit `26e0a79`) — `strict: true` enabled (noImplicitAny/strictPropertyInitialization kept off for the established DTO/any-param patterns); 3 catch-block `error is unknown` fallouts fixed.
 
 ---

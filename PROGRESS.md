@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `656bc40`.** Tree is 100% clean, `backend` tsc clean + jest **12 suites/74 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Last updated at commit `5debfce`.** Tree is 100% clean, `backend` tsc clean + jest **13 suites/92 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -37,7 +37,7 @@ Logins (password `admin123`): `root@ owner@ manager@ agent@ renter@` `carhub.os`
 - **Phase 4 — rental lifecycle** ✅ — OVERDUE state + legal transitions + spam-guarded hourly cron, contract e-sign gated on SIGNED, inspection return/damage flow (PRE vs POST_RENTAL diff, conservative auto-charge — never fabricates an amount, flags manual review when there's no real cost signal), **and now late fees**: `BookingsService.updateStatus()` charges every day past the scheduled return at the car's own `pricePerDay` (a real rate, not invented) when an OVERDUE booking is closed out, same integer-cents reconciliation pattern, audited (`bookings.service.spec.ts`).
   - **Left**: rate tiers/seasonality/extras — not started, lower priority (not in the Market-Ready Checklist verbatim).
 - **Phase 5A/5B** ✅ capability engine + renter portal/consent.
-- **Phase 6 — performance** ✅ — `trust.assess()` no longer recomputes-on-read; `analytics.service.ts` converted to SQL aggregates; `search.service.ts` uses `startsWith`; hot-path indexes added (migration `20260720125819_hot_path_indexes`); **and now bookings pagination**: `GET /bookings` accepts optional `status/from/to/page/pageSize` — omitting all of them returns the exact same flat array as before (zero risk to today's frontend), passing them moves filtering to a SQL `WHERE` + `skip/take` and returns `{items,total,page,pageSize}`. Adopting the paginated shape in the UI is a separate follow-up.
+- **Phase 6 — performance** ✅ — `trust.assess()` no longer recomputes-on-read; `analytics.service.ts` converted to SQL aggregates; `search.service.ts` uses `startsWith`; hot-path indexes added (migration `20260720125819_hot_path_indexes`); **and now bookings pagination**: `GET /bookings` accepts optional `status/from/to/page/pageSize` — omitting all of them returns the exact same flat array as before (zero risk to today's frontend), passing them moves filtering to a SQL `WHERE` + `skip/take` and returns `{items,total,page,pageSize}`. **The owner scheduler now adopts this** (commit `a90c4d5`): `from`/`to` were upgraded to **overlap** semantics (`startDate <= to AND endDate >= from`, so an in-progress rental that began before the window still shows), and `useBookings(from,to)` fetches only the visible 14-day window (cached fleet/customer ref-data, monotonic request-id guard against out-of-order responses, non-destructive nav-fetch errors). Adversarially reviewed before commit.
 - **Phase 7 — UX/a11y/i18n** ✅ mostly — next-intl FR(default)/AR(RTL)/EN foundation; the false "AES-256 JWT ENCRYPTION" claim (already gone) and a second one on `/admin/provision` (softened to something honest); contrast-floor grep sweep came back clean (Phase 12's token migration already fixed it); **all three known fake-success toasts removed** — `admin/provision`'s "Instantiate tenant" and `accidents`' "Report incident"/"Export PDF" now show honest "not wired yet" info toasts instead of fabricating success (verified `admin/agencies`'s subscription/invoice toasts are real — they call genuine `/saas-admin/*` endpoints).
   - **Left**: chart tap/focus + screen-reader table equivalents — a genuinely separate, larger a11y feature, not attempted.
 - **Phase 8 — tests + CI** ✅ mostly — this was "not started" at the top of this session, now substantially done:
@@ -58,12 +58,15 @@ Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF 
 `/security-review` + `/code-review` on the full diff since Phase 0; re-run the market-readiness checklist end to end; close or explicitly defer every remaining item.
 
 ### 3. Smaller follow-ups (not blocking, pick up opportunistically)
-- Rate tiers/seasonality/extras on bookings (Phase 4).
-- Adopt the new paginated `GET /bookings` shape in the frontend bookings page (currently still fetches the full flat array).
-- Chart tap/focus + screen-reader table equivalents (Phase 7 a11y).
-- Extend the multi-tenant boundary test to more domains (payments, contracts, expenses, hub, staff, ...) one at a time.
+- ✅ ~~Adopt the paginated `GET /bookings` shape in the frontend~~ — done (`a90c4d5`, windowed scheduler; see Phase 6 above).
+- ✅ ~~OVERDUE booking status crashed the frontend~~ — done (`aa71a37`): OVERDUE (reachable via the ACTIVE→OVERDUE cron) was missing from every frontend status map; the owner scheduler + renter portal history crashed on it. Added OVERDUE (amber "needs attention") to the `BookingStatus` types + all status maps (owner bookings/portal/customers/fleet/search); tsc enforces exhaustiveness.
+- 🔄 Extend the multi-tenant boundary test to more domains — **now 10 domains** (`5debfce` added cars, maintenance, and payments-verify the load-then-check IDOR variant). Remaining: staff/memberships, tasks, refusal-logs, automations, notifications, analytics — one at a time.
+- Rate tiers/seasonality/extras on bookings (Phase 4). **Likely a product decision** (weekend multiplier? seasonal calendar? per-car tiers?) — worth confirming the pricing model with the founder before building; touches money math.
+- Chart tap/focus + screen-reader table equivalents (Phase 7 a11y). Charts are inline SVG in the analytics/dashboard pages (no shared chart component).
+- Other unbounded list endpoints (perf checklist "holds at 10k+"): audit `GET /customers` / `/cars` / `/payments` — customers pagination needs a typeahead in the booking-create form (the `?search=` param already exists).
 - A live-DB Playwright/e2e CI job (needs a Postgres service container in `ci.yml`).
-- Real file storage for Guardian Vault uploads (currently metadata-only).
+- Real file storage for Guardian Vault uploads (currently metadata-only) — infra decision.
+- Enum constraints (Phase 2 [M]): string pseudo-enums (`depositMethod`, payment `type`/`status`, etc.) are unconstrained; the seed even uses an undocumented `BANK_TRANSFER`. Add `@IsIn`/shared consts — but first audit the ACTUAL values used across seed + frontend + backend so the constraint doesn't reject a live value.
 - A real "founder provisions a tenant" backend endpoint for `admin/provision`'s wizard, or repurpose the page.
 - A real Accident/incident backend model, or repurpose `accidents/page.tsx`.
 
