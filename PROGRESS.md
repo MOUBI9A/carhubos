@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `b22203d`.** Tree is 100% clean, `backend` tsc clean + jest **14 suites/99 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Last updated at commit `aac52f3`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/105 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -60,15 +60,15 @@ Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF 
 ### 3. Smaller follow-ups (not blocking, pick up opportunistically)
 - ✅ ~~Adopt the paginated `GET /bookings` shape in the frontend~~ — done (`a90c4d5`, windowed scheduler; see Phase 6 above).
 - ✅ ~~OVERDUE booking status crashed the frontend~~ — done (`aa71a37`): OVERDUE (reachable via the ACTIVE→OVERDUE cron) was missing from every frontend status map; the owner scheduler + renter portal history crashed on it. Added OVERDUE (amber "needs attention") to the `BookingStatus` types + all status maps (owner bookings/portal/customers/fleet/search); tsc enforces exhaustiveness.
-- 🔄 Extend the multi-tenant boundary test to more domains — **now 10 domains** (`5debfce` added cars, maintenance, and payments-verify the load-then-check IDOR variant). **Staff/memberships** got a dedicated security spec (`b22203d`, `agency-staff.service.spec.ts`): tenant boundary + anti-escalation (a non-ROOT_ADMIN caller can't grant caps they don't hold — the guard stopping a staff.manage delegate from minting owner access) + lockout guards (last staff.manage, last owner, remove-self). Remaining: tasks, refusal-logs, automations, notifications, analytics — one at a time.
-- Rate tiers/seasonality/extras on bookings (Phase 4). **Likely a product decision** (weekend multiplier? seasonal calendar? per-car tiers?) — worth confirming the pricing model with the founder before building; touches money math.
-- Chart tap/focus + screen-reader table equivalents (Phase 7 a11y). Charts are inline SVG in the analytics/dashboard pages (no shared chart component).
-- Other unbounded list endpoints (perf checklist "holds at 10k+"): audit `GET /customers` / `/cars` / `/payments` — customers pagination needs a typeahead in the booking-create form (the `?search=` param already exists).
+- ✅ ~~Extend the multi-tenant boundary test~~ — **now 12 domains** across 3 scoping shapes (`5debfce` cars/maintenance/payments-verify load-then-check; `aac52f3` tasks updateMany-write-scoping + refusal-logs). **Staff/memberships** got a dedicated security spec (`b22203d`, `agency-staff.service.spec.ts`): tenant boundary + anti-escalation (a non-ROOT_ADMIN caller can't grant caps they don't hold) + lockout guards. Remaining (low value): automations, notifications, analytics.
+- ✅ ~~Enum/validation hardening~~ — done (`171cef3`): constrained the unconstrained pseudo-enum String fields with `@IsIn` after auditing real values (Car.status, Customer.status, Customer.identityType, UpdateBookingDto.status); fixed the seed's `BANK_TRANSFER`→`TRANSFER` drift; `dto-enum-constraints.spec.ts`. fuelType/gearbox left free-form (no fixed set used anywhere).
+- ✅ ~~Chart tap/focus + screen-reader table equivalents~~ — done (`fbbaf2b`): reusable `SrDataTable`; the dashboard daily-intensity chart (data was hover-tooltip-only) now has an sr-only `<table>` + labelled `<figure>` + aria-hidden decorative bars; fleet gauge SVG hidden from AT. Finance breakdown already exposed label+value as text (no change); admin/pulse is a mock page (skipped).
+- Rate tiers/seasonality/extras on bookings (Phase 4). **Product decision** (weekend multiplier? seasonal calendar? per-car tiers?) — confirm the pricing model with the founder; touches money math.
+- Other unbounded list endpoints (perf "holds at 10k+"): `GET /customers` is **already paginated** (ListCustomersQueryDto page/limit/search); audit `/cars` / `/payments`.
 - A live-DB Playwright/e2e CI job (needs a Postgres service container in `ci.yml`).
 - Real file storage for Guardian Vault uploads (currently metadata-only) — infra decision.
-- Enum constraints (Phase 2 [M]): string pseudo-enums (`depositMethod`, payment `type`/`status`, etc.) are unconstrained; the seed even uses an undocumented `BANK_TRANSFER`. Add `@IsIn`/shared consts — but first audit the ACTUAL values used across seed + frontend + backend so the constraint doesn't reject a live value.
-- A real "founder provisions a tenant" backend endpoint for `admin/provision`'s wizard, or repurpose the page.
-- A real Accident/incident backend model, or repurpose `accidents/page.tsx`.
+- **`admin/provision`** ("founder provisions a tenant") — needs a product call: it can reuse the register txn (agency+owner+BETA subscription, **no migration**), but the wizard collects no owner name/password and has enterprise-theater fields (region/sharding/SLA/backup) that map to nothing. Decision needed: how the provisioned owner gets credentials (founder-set initial password is the simplest honest MVP).
+- **`accidents/page.tsx`** — real Accident/incident model = new Prisma model + **migration** + product spec (fields/workflow); larger, needs the DB running to verify.
 
 ## Open questions / mid-debugging
 None blocking — tree is clean, all four verification commands (backend tsc/jest/eslint, frontend tsc/vitest/eslint) are green. The only genuine ambiguity is whether the Codex CLI process might resume in a future session; check `git status` first per the note above.
