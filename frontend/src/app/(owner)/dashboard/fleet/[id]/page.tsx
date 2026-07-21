@@ -447,7 +447,8 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               <Card>
                 <CardTitle className="mb-4">Compliance score</CardTitle>
                 <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                  {/* Decorative gauge — the score is announced via the visible text below. */}
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
                     <circle cx="18" cy="18" r="16" fill="none" className="stroke-hairline" strokeWidth="3" />
                     <circle
                       cx="18" cy="18" r="16" fill="none"

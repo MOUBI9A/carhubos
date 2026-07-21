@@ -40,6 +40,7 @@ import { Skeleton, SkeletonCard, SkeletonRows } from '@/components/ui/Skeleton';
 import { CarPhoto } from '@/components/ui/AgencyImage';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/badge';
+import { SrDataTable } from '@/components/ui/SrDataTable';
 import { useCustomerRisk } from './useCustomerRisk';
 import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
 
@@ -350,13 +351,14 @@ export default function OwnerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">
           {/* ═══════ Daily intensity chart ═══════ */}
+          <figure className="m-0" aria-label="Daily intensity — 14-day booking and revenue flow">
           <Card className="h-96 flex flex-col justify-between">
             <CardHeader className="p-0">
                <div>
                   <CardTitle className="text-lg">Daily intensity</CardTitle>
                   <CardDescription>14-day booking & revenue flow</CardDescription>
                </div>
-               <div className="flex items-center gap-4 bg-surface p-2 rounded-lg border border-hairline">
+               <div className="flex items-center gap-4 bg-surface p-2 rounded-lg border border-hairline" aria-hidden="true">
                   <div className="flex items-center gap-2">
                      <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                      <span className="text-[11px] text-text-muted">Revenue</span>
@@ -367,7 +369,18 @@ export default function OwnerDashboard() {
                   </div>
                </div>
             </CardHeader>
-            <div className="flex-1 flex items-end gap-2 pb-4 pt-10">
+            {/* Screen-reader equivalent of the bar chart (the visual bars below are
+                aria-hidden decorative; this table carries the actual figures). */}
+            <SrDataTable
+              caption="Daily revenue and bookings over the last 14 days"
+              columns={['Day', 'Revenue (MAD)', 'Bookings']}
+              rows={data.dailyIntensity.map((d) => [
+                d.label,
+                d.revenue.toLocaleString(),
+                String(d.bookings),
+              ])}
+            />
+            <div className="flex-1 flex items-end gap-2 pb-4 pt-10" aria-hidden="true">
                {data.dailyIntensity.map((day, i) => (
                  <div key={i} className="group/bar relative flex-1 flex flex-col items-center justify-end">
                     {/* Tooltip */}
@@ -391,12 +404,13 @@ export default function OwnerDashboard() {
                  </div>
                ))}
             </div>
-            <div className="flex items-center justify-between pt-4 border-t border-hairline">
+            <div className="flex items-center justify-between pt-4 border-t border-hairline" aria-hidden="true">
                {data.dailyIntensity.map((day, i) => (
                  <span key={i} className="text-[8px] text-text-faint">{day.label}</span>
                ))}
             </div>
           </Card>
+          </figure>
 
           {/* ═══════ Active compliance queue ═══════ */}
           <div className="space-y-6">
