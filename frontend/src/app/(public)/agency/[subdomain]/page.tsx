@@ -31,6 +31,17 @@ type PublicCar = {
   agency?: { name?: string | null; city?: string | null } | null;
 };
 
+/** Paginated envelope returned by `GET /public/fleet` when page/pageSize are sent. */
+type PublicFleetPage = {
+  items: PublicCar[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+/** Matches the server-side ceiling on the public fleet endpoint. */
+const FLEET_PAGE_SIZE = 60;
+
 export default function AgencyPublicPage() {
   const t = useTranslations('agencyPublic');
   const { money } = useFormat();
@@ -38,6 +49,7 @@ export default function AgencyPublicPage() {
   const subdomain = Array.isArray(params.subdomain) ? params.subdomain[0] : params.subdomain;
   const [agency, setAgency] = useState<Agency | null>(null);
   const [fleet, setFleet] = useState<PublicCar[]>([]);
+  const [fleetTotal, setFleetTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,10 +60,15 @@ export default function AgencyPublicPage() {
       setError(null);
       try {
         const agencyResponse = await api.get<Agency>(`/public/agency-by-subdomain/${encodeURIComponent(subdomain)}`);
-        const fleetResponse = await api.get<PublicCar[]>('/public/fleet', { params: { agencyId: agencyResponse.data.id } });
+        // Paginated envelope (finding #3): the endpoint is bounded now, so ask
+        // for the count too rather than silently rendering a truncated fleet.
+        const fleetResponse = await api.get<PublicFleetPage>('/public/fleet', {
+          params: { agencyId: agencyResponse.data.id, page: 1, pageSize: FLEET_PAGE_SIZE },
+        });
         if (!cancelled) {
           setAgency(agencyResponse.data);
-          setFleet(fleetResponse.data);
+          setFleet(fleetResponse.data.items);
+          setFleetTotal(fleetResponse.data.total);
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.response?.data?.message || t('loadFailed'));
@@ -93,6 +110,12 @@ export default function AgencyPublicPage() {
       {fleet.length === 0 ? (
         <div className="py-20 text-center text-text-muted">{t('noFleet')}</div>
       ) : (
+        <>
+        {fleetTotal > fleet.length && (
+          <p className="mb-4 text-xs text-text-faint">
+            {t('showingCount', { shown: fleet.length, total: fleetTotal })}
+          </p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
           {fleet.map((car) => (
             <Card key={car.id} padding="none" className="group h-full overflow-hidden">
@@ -115,6 +138,7 @@ export default function AgencyPublicPage() {
             </Card>
           ))}
         </div>
+        </>
       )}
 
       <section><Card padding="lg" className="text-center relative overflow-hidden"><div className="relative z-10 max-w-2xl mx-auto"><p className="eyebrow mb-4">{t('securityProtocol')}</p><h2 className="display text-3xl md:text-4xl text-foreground mb-6">{t('trustVault')}</h2><SealDivider className="max-w-xs mx-auto mb-8" /><div className="flex flex-wrap justify-center gap-8 md:gap-12">{[{ label: t('instantId'), icon: Zap }, { label: t('secureEscrow'), icon: ShieldCheck }, { label: t('digitalReport'), icon: CheckCircle2 }].map((item) => <div key={item.label} className="flex items-center gap-2.5"><item.icon className="w-5 h-5 text-text-muted" strokeWidth={1.5} /><span className="text-sm text-text-muted">{item.label}</span></div>)}</div></div></Card></section>

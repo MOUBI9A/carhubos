@@ -21,10 +21,22 @@ type PublicCar = {
   agency?: { name?: string | null; city?: string | null } | null;
 };
 
+/** Paginated envelope returned by `GET /public/fleet` when page/pageSize are sent. */
+type PublicFleetPage = {
+  items: PublicCar[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+/** Matches the server-side ceiling on the public fleet endpoint. */
+const FLEET_PAGE_SIZE = 60;
+
 export default function BookCar() {
   const t = useTranslations('renterBook');
   const { money } = useFormat();
   const [cars, setCars] = useState<PublicCar[]>([]);
+  const [total, setTotal] = useState(0);
   const [type, setType] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,8 +45,15 @@ export default function BookCar() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.get<PublicCar[]>('/public/fleet');
-      setCars(response.data);
+      // Ask for the paginated envelope explicitly. The endpoint is now bounded
+      // either way (finding #3); requesting it this way means we also learn the
+      // real `total`, so a truncated list can say so instead of silently
+      // pretending it is the whole fleet.
+      const response = await api.get<PublicFleetPage>('/public/fleet', {
+        params: { page: 1, pageSize: FLEET_PAGE_SIZE },
+      });
+      setCars(response.data.items);
+      setTotal(response.data.total);
     } catch (err: any) {
       setError(err?.response?.data?.message || t('loadFailed'));
     } finally {
@@ -114,7 +133,13 @@ export default function BookCar() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-4">
+          {total > cars.length && (
+            <p className="text-xs text-text-faint">
+              {t('showingCount', { shown: cars.length, total })}
+            </p>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {visibleCars.map((car) => (
             <Card key={car.id} padding="none" className="overflow-hidden group hover:translate-y-[-4px]">
               <CarPhoto
@@ -135,6 +160,7 @@ export default function BookCar() {
               </div>
             </Card>
           ))}
+          </div>
         </div>
       )}
 

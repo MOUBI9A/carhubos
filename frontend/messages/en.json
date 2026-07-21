@@ -211,8 +211,8 @@
     "updateFailed": "Update failed",
     "deleteFailed": "Delete failed",
     "taskUpdated": "Task updated",
-    "taskAssigned": "Task assigned"
-    ,"inspectionRecorded": "Inspection recorded"
+    "taskAssigned": "Task assigned",
+    "inspectionRecorded": "Inspection recorded"
   },
   "agentTasks": {
     "title": "Task board",
@@ -338,7 +338,8 @@
     "loadFailed": "Could not load the fleet.",
     "noCars": "No vehicles available",
     "bookingUnavailable": "Online booking requests will be available soon.",
-    "agency": "Agency"
+    "agency": "Agency",
+    "showingCount": "Showing {shown} of {total} available vehicles"
   },
   "renterHistory": {
     "title": "Rental history",
@@ -445,6 +446,7 @@
     "secureEscrow": "Secure escrow",
     "digitalReport": "Digital report",
     "loadFailed": "Could not load this agency.",
-    "noFleet": "No vehicles available"
+    "noFleet": "No vehicles available",
+    "showingCount": "Showing {shown} of {total} vehicles"
   }
 }

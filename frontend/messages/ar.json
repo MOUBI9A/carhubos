@@ -211,8 +211,8 @@
     "updateFailed": "فشل التحديث",
     "deleteFailed": "فشل الحذف",
     "taskUpdated": "تم تحديث المهمة",
-    "taskAssigned": "تم إسناد المهمة"
-    ,"inspectionRecorded": "تم تسجيل الفحص"
+    "taskAssigned": "تم إسناد المهمة",
+    "inspectionRecorded": "تم تسجيل الفحص"
   },
   "agentTasks": {
     "title": "لوحة المهام",
@@ -338,7 +338,8 @@
     "loadFailed": "تعذر تحميل الأسطول.",
     "noCars": "لا توجد سيارات متاحة",
     "bookingUnavailable": "ستتوفر طلبات الحجز عبر الإنترنت قريباً.",
-    "agency": "الوكالة"
+    "agency": "الوكالة",
+    "showingCount": "عرض {shown} من {total} مركبة متاحة"
   },
   "renterHistory": {
     "title": "سجل الإيجارات",
@@ -445,6 +446,7 @@
     "secureEscrow": "ضمان آمن",
     "digitalReport": "محضر رقمي",
     "loadFailed": "تعذر تحميل هذه الوكالة.",
-    "noFleet": "لا توجد سيارات متاحة"
+    "noFleet": "لا توجد سيارات متاحة",
+    "showingCount": "عرض {shown} من {total} مركبة"
   }
 }

@@ -211,8 +211,8 @@
     "updateFailed": "Échec de la mise à jour",
     "deleteFailed": "Échec de la suppression",
     "taskUpdated": "Tâche mise à jour",
-    "taskAssigned": "Tâche attribuée"
-    ,"inspectionRecorded": "Inspection enregistrée"
+    "taskAssigned": "Tâche attribuée",
+    "inspectionRecorded": "Inspection enregistrée"
   },
   "agentTasks": {
     "title": "Tableau des tâches",
@@ -338,7 +338,8 @@
     "loadFailed": "Impossible de charger la flotte.",
     "noCars": "Aucun véhicule disponible",
     "bookingUnavailable": "La demande de réservation en ligne sera bientôt disponible.",
-    "agency": "Agence"
+    "agency": "Agence",
+    "showingCount": "Affichage de {shown} sur {total} véhicules disponibles"
   },
   "renterHistory": {
     "title": "Historique des locations",
@@ -445,6 +446,7 @@
     "secureEscrow": "Séquestre sécurisé",
     "digitalReport": "Constat numérique",
     "loadFailed": "Impossible de charger cette agence.",
-    "noFleet": "Aucun véhicule disponible"
+    "noFleet": "Aucun véhicule disponible",
+    "showingCount": "Affichage de {shown} sur {total} véhicules"
   }
 }
