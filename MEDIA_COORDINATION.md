@@ -46,7 +46,7 @@
 | Media & Brand Director (Lead) | active | Resumed team on founder's "keep going" | `MEDIA_COORDINATION.md` | 2026-07-21: resumed after pause; re-engaged Car Data + Copywriter, dispatched Visual & Media Asset Designer. |
 | Car Data & Spec Researcher | done | Complete: all 4 deliverables committed | `content/car-data/fleet-categories.json`, `content/car-data/car-specs.json`, `content/car-data/pricing-structure.md`, `content/car-data/rental-details.md` | 2026-07-21: all 4 files done and committed (`552c9d4`). 8 fleet categories, 24 sample vehicles, pricing + rental-terms reference docs. Seasonal/rate-tier pricing explicitly flagged as proposal-only per CLAUDE.md. Not pushed. |
 | Copywriter & Client Hook Strategist | done | Complete: all 4 deliverables committed | `docs/marketing/copy/landing-headlines.md`, `docs/marketing/copy/cta-library.md`, `docs/marketing/copy/client-hooks.md`, `docs/marketing/copy/onboarding-messaging.md` | 2026-07-21: all 4 files done. Read `frontend/messages/en.json` (`landing`/`auth`/`nav` namespaces) + the actual `_components/*.tsx` for the real shipped voice before drafting — options are alternates to the live copy, not blind rewrites. No fabricated certifications/claims (checked `#enterprise` tile list stays paired with real properties only). Each file flags French/Arabic localization as a translator follow-up, not done here. Not pushed. |
-| Visual & Media Asset Designer | active | Starting: style-guide.md, logo-guidelines.md, asset-specs.md | `docs/marketing/brand/`, `frontend/public/assets/media/` | 2026-07-21: dispatched for the first time. |
+| Visual & Media Asset Designer | done | Delivered style-guide.md, logo-guidelines.md, asset-specs.md + 2 new SVG assets | `docs/marketing/brand/style-guide.md`, `docs/marketing/brand/logo-guidelines.md`, `docs/marketing/brand/asset-specs.md`, `frontend/public/assets/media/logo-reversed.svg`, `frontend/public/assets/media/logo-icon-monochrome.svg` | 2026-07-21: all 3 docs + 2 supplementary logo variants delivered, grounded in `globals.css`/`DESIGN_VISION.md`/component code. Did not touch any existing `frontend/public/` file, `.ts`/`.tsx`, or `globals.css`. Ready for Director review. |
 
 ## Notes log (append-only, most recent last)
 
@@ -95,3 +95,23 @@
   network-size number for the hooks file. Every file carries a closing note that
   French (default locale) + Arabic (RTL) localization is a translator follow-up, not done here.
   Touched no files outside `docs/marketing/copy/` and my own status-board row. Not pushed.
+- **2026-07-21 — Visual & Media Asset Designer:** Finished all 3 deliverables under
+  `docs/marketing/brand/`: `style-guide.md` (real color tokens with computed hex + usage rules,
+  read verbatim from `frontend/src/app/globals.css`'s `@theme` block — e.g. `--color-metal:
+  hsl(40 56% 58%)` = `#D0A858`, "premium moments ONLY" per the file's own comment; type system —
+  Fraunces/Hanken Grotesk/IBM Plex Mono/Noto Sans Arabic per `layout.tsx`; the killed
+  blanket-uppercase-font-black rule and the surviving `.eyebrow`-only uppercase exception, both
+  quoted from `globals.css`'s base layer), `logo-guidelines.md` (described `logo.svg` /
+  `logo-icon.svg` from an actual read — found a real contrast issue: `logo.svg`'s "Fider" wordmark
+  is filled `#2A2E30`, dark graphite, and is not legible on the product's own dark background
+  `hsl(30 9% 7%)`/`#131210` — documented as the reason a reversed variant was needed), `asset-specs.md`
+  (car/agency/banner/avatar specs mapped to `AgencyImage`/`CarPhoto`/`Avatar`/`Seal.tsx` — pinned
+  ratios from actual code, e.g. `CarPhoto`'s hardcoded `3/2`, plus every real `ratio=` value grepped
+  across `frontend/src/app/`; flagged the social-share 1200×630 spec as an external convention, not
+  a pinned product spec). Added 2 supplementary SVGs under `frontend/public/assets/media/`
+  (existing `logo.svg`/`logo-icon.svg`/`hero-illustration.svg` untouched): `logo-reversed.svg`
+  (light-on-dark wordmark, cream text + the same brass gradient stops as `globals.css`'s
+  `.metal-text` utility) and `logo-icon-monochrome.svg` (single-ink evenodd silhouette of the
+  shield+"F" cutout, for engraving/1-color-print/watermark use). Both validated as well-formed XML
+  after fixing one invalid `--` sequence inside an SVG comment. No `.ts`/`.tsx`/`globals.css`/
+  `schema.prisma` files touched. Not pushed.
