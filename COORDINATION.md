@@ -124,4 +124,4 @@ Still outstanding on `frontend/src/app/(owner)/dashboard/page.tsx`:
 > stay open** — unclaimed, up for grabs.
 
 ## Current state (2026-07-21)
-`main` @ `1ed9fea`, all green: backend **18 suites / 123 tests**, frontend **9 vitest**, tsc + eslint clean both sides. Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+`main` @ `fd177ec`, all green: backend **19 suites / 129 tests**, frontend **9 vitest**, tsc + eslint clean both sides. Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
