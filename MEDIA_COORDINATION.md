@@ -45,7 +45,7 @@
 |---|---|---|---|---|
 | Media & Brand Director (Lead) | active | Resumed team on founder's "keep going" | `MEDIA_COORDINATION.md` | 2026-07-21: resumed after pause; re-engaged Car Data + Copywriter, dispatched Visual & Media Asset Designer. |
 | Car Data & Spec Researcher | done | Complete: all 4 deliverables committed | `content/car-data/fleet-categories.json`, `content/car-data/car-specs.json`, `content/car-data/pricing-structure.md`, `content/car-data/rental-details.md` | 2026-07-21: all 4 files done and committed (`552c9d4`). 8 fleet categories, 24 sample vehicles, pricing + rental-terms reference docs. Seasonal/rate-tier pricing explicitly flagged as proposal-only per CLAUDE.md. Not pushed. |
-| Copywriter & Client Hook Strategist | active | Starting: landing-headlines.md, cta-library.md, client-hooks.md, onboarding-messaging.md | `docs/marketing/copy/` | 2026-07-21: resumed, had not started before the pause. |
+| Copywriter & Client Hook Strategist | done | Complete: all 4 deliverables committed | `docs/marketing/copy/landing-headlines.md`, `docs/marketing/copy/cta-library.md`, `docs/marketing/copy/client-hooks.md`, `docs/marketing/copy/onboarding-messaging.md` | 2026-07-21: all 4 files done. Read `frontend/messages/en.json` (`landing`/`auth`/`nav` namespaces) + the actual `_components/*.tsx` for the real shipped voice before drafting — options are alternates to the live copy, not blind rewrites. No fabricated certifications/claims (checked `#enterprise` tile list stays paired with real properties only). Each file flags French/Arabic localization as a translator follow-up, not done here. Not pushed. |
 | Visual & Media Asset Designer | active | Starting: style-guide.md, logo-guidelines.md, asset-specs.md | `docs/marketing/brand/`, `frontend/public/assets/media/` | 2026-07-21: dispatched for the first time. |
 
 ## Notes log (append-only, most recent last)
@@ -76,3 +76,22 @@
   `car-specs.json.category` value exists in `fleet-categories.json`. Committed content as
   `552c9d4`; touched no files outside `content/car-data/` and my own status-board row. Not
   pushed.
+- **2026-07-21 — Copywriter & Client Hook Strategist:** Finished all 4 deliverables under
+  `docs/marketing/copy/`: `landing-headlines.md` (5-8 hero options plus section headlines for
+  `#solutions`/Trust Console, `#enterprise`, and the honest-capability tiles, each cross-checked
+  against real shipped capability so nothing overclaims), `cta-library.md` (button copy grouped
+  by funnel stage — top-of-funnel landing through bottom-of-funnel signup, plus in-app
+  upgrade/upsell copy for the BETA-free plan tiers), `client-hooks.md` (10 pain-point hooks for
+  Moroccan agency owners — double-bookings, cross-agency renter blind spots, damage disputes,
+  paperwork, staff accountability, VAT/cash reconciliation, idle fleet, document-expiry
+  compliance, outgrowing spreadsheets, the trust network effect), `onboarding-messaging.md`
+  (signup → first car → first booking → first-completed-rental "you're live" moment, plus a
+  bonus short section for renter-portal consent/QR onboarding). Read the real shipped landing
+  copy (`frontend/messages/en.json` `landing`/`auth`/`nav`, and all four
+  `(public)/landing/_components/*.tsx`) before drafting, so voice matches rather than
+  contradicts what's live. Kept the existing "no fabricated claims" rule strict: flagged the
+  `#enterprise` headline must stay paired with its real property list, explicitly listed what
+  not to claim (SOC 2/ISO/bank-grade/uptime SLA/unverified counts), and didn't invent a
+  network-size number for the hooks file. Every file carries a closing note that
+  French (default locale) + Arabic (RTL) localization is a translator follow-up, not done here.
+  Touched no files outside `docs/marketing/copy/` and my own status-board row. Not pushed.
