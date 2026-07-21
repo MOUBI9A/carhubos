@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `5debfce`.** Tree is 100% clean, `backend` tsc clean + jest **13 suites/92 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Last updated at commit `b22203d`.** Tree is 100% clean, `backend` tsc clean + jest **14 suites/99 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -60,7 +60,7 @@ Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF 
 ### 3. Smaller follow-ups (not blocking, pick up opportunistically)
 - ✅ ~~Adopt the paginated `GET /bookings` shape in the frontend~~ — done (`a90c4d5`, windowed scheduler; see Phase 6 above).
 - ✅ ~~OVERDUE booking status crashed the frontend~~ — done (`aa71a37`): OVERDUE (reachable via the ACTIVE→OVERDUE cron) was missing from every frontend status map; the owner scheduler + renter portal history crashed on it. Added OVERDUE (amber "needs attention") to the `BookingStatus` types + all status maps (owner bookings/portal/customers/fleet/search); tsc enforces exhaustiveness.
-- 🔄 Extend the multi-tenant boundary test to more domains — **now 10 domains** (`5debfce` added cars, maintenance, and payments-verify the load-then-check IDOR variant). Remaining: staff/memberships, tasks, refusal-logs, automations, notifications, analytics — one at a time.
+- 🔄 Extend the multi-tenant boundary test to more domains — **now 10 domains** (`5debfce` added cars, maintenance, and payments-verify the load-then-check IDOR variant). **Staff/memberships** got a dedicated security spec (`b22203d`, `agency-staff.service.spec.ts`): tenant boundary + anti-escalation (a non-ROOT_ADMIN caller can't grant caps they don't hold — the guard stopping a staff.manage delegate from minting owner access) + lockout guards (last staff.manage, last owner, remove-self). Remaining: tasks, refusal-logs, automations, notifications, analytics — one at a time.
 - Rate tiers/seasonality/extras on bookings (Phase 4). **Likely a product decision** (weekend multiplier? seasonal calendar? per-car tiers?) — worth confirming the pricing model with the founder before building; touches money math.
 - Chart tap/focus + screen-reader table equivalents (Phase 7 a11y). Charts are inline SVG in the analytics/dashboard pages (no shared chart component).
 - Other unbounded list endpoints (perf checklist "holds at 10k+"): audit `GET /customers` / `/cars` / `/payments` — customers pagination needs a typeahead in the booking-create form (the `?search=` param already exists).
