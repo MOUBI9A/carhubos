@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | Defined this restructure. No implementation claim yet — available next for an architecture-level item (e.g. scoping the Accidents domain model for Lane 1, or arbitrating a founder-gated decision). | None claimed. | 2026-07-21 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Finding #6 (webhooks SSRF) DONE + pushed (`460a8a6`, see R6).** Now **claiming finding #8** (soft-deleted agency permanently blocks re-provisioning of its `subdomain`/`contactEmail`) — implementing C's agreed **no-migration** fix: `AgenciesService.softDelete()` will rename the two `@unique` fields off the tombstone (embedding the row's own uuid so the freed value can never re-collide) so the dead row keeps its historical identity but stops occupying the unique slots forever, unblocking a later re-provision of the same subdomain/email. Adding a new `agencies.service.spec.ts` (module has **0** specs today — also chips finding #7) proving: softDelete frees both slots + stamps `deletedAt`, a null subdomain stays null, and an already-deleted/missing agency still 404s. Not touching `saas-admin.service.ts` — the rename makes provisioning's existing 409 path correct without changing it. | `backend/src/agencies/agencies.service.ts`, new `backend/src/agencies/agencies.service.spec.ts` | 2026-07-21 |
+| **QA Tester** | **Finding #6 DONE (`460a8a6`, R6). Finding #8 DONE + pushed (`10aa7d5`, R8).** `AgenciesService.softDelete()` now renames `subdomain`/`contactEmail` off the tombstone (appends `.deleted-<agency.id>` — the row's own uuid, globally unique, original kept as prefix), freeing both `@unique` slots so a later re-provision of the same subdomain/email succeeds; null subdomain stays null; no schema migration. New `agencies.service.spec.ts` (module had **0** specs — also chips #7): 7 tests. Verified: backend `tsc` clean, `jest` **23 suites / 184** (was 22/177), `eslint .` clean. **See QA Tester → Architect note re: one-time backfill of pre-existing tombstones.** **Claim released.** | None claimed. | 2026-07-21 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -154,6 +154,19 @@ push **is** the message.
 > Also note: I gated **all three** handlers (incl. `GET /webhooks` and
 > `DELETE`), not just `subscribe` — `findAll` returns subscription rows incl. the
 > `secret`, so owner-only read is the safer contract.
+
+> **QA Tester → Architect** (re: finding #8, `10aa7d5`, full writeup in R8). The
+> code fix is in and green, but there's **one data task that is yours, not mine**:
+> a **one-time backfill of tombstones created before `10aa7d5`.** softDelete now
+> frees the `subdomain`/`contactEmail` unique slots going forward, but any agency
+> soft-deleted *earlier* still holds its original values and will still block
+> re-provisioning of that subdomain/email. A single UPDATE over rows where
+> `deletedAt IS NOT NULL` (apply the same `.deleted-<id>` rename) closes it. I
+> did **not** write/commit that script — it's a data migration on the live DB,
+> Architect territory, and in the current beta DB it's plausibly a no-op (likely
+> zero soft-deleted agencies yet). Please confirm the count before go-live. I
+> also deliberately left `saas-admin.service.ts` untouched (its generic 409 is
+> now correct — a 409 can now only mean a genuine live collision).
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -667,4 +680,56 @@ Verified: frontend `tsc --noEmit` clean, `vitest` **9/9**, `eslint .` clean;
 backend (201/409/exclusion all confirmed as the backend's actual behavior,
 not assumed) — full method in the note above. No new remote commits between
 verify and push (`git fetch` showed `HEAD == origin/main` before staging).
+
+---
+
+### R8 — finding #8 (soft-deleted agency blocks re-provisioning) resolved (QA Tester, 2026-07-21)
+Commit `10aa7d5`. Took C's agreed no-migration approach (the rename, not a
+partial unique index): `AgenciesService.softDelete()` (`agencies.service.ts`)
+now, in the same `update` that stamps `deletedAt`, rewrites the two `@unique`
+fields off the tombstone —
+
+- `contactEmail` → `` `${contactEmail}.deleted-${agency.id}` `` (non-null column,
+  always renamed),
+- `subdomain` → `` `${subdomain}.deleted-${agency.id}` `` **only when non-null**
+  (a null occupies no unique slot, so it stays null rather than becoming a
+  nonsense `"null.deleted-…"`).
+
+The row's own uuid is embedded so the retired value is globally unique and can
+never re-collide with a live row or another tombstone; the original stays a
+readable prefix so the dead tenant keeps its historical identity. The existing
+`deletedAt: null` guard means a row is re-tombstoned at most once (no
+double-suffixing). Tenant scoping untouched. This makes provisioning's existing
+P2002→409 path correct **by construction** — after a soft-delete the slots are
+free, so re-provisioning the same subdomain/email simply succeeds; a 409 now
+only ever means a genuine **live** collision. Confirmed by reading every
+`subdomain`/`contactEmail` use: the public lookups (`getAgencyBySubdomain`,
+`/public/fleet`) already filter `deletedAt: null`, so nothing resolves a
+tombstone by these fields; the DTO format validation only guards *new input*,
+never the value softDelete writes.
+
+New `agencies.service.spec.ts` (agencies module had **0** specs — also chips
+finding #7), 7 tests: softDelete frees both slots + stamps `deletedAt`, keeps
+the original as a prefix and embeds the pk; a null subdomain stays null while
+contactEmail is still freed; deterministic retired value; a missing/
+already-deleted agency 404s **without** calling `update`; the lookup is scoped
+on `deletedAt: null`; plus getMyAgency happy-path + 404-on-tombstone.
+
+Verified (real output): `cd backend && npx tsc --noEmit` clean; `npx jest`
+**23 suites / 184 tests** (baseline 22/177); `npx eslint .` clean.
+
+**Deliberately NOT done (flagged to Architect, not silently skipped):**
+1. **No backfill of pre-existing tombstones.** This fix only frees slots for
+   agencies soft-deleted *from now on*. Any agency already soft-deleted before
+   `10aa7d5` still holds its original `subdomain`/`contactEmail` and will still
+   block re-provisioning. A one-time backfill (rename existing rows where
+   `deletedAt IS NOT NULL`) closes that — it's a data script, not code, so I left
+   it for the Architect to run/own rather than commit a migration unasked. In a
+   pre-production beta DB this may be a no-op (likely zero soft-deleted agencies
+   yet), but it should be confirmed before go-live.
+2. **Did not change `saas-admin.service.ts`.** The finding noted the 409 message
+   can't distinguish a live collision from a tombstone; with slots now freed on
+   delete, the only remaining 409 *is* a live collision, so the generic message
+   is correct. Not worth touching another session's provisioning path for a
+   message tweak.
 
