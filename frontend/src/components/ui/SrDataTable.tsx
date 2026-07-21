@@ -7,8 +7,10 @@ import React from 'react';
  * hover tooltips, which are invisible to assistive tech (and unusable on touch,
  * where there is no hover). Rendering the same series as a real `<table>` inside
  * `.sr-only` gives screen-reader and keyboard users the actual figures without
- * changing the visual design. Pair it with a `<figure aria-labelledby>` wrapper
- * so the chart reads as one labelled figure.
+ * changing the visual design. Render it inside the chart's `<figure>`; the
+ * table's own `<caption>` names the data for assistive tech (and the visible
+ * chart heading names the figure), so don't also put an `aria-label` on the
+ * figure — that just double-announces the same sentence.
  *
  * `rows` is a list of string cells; the first cell of each row is the row header.
  */

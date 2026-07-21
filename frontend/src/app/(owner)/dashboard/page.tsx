@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -46,6 +46,9 @@ import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
 
 export default function OwnerDashboard() {
   const t = useTranslations('ownerPages');
+  // Locale-aware number formatting (next-intl) — not the browser's locale. Matters
+  // most in the SR data table, which a screen reader reads verbatim.
+  const format = useFormatter();
   const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -351,7 +354,7 @@ export default function OwnerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">
           {/* ═══════ Daily intensity chart ═══════ */}
-          <figure className="m-0" aria-label="Daily intensity — 14-day booking and revenue flow">
+          <figure className="m-0">
           <Card className="h-96 flex flex-col justify-between">
             <CardHeader className="p-0">
                <div>
@@ -376,7 +379,7 @@ export default function OwnerDashboard() {
               columns={['Day', 'Revenue (MAD)', 'Bookings']}
               rows={data.dailyIntensity.map((d) => [
                 d.label,
-                d.revenue.toLocaleString(),
+                format.number(d.revenue),
                 String(d.bookings),
               ])}
             />
@@ -384,8 +387,8 @@ export default function OwnerDashboard() {
                {data.dailyIntensity.map((day, i) => (
                  <div key={i} className="group/bar relative flex-1 flex flex-col items-center justify-end">
                     {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-surface-raised text-foreground border border-hairline text-[10px] px-3 py-2 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none z-10 scale-95 group-hover/bar:scale-100 whitespace-nowrap shadow-lg">
-                       <p className="font-mono tabular text-primary">{day.revenue.toLocaleString()} MAD</p>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-surface-raised text-foreground border border-hairline text-[10px] px-3 py-2 rounded-lg opacity-0 group-hover/bar:opacity-100 group-active/bar:opacity-100 transition-all pointer-events-none z-10 scale-95 group-hover/bar:scale-100 group-active/bar:scale-100 whitespace-nowrap shadow-lg">
+                       <p className="font-mono tabular text-primary">{format.number(day.revenue)} MAD</p>
                        <p className="text-text-muted">{day.bookings} booking{day.bookings !== 1 ? 's' : ''}</p>
                     </div>
                     {/* Booking count dot */}
