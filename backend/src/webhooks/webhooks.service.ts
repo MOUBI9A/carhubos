@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscribeWebhookDto } from './dto/subscribe-webhook.dto';
 import axios from 'axios';
 import * as crypto from 'crypto';
 
@@ -9,10 +10,12 @@ export class WebhooksService {
 
   constructor(private prisma: PrismaService) {}
 
-  async subscribe(agencyId: string, data: { url: string; event: string; secret?: string }) {
+  async subscribe(agencyId: string, data: SubscribeWebhookDto) {
     return this.prisma.webhookSubscription.create({
       data: {
-        ...data,
+        url: data.url,
+        event: data.event,
+        secret: data.secret,
         agencyId,
       },
     });
