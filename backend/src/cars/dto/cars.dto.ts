@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -8,6 +9,16 @@ import {
   Max,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+
+// Fleet lifecycle states (schema stores as String; matches the schema comment
+// and the frontend CarStatus type). fuelType/gearbox are left free-form — no
+// fixed value set is used anywhere, so constraining them would reject valid input.
+export const CAR_STATUSES = [
+  'AVAILABLE',
+  'RENTED',
+  'MAINTENANCE',
+  'OUT_OF_SERVICE',
+] as const;
 
 export class CreateCarDto {
   @IsString()
@@ -41,6 +52,7 @@ export class CreateCarDto {
 
   @IsString()
   @IsOptional()
+  @IsIn([...CAR_STATUSES], { message: `status must be one of ${CAR_STATUSES.join(', ')}` })
   status?: string;
 }
 

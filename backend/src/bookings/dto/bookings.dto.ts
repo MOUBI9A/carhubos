@@ -77,5 +77,6 @@ export class CreateBookingDto {
 export class UpdateBookingDto extends PartialType(CreateBookingDto) {
   @IsString()
   @IsOptional()
+  @IsIn(BOOKING_STATUSES, { message: `status must be one of ${BOOKING_STATUSES.join(', ')}` })
   status?: string;
 }

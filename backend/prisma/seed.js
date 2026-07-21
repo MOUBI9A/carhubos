@@ -192,7 +192,7 @@ async function main() {
           amount: totalPrice,
           status: 'VERIFIED',
           type: 'INCOME',
-          method: 'BANK_TRANSFER',
+          method: 'TRANSFER',
           date: startDate,
           invoiceId: invoice.id,
         }

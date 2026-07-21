@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -9,6 +10,12 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
+
+// Pseudo-enum value sets (schema stores these as String). Constrained here so an
+// invalid value can't be written through the API — matches the schema comments,
+// the seed, and the frontend pickers.
+export const CUSTOMER_STATUSES = ['ACTIVE', 'BLACKLISTED'] as const;
+export const IDENTITY_TYPES = ['CIN', 'PASSPORT'] as const;
 
 export class CreateCustomerDto {
   @IsString()
@@ -29,7 +36,8 @@ export class CreateCustomerDto {
 
   @IsString()
   @IsNotEmpty()
-  identityType: string; // CIN, PASSPORT
+  @IsIn([...IDENTITY_TYPES], { message: `identityType must be one of ${IDENTITY_TYPES.join(', ')}` })
+  identityType: string;
 
   @IsString()
   @IsNotEmpty()
@@ -43,6 +51,7 @@ export class CreateCustomerDto {
 export class UpdateCustomerDto extends PartialType(CreateCustomerDto) {
   @IsString()
   @IsOptional()
+  @IsIn([...CUSTOMER_STATUSES], { message: `status must be one of ${CUSTOMER_STATUSES.join(', ')}` })
   status?: string;
 }
 
