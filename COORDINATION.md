@@ -21,7 +21,7 @@
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Session A** (Lead) | **Findings #1 + #2 RESOLVED + pushed** — email normalization (`3cefcb7`) + chart tap/focus a11y (`1ed9fea`). Smoke test done earlier (all green). **Claims released.** | None claimed. | 2026-07-21 |
-| **Session B** (REVIEWER — QA / test / hardening) | Cycle 2 done, **no new executor commits to review** (T1 not pushed yet). Pushed `40c6719` (public soft-delete leak, proven live) and `e9e32d0` (**MRR/ARR were float math** — §5.3 violation, latent). Open finding **#3** still yours. Backend **21 suites / 138**. | None claimed — `public.controller.ts`, `saas-admin.service.ts` released. | 2026-07-21 |
+| **Session B** (REVIEWER — QA / test / hardening) | Cycle 3 done. **Still no executor commits to review** (T1 unpushed). Swept fake-success/mock-data: pushed `fc03417` — **`hub/page.tsx` fabricated success on a page that never called the backend**. New findings **#4** (hub wiring — backend already exists) and **#5** (3 minor things in `erp/page.tsx`, deliberately NOT patched, it's your T1 file). #3 still open. | None claimed. **Not touching `erp/page.tsx` or `TrustConsole.tsx` — yours for T1.** | 2026-07-21 |
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -155,6 +155,47 @@ Still outstanding on `frontend/src/app/(owner)/dashboard/page.tsx`:
 > good SR/touch spot-check is welcome from B (QA). **`erp` + `TrustConsole` charts
 > stay open** — unclaimed, up for grabs.
 
+### 4. Hub page needs real wiring — the backend already exists (found by B) — OPEN
+**Files:** `frontend/src/app/(owner)/dashboard/hub/page.tsx`; endpoints in
+`backend/src/hub/hub.controller.ts`.
+
+I removed the *lying* half in `fc03417` (it fabricated a hardcoded "Ferrari F8
+Tributo", pushed it into local state, and toasted "listed successfully" without
+ever calling the backend). What's left is the actual wiring, which is a feature:
+
+- **Marketplace grid** still renders the `INITIAL_MARKETPLACE_CARS` constant.
+  `GET /hub/discover` (capability `fleet.view`) already returns real
+  cross-agency listings.
+- **Listing a vehicle** needs `POST /hub/list` (capability `hub.manage`, body
+  `{ carId, b2bRate }`). The blocker is UI, not API: the modal only collects a
+  daily rate, so it needs a **car picker** to supply a real `carId`.
+- **B2B requests** have *no endpoint at all* — that's a backend feature to spec,
+  not just a wiring job. Worth confirming with the founder whether B2B requests
+  are in scope for beta before building.
+
+Note this contradicts `CLAUDE.md` §Phase 7's claim that all fake-success toasts
+were removed — two were missed here. Worth correcting that line when convenient.
+
+### 5. Three small things in `erp/page.tsx` — NOT patched, it's your T1 file (found by B)
+Left entirely alone to avoid colliding with T1. All minor:
+
+1. **`page.tsx:277` mislabels an advisory as a completed action.** The
+   `EXPAND_FLEET` branch navigates and the `BOOST_MARKETING` branch correctly
+   uses `showToast('info', …)`, but the third branch uses
+   `showToast('success', 'Pricing optimized', 'Review peak-period pricing…')`.
+   Nothing was optimized — the body text is advice. Should be `'info'`, matching
+   its sibling branch two lines up.
+2. **`page.tsx:54-56` can toast a download that didn't happen.**
+   `handleExportPnL` calls `exportPnL()`, which early-returns on `if (!data)`,
+   then unconditionally toasts "has been downloaded as CSV". Only reachable if
+   the button renders before data resolves — worth a guard either way.
+3. **`useErpData.ts:54-71` sums money with JS floats in the exported CSV**
+   (`m.revenue - m.expenses`, `reduce((s, m) => s + m.revenue, 0)`). This is
+   *not* a §5.3 violation — the wire contract is deliberately numeric and the
+   interceptor exists precisely so the frontend does number math. But float sums
+   can emit `12345.670000000002` into a financial document an accountant reads.
+   Rounding to 2dp at CSV-write time would be enough.
+
 ## Reviewer audit log — what has actually been swept (so nobody redoes it)
 
 - **Money / Decimal invariant (§5.3)** — swept every `Number(...)`/`parseFloat`/
@@ -173,8 +214,16 @@ Still outstanding on `frontend/src/app/(owner)/dashboard/page.tsx`:
 - **Public/unauthenticated input** — `?agencyId=<not-a-uuid>` returns `[]`/200,
   **not** a 500, so there's no unvalidated-param crash. The remaining gap on
   that endpoint is bounds/indexing → finding #3.
-- **Not yet swept:** React effect cleanup/stale closures, fake-success toasts or
-  mock data in "wired" pages, migrations against an empty DB.
+- **Fake-success toasts / mock data in "wired" pages** — swept all 19 files
+  containing a `success` toast, cross-checked against whether the file actually
+  calls the API. **One real offender:** `hub/page.tsx` (0 API calls, 2 fabricated
+  successes) — fixed in `fc03417`, wiring left as finding #4. `erp/page.tsx` also
+  has 0 API calls but its P&L export genuinely builds a CSV blob client-side, so
+  that toast is honest; three minor issues there are finding #5. Everything else
+  pairs its success toast with a real request. Known-mock pages `accidents` and
+  `admin/pulse` already carry honest states.
+- **Not yet swept:** React effect cleanup/stale closures, migrations against an
+  empty DB.
 
 ## Current state (2026-07-21)
-`main` @ `e9e32d0`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+`main` @ `fc03417`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
