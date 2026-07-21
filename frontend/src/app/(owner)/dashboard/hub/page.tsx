@@ -71,7 +71,9 @@ export default function HubPage() {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'my-fleet'>('marketplace');
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
-  const [marketplaceCars, setMarketplaceCars] = useState(INITIAL_MARKETPLACE_CARS);
+  // Placeholder inventory. Real cross-agency listings live behind
+  // `GET /hub/discover` — see the wiring note on handleListVehicle below.
+  const marketplaceCars = INITIAL_MARKETPLACE_CARS;
   const [newListingRate, setNewListingRate] = useState("");
 
   const handleListVehicle = () => {
@@ -79,25 +81,32 @@ export default function HubPage() {
       showToast('danger', 'Input Required', 'Please enter a daily rate');
       return;
     }
-    const newCar = {
-      id: Date.now(),
-      name: "Ferrari F8 Tributo",
-      agency: "My Agency",
-      type: "Supercar",
-      dailyRate: Number(newListingRate),
-      image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200",
-      status: "Available",
-      trustScore: 100
-    };
-    setMarketplaceCars([newCar, ...marketplaceCars]);
+    // NOT WIRED. This used to fabricate a hardcoded "Ferrari F8 Tributo" entry,
+    // push it into local state and claim "listed successfully" — while never
+    // calling the backend, so nothing persisted and a refresh lost it. The real
+    // endpoint exists (`POST /hub/list`, capability `hub.manage`, body
+    // `{ carId, b2bRate }`) but needs a car picker to supply a real carId, so
+    // wiring it is a feature, not a toast change. Be honest until then — same
+    // pattern as accidents/page.tsx.
     setIsListingModalOpen(false);
     setNewListingRate("");
-    showToast('success', 'Listing Created', 'Vehicle listed on the hub successfully!');
-    setActiveTab('my-fleet');
+    showToast(
+      'info',
+      'Not wired yet',
+      'Hub listing isn’t connected to the backend yet — nothing was saved.',
+    );
   };
 
   const handleRequest = (car: any) => {
-    showToast('success', 'B2B Request Sent', `Request sent to ${car.agency} for ${car.name}`);
+    // Also not wired: there is no B2B request endpoint at all yet (the hub
+    // module exposes only POST /hub/list and GET /hub/discover). Claiming the
+    // request was sent meant an owner could sit waiting on a reply that no one
+    // was ever going to receive.
+    showToast(
+      'info',
+      'Not available yet',
+      `B2B requests aren’t built yet — nothing was sent to ${car.agency}.`,
+    );
   };
 
   return (
