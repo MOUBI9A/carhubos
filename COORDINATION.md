@@ -39,13 +39,63 @@ C = PM/E2E QA Architect). On top of the Golden rules above:
 > A to append a *different* #6 (soft-deleted tenant 409 on re-provisioning) and #7
 > (empty-DB seed/migration baseline). A did not write them — see R5.
 
-## 🔴 Live status board — update this before editing
+## Role restructure (2026-07-21, later same day — founder-set)
+
+The founder asked for a clean, fixed 3-role team going forward, replacing the
+ad-hoc A/B/C labels for anyone newly picking up work from here on:
+
+| Role | Owns | Roughly maps to (history) |
+|---|---|---|
+| **Architect** | Backend/schema/architecture decisions, breaking `docs/AUDIT_BACKLOG.md` phases into concrete tasks, arbitrating cross-cutting findings, anything touching `schema.prisma` (still serialized — Golden Rule 5) | Session A's execution work + Session C's PM/direction-setting |
+| **Frontend Developer** | `frontend/` — wiring mock pages to real endpoints, UI, a11y/i18n polish (conventions in `.claude/agents/frontend-wirer.md`) | Session A's frontend slices |
+| **QA Tester** | Tests (Jest unit/e2e, Playwright), CI, adversarial review of the other two roles' commits before they're considered done, owning hardening findings (`.claude/agents/test-writer.md` + `verifier.md`) | Session B (Reviewer/QA) + Session C's testing/CI work |
+
+**This does not retroactively rename anyone.** If a session is still running as
+Session A/B/C from the earlier cohort, keep updating your existing row below
+and finish what you claimed — a label change is not a reason to stop mid-task.
+The status board further down starts a **fresh table** for whoever picks up
+work under the new names, so the two cohorts can't collide. Same golden rules,
+same append-only findings/resolution log, same file-ownership discipline —
+only the names and the cleaner 3-way split are new.
+
+**Automatic task pickup (all three roles):** on start (or right after
+finishing/releasing a claim), `git fetch && git pull --rebase`, re-read this
+file + `docs/AUDIT_BACKLOG.md` + `CLAUDE.md` §9, then scan Open lanes / Open
+findings below for the highest-priority **unclaimed** item matching your
+role's charter. Claim it in your row (task + files you own) and commit+push
+that claim **on its own** — before writing any code (Golden Rule 3). If
+nothing matching your charter is open, look one tier down (e.g. QA Tester with
+no open findings left picks the next thinnest gap from finding #7's
+test-coverage audit).
+
+**Message-passing (all three roles):** there is no chat between sessions —
+per `CLAUDE.md` §9, *"anything the other needs to know goes in this file, not
+in chat."* When you finish, get blocked, or hand something to another role:
+update your row, append a `**<Your Role> →**` note addressed to whoever needs
+it (see the existing `Session A →` notes above for the pattern), and push that
+as its own commit. The other role receives it on its next `git pull` — that
+push **is** the message.
+
+## 🔴 Live status board — Session A/B/C cohort (history — keep updating your own row if you're still mid-task; new joiners use the table below instead)
 
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Session A** (Lead) | **T1 + finding #3 DONE + pushed.** T1 = `erp` capital-flow chart (`SrDataTable`, `aria-hidden` decoration, `group-active` touch tooltip, next-intl numbers) + `TrustConsole` gauge (`aria-hidden`; no SR table — its numbers are already visible text, reasoned in a comment). Finding #3 = `/public/fleet` bounded + `startsWith` + optional `{items,total,page,pageSize}`, both consumers updated. Also took **finding #5** (all three). Backend **21 suites / 144**, frontend **9 vitest**, tsc + eslint + `next build` clean. **Claims released.** | None claimed. | 2026-07-21 |
 | **Session B** (REVIEWER — QA / test / hardening) | Cycle 3 done. **Still no executor commits to review** (T1 unpushed). Swept fake-success/mock-data: pushed `fc03417` — **`hub/page.tsx` fabricated success on a page that never called the backend**. New findings **#4** (hub wiring — backend already exists) and **#5** (3 minor things in `erp/page.tsx`, deliberately NOT patched, it's your T1 file). #3 still open. | None claimed. **Not touching `erp/page.tsx` or `TrustConsole.tsx` — yours for T1.** | 2026-07-21 |
 | **Session C** (PM / Chief E2E QA Architect) | Tour + audit done. Opened finding **#6** (webhooks SSRF, for B), **#7** (test-coverage audit), and verified + filed **#8** (soft-deleted agency blocks re-provisioning of its subdomain/contactEmail forever — for A/B; reproduced from code, not taken on the relayed one-liner). Confirmed both e2e frameworks (Playwright, Jest e2e) already exist — nothing to install; the real gap is CI never running the backend one. **Starting T4 (live-DB e2e CI job) now**, then T2. | `.github/workflows/ci.yml` · `backend/test/*.e2e-spec.ts` (new) — starting now. | 2026-07-21 |
+
+## 🔴 Live status board — Architect / Frontend Developer / QA Tester (current cohort)
+
+| Role | Working on | Files it owns right now | Last update |
+|---|---|---|---|
+| **Architect** | Defined this restructure. No implementation claim yet — available next for an architecture-level item (e.g. scoping the Accidents domain model for Lane 1, or arbitrating a founder-gated decision). | None claimed. | 2026-07-21 |
+| **Frontend Developer** | Starting **finding #4** (Hub page wiring) — backend (`GET /hub/discover`, `POST /hub/list`) already exists; wire the marketplace grid off real data (currently `INITIAL_MARKETPLACE_CARS` mock) and add a car picker to the listing modal so it supplies a real `carId`. B2B-request endpoint (no backend yet) stays out of scope pending a founder call. | `frontend/src/app/(owner)/dashboard/hub/page.tsx` (+ a new car-picker component if needed) | 2026-07-21 |
+| **QA Tester** | Starting **finding #6** (webhooks SSRF) — a real `SubscribeWebhookDto` (`@IsUrl({protocols:['https'],require_protocol:true})` + a loopback/link-local/private-range host denylist), a capability gate so it isn't open to every authenticated role, and a boundary+validation spec (module currently has zero test coverage). | `backend/src/webhooks/webhooks.controller.ts`, `webhooks.service.ts`, new `dto/subscribe-webhook.dto.ts`, new `webhooks.spec.ts` | 2026-07-21 |
+
+> Neither claim overlaps the pre-restructure cohort's files (Session C's
+> `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
+> expected. Standard rules still apply: pull before touching anything, verify
+> before every commit, push a board update on its own.
 
 > **Session A →** three things, in order of how much they matter to you.
 >
