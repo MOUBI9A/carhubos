@@ -166,3 +166,78 @@ describe('BookingsService.updateStatus — late fee', () => {
     expect(tx.payment.create).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * findAll's optional filters. The critical one is `from`/`to`: they must use
+ * OVERLAP semantics (startDate <= to AND endDate >= from) so the scheduler grid
+ * doesn't silently drop a rental that began before the window but is still
+ * running. A mocked Prisma that records the `where`/pagination args is enough —
+ * this is about the query shape, not the DB.
+ */
+describe('BookingsService.findAll — overlap window + pagination', () => {
+  function makeSvc(
+    findMany: jest.Mock,
+    count: jest.Mock = jest.fn().mockResolvedValue(0),
+  ) {
+    const prisma = { booking: { findMany, count } };
+    return new BookingsService(
+      prisma as any,
+      { log: jest.fn() } as any,
+      { trigger: jest.fn() } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+  }
+
+  it('returns the same flat array (tenant-scoped only) when no params are given', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'b1' }]);
+    const svc = makeSvc(findMany);
+
+    const result = await svc.findAll('agency-1');
+
+    expect(result).toEqual([{ id: 'b1' }]);
+    expect(findMany.mock.calls[0][0].where).toEqual({ agencyId: 'agency-1' });
+    expect(findMany.mock.calls[0][0].skip).toBeUndefined();
+  });
+
+  it('filters on overlap (startDate <= to AND endDate >= from), not startDate alone', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = makeSvc(findMany);
+
+    const from = '2026-07-01T00:00:00.000Z';
+    const to = '2026-07-15T00:00:00.000Z';
+    await svc.findAll('agency-1', { from, to });
+
+    const where = findMany.mock.calls[0][0].where;
+    expect(where.agencyId).toBe('agency-1');
+    // The regression guard: a booking that STARTED before the window but ends
+    // inside it must still match — impossible with a startDate-only `gte` filter.
+    expect(where.startDate).toEqual({ lte: new Date(to) });
+    expect(where.endDate).toEqual({ gte: new Date(from) });
+  });
+
+  it('still returns a flat array (no envelope) when only from/to are given', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'b1' }]);
+    const svc = makeSvc(findMany);
+
+    const result = await svc.findAll('agency-1', {
+      from: '2026-07-01T00:00:00.000Z',
+      to: '2026-07-15T00:00:00.000Z',
+    });
+
+    expect(Array.isArray(result)).toBe(true); // scheduler consumes a flat array
+    expect(findMany.mock.calls[0][0].skip).toBeUndefined();
+  });
+
+  it('returns a paginated envelope only when page/pageSize are supplied', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'b1' }]);
+    const svc = makeSvc(findMany, jest.fn().mockResolvedValue(42));
+
+    const result = await svc.findAll('agency-1', { page: 2, pageSize: 10 });
+
+    expect(result).toEqual({ items: [{ id: 'b1' }], total: 42, page: 2, pageSize: 10 });
+    expect(findMany.mock.calls[0][0].skip).toBe(10); // (page - 1) * pageSize
+    expect(findMany.mock.calls[0][0].take).toBe(10);
+  });
+});

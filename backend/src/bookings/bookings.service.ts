@@ -248,8 +248,13 @@ export class BookingsService {
    * `status`/`from`/`to`/`page`/`pageSize` are all optional and additive — when
    * none are supplied this returns the same flat array as before (existing
    * frontend callers are unaffected). Passing them moves filtering/paging from
-   * in-memory JS to the SQL query, which is the actual perf fix; adopting them
-   * in the UI is a separate follow-up.
+   * in-memory JS to the SQL query, which is the actual perf fix.
+   *
+   * `from`/`to` use **overlap** semantics (not "starts-within"): a booking is
+   * returned when it intersects the window, i.e. `startDate <= to AND
+   * endDate >= from`. This is what a date-range UI like the scheduler grid needs
+   * — a rental that began before `from` but is still running must still appear,
+   * not be dropped. The owner scheduler now fetches only its visible window.
    */
   async findAll(
     agencyId: string,
@@ -257,12 +262,10 @@ export class BookingsService {
   ) {
     const where: Prisma.BookingWhereInput = { agencyId };
     if (query?.status) where.status = query.status;
-    if (query?.from || query?.to) {
-      where.startDate = {
-        ...(query.from ? { gte: new Date(query.from) } : {}),
-        ...(query.to ? { lte: new Date(query.to) } : {}),
-      };
-    }
+    // Overlap window: keep every booking that intersects [from, to], including
+    // ones that started before `from` and are still running (endDate >= from).
+    if (query?.to) where.startDate = { lte: new Date(query.to) };
+    if (query?.from) where.endDate = { gte: new Date(query.from) };
 
     const paginate = query?.page !== undefined || query?.pageSize !== undefined;
     const page = Math.max(1, query?.page ?? 1);

@@ -80,9 +80,19 @@ const inputCls =
 export default function BookingsScheduler() {
   const t = useTranslations('ownerPages');
   const { showToast } = useToast();
-  const { data, isLoading, error, refetch } = useBookings();
 
   const [windowStart, setWindowStart] = useState(() => startOfDay(new Date()));
+  // The scheduler loads only the bookings overlapping its visible window, so the
+  // grid scales with what's on screen — not the agency's whole booking history.
+  // Moving the window (shiftWindow / "Today") re-runs the windowed query.
+  const rangeFrom = useMemo(() => windowStart.toISOString(), [windowStart]);
+  const rangeTo = useMemo(() => {
+    const end = new Date(windowStart);
+    end.setDate(end.getDate() + DAYS_TO_SHOW);
+    return end.toISOString();
+  }, [windowStart]);
+  const { data, isLoading, error, refetch } = useBookings(rangeFrom, rangeTo);
+
   // Captured once per mount — keeps render pure (react-hooks/purity)
   const [nowTs] = useState(() => Date.now());
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'ALL'>('ALL');
