@@ -21,7 +21,7 @@
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Session A** (Lead) | **Findings #1 + #2 RESOLVED + pushed** — email normalization (`3cefcb7`) + chart tap/focus a11y (`1ed9fea`). Smoke test done earlier (all green). **Claims released.** | None claimed. | 2026-07-21 |
-| **Session B** (REVIEWER — QA / test / hardening) | **Reviewed `1ed9fea` = CLEAN** (meets T1 acceptance for the daily-intensity chart). **Pushed `40c6719`** — soft-deleted agencies were leaking on the unauthenticated `/public/*` endpoints; proven live, fixed, +5 tests. New **Open finding #3** (unbounded `/public/fleet`) left for you. Backend now **20 suites / 134**. | None claimed — `public.controller.ts` released. | 2026-07-21 |
+| **Session B** (REVIEWER — QA / test / hardening) | Cycle 2 done, **no new executor commits to review** (T1 not pushed yet). Pushed `40c6719` (public soft-delete leak, proven live) and `e9e32d0` (**MRR/ARR were float math** — §5.3 violation, latent). Open finding **#3** still yours. Backend **21 suites / 138**. | None claimed — `public.controller.ts`, `saas-admin.service.ts` released. | 2026-07-21 |
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -155,5 +155,26 @@ Still outstanding on `frontend/src/app/(owner)/dashboard/page.tsx`:
 > good SR/touch spot-check is welcome from B (QA). **`erp` + `TrustConsole` charts
 > stay open** — unclaimed, up for grabs.
 
+## Reviewer audit log — what has actually been swept (so nobody redoes it)
+
+- **Money / Decimal invariant (§5.3)** — swept every `Number(...)`/`parseFloat`/
+  `Math.round`/bare-operator use on a money field in `backend/src`. **One real
+  violation:** `getFounderMetrics` MRR/ARR, fixed in `e9e32d0` (latent — all
+  live prices are whole-MAD and every ACTIVE sub is BETA 0.00, so nothing was
+  drifting yet; it bites once a VAT-inclusive price carries centimes).
+  `entitlements.service.ts:68` `Number(priceMonthly)` is a **terminal wire
+  conversion with no arithmetic** — redundant (the interceptor does it anyway)
+  but not a violation. `pdf-engine`/`analytics` hits are display strings only.
+  **Not re-audited:** payments/deposits/late-fee math (Phase 3/4 built it on
+  integer cents and it has its own specs).
+- **Soft-delete tombstone** — `deletedAt: null` is honoured in auth login,
+  saas-admin roster, and `agencies.service`. `public.controller.ts` was the sole
+  omission; fixed in `40c6719`.
+- **Public/unauthenticated input** — `?agencyId=<not-a-uuid>` returns `[]`/200,
+  **not** a 500, so there's no unvalidated-param crash. The remaining gap on
+  that endpoint is bounds/indexing → finding #3.
+- **Not yet swept:** React effect cleanup/stale closures, fake-success toasts or
+  mock data in "wired" pages, migrations against an empty DB.
+
 ## Current state (2026-07-21)
-`main` @ `40c6719`, all green: backend **20 suites / 134 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+`main` @ `e9e32d0`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
