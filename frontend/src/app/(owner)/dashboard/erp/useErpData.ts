@@ -54,19 +54,26 @@ export function useErpData() {
   const exportPnL = useCallback(() => {
     if (!data) return;
 
+    // Money arrives as JS numbers by design (the backend's
+    // DecimalToNumberInterceptor converts Prisma Decimals on the wire), so
+    // summing here is not a §5.3 violation. But float sums drift —
+    // `12345.67 + 0.1` style accumulation emits `12345.670000000002` — and this
+    // CSV is a financial document an accountant reads. Round at write time.
+    const money = (n: number) => n.toFixed(2);
+
     const rows = [
       ['Month', 'Revenue (MAD)', 'Expenses (MAD)', 'Net (MAD)'],
       ...data.monthlyData.map((m) => [
         m.month,
-        m.revenue.toString(),
-        m.expenses.toString(),
-        (m.revenue - m.expenses).toString(),
+        money(m.revenue),
+        money(m.expenses),
+        money(m.revenue - m.expenses),
       ]),
       [],
-      ['TOTAL', 
-        data.monthlyData.reduce((s, m) => s + m.revenue, 0).toString(),
-        data.monthlyData.reduce((s, m) => s + m.expenses, 0).toString(),
-        data.monthlyData.reduce((s, m) => s + (m.revenue - m.expenses), 0).toString(),
+      ['TOTAL',
+        money(data.monthlyData.reduce((s, m) => s + m.revenue, 0)),
+        money(data.monthlyData.reduce((s, m) => s + m.expenses, 0)),
+        money(data.monthlyData.reduce((s, m) => s + (m.revenue - m.expenses), 0)),
       ],
     ];
 

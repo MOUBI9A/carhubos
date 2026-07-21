@@ -419,7 +419,12 @@ function Verdict({
       {/* Band + gauge */}
       <div className="flex items-center gap-5 mb-4">
         <div className="relative w-[92px] h-[52px] shrink-0">
-          <svg viewBox="0 0 92 52" className="w-full h-full">
+          {/* Decorative only — no SrDataTable needed here. Unlike the dashboard
+              charts, every figure this gauge encodes is already visible text
+              inside/beside it: the score and "/ 5" are rendered below, and the
+              band label, review count and agency count sit to its right. An
+              sr-only table would just double-announce them. */}
+          <svg viewBox="0 0 92 52" className="w-full h-full" aria-hidden="true">
             <path d="M 12 48 A 34 34 0 0 1 80 48" fill="none" stroke="var(--color-hairline)" strokeWidth="7" strokeLinecap="round" />
             <path
               d="M 12 48 A 34 34 0 0 1 80 48"

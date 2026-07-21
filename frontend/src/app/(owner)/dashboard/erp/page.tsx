@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -31,19 +31,24 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
+import { SrDataTable } from '@/components/ui/SrDataTable';
 import { useErpData } from './useErpData';
 
 export default function TitanERP() {
   const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const router = useRouter();
+  // next-intl formatter — `toLocaleString()` formats with the BROWSER's locale,
+  // not the app's, so an FR app in an en-US browser rendered "12,345" instead of
+  // "12 345". Worst in the screen-reader table, which is read out verbatim.
+  const format = useFormatter();
   const { data, isLoading, error, refetch, exportPnL } = useErpData();
   const [activeView, setActiveTab] = useState<'global' | 'branches' | 'forecast'>('global');
 
   const formatAmount = (amount: number) => {
     if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
     if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
-    return amount.toLocaleString();
+    return format.number(amount);
   };
 
   const handleAudit = () => {
@@ -52,6 +57,13 @@ export default function TitanERP() {
   };
 
   const handleExportPnL = () => {
+    // `exportPnL()` early-returns when there is no data yet. Toasting
+    // unconditionally claimed a download that never happened — report what
+    // actually occurred instead.
+    if (!data) {
+      showToast('info', 'Nothing to export yet', 'The P&L is still loading. Try again in a moment.');
+      return;
+    }
     exportPnL();
     showToast('success', 'P&L exported', 'Your institutional P&L statement has been downloaded as CSV.');
   };
@@ -207,13 +219,14 @@ export default function TitanERP() {
 
            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Capital flow chart — violet revenue series, neutral expenses */}
-              <Card className="lg:col-span-8 h-[450px] flex flex-col justify-between">
+              <figure className="m-0 lg:col-span-8">
+              <Card className="h-[450px] flex flex-col justify-between">
                  <CardHeader className="p-0 flex-row items-start justify-between">
                     <div>
                        <CardTitle className="text-lg">Capital flow</CardTitle>
                        <CardDescription>Revenue vs OpEx · 12 months</CardDescription>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4" aria-hidden="true">
                        <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded bg-primary" />
                           <span className="eyebrow">Revenue</span>
@@ -224,14 +237,29 @@ export default function TitanERP() {
                        </div>
                     </div>
                  </CardHeader>
-                 <div className="flex-1 flex items-end gap-2 pb-8 pt-12">
+                 {/* Screen-reader equivalent of the bar chart (the visual bars below are
+                     aria-hidden decorative; this table carries the actual figures). */}
+                 <SrDataTable
+                   caption="Revenue, expenses and net by month over the last 12 months, in MAD"
+                   columns={['Month', 'Revenue (MAD)', 'Expenses (MAD)', 'Net (MAD)']}
+                   rows={data.monthlyData.map((m) => [
+                     m.month,
+                     format.number(m.revenue),
+                     format.number(m.expenses),
+                     format.number(m.revenue - m.expenses),
+                   ])}
+                 />
+                 <div className="flex-1 flex items-end gap-2 pb-8 pt-12" aria-hidden="true">
                     {data.monthlyData.map((m, i) => (
                       <div key={i} className="flex-1 relative group/bar flex flex-col items-center justify-end gap-1">
-                         {/* Tooltip */}
-                         <div className="absolute bottom-full mb-4 bg-surface-raised text-foreground text-[10px] font-medium px-3 py-2 rounded-lg border border-hairline opacity-0 group-hover/bar:opacity-100 transition-all scale-90 group-hover/bar:scale-100 z-10 whitespace-nowrap shadow-lg">
-                            <p className="font-mono tabular text-primary">↑ {m.revenue.toLocaleString()} MAD</p>
-                            <p className="font-mono tabular text-danger">↓ {m.expenses.toLocaleString()} MAD</p>
-                            <p className="border-t border-hairline mt-1 pt-1 font-mono tabular text-text-muted">Net {(m.revenue - m.expenses).toLocaleString()} MAD</p>
+                         {/* Tooltip — `group-active` as well as `group-hover` so touch
+                             users (who have no hover) can read the figures too.
+                             Deliberately NOT `focus`: the container is aria-hidden, and
+                             a focusable child inside aria-hidden is an axe violation. */}
+                         <div className="absolute bottom-full mb-4 bg-surface-raised text-foreground text-[10px] font-medium px-3 py-2 rounded-lg border border-hairline opacity-0 group-hover/bar:opacity-100 group-active/bar:opacity-100 transition-all scale-90 group-hover/bar:scale-100 group-active/bar:scale-100 pointer-events-none z-10 whitespace-nowrap shadow-lg">
+                            <p className="font-mono tabular text-primary">↑ {format.number(m.revenue)} MAD</p>
+                            <p className="font-mono tabular text-danger">↓ {format.number(m.expenses)} MAD</p>
+                            <p className="border-t border-hairline mt-1 pt-1 font-mono tabular text-text-muted">Net {format.number(m.revenue - m.expenses)} MAD</p>
                          </div>
                          {/* Expense bar (background) */}
                          <div
@@ -246,12 +274,13 @@ export default function TitanERP() {
                       </div>
                     ))}
                  </div>
-                 <div className="flex items-center justify-between pt-6 border-t border-hairline">
+                 <div className="flex items-center justify-between pt-6 border-t border-hairline" aria-hidden="true">
                     {data.monthlyData.map((m) => (
                       <span key={m.month} className="font-mono tabular text-[9px] text-text-faint">{m.month}</span>
                     ))}
                  </div>
               </Card>
+              </figure>
 
               {/* Forensic Intelligence Sidebar */}
               <div className="lg:col-span-4 space-y-8">
@@ -274,7 +303,7 @@ export default function TitanERP() {
                            } else if (data.advisor.action === 'BOOST_MARKETING') {
                              showToast('info', 'Marketing campaign', 'Consider launching promotions to boost fleet utilization.');
                            } else {
-                             showToast('success', 'Pricing optimized', 'Review peak-period pricing in your fleet settings.');
+                             showToast('info', 'Pricing review', 'Review peak-period pricing in your fleet settings.');
                            }
                          }}
                        >
@@ -394,7 +423,9 @@ export default function TitanERP() {
                         <span className="eyebrow">Utilization</span>
                         <span className="font-mono tabular text-xs text-primary">{Math.round(branch.utilization)}%</span>
                       </div>
-                      <div className="h-2 w-full bg-surface-raised rounded-full overflow-hidden">
+                      {/* Decorative: the percentage is already visible text directly
+                          above, so this track would only double-announce. */}
+                      <div className="h-2 w-full bg-surface-raised rounded-full overflow-hidden" aria-hidden="true">
                         <div
                           className="h-full bg-primary rounded-full transition-all duration-1000"
                           style={{ width: `${Math.min(branch.utilization, 100)}%` }}
@@ -475,7 +506,7 @@ export default function TitanERP() {
                               <p className="text-sm font-medium text-foreground">{row.source}</p>
                               <p className="text-xs text-text-muted">Expected <span className="font-mono tabular">{row.date}</span></p>
                            </div>
-                           <p className="text-sm font-mono tabular font-medium text-success">+{row.amount.toLocaleString()} MAD</p>
+                           <p className="text-sm font-mono tabular font-medium text-success">+{format.number(row.amount)} MAD</p>
                         </div>
                       ))
                     )}
@@ -499,7 +530,7 @@ export default function TitanERP() {
                               <p className="text-sm font-medium text-foreground">{row.source}</p>
                               <p className="text-xs text-text-muted">Target <span className="font-mono tabular">{row.date}</span></p>
                            </div>
-                           <p className="text-sm font-mono tabular font-medium text-danger">−{row.amount.toLocaleString()} MAD</p>
+                           <p className="text-sm font-mono tabular font-medium text-danger">−{format.number(row.amount)} MAD</p>
                         </div>
                       ))
                     )}
@@ -512,12 +543,12 @@ export default function TitanERP() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="eyebrow">Total projected inflows</p>
-                  <p className="mt-1 font-mono tabular text-xl font-semibold text-success">+{data.forecast.inflows.reduce((s, i) => s + i.amount, 0).toLocaleString()} MAD</p>
+                  <p className="mt-1 font-mono tabular text-xl font-semibold text-success">+{format.number(data.forecast.inflows.reduce((s, i) => s + i.amount, 0))} MAD</p>
                 </div>
                 <div className="eyebrow px-6">vs</div>
                 <div className="text-end">
                   <p className="eyebrow">Total projected outflows</p>
-                  <p className="mt-1 font-mono tabular text-xl font-semibold text-danger">−{data.forecast.outflows.reduce((s, o) => s + o.amount, 0).toLocaleString()} MAD</p>
+                  <p className="mt-1 font-mono tabular text-xl font-semibold text-danger">−{format.number(data.forecast.outflows.reduce((s, o) => s + o.amount, 0))} MAD</p>
                 </div>
               </div>
            </Card>
