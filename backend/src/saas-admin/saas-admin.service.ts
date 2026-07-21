@@ -181,7 +181,10 @@ export class SaasAdminService {
       include: { plan: { select: { key: true, priceMonthly: true } } },
     });
 
-    let mrr = 0;
+    // MRR is money, so it accumulates as Decimal, not float (CLAUDE.md §5.3).
+    // The global DecimalToNumberInterceptor turns it back into a JS number on
+    // the wire, so the API contract is unchanged.
+    let mrr = new Prisma.Decimal(0);
     let activeTenants = 0;
     let trials = 0;
     let paying = 0;
@@ -189,13 +192,15 @@ export class SaasAdminService {
     const statusDistribution: Record<string, number> = {};
 
     for (const s of subs) {
-      const price = Number(s.plan.priceMonthly);
+      // Keep the Prisma.Decimal — Number() here was the lossy step.
+      const price = s.plan.priceMonthly;
       planDistribution[s.plan.key] = (planDistribution[s.plan.key] ?? 0) + 1;
       statusDistribution[s.status] = (statusDistribution[s.status] ?? 0) + 1;
       if (s.status === 'ACTIVE') {
         activeTenants++;
-        mrr += price;
-        if (price > 0) paying++;
+        mrr = mrr.plus(price);
+        // .greaterThan, not `>` — comparison operators on a Decimal coerce.
+        if (price.greaterThan(0)) paying++;
       }
       if (s.status === 'TRIAL') trials++;
     }
@@ -211,7 +216,7 @@ export class SaasAdminService {
     return {
       currency: 'MAD',
       mrr,
-      arr: mrr * 12,
+      arr: mrr.times(12),
       totalTenants,
       activeTenants,
       trials,
