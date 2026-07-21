@@ -7,6 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { NormalizeEmail } from '../../common/decorators/normalize-email.decorator';
 
 /**
  * Founder-initiated tenant provisioning. Creates an agency + its OWNER + a BETA
@@ -45,6 +46,7 @@ export class ProvisionTenantDto {
   @IsNotEmpty()
   ownerName: string;
 
+  @NormalizeEmail()
   @IsEmail()
   ownerEmail: string;
 

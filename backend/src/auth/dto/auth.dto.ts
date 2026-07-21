@@ -6,8 +6,10 @@ import {
   IsString,
   IsIn,
 } from 'class-validator';
+import { NormalizeEmail } from '../../common/decorators/normalize-email.decorator';
 
 export class LoginDto {
+  @NormalizeEmail()
   @IsEmail()
   @IsNotEmpty()
   email: string;
@@ -18,6 +20,7 @@ export class LoginDto {
 }
 
 export class RegisterDto {
+  @NormalizeEmail()
   @IsEmail()
   @IsNotEmpty()
   email: string;
