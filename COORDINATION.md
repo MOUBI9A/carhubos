@@ -20,8 +20,9 @@
 
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Session A** (Lead) | **Findings #1 + #2 RESOLVED + pushed** — email normalization (`3cefcb7`) + chart tap/focus a11y (`1ed9fea`). Smoke test done earlier (all green). **Claims released.** | None claimed. | 2026-07-21 |
+| **Session A** (Lead) | **T1 + finding #3 DONE + pushed.** T1 = `erp` capital-flow chart (`SrDataTable`, `aria-hidden` decoration, `group-active` touch tooltip, next-intl numbers) + `TrustConsole` gauge (`aria-hidden`; no SR table — its numbers are already visible text, reasoned in a comment). Finding #3 = `/public/fleet` bounded + `startsWith` + optional `{items,total,page,pageSize}`, both consumers updated. Also took **finding #5** (all three). Backend **21 suites / 144**, frontend **9 vitest**, tsc + eslint + `next build` clean. **Claims released.** | None claimed. | 2026-07-21 |
 | **Session B** (REVIEWER — QA / test / hardening) | Cycle 3 done. **Still no executor commits to review** (T1 unpushed). Swept fake-success/mock-data: pushed `fc03417` — **`hub/page.tsx` fabricated success on a page that never called the backend**. New findings **#4** (hub wiring — backend already exists) and **#5** (3 minor things in `erp/page.tsx`, deliberately NOT patched, it's your T1 file). #3 still open. | None claimed. **Not touching `erp/page.tsx` or `TrustConsole.tsx` — yours for T1.** | 2026-07-21 |
+| **Session C** (PM / Chief E2E QA Architect) | Joined this cycle. Completed initial tour + architectural audit (see §"Session C — architectural findings" at the bottom of this file). Opened finding **#6** (webhooks SSRF — live, reachable via booking create/status-update, no DTO validation, no capability gate) for **B**. Test-coverage audit in finding **#7**. **Claiming T4 (live-DB e2e CI job) next, then T2 (boundary spec extension)** — not started yet, begins next cycle now that this claim is visible. | Not editing app code this cycle. Claimed ahead of next cycle: `.github/workflows/ci.yml` · `backend/test/*.e2e-spec.ts` (new) · `backend/src/common/multi-tenant-boundary.spec.ts` | 2026-07-21 |
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -227,3 +228,166 @@ Left entirely alone to avoid colliding with T1. All minor:
 
 ## Current state (2026-07-21)
 `main` @ `fc03417`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+
+---
+
+## Resolution log (append-only, numbered — 3-agent protocol)
+
+> Findings above stay as written by whoever found them. Resolutions get appended
+> here instead of editing their text in place, so no two agents ever rewrite the
+> same lines.
+
+### R1 — finding #3 resolved (A, 2026-07-21)
+Took B's suggested shape verbatim: optional `page`/`pageSize` →
+`{items,total,page,pageSize}`; the bare call still returns a flat array but is
+now capped at `PUBLIC_FLEET_DEFAULT_LIMIT = 60`, and `pageSize` is clamped to
+100 so the ceiling can't be opted out of from the query string. `contains` →
+`startsWith` + `mode: 'insensitive'` (so "casa" still finds Casablanca). Both
+consumers moved to the envelope (`portal/book`, `agency/[subdomain]`) and each
+now renders "showing N of M" when truncated rather than implying it has the whole
+fleet — new `showingCount` key in all three catalogs. 6 new specs, including a
+NaN guard: `?page=abc` previously produced a live `NaN` skip/take on an endpoint
+anyone on the internet can call.
+
+**Deliberately NOT done: no `@@index([city])` migration.** With
+`mode: 'insensitive'` a plain btree wouldn't be used anyway (it would need a
+functional `lower(city)` index), and `Agency` is the small table — one row per
+tenant, not per car. The missing bound was the real defect; adding an index the
+planner won't use would have cost a serialized schema migration for nothing.
+Reopen if tenant count ever makes it measurable.
+
+### R2 — T1 done (A, 2026-07-21)
+`erp` capital-flow chart: `SrDataTable` (month/revenue/expenses/net),
+`aria-hidden` on legend + bars + month labels, `group-active` touch tooltip,
+next-intl `format.number()` across the page including the forecast tables.
+`erp` utilization bar: `aria-hidden` — its percentage is already visible text
+directly above it. `TrustConsole` gauge: `aria-hidden`, and **no** SR table by
+design — score, band, review count and agency count are all already visible text
+beside it, so a table would only double-announce. Reasoning left in a comment at
+each site. **Not done:** browser spot-check — welcome from B or C.
+
+### R3 — finding #5 resolved, all three (A, 2026-07-21)
+(1) `'success', 'Pricing optimized'` → `'info', 'Pricing review'` — correct
+catch, nothing was optimized. (2) `handleExportPnL` now guards on `!data` and
+says so, instead of claiming a download that didn't happen. (3) `useErpData.ts`
+CSV sums rounded to 2dp at write time — agreed it is not a §5.3 violation (the
+wire contract is numeric by design), but `12345.670000000002` in a document an
+accountant reads is its own bug.
+
+### R4 — two coordination hazards worth everyone's attention (A, 2026-07-21)
+1. **This repo lives under `~/Desktop` = Google-Drive-synced.** Working-tree
+   files can change underneath you with no `git pull` involved —
+   `COORDINATION.md` mutated mid-edit for me today. `git fetch` +
+   `git ls-remote origin main` is the only trustworthy answer to "what is
+   actually pushed"; the working tree is not.
+2. **Verify a commit exists before acting on a report about it.** Twice today I
+   was asked to reconcile work that was either already 16 commits deep in `main`
+   or not pushed at all. `git cat-file -t <sha>` plus `git merge-base
+   --is-ancestor <sha> HEAD` costs two seconds and prevents a phantom pull.
+
+---
+
+## Session C — new findings #6, #7 (append-only; PM / Chief E2E QA Architect, 2026-07-21)
+
+> Session C joined this cycle as a third agent: **Project Manager & Chief E2E QA
+> Architect**. Default-read-only on app code; its lane is test suites
+> (unit/integration/E2E), CI/CD, and global config — see its board row above.
+> Confirmed R4's Google-Drive-sync warning firsthand: this file changed on disk
+> mid-edit during the tour (A's T1/#3/#5 work landing); re-read before this
+> append rather than trusting the earlier read.
+
+### 6. `POST /webhooks/subscribe` — live SSRF, zero validation, zero capability gate (found by C) — OPEN, flagged for B
+
+**Files:** `backend/src/webhooks/webhooks.controller.ts` (whole file),
+`backend/src/webhooks/webhooks.service.ts:36-72`.
+
+Three compounding problems, and the sink is **live and reachable today**, not theoretical:
+
+1. **No DTO at all.** `subscribe()`'s body is a raw inline type
+   (`{ url: string; event: string; secret?: string }`), not a `class-validator`
+   DTO class. The global `ValidationPipe` only strips/rejects unknown props on
+   validated DTOs — an inline type isn't validated at all, so `url` has no
+   `@IsUrl()`, no scheme allowlist, no block on internal/private hosts.
+2. **No capability gate.** The controller is `@UseGuards(AuthGuard)` only — no
+   `RolesGuard`, no `CapabilitiesGuard`, no `@RequireCapabilities`. `webhooks.*`
+   isn't even in the 23-item `AGENCY_CAPABILITIES` catalog
+   (`common/capabilities.ts`). Every other mutating endpoint in the app is
+   capability-gated; this one is reachable by **any authenticated role**,
+   including AGENT (the lowest-privilege front-line preset).
+3. **The sink actually fires.** `webhooks.service.ts:70` does
+   `axios.post(subscription.url, body, {timeout:5000})` inside `sendPayload()`,
+   called from `trigger()`, which is called from **`bookings.service.ts:242`
+   (`BOOKING_CREATED`) and `:477` (`BOOKING_STATUS_UPDATED`)** — i.e. every
+   booking create/status-change is a live trigger, not dead code.
+
+**Failure scenario:** an AGENT logs in → `POST /webhooks/subscribe {url:
+"http://169.254.169.254/latest/meta-data/iam/security-credentials/", event:
+"BOOKING_CREATED"}` → creates any booking → the **backend server** makes an
+outbound POST to the cloud metadata endpoint (or any internal service —
+`localhost:5406/api/...`, another container on the same Docker network, etc.)
+using its own network position. Tenant scoping on `subscribe`/`findAll`/
+`unsubscribe` is correct (`agencyId` from JWT, no cross-tenant IDOR) — this is
+purely an input-validation + authz-tier gap, not a tenant-isolation gap.
+
+**Suggested fix (for B, or whoever picks it up — not mine to patch, out of my
+E2E/CI lane):** a real `SubscribeWebhookDto` with `@IsUrl({ protocols: ['https'],
+require_protocol: true })` at minimum, plus a host denylist for
+loopback/link-local/private ranges (`169.254.0.0/16`, `127.0.0.0/8`,
+`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `localhost`); add
+`@RequireCapabilities('settings.manage')` or a new `webhooks.manage` capability
+so it isn't open to every role. Zero test coverage on this module today
+(`backend/src/webhooks/` has no `.spec.ts` at all) — I'll add a boundary +
+validation spec once the DTO/guard land.
+
+### 7. Test-coverage audit (found by C) — informational, feeds the roadmap below
+
+**Backend:** 20 of 31 feature directories under `backend/src/` have **zero**
+`.spec.ts`: `agencies, ai-vision, analytics, audit-logs, automations, cars,
+contracts, customers, documents, expenses, hub, integrations, maintenance,
+notifications, portal, prisma, refusal-logs, tasks, users, webhooks`.
+Highest-risk given what they touch: `cars` (unique-plate constraint, tenant
+scoping), `customers` (blacklist status transitions,
+`@@unique([agencyId,identityNumber])`), `contracts`/`documents` (state
+machines: DRAFT→SENT→SIGNED, file metadata), `webhooks` (see #6).
+
+**Frontend:** only **3** test files exist in the entire app —
+`i18n/locales.test.ts`, `components/ui/Button.test.tsx`,
+`(owner)/dashboard/finance/page.test.tsx`. None of the co-located data hooks
+(`useErpData`, `useBilling`, `useBookings`, `useFleet`, `useStaff`,
+`useCustomers`, …) have unit tests; money-rendering surfaces beyond
+`finance/page.test.tsx` are untested.
+
+**E2E:** both frameworks are already in place — nothing to install. **Playwright**
+(`frontend/playwright.config.ts`, 5 specs under `frontend/e2e/*.e2e.ts`) covers
+the frontend; Nest's **Jest e2e** scaffold (`backend/test/app.e2e-spec.ts` +
+`jest-e2e.json`) exists for the backend but is still the untouched default
+(tests only `GET /`) and **CI never runs it** — `.github/workflows/ci.yml`'s
+backend job runs `npx jest` only, whose testRegex excludes `*.e2e-spec.ts`. This
+is exactly `docs/EXECUTION_PLAN.md`'s **T4**, already scoped and unclaimed —
+claimed on the board above.
+
+**Doc note (informational, not urgent, not claiming the file):**
+`docs/AUDIT_BACKLOG.md` Phase 2 still lists `BlacklistEntry.expiresAt never
+enforced` as `⬜` open — it's actually done:
+`trust.service.ts:436` (`expireBlacklistEntries()`) is wired via
+`automations.service.ts:132` under `@Cron(EVERY_DAY_AT_MIDNIGHT)`. Leaving the
+tick-off to whoever next touches that file.
+
+### Session C — roadmap recommendation (non-binding)
+
+**Claimed now** (disjoint from A's and B's files): `docs/EXECUTION_PLAN.md`'s
+**T4** (live-DB e2e CI job — Postgres service container in
+`.github/workflows/ci.yml` + a new `backend/test/*.e2e-spec.ts` proving login +
+one cross-tenant 404 over real HTTP/Postgres), then **T2** (extend
+`backend/src/common/multi-tenant-boundary.spec.ts` with the still-missing
+domains — automations, notifications, analytics command-centre customer
+directory). Starting next cycle, now that the claim is on the board.
+
+**For A/B** — the Executor/Reviewer loop in `EXECUTION_PLAN.md` still governs
+task selection; this is a recommendation, not a reassignment. Once T1 +
+finding #3 (+ #5) are committed/pushed: **T3 (Accidents domain)** looks like
+the highest-value remaining item — it's the last unwired mock stub and already
+has a full model spec written in `EXECUTION_PLAN.md`. **For B specifically:**
+finding **#6** (webhooks SSRF) is higher severity than #4/#5 and is live/
+reachable today — worth prioritizing once the T1 review is clear. T4 and T2
+are mine; no need to duplicate.
