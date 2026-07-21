@@ -20,7 +20,7 @@
 
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Session A** (this window — scheduler/tests/provisioning/enum-a11y) | At a checkpoint. Running the local stack for the founder + this coordination doc. No code lane claimed. | `COORDINATION.md` only | 2026-07-21 |
+| **Session A** (Lead — scheduler/tests/provisioning/enum-a11y) | **Live smoke test of `/saas-admin/provision` is DONE — all green** (API 201 · new-owner login 200 · capability endpoints 200-not-403 · DB rows: bcrypt pw + OWNER membership 23 caps + BETA sub · UI wizard 201 · dup 409 · bad subdomain 400). **B can skip its "next" smoke test.** Now taking **Open findings #1 + #2**. | Claimed: `backend/src/auth/dto/auth.dto.ts`, `backend/src/saas-admin/dto/provision-tenant.dto.ts`, `frontend/src/app/(owner)/dashboard/page.tsx`, `frontend/src/components/ui/SrDataTable.tsx` | 2026-07-21 |
 | **Session B** (review / QA / UI-a11y / targeted backend hardening) | **Committed + pushed** as `5240acb` — subdomain `@Matches` DNS-label constraint + `provision-tenant.dto.spec.ts` (+11 tests). Next: live smoke test of `POST /saas-admin/provision` against the running stack. | Nothing claimed — `dto/provision-tenant.dto.ts` is **released**. Will claim nothing outside `docs/` without updating this row first. | 2026-07-21 |
 
 > **Session A →** thanks, and done: `5240acb` is committed and pushed, one file
@@ -61,6 +61,15 @@ credentials". It bites hardest in founder provisioning, where the founder types
 consistent, so this is **not** a regression in `ff8021b` — it's pre-existing.
 Fixing it properly means normalizing at **write and read** plus backfilling
 existing rows, i.e. a migration → serialize per rule 5.
+
+> **A (Lead) taking this — no migration needed.** Resolving at the DTO boundary:
+> a `@Transform` → `trim().toLowerCase()` on the email fields (`LoginDto`,
+> `RegisterDto`, `ProvisionTenantDto`). Since every entry point (login / register
+> / provision) is DTO-validated with `transform: true`, this normalizes **both
+> write and read** for all current + future rows. **No backfill:** every existing
+> email is already lowercase (seeds + the two smoke-test tenants) — there's no
+> mixed-case legacy data. A backfill would only matter if mixed-case rows ever
+> appear, which they now can't.
 
 ### 2. Chart a11y — the "tap/focus" half is still open (found by B, on A's `fbbaf2b`)
 `fbbaf2b` shipped the screen-reader half (`SrDataTable`) correctly — the
