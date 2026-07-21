@@ -11,6 +11,7 @@ import {
   ROLE_PRESETS,
   STAFF_PRESETS,
 } from '../../common/capabilities';
+import { NormalizeEmail } from '../../common/decorators/normalize-email.decorator';
 
 /**
  * Every preset name the owner UI may seed a staff account from: the identity
@@ -28,6 +29,19 @@ export class CreateStaffDto {
   @IsNotEmpty()
   name: string;
 
+  /**
+   * Normalized for the same reason as login/register/provision (see
+   * `NormalizeEmail`): this creates a real `User` login row, and the service
+   * uses it for BOTH the duplicate check and `tx.user.create()`.
+   *
+   * Without it this is the one entry point that can still mint a mixed-case
+   * account — and now that login lowercases, such a row is permanently
+   * unreachable: an owner who invites `Manager@Agency.ma` creates a staff member
+   * whose login is looked up as `manager@agency.ma` and never found. It also
+   * defeats the duplicate check, since `Manager@x.ma` doesn't collide with an
+   * existing `manager@x.ma`.
+   */
+  @NormalizeEmail()
   @IsEmail()
   @IsNotEmpty()
   email: string;
