@@ -104,11 +104,11 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
-## PHASE 6 — Performance & scalability ✅ mostly DONE (commits `1d4ec95`, `786dd0e`)
+## PHASE 6 — Performance & scalability ✅ DONE (commits `1d4ec95`, `786dd0e`, `39ecc45`)
 
 - **[C] Bookings list has no pagination** ✅ backend, ⬜ frontend adoption — `GET /bookings` now accepts optional `status/from/to/page/pageSize`; omitted, it returns the same flat array as before (zero risk to today's UI). Passing them moves filtering to SQL `WHERE`+`skip/take`, returning `{items,total,page,pageSize}`. The frontend bookings page doesn't send these yet — adopting the paginated shape in the UI is a follow-up.
 - **[C] Analytics sum whole row-sets in JS; ERP loads ALL payments unbounded** ✅ — `analytics.service.ts` converted to `prisma.aggregate()`/`groupBy()` across the hot paths (command centre, financial pulse, ERP dashboard); same response shape.
-- **[H] Command Centre embeds the whole customer directory** ⬜ — not addressed this pass (was scoped as part of the broader analytics rewrite but not explicitly verified — check on resume).
+- **[H] Command Centre embeds the whole customer directory** ✅ — bounded to the 200 most-recent customers; `totalCustomers` stays the true count; modal falls back to `GET /customers?search=` typeahead for larger books.
 - **[H] `trust.assess()` recomputes + writes on every read** ✅ — removed; every mutation already keeps the cached aggregates fresh, `assess()` now reads them directly.
 - **[M] ~13 sequential awaited queries + unused eager includes** ⬜ — not addressed this pass.
 - **[M] Global search leading-wildcard LIKE, no index** ✅ — `search.service.ts` now uses `startsWith`.
@@ -120,7 +120,7 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 - **[H] No mobile nav + hardcoded `ml-64`** ✅ — off-canvas sidebar + hamburger + overlay landed earlier.
 - **[H] Modal has no focus trap/Escape/ARIA/focus restore** ✅ — landed earlier.
-- **[H] Booking modal discards data on optimistic submit** ⬜ — not addressed.
+- **[H] Booking modal discards data on optimistic submit** ✅ (commit `6fa50a1`) — submit button shows in-flight state; modal closes only on success, stays open with data intact on error for correct-and-retry.
 - **[H] No i18n/RTL for a Morocco product** ✅ — next-intl FR(default)/AR(RTL)/EN, Noto Sans Arabic, `lang`/`dir` driven by locale, Intl date/currency helpers.
 - **[M] Sub-WCAG micro-typography** ✅ — the Phase 12 token migration replaced the old white/10-20 opacity ladder; a final grep sweep for sub-20%-opacity text returned 0 hits app-wide.
 - **[M] Dead buttons fire fake success toasts** ✅ — audited every `showToast('success', ...)` on admin/finance/accidents/vault: `admin/agencies` calls were real (verified — genuine `/saas-admin/*` calls); `admin/provision`'s "Instantiate tenant" and `accidents`' "Report incident"/"Export PDF" were fake (no backend, fabricated client-only data) — changed to honest info toasts; `finance` and `vault` were fixed earlier this program (wired to real data).
@@ -132,14 +132,14 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 ## PHASE 8 — Testing & CI ✅ mostly DONE (commits `d2fef80`, `cb86fd4`, `7e32814`, `656bc40`)
 
 - **[C] Zero backend unit tests** for money/trust/auth logic ✅ — money/trust/consent/deposits/inspections/late-fee all have specs; **auth + capability guard specifically** (`auth.guard.spec.ts`, `auth.service.spec.ts`, `capabilities.guard.spec.ts`) were the last gap, now closed (24 new tests across the three files).
-- **[H] Blacklist enforcement boundary untested** ⬜ — `isHardBlock`/`blockingFlagForCustomer` still untested per severity/status.
-- **[H] Identity hash untested** ⬜ — no golden-value test for `hashIdentity`/`normalize` yet.
+- **[H] Blacklist enforcement boundary untested** ✅ (commit `d853dec`) — `trust.blacklist-boundary.spec.ts`: CRITICAL/HIGH hard-block, LOW/MEDIUM don't, CRITICAL wins when both present, cross-tenant lookup returns null.
+- **[H] Identity hash untested** ✅ — golden-value + normalization tests already in `trust.identity.spec.ts`.
 - **[H] Money math untested (Float/DST)** 🔄 — money math is well-covered across the newer specs (deposits/refunds/late-fee/damage-charge, all integer-cents); a dedicated DST-range day-count test isn't written.
 - **[H] ESLint rules disabled** ✅ — both flipped to `error`. Real fallout (after excluding `dist/`/`prisma/*.js` lint noise): frontend 0, backend 1 (fixed: `main.ts` bootstrap now `.catch()`-handled).
 - **[M] No CI** ✅ — `.github/workflows/ci.yml`: backend (`prisma generate`→tsc→jest→eslint) + frontend (tsc→vitest→eslint), on `pull_request`+`push:main`. Making it a *required* PR check needs a repo-admin action (Settings → Branches) — flagged for the founder, not done unasked. No live-DB/Playwright e2e job yet (needs a Postgres service container).
 - **[M] Frontend tests validate mock data** ⬜ — not audited this pass.
-- **[M] E2E single-role, no authz/negative tests** ✅ partial — `common/multi-tenant-boundary.spec.ts` covers bookings/customers/documents/inspections (agency A → 404 on agency B's resource); this is a unit-level (mocked Prisma) proof, not a live-DB E2E suite, and covers a representative sample rather than every domain.
-- **[L] Backend tsconfig not strict** ⬜ — not addressed.
+- **[M] E2E single-role, no authz/negative tests** ✅ partial — `common/multi-tenant-boundary.spec.ts` covers bookings/customers/documents/inspections/expenses/contracts/hub (agency A → 404 on agency B's resource); unit-level (mocked Prisma), not a live-DB E2E suite.
+- **[L] Backend tsconfig not strict** ✅ (commit `26e0a79`) — `strict: true` enabled (noImplicitAny/strictPropertyInitialization kept off for the established DTO/any-param patterns); 3 catch-block `error is unknown` fallouts fixed.
 
 ---
 
