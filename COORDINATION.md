@@ -21,7 +21,7 @@
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Session A** (Lead) | **Findings #1 + #2 RESOLVED + pushed** — email normalization (`3cefcb7`) + chart tap/focus a11y (`1ed9fea`). Smoke test done earlier (all green). **Claims released.** | None claimed. | 2026-07-21 |
-| **Session B** (review / QA / UI-a11y / targeted backend hardening) | **Pushed `fd177ec`** — caught and closed a lockout hole your `3cefcb7` left open (`CreateStaffDto` was the missed 4th identity entry point). Verified live end-to-end. Idle, awaiting the founder's next assignment. | None claimed. | 2026-07-21 |
+| **Session B** (REVIEWER — QA / test / hardening) | **Reviewed `1ed9fea` = CLEAN** (meets T1 acceptance for the daily-intensity chart). **Pushed `40c6719`** — soft-deleted agencies were leaking on the unauthenticated `/public/*` endpoints; proven live, fixed, +5 tests. New **Open finding #3** (unbounded `/public/fleet`) left for you. Backend now **20 suites / 134**. | None claimed — `public.controller.ts` released. | 2026-07-21 |
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -69,6 +69,38 @@ Pick a lane that doesn't touch the other agent's files. Current backlog (details
 
 Too cross-cutting for the finder to patch unilaterally. Claim one in the board if
 you take it.
+
+### 3. `GET /public/fleet` is unbounded and its city filter is unindexed (found by B) — OPEN
+**File:** `backend/src/public/public.controller.ts:12-49` (`getPublicFleet`).
+
+Two separate problems on the app's only unauthenticated list endpoint:
+
+1. **No `take`/pagination at all.** It returns *every* `AVAILABLE` car matching
+   the filter. The market-ready perf criterion is "holds at 10k+"; this is the
+   one list a logged-out stranger can trigger. The global `ThrottlerGuard`
+   (100/60s) caps request *rate*, not response *size*, so it doesn't cover this.
+2. **`city: { contains: city }` cannot use an index.** `Agency` has no index on
+   `city` (only `agencyId`, `deletedAt`), and a `contains` → `LIKE '%x%'` can't
+   use a btree even if one existed. Phase 6 deliberately converted
+   `search.service.ts` to `startsWith` for exactly this reason — this endpoint
+   was missed.
+
+**Failure scenario:** agency with 10k cars across 3 cities → `GET
+/public/fleet?city=casa` (no auth, no cookie) → sequential scan over `Agency`
+joined against every AVAILABLE car, whole result set serialized in one response
+body. Repeat under the 100/60s throttle budget.
+
+**Suggested fix:** mirror the shape already proven on `GET /bookings` (Phase 6) —
+optional `page`/`pageSize` returning `{items,total,page,pageSize}`, and keep the
+bare call returning a capped array so the public site isn't broken by the change.
+Switch `contains` → `startsWith`, or add `@@index([city])` on `Agency` if
+substring search is a real product requirement. **Left for the executor**: it
+changes a public response contract and needs the landing/fleet UI updated with
+it, so it's not a reviewer drive-by. *(Not a regression — pre-existing.)*
+
+> Cars themselves have `@@index([agencyId])` + `@@index([status])`, and `Agency`
+> has `@@index([deletedAt])`, so the `status` + soft-delete predicates are fine.
+> Only the `city` path and the missing bound are at issue.
 
 ### 1. Email case is unnormalized app-wide — needs a data migration (found by B)
 `auth.service.ts` (register + login) and `saas-admin.service.ts`
@@ -124,4 +156,4 @@ Still outstanding on `frontend/src/app/(owner)/dashboard/page.tsx`:
 > stay open** — unclaimed, up for grabs.
 
 ## Current state (2026-07-21)
-`main` @ `fd177ec`, all green: backend **19 suites / 129 tests**, frontend **9 vitest**, tsc + eslint clean both sides. Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+`main` @ `40c6719`, all green: backend **20 suites / 134 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
