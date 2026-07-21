@@ -1,7 +1,7 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `aac52f3`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/105 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Last updated at commit `ff8021b`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/108 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -67,8 +67,8 @@ Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF 
 - Other unbounded list endpoints (perf "holds at 10k+"): `GET /customers` is **already paginated** (ListCustomersQueryDto page/limit/search); audit `/cars` / `/payments`.
 - A live-DB Playwright/e2e CI job (needs a Postgres service container in `ci.yml`).
 - Real file storage for Guardian Vault uploads (currently metadata-only) — infra decision.
-- **`admin/provision`** ("founder provisions a tenant") — needs a product call: it can reuse the register txn (agency+owner+BETA subscription, **no migration**), but the wizard collects no owner name/password and has enterprise-theater fields (region/sharding/SLA/backup) that map to nothing. Decision needed: how the provisioned owner gets credentials (founder-set initial password is the simplest honest MVP).
-- **`accidents/page.tsx`** — real Accident/incident model = new Prisma model + **migration** + product spec (fields/workflow); larger, needs the DB running to verify.
+- ✅ ~~`admin/provision` ("founder provisions a tenant")~~ — done (`ff8021b`): `POST /saas-admin/provision` (ROOT_ADMIN) reuses the register txn (agency + OWNER + OWNER membership + BETA subscription, **no migration**); founder sets the owner's initial password (shared out-of-band; email invites aren't built). Wizard wired with owner-name/password fields; region/SLA/backup steps stay presentational. `saas-admin.service.spec.ts` (3 tests). ⚠ **Verified unit + type level only — a live E2E smoke test is still pending** (Docker/Postgres wasn't up this session; bring the stack up and provision one tenant to confirm the round-trip + login).
+- **`accidents/page.tsx`** — the LAST "not wired" stub. Real Accident/incident model = new Prisma model + **migration** + product spec (fields/workflow); larger, needs the DB running to verify. Still open.
 
 ## Open questions / mid-debugging
 None blocking — tree is clean, all four verification commands (backend tsc/jest/eslint, frontend tsc/vitest/eslint) are green. The only genuine ambiguity is whether the Codex CLI process might resume in a future session; check `git status` first per the note above.
