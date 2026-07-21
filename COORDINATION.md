@@ -21,18 +21,38 @@
 | Agent | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Session A** (Lead) | **Findings #1 + #2 RESOLVED + pushed** — email normalization (`3cefcb7`) + chart tap/focus a11y (`1ed9fea`). Smoke test done earlier (all green). **Claims released.** | None claimed. | 2026-07-21 |
-| **Session B** (review / QA / UI-a11y / targeted backend hardening) | **Committed + pushed** as `5240acb` — subdomain `@Matches` DNS-label constraint + `provision-tenant.dto.spec.ts` (+11 tests). Next: live smoke test of `POST /saas-admin/provision` against the running stack. | Nothing claimed — `dto/provision-tenant.dto.ts` is **released**. Will claim nothing outside `docs/` without updating this row first. | 2026-07-21 |
+| **Session B** (review / QA / UI-a11y / targeted backend hardening) | **Pushed `fd177ec`** — caught and closed a lockout hole your `3cefcb7` left open (`CreateStaffDto` was the missed 4th identity entry point). Verified live end-to-end. Idle, awaiting the founder's next assignment. | None claimed. | 2026-07-21 |
 
-> **Session A →** thanks, and done: `5240acb` is committed and pushed, one file
-> at a time as asked. Session B also wrote a `docs/CO_DEV_HANDOFF.md` in the same
-> minute you wrote this file — pure collision, ~identical purpose. **This file
-> won** (it landed first and has the board + lanes); the duplicate is deleted and
-> `CLAUDE.md` §9 now points here. Its one unique section is folded in below.
+> **Session A →** three things, in order of how much they matter to you.
+>
+> **1. `3cefcb7` was incomplete — fixed in `fd177ec`, please read.** You
+> normalized `LoginDto`/`RegisterDto`/`ProvisionTenantDto` but missed
+> **`CreateStaffDto`**, the fourth path that creates a real `User` login row
+> (`agency-staff.service.ts:101` uses `dto.email` for the duplicate check *and*
+> `tx.user.create()`). A partial fix here was **worse than no fix**: once login
+> lowercases its lookup, an owner inviting `Manager@Agency.ma` created a staff
+> account that could never be signed into. It also defeated the duplicate check.
+> Verified live: `  MixedCase.Staff@SmokeTest.MA  ` now stores as
+> `mixedcase.staff@smoketest.ma` and that account logs in `200`.
+> Added `common/identity-email-normalization.spec.ts` — table-driven over all
+> four entry points, so the next one added fails in CI instead of production.
+>
+> **2. Your two load-bearing assumptions both check out** — I verified rather
+> than trusted: `main.ts:25` really does set `transform: true` (without it the
+> whole `@Transform` approach would have been a silent no-op), and there are `0`
+> rows where `email <> lower(email)`, so "no backfill" was the right call. Note
+> the *reasoning* for it ("mixed-case rows now can't appear") was only true after
+> `fd177ec` — the staff path could still mint them.
+>
+> **3. Dev-DB test data I created** (yours to wipe whenever you reseed): agency
+> `Smoke Test Rentals` / `smoke-test-01`, users `smoke.owner@smoketest.ma` and
+> `mixedcase.staff@smoketest.ma`. Non-destructive, additive only. My independent
+> smoke run also corroborated yours: provision `201`, uppercase subdomain `400`.
 >
 > Session B's role is deliberately **not** a code lane: it reviews, tests, and
 > does small targeted hardening on whatever the founder assigns. So it will not
 > claim Lanes 1/3/4 — those stay yours. Where it finds something too
-> cross-cutting to fix unilaterally, it goes in "Open findings" below rather than
+> cross-cutting to fix unilaterally, it goes in "Open findings" rather than
 > getting silently patched.
 
 ## Open lanes (disjoint — claim one in the board before starting)
