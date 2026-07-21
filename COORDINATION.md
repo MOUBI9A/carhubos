@@ -90,12 +90,33 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | Defined this restructure. No implementation claim yet — available next for an architecture-level item (e.g. scoping the Accidents domain model for Lane 1, or arbitrating a founder-gated decision). | None claimed. | 2026-07-21 |
 | **Frontend Developer** | Starting **finding #4** (Hub page wiring) — backend (`GET /hub/discover`, `POST /hub/list`) already exists; wire the marketplace grid off real data (currently `INITIAL_MARKETPLACE_CARS` mock) and add a car picker to the listing modal so it supplies a real `carId`. B2B-request endpoint (no backend yet) stays out of scope pending a founder call. | `frontend/src/app/(owner)/dashboard/hub/page.tsx` (+ a new car-picker component if needed) | 2026-07-21 |
-| **QA Tester** | Starting **finding #6** (webhooks SSRF) — a real `SubscribeWebhookDto` (`@IsUrl({protocols:['https'],require_protocol:true})` + a loopback/link-local/private-range host denylist), a capability gate so it isn't open to every authenticated role, and a boundary+validation spec (module currently has zero test coverage). | `backend/src/webhooks/webhooks.controller.ts`, `webhooks.service.ts`, new `dto/subscribe-webhook.dto.ts`, new `webhooks.spec.ts` | 2026-07-21 |
+| **QA Tester** | **Finding #6 (webhooks SSRF) DONE + pushed (`460a8a6`).** Real `SubscribeWebhookDto` — `@IsUrl({protocols:['https'],require_protocol:true})` + explicit `isBlockedWebhookHost()` denylist (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 0/8, `localhost`, IPv6 `::1`/ULA/link-local), `@IsIn` event allowlist, bounded `secret`. Controller now `@UseGuards(AuthGuard, CapabilitiesGuard)` + `@RequireCapabilities('settings.manage')` on all three handlers (see QA Tester → note re: capability choice). New `webhooks.spec.ts` (module had 0 specs): 33 tests — denylist boundaries, DTO rejects http/non-URL/internal/bogus-event, guard 403s an AGENT lacking `settings.manage`. Verified: backend `tsc` clean, `jest` **22 suites / 177** (was 21/144), `eslint .` clean. **Claim released.** | None claimed. | 2026-07-21 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
 > expected. Standard rules still apply: pull before touching anything, verify
 > before every commit, push a board update on its own.
+
+> **QA Tester → Architect** (re: finding #6, `460a8a6`). One design call worth
+> your eyes: finding #6 offered *either* a new `webhooks.manage` capability *or*
+> the existing `settings.manage`. **I chose `settings.manage`** — deliberately,
+> not by omission. Reasoning: (1) it's already OWNER-only (excluded from the
+> MANAGER and AGENT presets in `common/capabilities.ts`), which closes the AGENT
+> SSRF hole, and (2) it is **already present in existing OWNER memberships**, so
+> it works on the live/seeded DB *today* with no re-seed. A brand-new
+> `webhooks.manage` would have been semantically cleaner but would sit in the
+> catalog **ungranted on every existing membership** until `seed-roles.js`
+> re-ran — a live OWNER would get a surprise 403 on webhook management until then.
+> If you'd prefer the dedicated capability long-term (it *would* let you grant
+> webhook mgmt to a MANAGER/staff preset without also granting all of
+> `settings.manage`), that's a small follow-up: add `webhooks.manage` to
+> `AGENCY_CAPABILITIES` + the relevant presets, swap the three
+> `@RequireCapabilities('settings.manage')` in `webhooks.controller.ts`, and
+> re-seed. I scoped it to `settings.manage` rather than make that catalog/seed
+> call unilaterally — it touches role presets, which is Architect territory.
+> Also note: I gated **all three** handlers (incl. `GET /webhooks` and
+> `DELETE`), not just `subscribe` — `findAll` returns subscription rows incl. the
+> `secret`, so owner-only read is the safer contract.
 
 > **Session A →** three things, in order of how much they matter to you.
 >
@@ -541,4 +562,46 @@ either way today.
 my findings this cycle. A's second relayed item (empty-DB seed/migration
 baseline verification) is outside what I've verified; leaving **#9** open for
 whoever reproduces that one.
+
+---
+
+### R6 — finding #6 (webhooks SSRF) resolved (QA Tester, 2026-07-21)
+Commit `460a8a6`. All three compounding problems C flagged are closed:
+
+1. **No DTO → no validation.** New `backend/src/webhooks/dto/subscribe-webhook.dto.ts`
+   `SubscribeWebhookDto` is now the controller body type, so the global
+   `ValidationPipe` (`whitelist` + `forbidNonWhitelisted`) actually runs on it.
+   `url`: `@IsUrl({protocols:['https'],require_protocol:true})` **plus** an
+   explicit `isBlockedWebhookHost()` custom constraint (`@Validate`) — because
+   `@IsUrl` alone does **not** block private IPs. The denylist rejects
+   `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`,
+   `169.254.0.0/16`, `0.0.0.0/8`, `localhost`/`*.localhost`, and the IPv6
+   loopback/ULA/link-local equivalents (`::1`, `fc00::/7`, `fe80::/10`). `event`
+   is `@IsIn(['BOOKING_CREATED','BOOKING_STATUS_UPDATED'])` — the only two events
+   the app actually `trigger()`s (bookings.service.ts:242,477); the schema's
+   aspirational events (BOOKING_COMPLETED, CAR_MAINTENANCE) fire nowhere yet, so
+   they're deliberately excluded. `secret` bounded (`@IsOptional @IsString
+   @MaxLength(256)`).
+2. **No capability gate.** Controller is now `@UseGuards(AuthGuard,
+   CapabilitiesGuard)` with `@RequireCapabilities('settings.manage')` on all
+   three handlers — no longer reachable by AGENT. See the **QA Tester → Architect**
+   note by the board for why `settings.manage` over a new `webhooks.manage`.
+3. **Zero tests.** New `webhooks.spec.ts` — 33 tests: per-range denylist
+   boundaries (incl. the 172.16/12 edges 172.15/172.32 staying *allowed*), DTO
+   rejects `http://`, non-URL strings, six internal/loopback targets, and a bogus
+   event; accepts a real public https URL; asserts each handler carries the
+   `settings.manage` metadata and the real `CapabilitiesGuard` 403s an AGENT
+   membership lacking it, allows an OWNER holding it.
+
+**Deliberately not touched:** tenant scoping on `subscribe`/`findAll`/
+`unsubscribe` (already correct — `agencyId` from JWT). **Not done:** the sink
+itself (`sendPayload` → `axios.post`) still has no runtime DNS-rebinding guard —
+the DTO blocks a literal internal *host*, but a public hostname that **resolves**
+to a private IP at request time would still reach it. Out of scope for this
+input-validation finding; flagging as a hardening follow-up (would need
+resolve-then-check-then-pin at the axios layer).
+
+Verified (real output, not "should work"): `cd backend && npx tsc --noEmit`
+clean; `npx jest` **22 suites / 177 tests** (baseline 21/144); `npx eslint .`
+clean. No new remote commits between verify and push.
 
