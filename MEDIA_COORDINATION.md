@@ -43,7 +43,7 @@
 
 | Role | Status | Current task | Files touched | Notes |
 |---|---|---|---|---|
-| Media & Brand Director (Lead) | active | Resumed team on founder's "keep going" | `MEDIA_COORDINATION.md` | 2026-07-21: resumed after pause; re-engaged Car Data + Copywriter, dispatched Visual & Media Asset Designer. |
+| Media & Brand Director (Lead) | idle | All 3 roles delivered v1 of their deliverables; awaiting founder direction on next round / push / translation follow-up | `MEDIA_COORDINATION.md` | 2026-07-21: all 3 subagents completed and committed locally. Also audited the shipped `frontend/messages/{en,fr,ar}.json` for content quality (keys match, no empty values, no placeholder mismatches, translations read as native) — fixed one real issue: mixed straight/curly apostrophes in `fr.json`, normalized (`f7023ae`). |
 | Car Data & Spec Researcher | done | Complete: all 4 deliverables committed | `content/car-data/fleet-categories.json`, `content/car-data/car-specs.json`, `content/car-data/pricing-structure.md`, `content/car-data/rental-details.md` | 2026-07-21: all 4 files done and committed (`552c9d4`). 8 fleet categories, 24 sample vehicles, pricing + rental-terms reference docs. Seasonal/rate-tier pricing explicitly flagged as proposal-only per CLAUDE.md. Not pushed. |
 | Copywriter & Client Hook Strategist | done | Complete: all 4 deliverables committed | `docs/marketing/copy/landing-headlines.md`, `docs/marketing/copy/cta-library.md`, `docs/marketing/copy/client-hooks.md`, `docs/marketing/copy/onboarding-messaging.md` | 2026-07-21: all 4 files done. Read `frontend/messages/en.json` (`landing`/`auth`/`nav` namespaces) + the actual `_components/*.tsx` for the real shipped voice before drafting — options are alternates to the live copy, not blind rewrites. No fabricated certifications/claims (checked `#enterprise` tile list stays paired with real properties only). Each file flags French/Arabic localization as a translator follow-up, not done here. Not pushed. |
 | Visual & Media Asset Designer | done | Delivered style-guide.md, logo-guidelines.md, asset-specs.md + 2 new SVG assets | `docs/marketing/brand/style-guide.md`, `docs/marketing/brand/logo-guidelines.md`, `docs/marketing/brand/asset-specs.md`, `frontend/public/assets/media/logo-reversed.svg`, `frontend/public/assets/media/logo-icon-monochrome.svg` | 2026-07-21: all 3 docs + 2 supplementary logo variants delivered, grounded in `globals.css`/`DESIGN_VISION.md`/component code. Did not touch any existing `frontend/public/` file, `.ts`/`.tsx`, or `globals.css`. Ready for Director review. |
@@ -62,6 +62,13 @@
 - **2026-07-21 — Director:** Founder said to keep going. Resumed Car Data & Spec Researcher and
   Copywriter & Client Hook Strategist, and dispatched Visual & Media Asset Designer for the
   first time.
+- **2026-07-21 — Director:** All 3 roles now complete. Cross-team flag for the founder (not filed
+  into `COORDINATION.md` — that's the engineering channel's numbered-findings protocol, not mine
+  to open): the Visual & Media Asset Designer found the shipped `frontend/public/logo.svg`
+  wordmark is filled `#2A2E30` (dark graphite) and is illegible on the product's own dark
+  background — this is a real production defect, not a media-team file. Founder should decide
+  whether to relay it to the engineering team (Architect/Frontend Developer) as a proper
+  `COORDINATION.md` finding.
 - **2026-07-21 — Car Data & Spec Researcher:** Finished all 4 deliverables under
   `content/car-data/`: `fleet-categories.json` (8 categories, EN+FR names, MAD daily-rate and
   deposit ranges), `car-specs.json` (24 sample vehicles typical of the Moroccan rental market —
