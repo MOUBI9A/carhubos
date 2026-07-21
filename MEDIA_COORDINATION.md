@@ -43,13 +43,36 @@
 
 | Role | Status | Current task | Files touched | Notes |
 |---|---|---|---|---|
-| Media & Brand Director (Lead) | active | Set up team, dispatched 3 subagents | `MEDIA_COORDINATION.md` | 2026-07-21: initialized this file and the directory lanes. |
-| Car Data & Spec Researcher | pending | — | — | — |
-| Copywriter & Client Hook Strategist | pending | — | — | — |
-| Visual & Media Asset Designer | pending | — | — | — |
+| Media & Brand Director (Lead) | active | Resumed team on founder's "keep going" | `MEDIA_COORDINATION.md` | 2026-07-21: resumed after pause; re-engaged Car Data + Copywriter, dispatched Visual & Media Asset Designer. |
+| Car Data & Spec Researcher | done | Complete: all 4 deliverables committed | `content/car-data/fleet-categories.json`, `content/car-data/car-specs.json`, `content/car-data/pricing-structure.md`, `content/car-data/rental-details.md` | 2026-07-21: all 4 files done and committed (`552c9d4`). 8 fleet categories, 24 sample vehicles, pricing + rental-terms reference docs. Seasonal/rate-tier pricing explicitly flagged as proposal-only per CLAUDE.md. Not pushed. |
+| Copywriter & Client Hook Strategist | active | Starting: landing-headlines.md, cta-library.md, client-hooks.md, onboarding-messaging.md | `docs/marketing/copy/` | 2026-07-21: resumed, had not started before the pause. |
+| Visual & Media Asset Designer | active | Starting: style-guide.md, logo-guidelines.md, asset-specs.md | `docs/marketing/brand/`, `frontend/public/assets/media/` | 2026-07-21: dispatched for the first time. |
 
 ## Notes log (append-only, most recent last)
 
 - **2026-07-21 — Director:** Team stood up. Roles, directory ownership, and no-code-lane rule
   established. Repo has an unpushed engineering commit ahead of `origin/main` (webhooks SSRF
   fix) — media commits stay local until the Director confirms a push plan with the founder.
+- **2026-07-21 — Director:** Founder asked to pause all Media & Brand work (session limits) and
+  confirmed the app itself stays running for review. Verified: backend `:5406` → 200,
+  frontend `:3002` → 200, `carhub-db` container healthy — nothing restarted, no risk taken.
+  All in-flight subagents stopped; nothing committed since the initial coordination-file commit
+  (`content/car-data/fleet-categories.json` is on disk, uncommitted). Team is idle until the
+  founder says to resume.
+- **2026-07-21 — Director:** Founder said to keep going. Resumed Car Data & Spec Researcher and
+  Copywriter & Client Hook Strategist, and dispatched Visual & Media Asset Designer for the
+  first time.
+- **2026-07-21 — Car Data & Spec Researcher:** Finished all 4 deliverables under
+  `content/car-data/`: `fleet-categories.json` (8 categories, EN+FR names, MAD daily-rate and
+  deposit ranges), `car-specs.json` (24 sample vehicles typical of the Moroccan rental market —
+  Dacia/Renault/Peugeot/Hyundai/VW/Kia/Toyota/Fiat/Mercedes/BMW/Ford — with `category` values
+  matching the fleet-categories ids), `pricing-structure.md` (base rate, weekly/monthly discount
+  bands, deposit HOLD→RETURN/CLAIM lifecycle described narratively to match the real product,
+  20% VAT display conventions, extra-driver and young-driver fees, cross-border fee note,
+  seasonal pricing explicitly marked as a proposal-for-consideration since CLAUDE.md lists rate
+  tiers as not-yet-built), `rental-details.md` (min age/licence-years, CIN vs passport+IDP docs,
+  payment methods, 3 insurance tiers, full-to-full fuel policy, deposit coverage, cancellation
+  bands). Both JSON files validated (`python3 -m json.load`) and cross-checked — every
+  `car-specs.json.category` value exists in `fleet-categories.json`. Committed content as
+  `552c9d4`; touched no files outside `content/car-data/` and my own status-board row. Not
+  pushed.
