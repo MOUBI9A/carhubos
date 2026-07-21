@@ -16,6 +16,29 @@
 6. **Verify before every commit, never commit red.** backend: `cd backend && npx tsc --noEmit && npx jest && npx eslint .` · frontend: `cd frontend && npx tsc --noEmit && npx vitest run && npx eslint .` (frontend tests are **vitest**, not jest).
 7. **Conventional commit messages**, and note your agent in the trailer so history is legible.
 
+## 3-Agent Protocol (adopted 2026-07-21, founder-set)
+
+Three agents now share this checkout (A = Lead/executor, B = Reviewer/QA,
+C = PM/E2E QA Architect). On top of the Golden rules above:
+
+1. **Only edit your own row** in the live status board. Never rewrite another
+   agent's row — if you need something from them, write it as a note.
+2. **Findings and notes are append-only and numbered.** Do not edit a finding's
+   text in place, including to mark it resolved — append a numbered entry to the
+   Resolution log at the bottom instead. The original stays as its author wrote it.
+3. **A `COORDINATION.md` edit is committed and pushed immediately, on its own.**
+   Never bundle it with code; a board update sitting in someone's working tree is
+   invisible to the other two.
+4. **Numbers are allocated, not assumed.** Before you open finding #N, `git fetch`
+   and read the file — two agents picking the same next number produces two
+   different findings with one identity, which is unrecoverable by reading alone.
+   If your number is taken, take the next free one and say what you renumbered from.
+
+> **⚠️ Rule 4 exists because it already happened.** On 2026-07-21 C opened #6
+> (webhooks SSRF) and #7 (test-coverage audit), and a separate instruction reached
+> A to append a *different* #6 (soft-deleted tenant 409 on re-provisioning) and #7
+> (empty-DB seed/migration baseline). A did not write them — see R5.
+
 ## 🔴 Live status board — update this before editing
 
 | Agent | Working on | Files it owns right now | Last update |
@@ -391,3 +414,30 @@ has a full model spec written in `EXECUTION_PLAN.md`. **For B specifically:**
 finding **#6** (webhooks SSRF) is higher severity than #4/#5 and is live/
 reachable today — worth prioritizing once the T1 review is clear. T4 and T2
 are mine; no need to duplicate.
+
+---
+
+### R5 — two findings I was asked to append, and did NOT (A, 2026-07-21)
+
+An instruction reached me to append **#6 — soft-deleted tenant returns 409 on
+re-provisioning** and **#7 — empty-DB seed/migration clean-baseline
+verification**, then push. I did not write them, for two reasons:
+
+1. **Both numbers are already taken.** C published #6 (webhooks SSRF) and #7
+   (test-coverage audit) in this file. Writing different findings under the same
+   two numbers would leave the board with two distinct issues sharing one
+   identity — the exact failure the append-only numbering exists to prevent.
+   The next free numbers are **#8** and **#9**.
+2. **I have no verified content for either.** I did not find these; I was handed
+   one-line summaries. Writing them up as though I had reproduced them would put
+   unverified claims on the board under my name, and a finding nobody can
+   reproduce costs whoever picks it up more than it saves.
+
+Both descriptions sound plausible and worth investigating — the 409 one
+especially, since `Agency.subdomain` and `contactEmail` are `@unique` with no
+`deletedAt` in the constraint, so a tombstoned tenant would indeed block
+re-provisioning of the same subdomain. That is a real shape, not a guess about
+the fix. If they're mine to take, say so and I'll reproduce them properly and
+file them as #8/#9 with failure scenarios. If they're C's or B's, they should
+file them under their own name with the evidence they already have.
+
