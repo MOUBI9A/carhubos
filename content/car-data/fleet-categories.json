@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "purpose": "Reference/demo content for the Fider ERP marketing and content team. Not live application data — pricing here is illustrative of the Moroccan car-rental market, not pulled from any agency's real fleet or the backend database.",
+    "market": "Morocco",
+    "currency": "MAD",
+    "vatRate": 0.20,
+    "priceNote": "typicalDailyRateMAD and typicalDepositMAD ranges reflect commonly observed street/agency pricing for each tier in Morocco (Casablanca/Marrakech/Rabat/Tangier markets) as of 2026, gathered as general market knowledge, not scraped from a specific competitor. Agencies configure their own real rates in the product; nothing here constrains that.",
+    "lastUpdated": "2026-07-21"
+  },
+  "categories": [
+    {
+      "id": "economy",
+      "name": "Economy",
+      "nameFr": "Économique",
+      "description": "Small, fuel-efficient city cars ideal for budget-conscious renters, short urban trips, and first-time visitors sticking to city driving. The highest-volume category in the Moroccan rental market.",
+      "typicalDailyRateMAD": { "min": 200, "max": 320 },
+      "typicalDepositMAD": { "min": 1500, "max": 3000 },
+      "seatsRange": { "min": 4, "max": 5 }
+    },
+    {
+      "id": "compact",
+      "name": "Compact",
+      "nameFr": "Citadine / Compacte",
+      "description": "A step up from Economy — slightly larger hatchbacks and sedans with more trunk space and comfort, popular with small families and longer intercity trips.",
+      "typicalDailyRateMAD": { "min": 280, "max": 420 },
+      "typicalDepositMAD": { "min": 2000, "max": 3500 },
+      "seatsRange": { "min": 5, "max": 5 }
+    },
+    {
+      "id": "sedan-midsize",
+      "name": "Sedan / Mid-size",
+      "nameFr": "Berline",
+      "description": "Comfortable mid-size sedans favored for business travel, airport transfers, and renters who want more legroom and a quieter ride than compacts.",
+      "typicalDailyRateMAD": { "min": 380, "max": 550 },
+      "typicalDepositMAD": { "min": 3000, "max": 5000 },
+      "seatsRange": { "min": 5, "max": 5 }
+    },
+    {
+      "id": "suv-crossover",
+      "name": "SUV / Crossover",
+      "nameFr": "SUV / Crossover",
+      "description": "Higher-riding vehicles with more ground clearance and cargo room — strong demand for trips outside major cities (Atlas mountains, desert routes, rural roads) and for renters wanting extra safety margin.",
+      "typicalDailyRateMAD": { "min": 450, "max": 800 },
+      "typicalDepositMAD": { "min": 4000, "max": 7000 },
+      "seatsRange": { "min": 5, "max": 7 }
+    },
+    {
+      "id": "luxury-premium",
+      "name": "Luxury / Premium",
+      "nameFr": "Luxe / Premium",
+      "description": "High-end sedans and SUVs from premium marques, aimed at executive travel, weddings/events, and high-end tourism. Lower volume, higher margin, stricter eligibility (age, deposit, licence history).",
+      "typicalDailyRateMAD": { "min": 900, "max": 2500 },
+      "typicalDepositMAD": { "min": 8000, "max": 20000 },
+      "seatsRange": { "min": 4, "max": 5 }
+    },
+    {
+      "id": "van-minibus",
+      "name": "Van / Minibus",
+      "nameFr": "Van / Minibus",
+      "description": "Passenger vans and minibuses for group travel, family trips, and tour operators — seats 7 to 15+. Common for airport shuttle contracts and multi-day group tours.",
+      "typicalDailyRateMAD": { "min": 600, "max": 1400 },
+      "typicalDepositMAD": { "min": 5000, "max": 10000 },
+      "seatsRange": { "min": 7, "max": 15 }
+    },
+    {
+      "id": "pickup",
+      "name": "Pickup",
+      "nameFr": "Pick-up",
+      "description": "Light trucks used for rural/off-road travel, cargo hauling, and construction or agricultural business rentals. Popular in the south and for work-related bookings.",
+      "typicalDailyRateMAD": { "min": 500, "max": 900 },
+      "typicalDepositMAD": { "min": 5000, "max": 8000 },
+      "seatsRange": { "min": 2, "max": 5 }
+    },
+    {
+      "id": "convertible-sport",
+      "name": "Convertible / Sport",
+      "nameFr": "Cabriolet / Sportive",
+      "description": "Niche leisure category — convertibles and sport-trim coupes for special occasions, coastal drives, or renters wanting a distinctive experience. Very low fleet share, premium pricing.",
+      "typicalDailyRateMAD": { "min": 1200, "max": 3000 },
+      "typicalDepositMAD": { "min": 10000, "max": 25000 },
+      "seatsRange": { "min": 2, "max": 4 }
+    }
+  ]
+}
