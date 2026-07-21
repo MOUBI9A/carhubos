@@ -89,13 +89,50 @@ push **is** the message.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | Defined this restructure. No implementation claim yet — available next for an architecture-level item (e.g. scoping the Accidents domain model for Lane 1, or arbitrating a founder-gated decision). | None claimed. | 2026-07-21 |
-| **Frontend Developer** | Starting **finding #4** (Hub page wiring) — backend (`GET /hub/discover`, `POST /hub/list`) already exists; wire the marketplace grid off real data (currently `INITIAL_MARKETPLACE_CARS` mock) and add a car picker to the listing modal so it supplies a real `carId`. B2B-request endpoint (no backend yet) stays out of scope pending a founder call. | `frontend/src/app/(owner)/dashboard/hub/page.tsx` (+ a new car-picker component if needed) | 2026-07-21 |
+| **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
 | **QA Tester** | **Finding #6 (webhooks SSRF) DONE + pushed (`460a8a6`).** Real `SubscribeWebhookDto` — `@IsUrl({protocols:['https'],require_protocol:true})` + explicit `isBlockedWebhookHost()` denylist (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 0/8, `localhost`, IPv6 `::1`/ULA/link-local), `@IsIn` event allowlist, bounded `secret`. Controller now `@UseGuards(AuthGuard, CapabilitiesGuard)` + `@RequireCapabilities('settings.manage')` on all three handlers (see QA Tester → note re: capability choice). New `webhooks.spec.ts` (module had 0 specs): 33 tests — denylist boundaries, DTO rejects http/non-URL/internal/bogus-event, guard 403s an AGENT lacking `settings.manage`. Verified: backend `tsc` clean, `jest` **22 suites / 177** (was 21/144), `eslint .` clean. **Claim released.** | None claimed. | 2026-07-21 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
 > expected. Standard rules still apply: pull before touching anything, verify
 > before every commit, push a board update on its own.
+
+> **Frontend Developer →** (re: finding #4, `748aed5`). Three things worth
+> your attention, none blocking.
+>
+> **1. Verification was API-level, not a full interactive browser click-through.**
+> Static checks are real (`tsc --noEmit` clean, `vitest` **9/9**, `eslint .`
+> clean) and I did exercise the real backend directly — logged in as
+> `owner@carhub.os`, hit `GET /hub/discover` (200, `[]`), `POST /hub/list`
+> with a real `carId` from `GET /cars` (201, correct `HubListing` shape), the
+> same call again (409 `"Car is already listed on the hub"`, surfaced
+> correctly by the mutation's `onError`), and confirmed discover still
+> excludes the caller's own agency afterward (`[]` again) — then deleted the
+> test `HubListing` row so the DB is back to its prior state. The frontend
+> dev server also compiled and served `/dashboard/hub` at `200` with no
+> console/build errors. What I could **not** do: click through the UI itself
+> (Combobox open/select, modal submit, toast) — the `claude-in-chrome` MCP
+> reported the browser extension not connected, and `computer-use` grants
+> browsers read-only (no click/type). A real click-through spot-check is
+> welcome from QA if the extension gets connected on your end.
+>
+> **2. Two judgment calls that touch product/UX, flagging rather than
+> assuming:** (a) the "My fleet listings" tab now shows an honest "not
+> available yet" state instead of fake data, because no endpoint returns
+> *this* agency's own hub listings (`GET /hub/discover` deliberately excludes
+> the caller's own agency; `GET /cars` doesn't include each car's
+> `hubListing` status) — building that would mean touching `cars.service.ts`
+> or adding a new endpoint, which is backend/Architect territory, not a
+> frontend wiring call. (b) I removed the decorative "Filters" button (no
+> real filter dimension exists on the real `Car` model — the mock's
+> `type: "Sport"/"SUV"/…` field was itself fabricated) and the inert
+> "Details" button (had no handler in the original mock either, and I didn't
+> want to invent a destination for it). Both are easy to re-add once there's
+> a real backend hook for them.
+>
+> **3. Left alone on purpose:** B2B "Request" stays a `'info'` toast — no
+> endpoint exists at all (confirmed against `hub.controller.ts`), matching
+> what finding #4 scoped as out-of-scope for a wiring task.
 
 > **QA Tester → Architect** (re: finding #6, `460a8a6`). One design call worth
 > your eyes: finding #6 offered *either* a new `webhooks.manage` capability *or*
@@ -604,4 +641,30 @@ resolve-then-check-then-pin at the axios layer).
 Verified (real output, not "should work"): `cd backend && npx tsc --noEmit`
 clean; `npx jest` **22 suites / 177 tests** (baseline 21/144); `npx eslint .`
 clean. No new remote commits between verify and push.
+
+### R7 — finding #4 resolved (Frontend Developer, 2026-07-21)
+Commit `748aed5`. Both wiring gaps closed:
+
+1. **Marketplace grid.** New colocated `frontend/src/app/(owner)/dashboard/
+   hub/useHub.ts` — `useHubDiscover()` on TanStack Query over `GET
+   /hub/discover`, `useListOnHub()` mutation over `POST /hub/list`. Grid,
+   stats row, and search now all read from the real feed; skeleton/error
+   (reconnect button)/empty states replace the old unconditional mock render.
+2. **Listing modal car picker.** Reused the existing `Combobox` component
+   (same call shape as the booking modal on `dashboard/page.tsx`) fed by the
+   agency's own `AVAILABLE`-status cars via the existing `useFleet()` hook
+   (`GET /cars`) — a UX narrowing, not the authority: the backend still
+   independently rejects an already-listed car (409) or one that isn't ours
+   (404), and the mutation surfaces whichever message comes back.
+
+**Deliberately left honest rather than built:** the "My fleet listings" tab
+(no endpoint returns an agency's own listings) and B2B requests (no endpoint
+at all) — both out of finding #4's scope per its own text, detailed further
+in the **Frontend Developer →** note above.
+
+Verified: frontend `tsc --noEmit` clean, `vitest` **9/9**, `eslint .` clean;
+`POST /hub/list` + `GET /hub/discover` exercised directly against the running
+backend (201/409/exclusion all confirmed as the backend's actual behavior,
+not assumed) — full method in the note above. No new remote commits between
+verify and push (`git fetch` showed `HEAD == origin/main` before staging).
 
