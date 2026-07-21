@@ -1,14 +1,20 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { ROLE_PRESETS } from '../common/capabilities';
+import { DEFAULT_PLAN_KEY, TRIAL_DAYS } from '../common/plans';
 import {
   IssueInvoiceDto,
   UpdateSubscriptionDto,
 } from './dto/founder-billing.dto';
+import { ProvisionTenantDto } from './dto/provision-tenant.dto';
 
 @Injectable()
 export class SaasAdminService {
@@ -16,6 +22,108 @@ export class SaasAdminService {
     private prisma: PrismaService,
     private auditLogs: AuditLogsService,
   ) {}
+
+  /**
+   * Founder-initiated tenant creation. Mirrors the self-serve /auth/register txn
+   * (agency + BETA subscription + OWNER user + OWNER membership) but is performed
+   * by a ROOT_ADMIN — no access token is issued (the founder stays themselves),
+   * and the owner's initial password is set here to share out-of-band. Seeding
+   * the OWNER membership is REQUIRED: without it every capability-gated endpoint
+   * would 403 the new owner (CapabilitiesGuard needs a membership row).
+   */
+  async provisionTenant(dto: ProvisionTenantDto, actorId: string) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.ownerEmail },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('A user with that email already exists.');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.initialPassword, 10);
+
+    let result: {
+      agency: { id: string; name: string };
+      owner: { id: string; email: string; name: string };
+    };
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const agency = await tx.agency.create({
+          data: {
+            name: dto.agencyName,
+            subdomain: dto.subdomain || null,
+            contactEmail: dto.ownerEmail,
+            subscriptionTier: DEFAULT_PLAN_KEY,
+          },
+        });
+
+        // Put the tenant on the beta plan immediately (best-effort — if plans
+        // aren't seeded yet, entitlements fail open to BETA during the beta).
+        const betaPlan = await tx.plan.findUnique({
+          where: { key: DEFAULT_PLAN_KEY },
+        });
+        if (betaPlan) {
+          const now = new Date();
+          await tx.subscription.create({
+            data: {
+              agencyId: agency.id,
+              planId: betaPlan.id,
+              status: 'ACTIVE',
+              trialEndsAt: new Date(
+                now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+              ),
+              currentPeriodStart: now,
+              note: 'Founder-provisioned (Fider beta).',
+            },
+          });
+        }
+
+        const owner = await tx.user.create({
+          data: {
+            email: dto.ownerEmail,
+            password: hashedPassword,
+            name: dto.ownerName,
+            role: 'OWNER',
+            agencyId: agency.id,
+          },
+        });
+
+        await tx.agencyMembership.create({
+          data: {
+            userId: owner.id,
+            agencyId: agency.id,
+            rolePreset: 'OWNER',
+            capabilities: ROLE_PRESETS['OWNER'],
+          },
+        });
+
+        return {
+          agency: { id: agency.id, name: agency.name },
+          owner: { id: owner.id, email: owner.email, name: owner.name },
+        };
+      });
+    } catch (e) {
+      // Lost the race on a unique constraint (email / subdomain / contactEmail).
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target =
+          (e.meta?.target as string[] | undefined)?.join(', ') ?? 'a unique field';
+        throw new ConflictException(`Already in use: ${target}.`);
+      }
+      throw e;
+    }
+
+    await this.auditLogs.log(
+      result.agency.id,
+      actorId,
+      'TENANT_PROVISION',
+      'AGENCY',
+      result.agency.id,
+      null,
+      { agencyName: result.agency.name, ownerEmail: result.owner.email },
+    );
+
+    return result;
+  }
 
   /** Platform roster: every live tenant with its real subscription + counts. */
   async getPlatformOverview() {

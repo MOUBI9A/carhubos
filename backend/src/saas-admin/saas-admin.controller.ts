@@ -15,6 +15,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ProvisionTenantDto } from './dto/provision-tenant.dto';
 import {
   IssueInvoiceDto,
   UpdateSubscriptionDto,
@@ -78,6 +79,12 @@ export class SaasAdminController {
   @Patch('invoice/:id/mark-paid')
   markInvoicePaid(@Param('id') id: string, @CurrentUser() user: any) {
     return this.saasAdminService.markInvoicePaid(id, user.id);
+  }
+
+  /** Founder provisions a new tenant (agency + OWNER + BETA subscription). */
+  @Post('provision')
+  provisionTenant(@Body() dto: ProvisionTenantDto, @CurrentUser() user: any) {
+    return this.saasAdminService.provisionTenant(dto, user.id);
   }
 
   /**

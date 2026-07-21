@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { useTranslations } from 'next-intl';
+import api from '@/lib/api';
 
 const STEPS = [
   { id: 1, title: 'Identity', description: 'Institutional Info' },
@@ -39,12 +40,15 @@ export default function ProvisionPage() {
     orgName: '',
     subdomain: '',
     adminEmail: '',
+    ownerName: '',
+    initialPassword: '',
     region: 'us-east-1',
     sharding: 'shared',
     clusterType: 'standard',
     sla: '99.9%',
     backup: 'daily',
   });
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   const updateForm = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -52,6 +56,64 @@ export default function ProvisionPage() {
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+
+  // Real founder-initiated provisioning: POST /saas-admin/provision creates the
+  // agency + OWNER + BETA subscription server-side. The infrastructure/SLA steps
+  // are presentational (this is a single managed DB) — only the identity fields
+  // are persisted. The owner signs in with the initial password, shared out-of-band.
+  const handleProvision = async () => {
+    if (
+      !formData.orgName.trim() ||
+      !formData.ownerName.trim() ||
+      !formData.adminEmail.trim() ||
+      formData.initialPassword.length < 8
+    ) {
+      showToast(
+        'danger',
+        'Missing details',
+        'Organization name, owner name, admin email, and an 8+ character initial password are required.',
+      );
+      setCurrentStep(1);
+      return;
+    }
+    setIsProvisioning(true);
+    try {
+      const { data } = await api.post('/saas-admin/provision', {
+        agencyName: formData.orgName.trim(),
+        subdomain: formData.subdomain.trim() || undefined,
+        ownerName: formData.ownerName.trim(),
+        ownerEmail: formData.adminEmail.trim(),
+        initialPassword: formData.initialPassword,
+      });
+      showToast(
+        'success',
+        'Tenant provisioned',
+        `${data.agency.name} is live — ${data.owner.email} can sign in with the initial password you set.`,
+      );
+      setFormData({
+        orgName: '',
+        subdomain: '',
+        adminEmail: '',
+        ownerName: '',
+        initialPassword: '',
+        region: 'us-east-1',
+        sharding: 'shared',
+        clusterType: 'standard',
+        sla: '99.9%',
+        backup: 'daily',
+      });
+      setCurrentStep(1);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Provisioning failed.';
+      showToast(
+        'danger',
+        'Provisioning failed',
+        Array.isArray(msg) ? msg.join(' ') : String(msg),
+      );
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -144,13 +206,38 @@ export default function ProvisionPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="eyebrow">Owner name</Label>
+                    <Input
+                      placeholder="e.g. Sara Bennani"
+                      value={formData.ownerName}
+                      onChange={(e) => updateForm('ownerName', e.target.value)}
+                      className="bg-surface border-hairline h-12 focus:border-primary/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="eyebrow">Primary admin email</Label>
+                    <Input
+                      type="email"
+                      placeholder="admin@titan-global.com"
+                      value={formData.adminEmail}
+                      onChange={(e) => updateForm('adminEmail', e.target.value)}
+                      className="bg-surface border-hairline h-12 focus:border-primary/50"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label className="eyebrow">Primary admin email</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="eyebrow">Initial owner password</Label>
+                    <span className="text-[10px] text-text-faint">Min 8 chars · share securely with the owner</span>
+                  </div>
                   <Input
-                    type="email"
-                    placeholder="admin@titan-global.com"
-                    value={formData.adminEmail}
-                    onChange={(e) => updateForm('adminEmail', e.target.value)}
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.initialPassword}
+                    onChange={(e) => updateForm('initialPassword', e.target.value)}
                     className="bg-surface border-hairline h-12 focus:border-primary/50"
                   />
                 </div>
@@ -332,10 +419,11 @@ export default function ProvisionPage() {
           ) : (
             <Button
               className="px-8"
-              onClick={() => showToast('info', 'Not wired yet', 'Founder-initiated tenant provisioning isn’t connected to the backend yet — new agencies are created via /signup for now.')}
+              onClick={handleProvision}
+              disabled={isProvisioning}
             >
               <Zap className="w-3 h-3 me-2 fill-current" />
-              Instantiate tenant
+              {isProvisioning ? 'Provisioning…' : 'Instantiate tenant'}
             </Button>
           )}
         </div>
