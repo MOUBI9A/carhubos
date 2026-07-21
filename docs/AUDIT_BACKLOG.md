@@ -124,7 +124,7 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 - **[H] No i18n/RTL for a Morocco product** ✅ — next-intl FR(default)/AR(RTL)/EN, Noto Sans Arabic, `lang`/`dir` driven by locale, Intl date/currency helpers.
 - **[M] Sub-WCAG micro-typography** ✅ — the Phase 12 token migration replaced the old white/10-20 opacity ladder; a final grep sweep for sub-20%-opacity text returned 0 hits app-wide.
 - **[M] Dead buttons fire fake success toasts** ✅ — audited every `showToast('success', ...)` on admin/finance/accidents/vault: `admin/agencies` calls were real (verified — genuine `/saas-admin/*` calls); `admin/provision`'s "Instantiate tenant" and `accidents`' "Report incident"/"Export PDF" were fake (no backend, fabricated client-only data) — changed to honest info toasts; `finance` and `vault` were fixed earlier this program (wired to real data).
-- **[M] Chart hover-only (blank on touch/AT); placeholder-as-label forms; booking accepts past dates.** ⬜ — chart tap/focus + SR table equivalents not attempted (a genuinely separate, larger a11y feature). Booking past-date rejection landed earlier.
+- **[M] Chart hover-only (blank on touch/AT); placeholder-as-label forms; booking accepts past dates.** ✅ — chart tap/focus + SR table equivalents done across all four data-bearing chart surfaces (T1). Booking past-date rejection landed earlier.
 - **[L] Combobox a11y; toast auto-dismiss; tables clip on mobile; login bundles seed password + false "AES-256" claim.** 🔄 — the AES-256 claim on `/login` was already gone; a second one on `/admin/provision` found + softened. The rest of this line not audited.
 
 ---

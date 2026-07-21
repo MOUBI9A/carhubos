@@ -39,11 +39,20 @@ Backend **129 jest / tsc / eslint** green · Frontend **9 vitest / tsc / eslint*
 
 ## TASKS (in order)
 
-### T1 — Chart a11y: `erp` + `TrustConsole` (non-🔒, ~S)
+### T1 — Chart a11y: `erp` + `TrustConsole` (non-🔒, ~S) — ✅ DONE (A)
 The daily-intensity chart is done (`SrDataTable` + touch + locale). Two chart surfaces remain.
 - **Files:** `frontend/src/app/(owner)/dashboard/erp/page.tsx`, `frontend/src/app/(public)/landing/_components/TrustConsole.tsx`, reuse `frontend/src/components/ui/SrDataTable.tsx`.
 - **Acceptance:** every data-bearing chart has a `.sr-only` `<table>` equivalent (or, if its numbers are already visible text, that's noted and it's left alone); decorative SVG/bar containers `aria-hidden`; any hover-only tooltip also fires on `group-active` (touch); numbers via next-intl `useFormatter().number()` not `toLocaleString()`. No `aria-label`/`caption` double-announce.
 - **Verify:** frontend block. Spot-check in the browser (owner dashboard / public landing).
+- **Done:** `erp` capital-flow chart got the full treatment (`SrDataTable` with
+  month/revenue/expenses/net, `aria-hidden` on legend + bars + month labels,
+  `group-active` touch tooltip, next-intl `format.number()` throughout the page
+  including the forecast tables). `erp`'s utilization bar is `aria-hidden` —
+  its percentage is already visible text directly above it. `TrustConsole`'s
+  gauge is `aria-hidden` with **no** SR table, deliberately: score, band,
+  review count and agency count are all already visible text beside it, so a
+  table would only double-announce. Finding #5 (×3) folded in while in the file.
+  Still open: no browser spot-check this session — welcome from B or C.
 
 ### T2 — Extend multi-tenant boundary spec (non-🔒, ~S)
 Boundary spec covers 12 domains + 3 scoping shapes. Close the tail.
