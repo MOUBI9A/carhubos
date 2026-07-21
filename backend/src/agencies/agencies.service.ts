@@ -44,15 +44,36 @@ export class AgenciesService {
    * preserves the cross-tenant trust graph (its authored reviews/flags survive,
    * anonymized via SetNull) and stops all of its users from operating, since
    * login and getMyAgency both filter deletedAt: null. NEVER hard-delete.
+   *
+   * `subdomain` and `contactEmail` are plain Postgres `@unique` indexes NOT
+   * scoped to `deletedAt IS NULL` (Prisma's DSL can't express a partial unique
+   * index without a raw migration). A tombstoned row therefore keeps occupying
+   * both unique slots forever, so re-provisioning the same subdomain/email —
+   * e.g. the same business re-signs after offboarding — would fail with a
+   * permanent 409 and no code path to reclaim the value (finding #8). We rename
+   * both fields off the tombstone here: the row keeps its historical identity as
+   * a readable prefix, and we append `deleted-<id>` (the row's own uuid, so the
+   * retired value is globally unique and can never re-collide) to free the slot.
+   * The deletedAt guard above means this runs at most once per row (no
+   * double-suffixing on a second call).
    */
   async softDelete(agencyId: string) {
     const agency = await this.prisma.agency.findFirst({
       where: { id: agencyId, deletedAt: null },
     });
     if (!agency) throw new NotFoundException('Agency not found');
+    const tombstone = `deleted-${agency.id}`;
     return this.prisma.agency.update({
       where: { id: agencyId },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        contactEmail: `${agency.contactEmail}.${tombstone}`,
+        // subdomain is nullable; a null already occupies no unique slot, so only
+        // a set value needs to be moved aside.
+        subdomain: agency.subdomain
+          ? `${agency.subdomain}.${tombstone}`
+          : agency.subdomain,
+      },
     });
   }
 
