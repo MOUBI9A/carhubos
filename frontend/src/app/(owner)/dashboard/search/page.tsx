@@ -63,6 +63,7 @@ const BOOKING_STATUS_COLOR: Record<string, string> = {
   REQUESTED: 'text-text-muted bg-surface-raised border-hairline',
   APPROVED: 'text-info bg-info/10 border-info/20',
   ACTIVE: 'text-success bg-success/10 border-success/20',
+  OVERDUE: 'text-warning bg-warning/10 border-warning/20',
   COMPLETED: 'text-text-faint bg-surface border-hairline',
   CANCELLED: 'text-danger bg-danger/10 border-danger/20',
 };

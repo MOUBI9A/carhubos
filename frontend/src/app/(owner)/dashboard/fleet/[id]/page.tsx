@@ -65,6 +65,7 @@ const BOOKING_STATUS_STYLES: Record<string, string> = {
   REQUESTED: 'text-text-faint bg-surface-raised border-hairline',
   APPROVED: 'text-info bg-info/10 border-info/20',
   ACTIVE: 'text-primary bg-primary/10 border-primary/20',
+  OVERDUE: 'text-warning bg-warning/10 border-warning/20',
   COMPLETED: 'text-success bg-success/10 border-success/20',
   CANCELLED: 'text-danger bg-danger/10 border-danger/20',
 };

@@ -62,7 +62,13 @@ export interface RenterDocument {
   updatedAt: string;
 }
 
-export type BookingStatus = 'REQUESTED' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'ACTIVE'
+  | 'OVERDUE'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface PortalBookingCar {
   id: string;
@@ -127,6 +133,7 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, { chip: string; label:
   REQUESTED: { chip: 'text-text-muted bg-surface border-hairline', label: 'Requested' },
   APPROVED: { chip: 'text-info bg-info/10 border-info/20', label: 'Approved' },
   ACTIVE: { chip: 'text-primary bg-primary/10 border-primary/20', label: 'Active' },
+  OVERDUE: { chip: 'text-warning bg-warning/10 border-warning/20', label: 'Overdue' },
   COMPLETED: { chip: 'text-success bg-success/10 border-success/20', label: 'Completed' },
   CANCELLED: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Cancelled' },
 };

@@ -4,6 +4,7 @@ export type BookingStatus =
   | 'REQUESTED'
   | 'APPROVED'
   | 'ACTIVE'
+  | 'OVERDUE'
   | 'COMPLETED'
   | 'CANCELLED';
 
@@ -60,6 +61,12 @@ export const BOOKING_TRANSITIONS: Record<BookingStatus, StatusAction[]> = {
     { to: 'CANCELLED', label: 'Cancel', variant: 'danger' },
   ],
   ACTIVE: [{ to: 'COMPLETED', label: 'Complete Return', variant: 'primary' }],
+  // OVERDUE is reached automatically (the hourly cron flips ACTIVE → OVERDUE past
+  // the return date), not by a manual button; closing it out charges the late fee.
+  OVERDUE: [
+    { to: 'COMPLETED', label: 'Complete Return', variant: 'primary' },
+    { to: 'CANCELLED', label: 'Cancel', variant: 'danger' },
+  ],
   COMPLETED: [],
   CANCELLED: [],
 };
@@ -68,6 +75,7 @@ export const BOOKING_STATUSES: BookingStatus[] = [
   'REQUESTED',
   'APPROVED',
   'ACTIVE',
+  'OVERDUE',
   'COMPLETED',
   'CANCELLED',
 ];
@@ -94,6 +102,12 @@ export const BOOKING_STATUS_STYLES: Record<
     block: 'bg-primary/90 border-primary/50 text-cream',
     dot: 'bg-primary',
     label: 'Active',
+  },
+  OVERDUE: {
+    chip: 'text-warning bg-warning/10 border-warning/20',
+    block: 'bg-warning/90 border-warning/50 text-cream',
+    dot: 'bg-warning',
+    label: 'Overdue',
   },
   COMPLETED: {
     chip: 'text-success bg-success/10 border-success/20',

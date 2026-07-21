@@ -61,6 +61,7 @@ const STATUS_BADGE_VARIANT: Record<BookingStatus, 'outline' | 'secondary' | 'des
   REQUESTED: 'outline',
   APPROVED: 'secondary',
   ACTIVE: 'secondary',
+  OVERDUE: 'destructive',
   COMPLETED: 'outline',
   CANCELLED: 'destructive',
 };
@@ -117,7 +118,7 @@ export default function BookingsScheduler() {
   );
 
   const statusCounts = useMemo(() => {
-    const counts = { REQUESTED: 0, APPROVED: 0, ACTIVE: 0, COMPLETED: 0, CANCELLED: 0 };
+    const counts = { REQUESTED: 0, APPROVED: 0, ACTIVE: 0, OVERDUE: 0, COMPLETED: 0, CANCELLED: 0 };
     for (const b of data?.bookings ?? []) counts[b.status]++;
     return counts;
   }, [data?.bookings]);
