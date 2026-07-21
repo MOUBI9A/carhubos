@@ -9,6 +9,8 @@ import { HubService } from '../hub/hub.service';
 import { CarsService } from '../cars/cars.service';
 import { MaintenanceService } from '../maintenance/maintenance.service';
 import { PaymentsService } from '../payments/payments.service';
+import { TasksService } from '../tasks/tasks.service';
+import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -18,10 +20,12 @@ import { PaymentsService } from '../payments/payments.service';
  *
  * A mocked Prisma is sufficient — this is about the WHERE clause and the
  * exception thrown, not the DB. Covers bookings, customers, documents,
- * inspections, expenses, contracts, hub, cars, maintenance, and payments.
- * Most follow the `findFirst({ where: { id, agencyId } }) -> NotFoundException`
- * shape; payments.verify is the higher-risk **load-then-check** variant (find by
- * id alone, then scope by the invoice's agencyId), regression-guarded explicitly.
+ * inspections, expenses, contracts, hub, cars, maintenance, payments, tasks,
+ * and refusal-logs. Three scoping shapes are represented: the common
+ * `findFirst({ where: { id, agencyId } }) -> 404`; the **load-then-check**
+ * variant (payments.verify — find by id alone, then scope by the invoice's
+ * agencyId); and **write-scoping** (tasks.updateStatus — updateMany({id,
+ * agencyId}), count===0 -> 404). All regression-guarded explicitly.
  */
 const AGENCY_A = 'agency-a';
 const AGENCY_B = 'agency-b';
@@ -188,5 +192,44 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
     await expect(
       svc.verify(RESOURCE_ID, 'user-b', 'OWNER', AGENCY_B),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('TasksService.updateStatus 404s across tenants (updateMany write-scoping)', async () => {
+    // Tasks scope the WRITE itself: updateMany({ id, agencyId }) touches 0 rows
+    // for a foreign task, and count === 0 → 404. A distinct IDOR-prevention
+    // mechanism from the findFirst-then-check shape used elsewhere.
+    const prisma = {
+      task: {
+        updateMany: jest.fn(({ where }: any) =>
+          Promise.resolve({
+            count: where.id === RESOURCE_ID && where.agencyId === AGENCY_B ? 1 : 0,
+          }),
+        ),
+        findUnique: jest.fn().mockResolvedValue({ id: RESOURCE_ID, status: 'DONE' }),
+      },
+    };
+    const svc = new TasksService(prisma as any);
+
+    await expect(
+      svc.updateStatus(AGENCY_A, RESOURCE_ID, 'DONE'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.updateStatus(AGENCY_B, RESOURCE_ID, 'DONE')).resolves.toBeDefined();
+  });
+
+  it('RefusalLogsService.updateStatus 404s across tenants', async () => {
+    const prisma = {
+      refusalLog: {
+        findFirst: agencyScopedFindFirst(),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const svc = new RefusalLogsService(prisma as any);
+
+    await expect(
+      svc.updateStatus(AGENCY_A, RESOURCE_ID, 'RECOVERED'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      svc.updateStatus(AGENCY_B, RESOURCE_ID, 'RECOVERED'),
+    ).resolves.toBeDefined();
   });
 });
