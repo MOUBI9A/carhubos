@@ -1,0 +1,30 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fider Logo — reversed (light-on-dark) lockup for dark backgrounds.
+       Supplementary Media & Brand asset: the shipped frontend/public/logo.svg
+       fills its "Fider" wordmark with dark graphite (#2A2E30), which is
+       illegible on the product's own dark surfaces. This variant recolors the
+       wordmark to the warm cream/foreground tone (see docs/marketing/brand/
+       style-guide.md, logo-guidelines.md) so the lockup reads on dark
+       backgrounds. Icon glyph and proportions are unchanged from logo.svg;
+       the brass gradient uses the same stops as globals.css's .metal-text
+       utility (hsl(44 60% 72%) / hsl(40 56% 58%) / hsl(38 48% 46%)). -->
+  <defs>
+    <linearGradient id="brassGradientReversed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E2CC8D;stop-opacity:1" />
+      <stop offset="45%" style="stop-color:#D0A858;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#AE843D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon Symbol: Stylized 'F' with Layered Shield -->
+  <g transform="translate(10, 10)">
+    <path d="M0 5 L25 0 L35 5 L35 30 L25 40 L0 35 Z" fill="#272420" />
+    <path d="M5 10 L22 7 L28 10 L28 28 L22 35 L5 32 Z" fill="url(#brassGradientReversed)" />
+    <!-- Stylized 'F' cut-out -->
+    <path d="M10 15 H22 V18 H15 V22 H20 V25 H15 V30 H10 Z" fill="#272420" />
+  </g>
+
+  <!-- Typography: 'Fider' — cream fill so it reads on dark backgrounds -->
+  <text x="55" y="42" font-family="Hanken Grotesk, Arial, sans-serif" font-weight="700" font-size="32" fill="#F1EADA" letter-spacing="-0.02em">Fider</text>
+  <text x="145" y="42" font-family="Hanken Grotesk, Arial, sans-serif" font-weight="300" font-size="12" fill="#D0A858" letter-spacing="0.1em">LUX</text>
+</svg>

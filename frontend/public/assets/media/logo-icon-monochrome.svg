@@ -1,0 +1,21 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fider icon mark — single-ink monochrome variant. Supplementary Media &
+       Brand asset: flattens frontend/public/logo-icon.svg's two-tone brass
+       gradient + dark outer border down to one flat fill, for contexts where
+       the gradient won't reproduce (engraving/stamping, single-color print,
+       watermarks, or very small UI chrome). The shield-plus-cutout-"F"
+       silhouette matches logo-icon.svg's inner shape exactly, via
+       fill-rule="evenodd" so the "F" stays a clean negative-space cut-out.
+       Ships filled with the brass token (color-metal, hsl(40 56% 58%) =
+       #D0A858, per docs/marketing/brand/style-guide.md); swap the fill to
+       cream (#F1EADA) for dark backgrounds or graphite (#272420) for light
+       backgrounds as needed. -->
+  <g transform="translate(2, 2)">
+    <path
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M5 10 L22 7 L28 10 L28 28 L22 35 L5 32 Z M10 15 H22 V18 H15 V22 H20 V25 H15 V30 H10 Z"
+      fill="#D0A858"
+    />
+  </g>
+</svg>
