@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { BookingsService } from '../bookings/bookings.service';
 import { CustomersService } from '../customers/customers.service';
 import { DocumentsService } from '../documents/documents.service';
@@ -6,6 +6,9 @@ import { InspectionsService } from '../inspections/inspections.service';
 import { ExpensesService } from '../expenses/expenses.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { HubService } from '../hub/hub.service';
+import { CarsService } from '../cars/cars.service';
+import { MaintenanceService } from '../maintenance/maintenance.service';
+import { PaymentsService } from '../payments/payments.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -14,10 +17,11 @@ import { HubService } from '../hub/hub.service';
  * business query must be scoped by agencyId, never trust an id alone.
  *
  * A mocked Prisma is sufficient — this is about the WHERE clause and the
- * exception thrown, not the DB. Covers a representative sample of domains
- * (bookings, customers, documents, inspections); other domains follow the
- * same `findFirst({ where: { id, agencyId } }) -> NotFoundException` pattern
- * verified here and in their own per-domain specs.
+ * exception thrown, not the DB. Covers bookings, customers, documents,
+ * inspections, expenses, contracts, hub, cars, maintenance, and payments.
+ * Most follow the `findFirst({ where: { id, agencyId } }) -> NotFoundException`
+ * shape; payments.verify is the higher-risk **load-then-check** variant (find by
+ * id alone, then scope by the invoice's agencyId), regression-guarded explicitly.
  */
 const AGENCY_A = 'agency-a';
 const AGENCY_B = 'agency-b';
@@ -137,5 +141,52 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
       bookingId: RESOURCE_ID,
       booking: { agencyId: AGENCY_A },
     });
+  });
+
+  it('CarsService.findOne 404s across tenants', async () => {
+    const prisma = { car: { findFirst: agencyScopedFindFirst() } };
+    const svc = new CarsService(prisma as any, {} as any, {} as any);
+
+    await expect(svc.findOne(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.findOne(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('MaintenanceService.findAllForCar 404s across tenants (car ownership check)', async () => {
+    const prisma = {
+      car: { findFirst: agencyScopedFindFirst() },
+      maintenanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const svc = new MaintenanceService(prisma as any, {} as any);
+
+    await expect(svc.findAllForCar(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(svc.findAllForCar(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('PaymentsService.verify 404s across tenants (scoped by invoice.agencyId, not the payment id)', async () => {
+    // verify() loads the payment by id ALONE, then scopes by invoice.agencyId — a
+    // load-then-check IDOR spot (this regression-guards the Phase 1 fix). Agency A
+    // must 404; agency B clears the tenant boundary and is stopped only by the
+    // later status guard (409), which proves isolation didn't reject it.
+    const prisma = {
+      payment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: RESOURCE_ID,
+          status: 'VERIFIED', // not PENDING → past the tenant check, agency B hits 409
+          type: 'INCOME',
+          invoiceId: 'inv-b',
+          invoice: { agencyId: AGENCY_B },
+        }),
+      },
+    };
+    const svc = new PaymentsService(prisma as any, {} as any);
+
+    await expect(
+      svc.verify(RESOURCE_ID, 'user-a', 'OWNER', AGENCY_A),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      svc.verify(RESOURCE_ID, 'user-b', 'OWNER', AGENCY_B),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });
