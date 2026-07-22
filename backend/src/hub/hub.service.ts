@@ -2,6 +2,13 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+// discoverAssets scans every OTHER agency's active listings — unlike most
+// list endpoints in this app, its result set grows with the whole platform,
+// not one tenant. Capped (matches the /public/fleet precedent), not
+// paginated, so the existing flat-array response + marketplace grid are
+// unchanged.
+const HUB_DISCOVER_CAP = 100;
+
 @Injectable()
 export class HubService {
   constructor(private prisma: PrismaService) {}
@@ -48,6 +55,8 @@ export class HubService {
           select: { name: true, city: true },
         },
       },
+      orderBy: { createdAt: 'desc' },
+      take: HUB_DISCOVER_CAP,
     });
   }
 }
