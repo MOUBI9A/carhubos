@@ -65,7 +65,7 @@ customers spec (`3dd6200`).
 | # | Bug | Where | Fix | Eff |
 |---|---|---|---|---|
 | F2 | ✅ **DONE (`5b08423`, QA Tester — R12).** `create(@Body() data: any)` → spread into `prisma.refusalLog.create` = **mass-assignment**, no validation on enum-likes (`requestedCarType`, `status`) or Decimal `potentialRevenue` | `refusal-logs.controller.ts:20` · `refusal-logs.service.ts:8` | Add `CreateRefusalLogDto` (`@IsIn`, `@IsNumber` on money) | M |
-| F3 | Create/update typed with an **inline TS type** (erased at runtime → pipe can't validate). Money `amount` has no `@IsNumber/@IsPositive`; `category`/`status` unconstrained | `expenses.controller.ts:17,39` | Add `CreateExpenseDto`/`UpdateExpenseDto` | M |
+| F3 | ✅ **DONE (`73ac5e1`, QA Tester — R13), except `category` is deliberately unconstrained — see new finding #10.** Create/update typed with an **inline TS type** (erased at runtime → pipe can't validate). Money `amount` has no `@IsNumber/@IsPositive`; `category`/`status` unconstrained | `expenses.controller.ts:17,39` | Add `CreateExpenseDto`/`UpdateExpenseDto` | M |
 | F4 | **Fake-success toast** — `POST /automations` 404s (backend has **no controller**, only cron service), catch branch invents a rule + fires `showToast('success','Rule Constructed',…)`. Violates the honesty invariant | `automations/page.tsx:131-149` (+ `SYSTEM_RULES` mock `:68`) | Either build the automations controller (see §3) or make the page honest ("not wired") until it exists | M |
 | F5 | 🟡 **`refusal-logs` half DONE (`5b08423`, R12); `saas-admin.controller.ts:57`'s `@Body('tier')` still open** — different domain (billing/tier change), left for whoever owns it. `@Body('status')`/`@Body('tier')` raw strings, unvalidated enums | `refusal-logs.controller.ts:40` · `saas-admin.controller.ts:57` | `@IsIn` DTO or inline guard | S |
 | F6 | `@Body('carId')` not `@IsUUID` (low impact — service scopes ownership) | `ai-vision.controller.ts:29` | `@IsUUID` | S |
@@ -86,7 +86,8 @@ Each renders hardcoded data / no-op buttons behind a "real" label. Either wire t
 ### 🟢 P3 — residuals from closed findings
 - **#6 residual:** webhooks — no runtime **DNS-rebinding** guard at the axios sink (denylist is at subscribe-time only). `webhooks.service.ts`. med/M.
 - **#8 follow-up:** one-time **backfill** of pre-`10aa7d5` soft-delete tombstones (rename their unique `subdomain`/`contactEmail` off the live namespace) before go-live. Architect-owned. S.
-- **#9 (open, unclaimed):** verify **seed + all migrations apply on a truly empty DB** (clean-baseline) — now doubly relevant with the new `add_accident` migration. S.
+- **#9:** ✅ verified clean — **seed + all migrations apply on a truly empty DB** (QA Tester, R10).
+- **#10 (open, founder/product decision):** `Expense.category` taxonomy — the schema comment (`SALARY/RENT/UTILITIES/MARKETING/TAX/OTHER`) and the live "Record an expense" form's actual option labels have zero overlap. Pick a canonical short-code list, update the `<select>` to map label→code, then `@IsIn` the DTO. S once decided.
 - Low: `customers.service.ts:52` search `contains` is case-sensitive on Postgres (misses case variants). S.
 
 ---
