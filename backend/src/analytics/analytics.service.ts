@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -11,8 +11,13 @@ export class AnalyticsService {
    * Recalculates the ROI score for a specific car.
    * Logic: (Total Revenue - Total Maintenance Costs - Depreciation Estimate) / Age in Fleet
    */
-  async calculateCarRoi(carId: string) {
-    const car = await this.prisma.car.findUnique({ where: { id: carId } });
+  async calculateCarRoi(agencyId: string, carId: string) {
+    // Tenant-scoped: a carId from another agency resolves to null → ROI 0 and no
+    // write. agencyId comes from the caller (JWT / an already-scoped internal
+    // record), never from client input (CLAUDE.md §5.1).
+    const car = await this.prisma.car.findFirst({
+      where: { id: carId, agencyId },
+    });
 
     if (!car) return 0;
 
@@ -42,9 +47,11 @@ export class AnalyticsService {
     const totalCosts = totalMaintenance > 0 ? totalMaintenance : 1;
     const roiScore = ((totalRevenue - totalMaintenance) / totalCosts) * 100;
 
-    // Update car with new ROI
-    await this.prisma.car.update({
-      where: { id: carId },
+    // Update car with new ROI. updateMany (not update) so the write carries the
+    // agencyId in its WHERE — a cross-tenant carId can never be written to
+    // (defence-in-depth: the findFirst above already returned for this agency).
+    await this.prisma.car.updateMany({
+      where: { id: carId, agencyId },
       data: { currentRoi: roiScore },
     });
 
@@ -104,11 +111,18 @@ export class AnalyticsService {
   }
 
   async getCarPerformance(agencyId: string, carId: string) {
-    const roi = await this.calculateCarRoi(carId);
-    const car = await this.prisma.car.findUnique({
-      where: { id: carId },
+    // Scope the recompute + read to the caller's agency. calculateCarRoi is
+    // agency-scoped, so a cross-tenant carId reads/writes nothing; the scoped
+    // findFirst then yields null → 404 (no existence leak, CLAUDE.md §5.1)
+    // rather than returning another tenant's car, bookings and maintenance.
+    const roi = await this.calculateCarRoi(agencyId, carId);
+    const car = await this.prisma.car.findFirst({
+      where: { id: carId, agencyId },
       include: { maintenance: true, bookings: true },
     });
+    if (!car) {
+      throw new NotFoundException('Car not found');
+    }
 
     return {
       car,

@@ -125,7 +125,7 @@ export class PaymentsService {
     });
 
     if (autoVerify && dto.type === 'INCOME' && invoice.booking?.carId) {
-      await this.analytics.calculateCarRoi(invoice.booking.carId);
+      await this.analytics.calculateCarRoi(agencyId, invoice.booking.carId);
     }
 
     return payment;
@@ -182,7 +182,7 @@ export class PaymentsService {
 
     // BP Pillar C: Trigger ROI recalculation as new real liquidity entered the system
     if (payment.type === 'INCOME') {
-      await this.analytics.calculateCarRoi(payment.invoice.booking.carId);
+      await this.analytics.calculateCarRoi(agencyId, payment.invoice.booking.carId);
     }
 
     return updatedPayment;

@@ -41,7 +41,9 @@ export class MaintenanceService {
     }
 
     // BP Pillar C: Trigger ROI recalculation after any mechanical spend
-    await this.analytics.calculateCarRoi(record.carId);
+    // (agencyId scopes the recompute — record.carId is already agency-owned via
+    // assertCarOwnership above).
+    await this.analytics.calculateCarRoi(agencyId, record.carId);
 
     return record;
   }
