@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING F1 (P0 cross-tenant IDOR — analytics ROI).** `GET /analytics/car/:id` → `calculateCarRoi`/`getCarPerformance` read another tenant's car + all its bookings/maintenance **and write** a recomputed ROI onto it, both via unscoped `findUnique`/`car.update` reachable through a GET. Fix: scope both by `{id, agencyId}` — `findFirst` read → 404, `updateMany` guarded write (`tasks.service.ts:56` pattern); thread the caller `agencyId` into the 3 internal callers (payments ×2, maintenance ×1 — all already operate on agency-scoped carIds, verified); new `analytics.service.spec.ts` (read-404 + write-scope boundary). **(Prev: T3 Accidents backend DONE `f3febe0`, R9 — frontend wiring handed to Frontend Developer.)** | `backend/src/analytics/analytics.service.ts` · `backend/src/analytics/analytics.service.spec.ts` (new) · `backend/src/payments/payments.service.ts` · `backend/src/maintenance/maintenance.service.ts` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Finding #6 DONE (`460a8a6`, R6). Finding #8 DONE + pushed (`10aa7d5`, R8).** `AgenciesService.softDelete()` now renames `subdomain`/`contactEmail` off the tombstone (appends `.deleted-<agency.id>` — the row's own uuid, globally unique, original kept as prefix), freeing both `@unique` slots so a later re-provision of the same subdomain/email succeeds; null subdomain stays null; no schema migration. New `agencies.service.spec.ts` (7 tests). **Verified Frontend Developer's finding #4 (`748aed5`) — PASS, no issues** (see QA Tester → Frontend Developer note). **Finding #7 slice DONE + pushed (`3dd6200`):** new `customers.service.spec.ts` (module had **0** specs), **12 tests** — agency-scoped duplicate-identity guard (409) + agencyId-from-caller-not-body, delete FK-restrict→409 "blacklist instead"/404/happy-path, blacklist+unblacklist transitions with audit before/after+reason, getBlacklisted filter, findOne tenant-scope + lifetimeSpend (VERIFIED income only). Additive test-only; `customers.service.ts` unchanged. Verified: backend `tsc` clean, `jest` **24 suites / 196** (was 23/184), new file eslint-clean. **Claim released, available for next.** | None claimed. | 2026-07-21 |
+| **QA Tester** | **Reviewed T3 (`f3febe0`) — clean, no defects.** Read `accidents.service.ts`/`.controller.ts`/`dto/accidents.dto.ts` end to end against T3's acceptance criteria: `findOne`/`update` tenant-scoped correctly (`findFirst`/`findOne`-then-`update by id`, never a raw `update({where:{id}})` on unverified input), `estimatedCost` goes through the Prisma.Decimal API only, `@IsIn` on severity/status, routes match the handed-off contract incl. the `GET /:id` fix. Only nit (not filed, matches existing P2 unbounded-list backlog pattern): `findAll` has no `take`. Re-ran the full verify suite myself, not on trust: backend `tsc` clean, `jest` **25/202**, `eslint .` clean; frontend `tsc` clean, `vitest` **9/9**, `eslint .` clean — matches the claimed baseline exactly. **Closed #9 (empty-DB migration/seed baseline, was unclaimed) — verified clean, see new Reviewer-audit-log bullet + R10.** **Found F1 independently while reading `analytics.service.ts`, then saw the Architect's live edit under me (`git status`/mtime) before my own edit landed — backed off immediately, untouched, nothing further needed from me there; their fix (in progress above) matches what I'd have proposed.** **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -416,8 +416,9 @@ Left entirely alone to avoid colliding with T1. All minor:
   that toast is honest; three minor issues there are finding #5. Everything else
   pairs its success toast with a real request. Known-mock pages `accidents` and
   `admin/pulse` already carry honest states.
-- **Not yet swept:** React effect cleanup/stale closures, migrations against an
-  empty DB.
+- **Empty-DB migration/seed baseline (#9)** — verified clean, see R10. All 9
+  migrations + all 3 seed scripts apply with zero errors on a truly empty DB.
+- **Not yet swept:** React effect cleanup/stale closures.
 
 ## Current state (2026-07-21)
 `main` @ `fc03417`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
@@ -838,4 +839,32 @@ endpoint by design), so the dev DB is back to its prior state.
   committed: `backend/test/tenant-isolation.e2e-spec.ts` (that's T4 / QA's e2e
   lane) and `frontend/_tmp_shoot.mjs` (a temp responsive-screenshot scratch
   script, self-described as "NOT part of the e2e suite").
+
+### R10 — #9 (empty-DB migration/seed baseline) verified clean (QA Tester, 2026-07-22)
+
+Reproduced rather than assumed: spun up a throwaway `postgres:15-alpine`
+container on a scratch port (`5433`, isolated from the shared dev DB on
+`5432` — no shared state, nothing to reconcile after), then from `backend/`:
+
+1. `DATABASE_URL=<throwaway> npx prisma migrate deploy` — all **9** migrations
+   (`init_postgres` through the new `add_accident`) applied cleanly from a
+   genuinely empty schema, zero errors, `prisma migrate status` implicitly
+   clean (deploy itself would have failed loudly on drift).
+2. `node -r dotenv/config prisma/seed.js` then `seed-roles.js` then
+   `seed-plans.js` (the exact three-script sequence `CLAUDE.md` §2
+   documents) — all three ran to completion with no errors. Spot-checked row
+   counts directly in the throwaway container (`Agency`=1, `Car`=3 → then 4
+   after seed-roles, `User`=2 → 7) to confirm the seed landed in the
+   isolated DB, not the shared one.
+3. Container torn down after (`docker stop`, no `--rm` volume left behind).
+
+No defect found — this closes #9 as **verified clean**, not a bug. One
+observation surfaced in passing, not filed as a finding (too minor, informational
+only): `seed-roles.js`'s live output shows **OWNER 23 / MANAGER 21 / AGENT 16**
+capabilities, but `CLAUDE.md`'s Phase 5 line still says **OWNER=21/MANAGER=19/
+AGENT=14** — the capability catalog has grown since that line was written
+(e.g. `settings.manage` reuse for webhooks, T3's `fleet.*` reuse). Doc-drift,
+not a code bug; leaving it for whoever next touches `CLAUDE.md`'s Phase 5 note
+since the fix is a one-line count update, not mine to silently edit into
+someone else's phase-summary paragraph.
 
