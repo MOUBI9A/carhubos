@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
@@ -26,15 +26,22 @@ export class UsersService {
   }
 
   /**
-   * Generates a unique, encrypted hash for a renter's Trust Vault QR code.
+   * Generates a fresh, unguessable Trust Vault QR token for a renter.
+   *
+   * qrHash is a bearer credential (consent.service.ts resolves a renter from
+   * it — see `requestGrant`), not an identity hash that needs to be
+   * recomputed and matched — it must never be derived from data an attacker
+   * could know or guess (userId/email are not secret; a hash of them plus a
+   * millisecond timestamp is brute-forceable within any plausible generation
+   * window). Cryptographically random, full stop.
    */
   async generateTrustQr(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== 'RENTER')
-      throw new Error('User not found or not a renter');
+    if (!user || user.role !== 'RENTER') {
+      throw new NotFoundException('User not found or not a renter');
+    }
 
-    const rawData = `${user.id}:${user.email}:${Date.now()}`;
-    const qrHash = crypto.createHash('sha256').update(rawData).digest('hex');
+    const qrHash = crypto.randomBytes(32).toString('hex');
 
     return this.prisma.user.update({
       where: { id: userId },
