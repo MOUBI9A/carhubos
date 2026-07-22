@@ -16,22 +16,30 @@ import { PartialType } from '@nestjs/mapped-types';
 // contract to break.
 export const EXPENSE_STATUSES = ['PENDING', 'PAID'] as const;
 
-// `category` is deliberately left as a plain non-empty string, NOT an `@IsIn`
-// enum. The schema's own comment claims `SALARY, RENT, UTILITIES, MARKETING,
-// TAX, OTHER`, but the live "Record an expense" form
-// (dashboard/finance/page.tsx) actually submits free-text option labels —
-// "Maintenance & Spare Parts", "Staff Salary Payout", "Real Estate / Rent",
-// "Marketing & Acquisition", "Utility Infrastructure" — none of which match
-// the commented enum, and there's a 6th commented value (TAX) with no UI
-// option at all. Locking to either list would either 400 every real save from
-// the live form (the schema's list) or bake in freeform display strings as a
-// permanent "enum" (the UI's list) — that's a product decision on the
-// canonical category taxonomy, not a validation-hardening call. Flagged in
-// COORDINATION.md rather than decided here. What this DTO *does* close: the
-// mass-assignment gap (no DTO at all before this) and the money/date holes.
+// `category` is the canonical expense taxonomy (COORDINATION.md finding #10,
+// founder decision: "codes + fix the UI"). The schema comment, this `@IsIn`, and
+// the live "Record an expense" form (dashboard/finance/page.tsx) now all use
+// these codes — the form submits the code via `<option value=>` and shows a
+// friendly label, and `getSummary().byCategory` keys on the code. The Expense
+// table was empty (0 rows) when this landed, so no legacy prose-category rows
+// exist to migrate. Previously category was an unconstrained string (the F3 DTO
+// deliberately left it open pending this taxonomy call).
+export const EXPENSE_CATEGORIES = [
+  'SALARY',
+  'RENT',
+  'UTILITIES',
+  'MARKETING',
+  'TAX',
+  'MAINTENANCE',
+  'OTHER',
+] as const;
+
 export class CreateExpenseDto {
   @IsString()
   @IsNotEmpty()
+  @IsIn([...EXPENSE_CATEGORIES], {
+    message: `category must be one of ${EXPENSE_CATEGORIES.join(', ')}`,
+  })
   category: string;
 
   @IsString()

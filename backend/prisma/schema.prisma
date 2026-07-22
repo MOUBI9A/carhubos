@@ -339,7 +339,7 @@ model Payment {
 
 model Expense {
   id          String   @id @default(uuid())
-  category    String // SALARY, RENT, UTILITIES, MARKETING, TAX, OTHER
+  category    String // SALARY, RENT, UTILITIES, MARKETING, TAX, MAINTENANCE, OTHER (DTO-constrained @IsIn — see expenses.dto.ts EXPENSE_CATEGORIES)
   description String
   amount      Decimal  @db.Decimal(12, 2)
   date        DateTime @default(now())

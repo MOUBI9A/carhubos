@@ -21,6 +21,24 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
 
+// Canonical expense taxonomy — must match the backend's EXPENSE_CATEGORIES
+// (expenses.dto.ts, finding #10). The <select> submits the CODE via
+// `<option value>`; the label is display-only. Summaries key on the code, so
+// CATEGORY_LABEL maps it back to a friendly label for rendering.
+const EXPENSE_CATEGORIES = [
+  { code: 'MAINTENANCE', label: 'Maintenance & Spare Parts' },
+  { code: 'SALARY', label: 'Staff Salary Payout' },
+  { code: 'RENT', label: 'Real Estate / Rent' },
+  { code: 'MARKETING', label: 'Marketing & Acquisition' },
+  { code: 'UTILITIES', label: 'Utility Infrastructure' },
+  { code: 'TAX', label: 'Tax' },
+  { code: 'OTHER', label: 'Other' },
+] as const;
+
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  EXPENSE_CATEGORIES.map((c) => [c.code, c.label]),
+);
+
 type Expense = {
   id: string;
   category: string;
@@ -221,7 +239,7 @@ export default function FinancialBrain() {
   const ledger = useMemo(() => {
     const expenseRows = expenses.map((expense) => ({
       id: expense.id,
-      name: expense.description || expense.category,
+      name: expense.description || CATEGORY_LABEL[expense.category] || expense.category,
       type: 'EXPENSE' as const,
       method: '—',
       amount: Number(expense.amount),
@@ -257,8 +275,8 @@ export default function FinancialBrain() {
     return Object.entries(summary.byCategory)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([label, amount], i) => ({
-        label,
+      .map(([code, amount], i) => ({
+        label: CATEGORY_LABEL[code] ?? code,
         value: Math.round((amount / total) * 100),
         color: colors[i % colors.length],
       }));
@@ -459,11 +477,9 @@ export default function FinancialBrain() {
            <div className="space-y-1.5">
               <p className="eyebrow px-1">Category</p>
               <select name="category" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
-                 <option>Maintenance & Spare Parts</option>
-                 <option>Staff Salary Payout</option>
-                 <option>Real Estate / Rent</option>
-                 <option>Marketing & Acquisition</option>
-                 <option>Utility Infrastructure</option>
+                 {EXPENSE_CATEGORIES.map((c) => (
+                   <option key={c.code} value={c.code}>{c.label}</option>
+                 ))}
               </select>
            </div>
            <div className="space-y-1.5">

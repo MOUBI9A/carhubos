@@ -10,14 +10,15 @@ import { CreateExpenseDto, UpdateExpenseDto } from './dto/expenses.dto';
  * money `amount` had no `@IsNumber`/`@IsPositive`, and any extra body property
  * rode along unchecked. Module previously had 0 specs.
  *
- * `category` is deliberately NOT enum-constrained (see dto/expenses.dto.ts) —
- * the schema's comment and the live "Record an expense" form disagree on the
- * taxonomy entirely, which is a product decision flagged in COORDINATION.md,
- * not resolved here. These tests only cover what the DTO does constrain.
+ * `category` is now enum-constrained to the canonical codes (see
+ * dto/expenses.dto.ts EXPENSE_CATEGORIES). The taxonomy product decision flagged
+ * in COORDINATION.md (finding #10) resolved to "codes + fix the UI", so the live
+ * form submits codes via `<option value=>` and the DTO validates them — these
+ * tests were updated from asserting the old free-text labels to the codes.
  */
 describe('CreateExpenseDto — validation (F3)', () => {
   const validBody = {
-    category: 'Real Estate / Rent',
+    category: 'RENT',
     description: 'July office rent',
     amount: 4500,
   };
@@ -27,17 +28,30 @@ describe('CreateExpenseDto — validation (F3)', () => {
     expect(await validate(dto)).toHaveLength(0);
   });
 
-  it('accepts every real category label the live form actually sends', async () => {
-    const realLabels = [
-      'Maintenance & Spare Parts',
-      'Staff Salary Payout',
-      'Real Estate / Rent',
-      'Marketing & Acquisition',
-      'Utility Infrastructure',
+  it('accepts every canonical category code and rejects prose labels / unknowns (finding #10)', async () => {
+    const validCodes = [
+      'SALARY',
+      'RENT',
+      'UTILITIES',
+      'MARKETING',
+      'TAX',
+      'MAINTENANCE',
+      'OTHER',
     ];
-    for (const category of realLabels) {
+    for (const category of validCodes) {
       const dto = plainToInstance(CreateExpenseDto, { ...validBody, category });
       expect(await validate(dto)).toHaveLength(0);
+    }
+    // The old free-text labels the form used to submit are now rejected — #10
+    // resolved to codes, and the <select> submits codes via <option value=>.
+    for (const category of [
+      'Real Estate / Rent',
+      'Maintenance & Spare Parts',
+      'nonsense',
+    ]) {
+      const dto = plainToInstance(CreateExpenseDto, { ...validBody, category });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'category')).toBe(true);
     }
   });
 
