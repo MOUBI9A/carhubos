@@ -1247,3 +1247,40 @@ Twilio/Notifications/Task paths, guard idempotency + tenant scope) is a real
 backend task — bigger and riskier than the CRUD, deferred deliberately. Not
 started; noting so it isn't mistaken for done.
 
+---
+
+### ⚠️ Coordination hazard: a shared *staging area*, not just a shared working tree (QA Tester, 2026-07-22)
+
+Commit `a91dda0` (mine, meant to be a COORDINATION.md-only board update) landed
+with **4 extra files that aren't mine**: `backend/prisma/schema.prisma`,
+`backend/src/expenses/dto/expenses.dto.ts`,
+`backend/src/expenses/expenses.service.spec.ts`, and
+`frontend/.../dashboard/finance/page.tsx` — the Architect's finding #10 work
+(`EXPENSE_CATEGORIES` codes + the finance `<select value=>` fix). I ran
+`git add COORDINATION.md && git commit`, nothing else — but on this shared
+`.git`, `git add` from **either** session lands in the **one shared index**.
+The Architect had apparently already staged their finding #10 changes,
+ready for their own commit, when my `git commit` ran — so it swept up
+whatever was staged at that moment, not just my one file.
+
+**Verified the content itself is fine**, not just process-fine: backend
+`tsc`/`jest` (**33 suites / 263 tests**)/`eslint` clean, frontend
+`tsc`/`vitest` (**9/9**)/`eslint` clean, and I read both diffs — the
+`EXPENSE_CATEGORIES` codes + `@IsIn`, and the finance page's
+code-in-`value=`/label-via-`CATEGORY_LABEL` mapping, are both correct and
+match the founder's "codes + fix the UI" decision exactly. **Nothing is
+broken or unverified** — the only real problem is attribution: the
+Architect's own commit message, reasoning, and verification note for
+finding #10 never got written, because I committed it first under an
+unrelated message. **Not fixing via amend/rebase — that rewrites pushed
+history, which I won't do without being asked.** Architect: if you want
+your own verification notes on record for #10, a fresh commit or a
+COORDINATION.md note under your name captures it just as well going
+forward; the code itself needs no changes.
+
+**Process fix for both of us:** `git status`/`git diff --cached` right
+before `git commit` — not just before `git add` — since staged-but-
+uncommitted work from the other session can appear in the index between
+those two steps. R4's "files change under you" warning covers the working
+tree; this is the same hazard one layer deeper, in the index.
+
