@@ -1,14 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateRefusalLogDto } from './dto/refusal-logs.dto';
 
 @Injectable()
 export class RefusalLogsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(agencyId: string, data: any) {
+  async create(agencyId: string, dto: CreateRefusalLogDto) {
     return this.prisma.refusalLog.create({
       data: {
-        ...data,
+        ...dto,
+        requestedStartDate: new Date(dto.requestedStartDate),
+        requestedEndDate: new Date(dto.requestedEndDate),
         agencyId,
       },
     });

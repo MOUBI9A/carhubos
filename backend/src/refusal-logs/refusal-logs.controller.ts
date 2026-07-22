@@ -10,6 +10,10 @@ import {
 import { RefusalLogsService } from './refusal-logs.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import {
+  CreateRefusalLogDto,
+  UpdateRefusalStatusDto,
+} from './dto/refusal-logs.dto';
 
 @Controller('refusal-logs')
 @UseGuards(AuthGuard)
@@ -17,8 +21,8 @@ export class RefusalLogsController {
   constructor(private readonly refusalLogsService: RefusalLogsService) {}
 
   @Post()
-  create(@CurrentUser() user: any, @Body() data: any) {
-    return this.refusalLogsService.create(user.agencyId, data);
+  create(@CurrentUser() user: any, @Body() dto: CreateRefusalLogDto) {
+    return this.refusalLogsService.create(user.agencyId, dto);
   }
 
   @Get()
@@ -37,8 +41,8 @@ export class RefusalLogsController {
   updateStatus(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body('status') status: string,
+    @Body() dto: UpdateRefusalStatusDto,
   ) {
-    return this.refusalLogsService.updateStatus(user.agencyId, id, status);
+    return this.refusalLogsService.updateStatus(user.agencyId, id, dto.status);
   }
 }
