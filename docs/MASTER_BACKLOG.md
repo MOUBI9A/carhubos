@@ -11,10 +11,13 @@
 > plan.** When you fix something here, tick it and note the commit. If it's not
 > already a numbered finding, you don't need to file it — just work top-down.
 >
-> **Verified baseline** (last clean, per `project_status.md`): jest **24 suites /
-> ~196 tests** green, vitest 9 green. Two engineering cohorts + a Media team have
-> been active; **`~/Desktop` is Google-Drive-synced → always `git fetch` and
-> trust origin, never local mtimes.**
+> **Verified baseline** (2026-07-22, `ffdbed7`): jest **31 suites / 259 tests**
+> green (mocked) + a live-DB e2e job in CI (N2), vitest 9 green. Two engineering
+> cohorts + a Media team have been active; **`~/Desktop` is Google-Drive-synced,
+> AND — more directly — this is a literal single shared `.git` between the
+> Architect/QA sessions (not just a synced folder): commits from either land on
+> the same branch history in real time. Always `git fetch` and trust origin,
+> never local mtimes; expect a working-tree file to change under you mid-edit.**
 
 ---
 
@@ -43,14 +46,14 @@ surfaces (`8c38e03`), MRR/ARR Decimal fix (`e9e32d0`), `/public/fleet` bounded
 soft-delete re-provisioning fix (`10aa7d5`), email normalization ×4 entry points,
 customers spec (`3dd6200`).
 
-**⚠️ IN-FLIGHT tonight — RECONCILE FIRST tomorrow (uncommitted on the working tree):**
-- **T3 Accidents (Architect):** backend built — `backend/src/accidents/**`, `schema.prisma`,
-  migration `20260721213211_add_accident/`, `app.module.ts`, `accidents.service.spec.ts`.
-  **Frontend `accidents/page.tsx` NOT wired yet** (still the mock + honest "not wired" toast).
-- **T4 live-DB e2e (Session C):** `backend/test/tenant-isolation.e2e-spec.ts` written,
-  **but `ci.yml` has no Postgres-service job to run it.**
-- Also loose: `frontend/_tmp_shoot.mjs` (temp), Media team commits **local, not pushed**.
-- **Step 1 tomorrow = `git status`; if these landed, verify green; if half-done, finish/commit them before new work.**
+**✅ Resolved since (this section is now stale history, kept for context):**
+- **T3 Accidents:** backend done (`f3febe0`); frontend `accidents/page.tsx` wiring is
+  tracked as **N1** below (still open — mock + honest "not wired" toast).
+- **T4 live-DB e2e:** ✅ done (`5c1fc40`) — `.github/workflows/ci.yml`'s `backend-e2e`
+  job runs `tenant-isolation.e2e-spec.ts` against a real `postgres:15` service
+  container. See **N2** below.
+- `frontend/_tmp_shoot.mjs` is still loose (temp scratch script, self-described as
+  not part of the e2e suite) — harmless, left alone.
 
 ---
 
@@ -97,7 +100,7 @@ Each renders hardcoded data / no-op buttons behind a "real" label. Either wire t
 | # | Item | Notes | Eff |
 |---|---|---|---|
 | N1 | **Finish T3 — wire `accidents/page.tsx`** | Backend is built (in-flight). Wire the page to `GET/POST/PATCH /accidents`, real data + honest states, drop the mock + "not wired" toast. Closes the last mock page on the checklist. | M |
-| N2 | **Finish T4 — CI live-DB e2e job** | Add a `postgres:15` service-container job to `.github/workflows/ci.yml` that runs `migrate deploy` → seed → the backend e2e (`test/tenant-isolation.e2e-spec.ts`) — otherwise the spec is dead coverage. Document in `CLAUDE.md`. | M |
+| N2 | ✅ **DONE (`5c1fc40`, QA Tester).** ~~Finish T4 — CI live-DB e2e job~~ | New `backend-e2e` job: `postgres:15` service container → `prisma generate` + `migrate deploy` → the e2e spec. No seed step needed — the spec self-registers its own users. Documented in `CLAUDE.md` §7. Verified locally with a clean `env -i` shell (no `.env`) before wiring into CI. | M |
 | N3 | **T5 — Guardian Vault file storage** | No `StorageService` exists; vault upload is metadata-only. Build a local-disk `StorageService` (swap to S3-compatible later) — upload persists, download streams, size/type validated, path never trusts client input. *(Confirm storage choice with founder.)* | M |
 | N4 | **Automations controller** (unblocks F4) | Backend `automations/` has only cron logic, no controller. Build `POST/GET/PATCH /automations` (agency-scoped, `@IsIn` trigger/action, capability-gated) + wire the page. | M |
 | N5 | **Platform audit-log endpoint** (unblocks `admin/logs`) | `audit-logs` is agency-scoped; add a ROOT_ADMIN platform-wide read for the SuperAdmin logs view. | M |
