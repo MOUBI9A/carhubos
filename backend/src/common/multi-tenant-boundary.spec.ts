@@ -11,6 +11,7 @@ import { MaintenanceService } from '../maintenance/maintenance.service';
 import { PaymentsService } from '../payments/payments.service';
 import { TasksService } from '../tasks/tasks.service';
 import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
+import { SearchService } from './search/search.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -21,11 +22,18 @@ import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
  * A mocked Prisma is sufficient — this is about the WHERE clause and the
  * exception thrown, not the DB. Covers bookings, customers, documents,
  * inspections, expenses, contracts, hub, cars, maintenance, payments, tasks,
- * and refusal-logs. Three scoping shapes are represented: the common
+ * refusal-logs, and search. Three scoping shapes are represented: the common
  * `findFirst({ where: { id, agencyId } }) -> 404`; the **load-then-check**
  * variant (payments.verify — find by id alone, then scope by the invoice's
  * agencyId); and **write-scoping** (tasks.updateStatus — updateMany({id,
  * agencyId}), count===0 -> 404). All regression-guarded explicitly.
+ *
+ * `automations` and `notifications` were considered for this file too (per
+ * `docs/EXECUTION_PLAN.md` T2) but don't have a matching boundary to test:
+ * `automations` is cron-only (no controller, no caller-supplied id — see
+ * finding F4), and `notifications.controller.ts`'s only route builds a
+ * WhatsApp deep-link from query params with no DB lookup at all. Neither has
+ * an IDOR surface in the shape this file checks.
  */
 const AGENCY_A = 'agency-a';
 const AGENCY_B = 'agency-b';
@@ -231,5 +239,42 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
     await expect(
       svc.updateStatus(AGENCY_B, RESOURCE_ID, 'RECOVERED'),
     ).resolves.toBeDefined();
+  });
+
+  it('SearchService.search never returns another agency\'s cars/customers/bookings', async () => {
+    // Real rows all belong to agency B; the mock only filters by agencyId
+    // (like the real WHERE clause would) so this isolates the tenant
+    // boundary from the text-matching logic itself.
+    const carB = { id: 'car-b', agencyId: AGENCY_B, brand: 'Dacia', model: 'Duster' };
+    const customerB = { id: 'cust-b', agencyId: AGENCY_B, firstName: 'Yassine' };
+    const bookingB = { id: 'booking-b', agencyId: AGENCY_B, status: 'ACTIVE' };
+
+    function scopedFindMany(rows: any[]) {
+      return jest.fn(({ where }: any) =>
+        Promise.resolve(rows.filter((r) => r.agencyId === where.agencyId)),
+      );
+    }
+
+    const prisma = {
+      car: { findMany: scopedFindMany([carB]) },
+      customer: { findMany: scopedFindMany([customerB]) },
+      booking: { findMany: scopedFindMany([bookingB]) },
+    };
+    const svc = new SearchService(prisma as any);
+
+    // Agency A searches a term that would match B's data on every field —
+    // must come back empty, not leak B's rows.
+    await expect(svc.search(AGENCY_A, 'Dacia')).resolves.toEqual({
+      cars: [],
+      customers: [],
+      bookings: [],
+      total: 0,
+    });
+
+    // Sanity: the true owner (agency B) does find its own data with the
+    // same query — proves the emptiness above is the tenant guard, not a
+    // broken mock.
+    const resultForB = await svc.search(AGENCY_B, 'Dacia');
+    expect(resultForB.total).toBe(3);
   });
 });
