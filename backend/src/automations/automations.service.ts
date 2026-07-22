@@ -1,9 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwilioService } from '../integrations/twilio/twilio.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TrustService } from '../trust/trust.service';
+import {
+  CreateAutomationDto,
+  UpdateAutomationDto,
+} from './dto/automations.dto';
 
 @Injectable()
 export class AutomationsService {
@@ -15,6 +19,62 @@ export class AutomationsService {
     private notifications: NotificationsService,
     private trust: TrustService,
   ) {}
+
+  // ── Agency-configurable rules (CRUD) ──────────────────────────────────────
+  // Every query is scoped by the caller's agencyId (from the JWT, never the
+  // body); a cross-tenant id makes updateMany/deleteMany affect 0 rows → 404
+  // (CLAUDE.md §5.1). NOTE: these rows are persisted but NOT consulted by the
+  // @Cron handlers below — the built-in automations are still hardcoded. Wiring
+  // rule execution is a tracked follow-up; a stored rule is a definition for now.
+
+  async findAll(agencyId: string) {
+    return this.prisma.automationRule.findMany({
+      where: { agencyId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async create(agencyId: string, dto: CreateAutomationDto) {
+    return this.prisma.automationRule.create({
+      data: {
+        agencyId,
+        name: dto.name,
+        trigger: dto.trigger,
+        action: dto.action,
+        config: dto.config ?? '{}',
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async update(agencyId: string, id: string, dto: UpdateAutomationDto) {
+    // Ownership guard: updateMany scopes the write so a cross-tenant id no-ops
+    // (count 0 → 404), never mutating another tenant's rule.
+    const result = await this.prisma.automationRule.updateMany({
+      where: { id, agencyId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.trigger !== undefined ? { trigger: dto.trigger } : {}),
+        ...(dto.action !== undefined ? { action: dto.action } : {}),
+        ...(dto.config !== undefined ? { config: dto.config } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+      },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException('Automation rule not found');
+    }
+    return this.prisma.automationRule.findFirst({ where: { id, agencyId } });
+  }
+
+  async remove(agencyId: string, id: string) {
+    const result = await this.prisma.automationRule.deleteMany({
+      where: { id, agencyId },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException('Automation rule not found');
+    }
+    return { id, deleted: true };
+  }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDocumentExpiryChecks() {
