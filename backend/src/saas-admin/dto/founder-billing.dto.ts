@@ -38,6 +38,18 @@ export class UpdateSubscriptionDto {
   note?: string;
 }
 
+/**
+ * Founder sets an agency's denormalized subscription tier
+ * (`Agency.subscriptionTier`). Constrained to the real plan keys — BETA included,
+ * since every agency runs on BETA during the free beta and this must not 400 a
+ * legitimate founder action. Mirrors `UpdateSubscriptionDto.planKey`.
+ */
+export class UpdateTierDto {
+  @IsString()
+  @IsIn(['BETA', 'STARTER', 'PRO', 'BUSINESS'])
+  tier!: string;
+}
+
 /** Founder issues a platform invoice to an agency (manual billing). */
 export class IssueInvoiceDto {
   @IsNumber({ maxDecimalPlaces: 2 })

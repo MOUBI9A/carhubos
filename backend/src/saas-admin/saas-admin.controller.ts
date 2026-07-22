@@ -19,6 +19,7 @@ import { ProvisionTenantDto } from './dto/provision-tenant.dto';
 import {
   IssueInvoiceDto,
   UpdateSubscriptionDto,
+  UpdateTierDto,
 } from './dto/founder-billing.dto';
 
 /** Cookie options shared with the auth login/logout flow. */
@@ -54,8 +55,8 @@ export class SaasAdminController {
   }
 
   @Patch('agency/:id/tier')
-  updateTier(@Param('id') id: string, @Body('tier') tier: string) {
-    return this.saasAdminService.updateAgencyTier(id, tier);
+  updateTier(@Param('id') id: string, @Body() dto: UpdateTierDto) {
+    return this.saasAdminService.updateAgencyTier(id, dto.tier);
   }
 
   @Patch('agency/:id/subscription')
