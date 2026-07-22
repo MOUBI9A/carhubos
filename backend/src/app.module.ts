@@ -38,6 +38,7 @@ import { AgencyStaffModule } from './agency-staff/agency-staff.module';
 import { ConsentModule } from './consent/consent.module';
 import { PortalModule } from './portal/portal.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
+import { AccidentsModule } from './accidents/accidents.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { EntitlementsModule } from './entitlements/entitlements.module';
     ConsentModule,
     PortalModule,
     EntitlementsModule,
+    AccidentsModule,
   ],
   controllers: [AppController],
   providers: [

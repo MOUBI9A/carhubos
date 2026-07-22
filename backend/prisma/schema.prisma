@@ -47,6 +47,7 @@ model Agency {
   consentGrants    ConsentGrant[]
   subscription     Subscription?
   platformInvoices PlatformInvoice[]
+  accidents        Accident[]
 
   @@index([deletedAt])
 }
@@ -147,6 +148,7 @@ model Car {
   maintenance MaintenanceRecord[]
   inspections Inspection[]
   hubListing  HubListing?
+  accidents   Accident[]
 
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
@@ -186,6 +188,32 @@ model MaintenanceRecord {
   carId String
   car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
 
+  @@index([carId])
+}
+
+// 🚧 Fleet incident / accident dossier. Tenant-scoped (agencyId), attached to a
+// car and optionally to the booking it occurred under. estimatedCost is money =
+// Decimal(12,2) (the global interceptor returns it as a number on the wire).
+model Accident {
+  id            String   @id @default(uuid())
+  occurredAt    DateTime
+  severity      String // MINOR, MODERATE, SEVERE, TOTAL
+  status        String   @default("REPORTED") // REPORTED, INVESTIGATING, REPAIR_QUOTE, IN_REPAIR, CLAIM_FILED, RESOLVED
+  description   String
+  location      String?
+  thirdParty    Boolean  @default(false)
+  estimatedCost Decimal? @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  carId    String
+  car      Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId])
   @@index([carId])
 }
 
@@ -258,6 +286,7 @@ model Booking {
   inspections      Inspection[]
   renterReview     RenterReview?
   blacklistEntries BlacklistEntry[]
+  accidents        Accident[]
 
   @@index([carId])
   @@index([customerId])
