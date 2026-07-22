@@ -14,6 +14,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
+import { AnalyzeVehicleDto } from './dto/analyze-vehicle.dto';
 
 @Controller('ai-vision')
 @UseGuards(AuthGuard, CapabilitiesGuard)
@@ -26,16 +27,13 @@ export class AiVisionController {
   async analyze(
     @CurrentUser() user: any,
     @UploadedFile() file: Express.Multer.File,
-    @Body('carId') carId: string,
+    @Body() dto: AnalyzeVehicleDto,
   ) {
     if (!file) {
       throw new BadRequestException('No image provided for analysis.');
     }
-    if (!carId) {
-      throw new BadRequestException('carId is required.');
-    }
 
-    return this.aiVisionService.analyzeVehicle(user.agencyId, carId, file.buffer);
+    return this.aiVisionService.analyzeVehicle(user.agencyId, dto.carId, file.buffer);
   }
 
   @Get('recent')
