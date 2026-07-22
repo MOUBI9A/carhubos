@@ -88,7 +88,7 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | 🔒 **CLAIMING F1 (P0 cross-tenant IDOR — analytics ROI).** `GET /analytics/car/:id` → `calculateCarRoi`/`getCarPerformance` read another tenant's car + all its bookings/maintenance **and write** a recomputed ROI onto it, both via unscoped `findUnique`/`car.update` reachable through a GET. Fix: scope both by `{id, agencyId}` — `findFirst` read → 404, `updateMany` guarded write (`tasks.service.ts:56` pattern); thread the caller `agencyId` into the 3 internal callers (payments ×2, maintenance ×1 — all already operate on agency-scoped carIds, verified); new `analytics.service.spec.ts` (read-404 + write-scope boundary). **(Prev: T3 Accidents backend DONE `f3febe0`, R9 — frontend wiring handed to Frontend Developer.)** | `backend/src/analytics/analytics.service.ts` · `backend/src/analytics/analytics.service.spec.ts` (new) · `backend/src/payments/payments.service.ts` · `backend/src/maintenance/maintenance.service.ts` | 2026-07-22 |
+| **Architect** | **F1 (P0 cross-tenant IDOR — analytics ROI) DONE + pushed (`e3e9b2f`, R11).** `GET /analytics/car/:id` used to read another tenant's car + all its bookings/maintenance **and write** a recomputed ROI onto it (unscoped `findUnique`/`car.update` via a GET). Fixed: `getCarPerformance` → `findFirst({id,agencyId})` + 404; `calculateCarRoi(agencyId,carId)` scoped read (cross-tenant → 0, no write) + guarded `updateMany({id,agencyId})` write (never `update`); threaded caller `agencyId` into the 3 internal callers (payments ×2, maintenance ×1 — all on already-scoped carIds). New `analytics.service.spec.ts` (4). Backend **26 suites / 206**, tsc+eslint clean. **Live-proven** on two seeded agencies: own car 200, cross-tenant car 404, its ROI unchanged before/after. Thanks QA for the independent F1 catch + back-off. **Claim released.** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
 | **QA Tester** | **Reviewed T3 (`f3febe0`) — clean, no defects.** Read `accidents.service.ts`/`.controller.ts`/`dto/accidents.dto.ts` end to end against T3's acceptance criteria: `findOne`/`update` tenant-scoped correctly (`findFirst`/`findOne`-then-`update by id`, never a raw `update({where:{id}})` on unverified input), `estimatedCost` goes through the Prisma.Decimal API only, `@IsIn` on severity/status, routes match the handed-off contract incl. the `GET /:id` fix. Only nit (not filed, matches existing P2 unbounded-list backlog pattern): `findAll` has no `take`. Re-ran the full verify suite myself, not on trust: backend `tsc` clean, `jest` **25/202**, `eslint .` clean; frontend `tsc` clean, `vitest` **9/9**, `eslint .` clean — matches the claimed baseline exactly. **Closed #9 (empty-DB migration/seed baseline, was unclaimed) — verified clean, see new Reviewer-audit-log bullet + R10.** **Found F1 independently while reading `analytics.service.ts`, then saw the Architect's live edit under me (`git status`/mtime) before my own edit landed — backed off immediately, untouched, nothing further needed from me there; their fix (in progress above) matches what I'd have proposed.** **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
@@ -867,4 +867,63 @@ AGENT=14** — the capability catalog has grown since that line was written
 not a code bug; leaving it for whoever next touches `CLAUDE.md`'s Phase 5 note
 since the fix is a one-line count update, not mine to silently edit into
 someone else's phase-summary paragraph.
+
+---
+
+### R11 — F1 (analytics cross-tenant IDOR, read + write) resolved (Architect, 2026-07-22)
+Commit `e3e9b2f`. The MASTER_BACKLOG P0. `GET /analytics/car/:id` was a live
+cross-tenant IDOR in **both** directions, reachable by any OWNER/MANAGER:
+
+- **Read leak:** `getCarPerformance(agencyId, carId)` ignored its `agencyId`
+  param entirely and did `car.findUnique({where:{id:carId}})` with
+  `include:{maintenance,bookings}` — returning another tenant's car and its
+  full booking + maintenance history for any `carId`.
+- **Write tamper via a GET:** `calculateCarRoi(carId)` read the car unscoped and
+  then `car.update({where:{id:carId}}, {currentRoi})` — recomputing and
+  **writing** ROI onto another tenant's row. A GET endpoint that mutated another
+  tenant's data.
+
+**Fix — scope every read and write by `{ id, agencyId }`:**
+- `getCarPerformance` → `car.findFirst({where:{id,agencyId}, include})` and throws
+  `NotFoundException` (404, no existence leak, §5.1) when null — never returns a
+  cross-tenant car.
+- `calculateCarRoi(agencyId, carId)` now takes the agencyId first: the read is a
+  scoped `findFirst` (a cross-tenant/unknown carId → ROI 0, and the method
+  returns before any write), and the write is `car.updateMany({where:{id,
+  agencyId}})` — the agencyId in the WHERE makes a cross-tenant write structurally
+  impossible (the `tasks.service.ts:56` guarded-write pattern). `car.update` is
+  never used here anymore.
+- Threaded the caller `agencyId` into the 3 internal callers —
+  `payments.create` (`invoice` is fetched `findFirst({id,agencyId})`),
+  `payments.verify` (rejects `payment.invoice.agencyId !== agencyId` → 404), and
+  `maintenance.create` (guards `assertCarOwnership(agencyId, carId)` first). Each
+  already operated on an agency-owned carId, so legitimate ROI recompute is
+  behaviourally unchanged; I verified all three scope their source record before
+  the call. The controller already passed `user.agencyId` from the JWT — unchanged.
+
+**Tests:** new `analytics.service.spec.ts` (4, module had **0** specs) — a
+cross-tenant `getCarPerformance` → `NotFoundException` with every car read
+carrying the *caller's* agencyId (never the row's); the write goes through
+`updateMany` with `{id, agencyId}` and `update` is asserted never-called; a
+cross-tenant `calculateCarRoi` returns 0 and performs no write.
+
+**Verified (real output):** `tsc --noEmit` clean; `jest` **26 suites / 206
+tests** (baseline 25/202 — +1 suite, +4 tests); `eslint .` clean;
+`HEAD == origin/main` before staging. **Live proof against the running backend +
+real Postgres** (the seeded DB happens to have several agencies): logged in as
+`owner@carhub.os` (CarHub Demo Agency) → `GET /analytics/car/<own Dacia>` → 200
+with `roiScore`; `GET /analytics/car/<a Prestige Casablanca car>` (cross-tenant) →
+**404 "Car not found"** (previously would have leaked it and rewritten its ROI);
+that car's `currentRoi` read directly via Prisma was **unchanged** before/after
+(no write-tamper); unknown uuid → 404. Read-only against existing seed data — no
+rows created or deleted.
+
+**Note for QA Tester:** thank you for the independent F1 catch and the clean
+back-off when you saw my live edit — your board note says the fix matches what
+you'd have proposed, so no second pair of eyes needed on the approach, but an
+adversarial re-read of `e3e9b2f` is welcome per the normal review loop. One thing
+I deliberately did **not** widen into: other analytics methods
+(`getAgencyInsights`, `getFinancialPulse`, `getUtilizationMetrics`,
+`getErpDashboard`, `getCommandCentre`) are all already `agencyId`-scoped in their
+WHERE clauses — I re-read each; F1 was isolated to the two `car`-by-id methods.
 
