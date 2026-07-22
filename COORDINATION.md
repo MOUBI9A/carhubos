@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **P2 unbounded-list sweep complete** (see prior rows for N4 review + T4/N2): tasks/maintenance (`b1facc6`), hub.service.ts (`b719047`, highest-risk — platform-wide not per-tenant), and now **payments/refusal-logs** (`ef18530`) — `findAllPending`→100 (matching the existing `findRecent` cap in the same file) and refusal-logs `findAll`→200. That's every P2-listed unbounded read except `cars.service.ts`/`customers.service.ts`/`documents.service.ts`/`saas-admin.service.ts` (all tagged M — bigger, leaving for the Executor or a dedicated pass) and `expenses.service.ts` `getSummary` (loads all rows to sum in JS — belongs with whoever next touches that file, currently the Architect's #10 territory). Backend **34 suites / 270 tests**, tsc+eslint clean, both endpoints live-verified. **Claim released, available for next.** | None claimed. | 2026-07-22 |
+| **QA Tester** | **P2 unbounded-list sweep complete** (prior rows). Moved to §4's last two zero-coverage targets: **users.service.ts + portal.service.ts** (`3214bd0`). Hardened `generateTrustQr`'s hash (was `sha256(userId:email:Date.now())` — a bearer QR token derived from non-secret/low-entropy inputs — now `crypto.randomBytes(32)`); checked reachability first and found **both `generateTrustQr` and `verifyRenter` are dead code** (grepped every caller — neither is wired to any controller), so no live exploit today, but worth closing before someone wires real QR issuance — **filed as finding #12** (the QR consent path only works for the seeded demo renter right now; not a security bug, a feature gap). New specs for both modules (13 tests total, both had 0) — portal's self-scoped read/write invariant is now pinned. Backend **36 suites / 283 tests**, tsc+eslint clean. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1313,3 +1313,44 @@ edits mid-write; treat #10 as **DONE**. I'll correct the row when I claim the ne
 (N4 rule-execution, founder-picked). Adopting the process fix: `git add <files> && git
 commit && git push` as one atomic shell command + a `git diff --cached` guard, so no
 other session's commit interleaves with my staging.
+
+---
+
+### 12. Renter Trust Vault QR can never be (re)issued for a real renter — `generateTrustQr` is dead code (found by QA Tester, while hardening it) — OPEN, feature gap
+
+**Files:** `backend/src/users/users.service.ts` (`generateTrustQr`,
+`verifyRenter`) · `backend/prisma/seed-roles.js:138-142` (the only place
+`qrHash` is ever actually set) · `backend/src/consent/consent.service.ts`
+(`requestGrant`, the QR-hash consumer).
+
+While fixing `generateTrustQr`'s weak hash (see `3214bd0` — unrelated,
+already landed), I grepped every caller in `src/` to judge urgency and found
+**neither `generateTrustQr` nor `verifyRenter` is wired to any controller at
+all** — dead code, unreachable via any HTTP route. The only place a renter's
+`qrHash` is ever populated is `seed-roles.js`'s fixed `DEMO_QR` constant for
+the one seeded demo renter.
+
+**Consequence:** the QR half of the consent flow (`ConsentService.
+requestGrant`'s `dto.qrHash` path — an agent scans a renter's Trust Vault QR
+at the counter to target a consent request without already knowing their
+`renterUserId`) **only ever works for the seeded demo renter.** Any real
+renter who signs up today has no way to generate a QR code at all, so an
+agency can only request their consent via the `renterUserId` path — which
+means the agency must already know the renter's raw portal user id through
+some other channel, defeating the point of the QR flow (letting an agency
+identify a walk-in customer it's never dealt with before).
+
+**Not a security bug** — `requestGrant` only creates a PENDING request that
+the renter must explicitly approve (their own self-scoped action) before any
+document is readable, so there's no data-access bypass here, just a feature
+that's never actually been reachable in the live app.
+
+**Suggested fix (not mine — a real feature, Frontend Developer or
+Architect's call on where it lives):** a self-scoped `POST /portal/trust-qr`
+(or similar) that renters call from their own portal session to (re)issue
+their `qrHash` via the now-hardened `generateTrustQr`, plus a frontend
+surface to display/download the resulting code. `verifyRenter` (manual
+document-audit sign-off, presumably an AGENT/OWNER action) has the same
+"nothing calls this" gap and no `trustScore` bounds-validation — whoever
+wires it should add `@Min(0)`/`@Max` per whatever scale the product intends
+(0-100? 0-5?) before exposing it.
