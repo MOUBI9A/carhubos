@@ -41,6 +41,54 @@ jobs:
       - name: Lint
         run: npx eslint .
 
+  backend-e2e:
+    name: Backend e2e (live Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: carhub_ci
+          POSTGRES_PASSWORD: carhub_ci
+          POSTGRES_DB: carhub_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carhub_ci -d carhub_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://carhub_ci:carhub_ci@localhost:5432/carhub_ci?schema=public
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-real
+      IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      # Needed for Prisma's generated types to exist before the e2e spec
+      # (which imports AppModule/PrismaService) compiles and runs.
+      - run: npx prisma generate
+
+      - name: Apply migrations to a fresh DB
+        run: npx prisma migrate deploy
+
+      # No seed step: tenant-isolation.e2e-spec.ts registers its own fresh
+      # agencies/users via POST /auth/register (unique run-scoped emails) and
+      # tears them down in afterAll — it doesn't depend on prisma/seed*.js.
+      - name: Live-DB e2e (auth + cross-tenant 404)
+        run: npx jest --config test/jest-e2e.json
+
   frontend:
     name: Frontend (tsc + vitest + lint)
     runs-on: ubuntu-latest

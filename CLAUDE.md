@@ -95,7 +95,10 @@ cd backend && npx tsc --noEmit && npx jest
 
 ## 7. Testing
 
-- `cd backend && npx jest`. Real coverage is currently thin (identity-hash golden test + a controller test) — the backlog Phase 8 builds it out (money/trust/auth units, multi-tenant authz E2E, CI). Add tests alongside risky changes even when not strictly required.
+- `cd backend && npx jest` — unit tests, real Postgres not required (mocked Prisma). 31+ suites covering money/state-machine flows (deposits, late fees, refund reconciliation), tenant-boundary regressions (`common/multi-tenant-boundary.spec.ts` across ~13 domains), auth/capabilities fail-closed guards, and forensic/impersonation. Add tests alongside risky changes even when not strictly required.
+- `cd frontend && npx vitest run` — frontend unit tests.
+- **Live-DB e2e:** `backend/test/tenant-isolation.e2e-spec.ts` (Nest's Jest e2e scaffold, `npx jest --config test/jest-e2e.json`) runs against a **real Postgres**, not mocked Prisma — proves login + a cross-tenant 404 over actual HTTP. It registers its own fresh, run-scoped users via `POST /auth/register` and tears them down in `afterAll`, so it needs **no seed data** — just `DATABASE_URL` + `JWT_SECRET` + `IDENTITY_PEPPER` pointed at an empty (freshly migrated) DB. Runs in CI (below) and locally against `docker compose up -d db` + `npx prisma migrate deploy`.
+- **CI** (`.github/workflows/ci.yml`, 3 jobs): `backend` (tsc/jest/eslint, mocked), `backend-e2e` (a `postgres:15` service container → `prisma migrate deploy` → the live-DB e2e spec above), `frontend` (tsc/vitest/eslint). Not yet a **required** PR check (repo-admin setting — Phase 9 item).
 
 ---
 
