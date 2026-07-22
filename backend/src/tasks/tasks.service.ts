@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Both list reads below returned every row for the agency with no cap — fine
+// at demo scale, not at the market-ready "holds at 10k+" bar. Capped rather
+// than paginated (no envelope) so the existing flat-array response shape and
+// its frontend consumers are unchanged.
+const TASK_LIST_CAP = 500;
+
 @Injectable()
 export class TasksService {
   constructor(private prisma: PrismaService) {}
@@ -39,6 +45,7 @@ export class TasksService {
       where: { agencyId, assigneeId },
       include: { assignee: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
+      take: TASK_LIST_CAP,
     });
   }
 
@@ -47,6 +54,7 @@ export class TasksService {
       where: { agencyId },
       include: { assignee: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
+      take: TASK_LIST_CAP,
     });
   }
 

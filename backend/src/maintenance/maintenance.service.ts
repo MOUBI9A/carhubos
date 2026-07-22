@@ -3,6 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { CreateMaintenanceDto } from './dto/maintenance.dto';
 
+// Capped rather than paginated (no envelope) so the existing flat-array
+// response shape is unchanged for both callers below.
+const CAR_HISTORY_CAP = 200;
+const AGENCY_HISTORY_CAP = 500;
+
 @Injectable()
 export class MaintenanceService {
   constructor(
@@ -53,6 +58,7 @@ export class MaintenanceService {
     return this.prisma.maintenanceRecord.findMany({
       where: { carId },
       orderBy: { createdAt: 'desc' },
+      take: CAR_HISTORY_CAP,
     });
   }
 
@@ -63,6 +69,7 @@ export class MaintenanceService {
       },
       include: { car: true },
       orderBy: { createdAt: 'desc' },
+      take: AGENCY_HISTORY_CAP,
     });
   }
 }
