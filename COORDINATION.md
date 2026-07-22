@@ -88,7 +88,7 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | 🔒 **CLAIMING N4 (automations controller — unblocks F4 honesty).** The `AutomationRule` table exists but is **unused** — `automations.service.ts` is pure hardcoded cron; the page 404s on `GET/POST/PATCH /automations` and fake-toasts (F4). Building real agency-scoped CRUD: `dto/automations.dto.ts` (`@IsIn` trigger/action = the FE's own vocabulary, exported so the UI can import one source of truth; name/config/isActive), `automations.controller.ts` (`GET/POST/PATCH/DELETE`, `AuthGuard`+`CapabilitiesGuard`, `settings.manage` — OWNER-only, matches the webhooks precedent, no re-seed), CRUD methods on `AutomationsService` (tenant-scoped, cross-tenant→404 via updateMany/deleteMany), `automations.service.spec.ts`. **No migration** (modelling existing fields; `type` is FE presentation, not stored). **Handoff caveats for Frontend Dev:** rules are persisted but NOT yet executed by the cron (execution wiring = separate follow-up), so the UI must not imply they fire, and the fake `SYSTEM_RULES`/execution metrics are theirs to make honest. **FOUNDER DECISION captured — finding #10:** `Expense.category` = **codes + fix the UI**; canonical set `SALARY, RENT, UTILITIES, MARKETING, TAX, MAINTENANCE, OTHER` (adds MAINTENANCE). Architect to apply (schema comment + `@IsIn` on `expenses.dto.ts` + finance `<select>`) after N4. **(Prev: F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9.)** | `backend/src/automations/**` (controller/service/module/dto/spec) | 2026-07-22 |
+| **Architect** | **N4 (automations controller) DONE + pushed (`c792970`, R16).** Real agency-scoped CRUD for `AutomationRule` (was an unused table behind a fake-toast page, F4): `GET/POST/PATCH/DELETE /automations`, `settings.manage`-gated (OWNER-only), agencyId-from-JWT → cross-tenant 404 via updateMany/deleteMany, `@IsIn` trigger/action exported as `AUTOMATION_TRIGGERS/ACTIONS`, spec (4). No migration. Backend **31/259**, tsc+eslint clean; **live:** create 201, bad trigger 400, extra `type` 400, PATCH 200, **AGENT 403** (cap gate), DELETE 200→404. **⚠️ Handoff to Frontend Dev (R16):** rules PERSIST but the cron does NOT execute them yet — UI must not imply firing; the fake `SYSTEM_RULES`/execution metrics are yours to make honest; FE POST must drop the `type` field + import triggers/actions from the exported consts. **Finding #10 (Expense taxonomy):** founder chose **codes + fix-UI** (`SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER`) — ready to apply but it MUST be an **atomic backend(DTO `@IsIn`)+frontend(`<select value=>`)** change or the live finance form 400s on every save, so NOT half-shipped; awaiting founder go / FE coordination. **(Prev: F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9.)** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
 | **QA Tester** | **Validation sweep done (F1 verified, F2/F5a/F3/F6 fixed — see prior row history); T2 boundary spec extended.** Moved on to MASTER_BACKLOG §4's ranked coverage gaps, both additive-only (no app code touched, no defect found in either — regression coverage on already-correct high-risk code): **deposit lifecycle** (`6943577`) — `bookings.service.ts` HOLD/RETURN/CLAIM state machine + CLAIM's damage-charge→invoice reconciliation, 17 tests with real `Prisma.Decimal` instances, incl. both PARTIAL/PAID reconciliation outcomes via the exact cents math the service uses. Checked and ruled out a hypothesized bug (CLAIM assuming no invoice exists) rather than assuming — every booking gets its invoice in the same creation transaction, so that path is unreachable. **ForensicService impersonation** (`baec7f1`) — §4's "Highest" risk item, 9 tests: both entry points reject non-ROOT_ADMIN before any target lookup, can't-impersonate-another-admin guard, 404s, and the minted token's exact claims + audit scope. Backend now **31 suites / 259 tests**, tsc+eslint clean **on my files** — noting, not fixing: `automations.service.spec.ts` (Architect's in-progress N4, uncommitted in the shared tree) has one pre-existing `no-unnecessary-type-assertion` lint error, left for them per Golden Rule 1. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
@@ -1175,4 +1175,75 @@ elsewhere (the hub listing modal, finding #4; the booking modal on
 effort — the backend needs no changes (F6's DTO already validates the
 shape; `analyzeVehicle` already tenant-scopes and 404s correctly on an
 unowned id).
+
+---
+
+### R16 — N4 (automations controller) resolved (Architect, 2026-07-22)
+Commit `c792970`. `MASTER_BACKLOG.md` N4 / the backend half of F4. The
+`AutomationRule` table existed but nothing used it — `automations.service.ts` was
+pure hardcoded `@Cron`, and the dashboard page 404'd on `GET/POST/PATCH
+/automations` and fell back to a fabricated success toast.
+
+**Built (`backend/src/automations/`):**
+- `automations.controller.ts` — `GET` / `POST` / `PATCH :id` / `DELETE :id`,
+  `AuthGuard` + `CapabilitiesGuard`, every handler `@RequireCapabilities('settings.manage')`.
+  Chose `settings.manage` (OWNER-only) over a new `automations.manage` for the same
+  reason QA chose it for webhooks (R6): automation rules are agency-wide config,
+  it's already in existing OWNER memberships, so it gates AGENT/MANAGER out and
+  works on the seeded DB with **no re-seed**.
+- CRUD on `AutomationsService`, all agency-scoped: `agencyId` from the JWT, never
+  the body; `update`/`remove` use `updateMany`/`deleteMany` scoped by
+  `{ id, agencyId }` so a cross-tenant id affects 0 rows → 404 (no write/delete
+  onto another tenant, §5.1). `create` defaults `config: '{}'` (the column is
+  non-null) and `isActive: true`.
+- `CreateAutomationDto`/`UpdateAutomationDto` — `@IsIn` on trigger/action,
+  exported as `AUTOMATION_TRIGGERS`/`AUTOMATION_ACTIONS` (copied verbatim from the
+  live form so both sides share one source of truth); `name @MaxLength(120)`,
+  `config` bounded.
+- `automations.service.spec.ts` (4) — findAll scoped, create stamps agencyId +
+  defaults, update/remove cross-tenant → 404 with the scoped WHERE.
+
+**No migration** — models the existing columns. The frontend's `type`
+(SYSTEM/CRM/…) is presentation, not persisted; if the product later needs it
+stored, that's an additive column then.
+
+**Verified (real output):** `tsc` clean, `jest` **31 suites / 259 tests**,
+`eslint .` clean; `HEAD == origin/main` before staging. **Live** against the
+running backend: `owner@` → `GET` 200 `[]`, `POST` valid 201 (config `'{}'`,
+isActive true, agencyId from JWT), invalid trigger 400 (exact enum message),
+`POST` carrying the FE's `type` field → 400 `"property type should not exist"`,
+`PATCH {isActive:false}` 200, `agent@` (lacks `settings.manage`) → **403**,
+`DELETE` 200 `{deleted:true}` then 404. Smoke rule deleted — dev DB clean.
+
+> **Architect → Frontend Developer** (N4 handoff — `accidents/page.tsx`-style, the
+> backend is ready to wire). Contract, all under `AuthGuard`+`settings.manage`
+> (so OWNER only; hide the New-rule UI for MANAGER/AGENT or let the 403 surface):
+> - `GET /automations` → `AutomationRule[]` (`id,name,trigger,action,config,isActive,createdAt,updatedAt,agencyId`), newest first.
+> - `POST /automations` `{ name, trigger, action, config?, isActive? }` → 201 the row.
+> - `PATCH /automations/:id` — any subset of those. `DELETE /automations/:id` → `{id,deleted:true}`; cross-tenant/unknown → 404.
+>
+> **Three things the page must change to be honest and to work:**
+> 1. **Drop `type` from the POST body** — the DTO rejects unknown props
+>    (`forbidNonWhitelisted`), so the current `{…, type:'CRM'}` 400s. Import
+>    `AUTOMATION_TRIGGERS`/`AUTOMATION_ACTIONS` from the backend DTO (or re-list
+>    them identically) for the two `<select>`s — your current lists match, so no
+>    save will 400 once `type` is gone.
+> 2. **The fabricated `SYSTEM_RULES` array + `executionCount`/`lastRun`/"Total
+>    executions"/"99.9% health" metrics are not real** — no execution engine
+>    backs them. Either remove them or clearly mark them as illustrative. The
+>    `handleCreateRule`/`toggleRule` catch branches that fake success on error
+>    should go too (the real endpoints now respond).
+> 3. **Rules do not execute yet.** The `@Cron` handlers are hardcoded and don't
+>    consult `AutomationRule`. So a saved rule is a *definition* — the page must
+>    not tell the user it's "now active"/"deployed" and firing. Honest copy:
+>    saved / will apply once execution ships. (Wiring the cron to read these rows
+>    is a backend follow-up — Architect, tracked below.)
+
+### N4 follow-up (new, Architect-owned) — wire rule execution
+`AutomationRule` rows are now persisted + managed but inert: the `@Cron` handlers
+in `automations.service.ts` don't read them. Making user rules actually fire
+(evaluate active rules per trigger, dispatch the action via the existing
+Twilio/Notifications/Task paths, guard idempotency + tenant scope) is a real
+backend task — bigger and riskier than the CRUD, deferred deliberately. Not
+started; noting so it isn't mistaken for done.
 
