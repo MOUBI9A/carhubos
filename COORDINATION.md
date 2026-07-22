@@ -88,7 +88,7 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | **T3 — Accidents domain (backend + schema ONLY; frontend is Frontend Developer's).** 🔒 **CLAIMING `prisma/schema.prisma`** (Golden Rule 5) to add the additive `Accident` model + new migration, then building `backend/src/accidents/**` (controller/service/module/dto + boundary spec). Purely additive migration (new table, no altered/dropped columns). Capability: reusing `fleet.view`/`fleet.manage` (accidents = Pillar-2 fleet-incident records; same gating as the `cars` sibling; works on the seeded DB with no re-seed). NOT touching `accidents/page.tsx`. | `backend/prisma/schema.prisma` · `backend/prisma/migrations/<ts>_add_accident/` · `backend/src/accidents/**` · `backend/src/app.module.ts` (register module). | 2026-07-21 |
+| **Architect** | **T3 — Accidents domain (backend + schema) DONE + pushed (`f3febe0`).** Additive `Accident` model (agency-scoped, Car + optional Booking links, `estimatedCost` Decimal(12,2), Agency/Car→Cascade, Booking→SetNull, `@@index` agencyId+carId) + migration `20260721213211_add_accident` (pure CREATE TABLE; `migrate status` = no drift). Module `backend/src/accidents/**`: `GET` (list) · `GET /:id` · `POST` · `PATCH /:id`; `AuthGuard`+`CapabilitiesGuard` gating reads on `fleet.view`, mutations on `fleet.manage` (reuses `cars` sibling gating, works on seeded DB with no re-seed); agencyId-from-JWT (cross-tenant→404, no leak); Decimal via Prisma API; `@IsIn` severity/status. Boundary spec (6 tests). **Fixed QA's eslint heads-up** (dropped the unnecessary `as any`) and **added the missing `GET /:id`** route a live smoke test caught (service had `findOne` + a boundary test but no route). Backend **25 suites / 202**, tsc+eslint clean, live-smoke green (create echoes `estimatedCost` back as a number, 400 on bad severity, 404 on cross-tenant car). **Claim released.** Frontend wiring of `accidents/page.tsx` → Frontend Developer (see note + R9). | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
 | **QA Tester** | **Finding #6 DONE (`460a8a6`, R6). Finding #8 DONE + pushed (`10aa7d5`, R8).** `AgenciesService.softDelete()` now renames `subdomain`/`contactEmail` off the tombstone (appends `.deleted-<agency.id>` — the row's own uuid, globally unique, original kept as prefix), freeing both `@unique` slots so a later re-provision of the same subdomain/email succeeds; null subdomain stays null; no schema migration. New `agencies.service.spec.ts` (7 tests). **Verified Frontend Developer's finding #4 (`748aed5`) — PASS, no issues** (see QA Tester → Frontend Developer note). **Finding #7 slice DONE + pushed (`3dd6200`):** new `customers.service.spec.ts` (module had **0** specs), **12 tests** — agency-scoped duplicate-identity guard (409) + agencyId-from-caller-not-body, delete FK-restrict→409 "blacklist instead"/404/happy-path, blacklist+unblacklist transitions with audit before/after+reason, getBlacklisted filter, findOne tenant-scope + lifetimeSpend (VERIFIED income only). Additive test-only; `customers.service.ts` unchanged. Verified: backend `tsc` clean, `jest` **24 suites / 196** (was 23/184), new file eslint-clean. **Claim released, available for next.** | None claimed. | 2026-07-21 |
 
@@ -224,6 +224,30 @@ push **is** the message.
 > claim Lanes 1/3/4 — those stay yours. Where it finds something too
 > cross-cutting to fix unilaterally, it goes in "Open findings" rather than
 > getting silently patched.
+
+> **Architect → Frontend Developer** (re: T3, `f3febe0`). The Accidents backend is
+> live and ready to wire — `frontend/src/app/(owner)/dashboard/accidents/page.tsx`
+> is yours (I did **not** touch it; it's still the mock array + honest "not wired"
+> toast). **Endpoint contract** (all under `AuthGuard`; agencyId from the JWT, so
+> send **no** `agencyId` in the body):
+> - `GET /accidents` (cap `fleet.view`) → array, each row `include`s
+>   `car {id,brand,model,licensePlate}`; ordered `occurredAt desc`.
+> - `GET /accidents/:id` (cap `fleet.view`) → one row (same `car` include);
+>   cross-tenant/unknown id → **404**.
+> - `POST /accidents` (cap `fleet.manage`) body
+>   `{ carId, occurredAt(ISO), severity, description, bookingId?, status?, location?, thirdParty?, estimatedCost? }`.
+> - `PATCH /accidents/:id` (cap `fleet.manage`) — any subset of the same fields.
+>
+> `severity ∈ {MINOR,MODERATE,SEVERE,TOTAL}`, `status ∈
+> {REPORTED,INVESTIGATING,REPAIR_QUOTE,IN_REPAIR,CLAIM_FILED,RESOLVED}` (exported
+> as `ACCIDENT_SEVERITIES` / `ACCIDENT_STATUSES` from `dto/accidents.dto.ts` if you
+> want to mirror them). `estimatedCost` is money — comes back as a **number** on
+> the wire (interceptor), send a number (≤2dp). The create modal needs a **car
+> picker** for a real `carId` — reuse the `Combobox` + `useFleet()` pattern the hub
+> page (finding #4) and the booking modal already use. AGENT holds `fleet.view`
+> only (can view, can't file/edit) — hide the create/edit controls for them or let
+> the 403 surface honestly. No DELETE endpoint by design (dossiers aren't deleted;
+> `status: RESOLVED` closes one).
 
 ## Open lanes (disjoint — claim one in the board before starting)
 
@@ -757,4 +781,61 @@ Verified (real output): `cd backend && npx tsc --noEmit` clean; `npx jest`
    delete, the only remaining 409 *is* a live collision, so the generic message
    is correct. Not worth touching another session's provisioning path for a
    message tweak.
+
+---
+
+### R9 — T3 Accidents domain, backend + schema slice (Architect, 2026-07-22)
+Commit `f3febe0`. The last "not wired" stub is now real on the backend. Built to
+`EXECUTION_PLAN.md` T3's proposed model (unchanged from the spec).
+
+**Schema / migration (serialized per Golden Rule 5 — claimed on the board first).**
+Additive-only: new `Accident` model + back-relations on `Agency`/`Car`/`Booking`,
+no altered or dropped columns. `estimatedCost Decimal(12,2)` (money, §5.3 —
+interceptor emits a number on the wire). Cascades: `Agency`/`Car` → Cascade,
+`Booking` → SetNull (a deleted booking must not wipe the incident dossier).
+`@@index([agencyId])` + `@@index([carId])`. Migration
+`20260721213211_add_accident` is a pure `CREATE TABLE` + indexes + 3 FKs; it was
+already applied to the dev DB and `prisma migrate status` reports **no drift**, and
+it composes from empty (all referenced tables predate it).
+
+**API (`backend/src/accidents/`).** `GET /accidents` (list) · `GET /accidents/:id`
+· `POST /accidents` · `PATCH /accidents/:id`. `AuthGuard` + `CapabilitiesGuard`;
+reads gated `fleet.view`, mutations `fleet.manage` — **reusing the `cars` sibling's
+capabilities on purpose** (accidents are Pillar-2 fleet-asset events; the reuse
+works on the live/seeded DB with no re-seed — existing OWNER/MANAGER hold both,
+AGENT holds `fleet.view` only so it can view but not file/edit). agencyId always
+from the JWT, never the body → a cross-tenant read/write resolves to null and
+throws `NotFoundException` (404, no existence leak, §5.1). `create`/`update` assert
+`Car` + optional `Booking` ownership before linking; `update` runs the `findOne`
+tenant guard before any write. `estimatedCost` converted through the
+`Prisma.Decimal` API (`new Prisma.Decimal(v).toDecimalPlaces(2)`) — never number
+math. DTOs: `@IsIn` on severity/status, `@IsUUID` on ids, `@IsNumber({maxDecimalPlaces:2})`+`@Min(0)`
+on money; `UpdateAccidentDto = PartialType`.
+
+**Two things beyond the raw stub, both worth noting:**
+1. **Fixed the QA Tester's eslint heads-up** (the note by the board): dropped the
+   unnecessary `as any` at `accidents.service.spec.ts:110` — the object already
+   satisfies `CreateAccidentDto`. `eslint .` is green across the whole backend.
+2. **Added the `GET /:id` route a live smoke test surfaced.** The service had a
+   `findOne` method *and* a dedicated boundary spec (whose docstring calls it "the
+   boundary-tested enforcement point"), but the controller never exposed a route
+   for it — `GET /accidents/:id` was returning a Nest *routing* 404 ("Cannot GET"),
+   not the tenant-scoped one. Now wired (`fleet.view`); a random id returns the
+   service's `"Accident not found"` 404.
+
+**Verified (real output, not "should work"):** backend `tsc --noEmit` clean; `jest`
+**25 suites / 202 tests** (was 24/196 — +1 suite, +6 tests); `eslint .` clean;
+`HEAD == origin/main` before staging. Live smoke against the running backend:
+login 200 → `GET /accidents` 200 → `POST` 201 (`estimatedCost` echoes back as the
+number `1234.5`) → `GET /:id` 200 → `PATCH status:RESOLVED` 200 → bad severity 400
+→ unknown/cross-tenant carId 404; the smoke row was deleted afterward (no DELETE
+endpoint by design), so the dev DB is back to its prior state.
+
+**Not done (correctly out of this slice):**
+- **Frontend wiring of `accidents/page.tsx`** — Frontend Developer's, per the board.
+  Endpoint contract handed off in the **Architect → Frontend Developer** note above.
+- Two files in my working tree are **not mine** and were left untracked, not
+  committed: `backend/test/tenant-isolation.e2e-spec.ts` (that's T4 / QA's e2e
+  lane) and `frontend/_tmp_shoot.mjs` (a temp responsive-screenshot scratch
+  script, self-described as "NOT part of the e2e suite").
 
