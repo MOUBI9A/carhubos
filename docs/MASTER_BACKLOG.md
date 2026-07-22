@@ -67,8 +67,8 @@ customers spec (`3dd6200`).
 | F2 | ✅ **DONE (`5b08423`, QA Tester — R12).** `create(@Body() data: any)` → spread into `prisma.refusalLog.create` = **mass-assignment**, no validation on enum-likes (`requestedCarType`, `status`) or Decimal `potentialRevenue` | `refusal-logs.controller.ts:20` · `refusal-logs.service.ts:8` | Add `CreateRefusalLogDto` (`@IsIn`, `@IsNumber` on money) | M |
 | F3 | ✅ **DONE (`73ac5e1`, QA Tester — R13), except `category` is deliberately unconstrained — see new finding #10.** Create/update typed with an **inline TS type** (erased at runtime → pipe can't validate). Money `amount` has no `@IsNumber/@IsPositive`; `category`/`status` unconstrained | `expenses.controller.ts:17,39` | Add `CreateExpenseDto`/`UpdateExpenseDto` | M |
 | F4 | **Fake-success toast** — `POST /automations` 404s (backend has **no controller**, only cron service), catch branch invents a rule + fires `showToast('success','Rule Constructed',…)`. Violates the honesty invariant | `automations/page.tsx:131-149` (+ `SYSTEM_RULES` mock `:68`) | Either build the automations controller (see §3) or make the page honest ("not wired") until it exists | M |
-| F5 | 🟡 **`refusal-logs` half DONE (`5b08423`, R12); `saas-admin.controller.ts:57`'s `@Body('tier')` still open** — different domain (billing/tier change), left for whoever owns it. `@Body('status')`/`@Body('tier')` raw strings, unvalidated enums | `refusal-logs.controller.ts:40` · `saas-admin.controller.ts:57` | `@IsIn` DTO or inline guard | S |
-| F6 | `@Body('carId')` not `@IsUUID` (low impact — service scopes ownership) | `ai-vision.controller.ts:29` | `@IsUUID` | S |
+| F5 | ✅ **DONE, both halves — refusal-logs (`5b08423`, R12) + saas-admin (`412508f`, R14).** `@Body('status')`/`@Body('tier')` raw strings, unvalidated enums | `refusal-logs.controller.ts:40` · `saas-admin.controller.ts:57` | `@IsIn` DTO or inline guard | S |
+| F6 | ✅ **DONE (`dd5ef62`, QA Tester — R15). Surfaced a bigger issue — see new finding #11: the frontend never sends a real carId at all**, so this was low-impact exactly as noted. `@Body('carId')` not `@IsUUID` (low impact — service scopes ownership) | `ai-vision.controller.ts:29` | `@IsUUID` | S |
 
 ### 🟡 P2 — mock/fake admin pages (auth-gated but actively mislead)
 Each renders hardcoded data / no-op buttons behind a "real" label. Either wire to a real endpoint (see §3) or make honest.
@@ -102,7 +102,8 @@ Each renders hardcoded data / no-op buttons behind a "real" label. Either wire t
 | N4 | **Automations controller** (unblocks F4) | Backend `automations/` has only cron logic, no controller. Build `POST/GET/PATCH /automations` (agency-scoped, `@IsIn` trigger/action, capability-gated) + wire the page. | M |
 | N5 | **Platform audit-log endpoint** (unblocks `admin/logs`) | `audit-logs` is agency-scoped; add a ROOT_ADMIN platform-wide read for the SuperAdmin logs view. | M |
 | N6 | **Real metrics for the god-mode pages** | `admin/pulse` infra metrics + `reports` generation + `fleet-map` telemetry are product decisions — either build real backends or convert to honest "coming soon". | L |
-| N7 | **T2 — extend boundary spec** | `common/multi-tenant-boundary.spec.ts` — add automations, notifications, analytics customer directory (grep: 0 hits; not started). | S |
+| N7 | ✅ **DONE (`f670baa`, QA Tester).** ~~T2 — extend boundary spec~~ | `common/multi-tenant-boundary.spec.ts` — added `search.service`. Checked automations/notifications first: neither has a matching IDOR surface (automations is cron-only, no caller-supplied id; notifications' only route has no DB lookup at all) — corrected in the spec file's own docstring rather than writing tests against a surface that doesn't exist. | S |
+| N8 | **Wire a real car picker into AI Vision** (finding #11) | `dashboard/ai-vision/page.tsx` hardcodes `carId:'1-A-2024'` on every scan request — never a real car, so the feature has never worked for any user. Backend (F6, done) needs no changes. Add a `Combobox`+`useFleet()` picker, same pattern as the hub listing modal (finding #4) / booking modal. | S |
 
 ---
 
