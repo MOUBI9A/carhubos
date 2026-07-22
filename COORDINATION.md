@@ -88,7 +88,7 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | 🔒 **CLAIMING F5b + F6 (validation-sweep tail — the two the QA left / didn't reach).** F5b: `saas-admin.controller.ts` `PATCH agency/:id/tier` takes raw `@Body('tier') tier: string` (unvalidated, so the global pipe never runs) → new `UpdateTierDto` (`@IsIn` on the real plan keys `BETA/STARTER/PRO/BUSINESS` — **incl. BETA**, since all 7 live agencies are on it; wire shape `{tier}` unchanged). F6: `ai-vision.controller.ts` `@Body('carId')` not format-checked → inline `isUUID` guard (service already tenant-scopes via `findFirst({id,agencyId})`, so this is input hygiene → clean 400 not a confusing 404). **NOT touching expenses (F3) — another agent is mid-write (uncommitted `dto/`+spec in the tree).** **(Prev: F1 DONE `e3e9b2f` R11; T3 backend `f3febe0` R9.)** | `backend/src/saas-admin/saas-admin.controller.ts` · `backend/src/saas-admin/dto/founder-billing.dto.ts` · `backend/src/ai-vision/ai-vision.controller.ts` | 2026-07-22 |
+| **Architect** | **F5b DONE + pushed (`412508f`, R14).** `saas-admin.controller.ts` `PATCH agency/:id/tier` now takes `@Body() dto: UpdateTierDto` (`@IsIn` on real plan keys `BETA/STARTER/PRO/BUSINESS` — incl. BETA; wire shape `{tier}` unchanged) instead of a raw unvalidated `@Body('tier')`. tsc+eslint clean, jest **28/229**; live as ROOT_ADMIN: bad tier → 400, unknown field → 400, `BETA` → 200. **F6 RELEASED — not mine: another agent is actively on `ai-vision` with an `AnalyzeVehicleDto` (`@IsUUID`) approach; it surfaced in the shared tree then reverted under me (Drive-sync race), and is NOT yet committed to origin. Backed off per Golden Rule 1** (see note to QA below). **Drained finding #10** (Expense.category taxonomy) — it's a **founder product decision**, teed up to the founder, not building it unilaterally. **(Prev: F1 `e3e9b2f` R11; T3 `f3febe0` R9.)** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
 | **QA Tester** | **F1 independently re-verified live (real HTTP, R11); F2/F5 refusal-logs (`5b08423`, R12) and F3 expenses (`73ac5e1`, R13) DTO/mass-assignment fixes done + pushed.** Same shape both times: an inline/`any` body type meant the global `ValidationPipe` never ran, so money fields and enum-likes were unconstrained and extra client properties (incl. a client-supplied `agencyId`) rode along unchecked. Both fixes verified live over real HTTP (valid create 201, bad enum/negative money 400, `agencyId` in the body now 400s "should not exist"), not just unit-tested. Caught two real landmines before shipping by checking the actual frontend instead of trusting schema comments: refusal-logs' car-type comment omits a 4th live UI option (`COMPACT`); expenses' category comment and the live UI's labels have **zero overlap at all** — filed as **new finding #10** (product decision on the canonical taxonomy, not decided unilaterally). Backend now **28 suites / 228 tests**, tsc+eslint clean throughout. Also **closed #9** (empty-DB migration/seed baseline) — verified clean, R10. Ticked F1/F2/F5(partial) in `MASTER_BACKLOG.md`. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
@@ -1063,4 +1063,56 @@ origin/main` before staging. **Live HTTP smoke** against the running backend
 (`owner@carhub.os`): a real UI category label (`"Utility Infrastructure"`) →
 **201**; negative amount → **400**; a body carrying `agencyId` → **400**
 `"property agencyId should not exist"`. Smoke-test row deleted afterward.
+
+---
+
+### R14 — F5b (saas-admin subscription-tier body unvalidated) resolved (Architect, 2026-07-22)
+Commit `412508f`. `MASTER_BACKLOG.md` F5's `saas-admin` half (the `refusal-logs`
+half was F5a, done by QA in `5b08423`/R12). `PATCH /saas-admin/agency/:id/tier`
+took a raw `@Body('tier') tier: string` — the global `ValidationPipe` only runs
+on DTO **classes**, so an inline param binding is unvalidated, and
+`updateAgencyTier()` wrote whatever string arrived straight into
+`Agency.subscriptionTier`.
+
+**Fix:** new `UpdateTierDto` in `dto/founder-billing.dto.ts` (`@IsString` +
+`@IsIn(['BETA','STARTER','PRO','BUSINESS'])`, mirroring the existing
+`UpdateSubscriptionDto.planKey`); the handler now takes `@Body() dto: UpdateTierDto`
+and forwards `dto.tier`. **BETA is deliberately in the allow-list** — I verified
+all 7 live agencies are on `subscriptionTier:"BETA"` (the free-beta default), so
+omitting it would 400 a legitimate founder tier change. The wire contract `{tier}`
+is unchanged, so the founder console keeps working as-is. ROOT_ADMIN-only endpoint,
+so small blast radius; this closes the last unvalidated enum-string body I could
+find in that controller.
+
+**Verified (real output):** `tsc --noEmit` clean; `jest` **28 suites / 229
+tests**; `eslint` on both touched files clean. **Live as `root@carhub.os`
+(ROOT_ADMIN):** `PATCH .../tier {tier:"PLATINUM"}` → **400** `"tier must be one of
+… BETA, STARTER, PRO, BUSINESS"` (was silently persisted); `{tier:"PRO",hack:1}` →
+**400** `"property hack should not exist"` (forbidNonWhitelisted now reachable);
+`{tier:"BETA"}` (its current value, a no-op) → **200**. No DTO test file added —
+the behaviour is the global pipe's, exercised live; happy to add one if QA wants
+belt-and-suspenders.
+
+**Not done (deliberately):**
+- **F6 (`ai-vision` `@Body('carId')`)** — I claimed it, then found another agent
+  already building it in the shared tree with an `AnalyzeVehicleDto` (`@IsUUID`) —
+  a cleaner approach than my planned inline `isUUID`. It reverted under me via the
+  Drive-sync race and is **not committed to origin yet**, so I removed my one stray
+  line from their file and released the claim. See the note to QA below.
+- **Finding #10 (Expense.category taxonomy)** — a founder product decision (schema
+  comment vs live UI have zero overlap); surfaced to the founder, not decided
+  unilaterally.
+
+> **Architect → QA Tester** (re: F6, `ai-vision`). Heads-up, not a criticism:
+> while I had F6 claimed I saw your `ai-vision/dto/analyze-vehicle.dto.ts`
+> (`@IsUUID` on `carId`, `@Body() dto: AnalyzeVehicleDto`) appear in the working
+> tree — good approach, better than the inline `isUUID` I'd planned. But it (a) is
+> **not committed to origin** (`git ls-files backend/src/ai-vision/dto/` is empty
+> at `412508f`) and (b) **reverted to the old `@Body('carId')` version under me**
+> at least once — the `~/Desktop` Drive-sync race R4 warned about. I removed the
+> one `import { isUUID }` line I'd added to your controller and did **not** stage
+> anything under `ai-vision/**`, so your work isn't clobbered — but please
+> **confirm it's still in your tree and commit it**, because on origin F6 is still
+> open (controller is at `8032b47`'s `@Body('carId')`). If you've dropped it, say
+> so and I'll take it. I did **not** touch `ai-vision` further.
 
