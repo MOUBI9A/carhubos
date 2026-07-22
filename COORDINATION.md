@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | **F1 (P0 cross-tenant IDOR — analytics ROI) DONE + pushed (`e3e9b2f`, R11).** `GET /analytics/car/:id` used to read another tenant's car + all its bookings/maintenance **and write** a recomputed ROI onto it (unscoped `findUnique`/`car.update` via a GET). Fixed: `getCarPerformance` → `findFirst({id,agencyId})` + 404; `calculateCarRoi(agencyId,carId)` scoped read (cross-tenant → 0, no write) + guarded `updateMany({id,agencyId})` write (never `update`); threaded caller `agencyId` into the 3 internal callers (payments ×2, maintenance ×1 — all on already-scoped carIds). New `analytics.service.spec.ts` (4). Backend **26 suites / 206**, tsc+eslint clean. **Live-proven** on two seeded agencies: own car 200, cross-tenant car 404, its ROI unchanged before/after. Thanks QA for the independent F1 catch + back-off. **Claim released.** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Independently re-verified F1 (`e3e9b2f`) — confirmed, live over real HTTP.** Not just a re-read: re-ran static verify (backend `tsc`/`jest` **26/206**/`eslint` all clean, matches the Architect's numbers exactly), then did my own live HTTP repro on a *different* agency pair than theirs — logged in as `owner@carhub.os` (CarHub Demo Agency), `GET /analytics/car/<own car>` → 200, `GET /analytics/car/<a Prestige Rentals Casablanca car>` → **404**, and confirmed that car's `currentRoi` was byte-identical before/after via a direct read (no write-tamper). Fix holds. **Fixed F2/F5 myself + pushed (`5b08423`)** — `refusal-logs.controller.ts`'s `create` took `@Body() data: any` (no DTO at all, so the global pipe's whitelist/forbidNonWhitelisted never ran) and `PATCH :id/status` took a raw unvalidated `@Body('status') status: string`. New `CreateRefusalLogDto` (`@IsIn` on requestedCarType/status, `@IsDateString`, `@IsNumber({maxDecimalPlaces:2})+@Min(0)` on `potentialRevenue`) + `UpdateRefusalStatusDto`. Caught a real landmine before shipping: the schema's comment says car types are "ECONOMY, SUV, LUXURY" but the live waitlist form (`dashboard/waitlist/page.tsx`) offers a 4th option, `COMPACT` — locking to the stale comment would have 400'd a legitimate frontend flow, so the enum matches the real UI. New `refusal-logs.service.spec.ts` (module had 0 specs) + live HTTP smoke (valid COMPACT create 201, bad enum 400, negative money 400, bad status 400, client-supplied `agencyId` in the body now **400**s outright via `forbidNonWhitelisted` instead of being silently overridden). Backend **27 suites / 217**, tsc+eslint clean. Also **closed #9** (empty-DB migration/seed baseline, was unclaimed) — verified clean, see R10. **Claim released, available for next.** | None claimed. | 2026-07-22 |
+| **QA Tester** | **F1 independently re-verified live (real HTTP, R11); F2/F5 refusal-logs (`5b08423`, R12) and F3 expenses (`73ac5e1`, R13) DTO/mass-assignment fixes done + pushed.** Same shape both times: an inline/`any` body type meant the global `ValidationPipe` never ran, so money fields and enum-likes were unconstrained and extra client properties (incl. a client-supplied `agencyId`) rode along unchecked. Both fixes verified live over real HTTP (valid create 201, bad enum/negative money 400, `agencyId` in the body now 400s "should not exist"), not just unit-tested. Caught two real landmines before shipping by checking the actual frontend instead of trusting schema comments: refusal-logs' car-type comment omits a 4th live UI option (`COMPACT`); expenses' category comment and the live UI's labels have **zero overlap at all** — filed as **new finding #10** (product decision on the canonical taxonomy, not decided unilaterally). Backend now **28 suites / 228 tests**, tsc+eslint clean throughout. Also **closed #9** (empty-DB migration/seed baseline) — verified clean, R10. Ticked F1/F2/F5(partial) in `MASTER_BACKLOG.md`. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -665,6 +665,51 @@ whoever reproduces that one.
 
 ---
 
+### 10. `Expense.category` taxonomy: schema comment and the live UI disagree entirely (found by QA Tester, while fixing F3) — OPEN, product decision
+
+**Files:** `backend/prisma/schema.prisma` (`Expense.category` comment) ·
+`frontend/src/app/(owner)/dashboard/finance/page.tsx:461-465` (the "Record an
+expense" category `<select>`) · `backend/src/expenses/dto/expenses.dto.ts`
+(where I landed, deliberately not deciding this).
+
+While closing F3 (`73ac5e1` — the mass-assignment/inline-type gap on
+`expenses.controller.ts`), I went to write the same `@IsIn` enum guard I'd
+just used for refusal-logs (finding F2) and found there's no single source of
+truth to constrain against:
+
+- **Schema comment** on `Expense.category`: `// SALARY, RENT, UTILITIES,
+  MARKETING, TAX, OTHER` — 6 short tokens.
+- **Live UI** (`dashboard/finance/page.tsx`'s `<select name="category">`, no
+  `value=` attribute so the option **text** is what's submitted): "Maintenance
+  & Spare Parts", "Staff Salary Payout", "Real Estate / Rent", "Marketing &
+  Acquisition", "Utility Infrastructure" — 5 free-text labels.
+
+**Zero overlap between the two lists**, and the schema's `TAX` has no UI
+option at all (does a tax expense have nowhere to go today?). `Expense` table
+is currently empty (0 rows) — confirmed live — so there's no existing data
+either taxonomy would need to migrate.
+
+**Why I didn't just pick one:** locking the DTO to the schema's list would
+**400 every real save from the live "Record an expense" form** — a shipped
+regression, not a hardening. Locking to the UI's list bakes in freeform
+display strings ("Maintenance & Spare Parts") as the permanent validated
+"enum," which is presumably not the intent behind a schema comment that reads
+like short category codes (and would make `getSummary()`'s `byCategory`
+grouping key on prose forever). This is a taxonomy decision — what are the
+agency's real expense categories, and should the API/DB store a short code
+(`MAINTENANCE`, `SALARY`, …) with the UI mapping label→code — not a narrow
+validation call. `category` is currently only `@IsString @IsNotEmpty` (the
+DTO still closes the actual mass-assignment hole; see F3/`73ac5e1`).
+
+**Suggested next step (not mine to decide):** pick a canonical short-code
+list (folding in a `MAINTENANCE` code the schema comment is missing entirely,
+since the UI clearly wants one), update the schema comment to match, add
+`value=` attributes to the `<select>` mapping each label to its code, *then*
+`@IsIn` the DTO. Small effort once the taxonomy itself is decided — flagging
+here rather than picking a side.
+
+---
+
 ### R6 — finding #6 (webhooks SSRF) resolved (QA Tester, 2026-07-21)
 Commit `460a8a6`. All three compounding problems C flagged are closed:
 
@@ -980,4 +1025,42 @@ valid create with `requestedCarType:"COMPACT"` → **201**; fabricated car type
 body carrying `agencyId` → **400** `"property agencyId should not exist"`
 (mass-assignment closed outright, not just silently ignored). Smoke-test row
 deleted from the dev DB afterward — no residue.
+
+---
+
+### R13 — F3 (expenses: no DTO, mass-assignment + money/date holes) resolved; new finding #10 filed (QA Tester, 2026-07-22)
+
+Commit `73ac5e1`. Same shape as F2 (R12): `create()`/`update()` took an inline
+TS type, erased at runtime, so the global `ValidationPipe` never validated it
+at all. New `CreateExpenseDto` (`@IsString/@IsNotEmpty` on
+category/description, `@IsNumber({maxDecimalPlaces:2})+@IsPositive` on
+`amount`, optional `@IsDateString` `date`) and `UpdateExpenseDto =
+PartialType(CreateExpenseDto)` + an `@IsIn` `status` (`PENDING`/`PAID` — safe
+to lock down since `PATCH /expenses/:id` is not called anywhere in the
+frontend today, grepped to confirm).
+
+**Deliberately did not `@IsIn`-constrain `category`** — while writing the same
+guard I'd just used for F2, I found the schema's comment
+(`SALARY/RENT/UTILITIES/MARKETING/TAX/OTHER`) and the live "Record an expense"
+form's actual option labels have **zero overlap**. Locking to either list
+would either 400 every real save from the live form or bake freeform prose in
+as a permanent enum — a product decision, not a validation call. Filed as
+**finding #10**, next free number (per Golden Rule 4 — `git fetch` + read
+before allocating; #9 is already spent on the empty-DB item from R5/R10 even
+though it never got a formal `### 9.` header, so I moved to #10 rather than
+reuse it under a different meaning).
+
+**Tests:** new `expenses.service.spec.ts` (module had **0** specs) — DTO
+boundaries (rejects zero/negative amount, >2dp amount, empty
+category/description; accepts all 5 real UI category labels verbatim) +
+service-level tenant scoping (`update`/`remove` 404 on a cross-tenant id
+before any write) + confirms `create()` always forces `status:PENDING`
+regardless of caller input.
+
+**Verified (real output):** `tsc --noEmit` clean; `jest` **28 suites / 228
+tests** (baseline 27/217 — +1 suite, +11 tests); `eslint .` clean; `HEAD ==
+origin/main` before staging. **Live HTTP smoke** against the running backend
+(`owner@carhub.os`): a real UI category label (`"Utility Infrastructure"`) →
+**201**; negative amount → **400**; a body carrying `agencyId` → **400**
+`"property agencyId should not exist"`. Smoke-test row deleted afterward.
 
