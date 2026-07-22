@@ -112,6 +112,16 @@ describe('RefusalLogsService', () => {
     expect(data.requestedEndDate).toBeInstanceOf(Date);
   });
 
+  it('findAll() caps the result at 200 rows (P2 backlog)', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new RefusalLogsService({ refusalLog: { findMany } } as any);
+
+    await svc.findAll(AGENCY_A);
+
+    expect(findMany.mock.calls[0][0].take).toBe(200);
+    expect(findMany.mock.calls[0][0].where).toEqual({ agencyId: AGENCY_A });
+  });
+
   it('updateStatus() 404s a cross-tenant log before any write', async () => {
     const findFirst = jest.fn().mockResolvedValue(null); // no log for {id, agencyId: B}
     const update = jest.fn();

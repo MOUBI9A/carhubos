@@ -17,6 +17,8 @@ export class PaymentsService {
     private analytics: AnalyticsService,
   ) {}
 
+  // Capped like findRecent below (100 rows) — same "stays snappy, full
+  // history is a reports job" rationale, this endpoint just had no cap yet.
   async findAllPending(agencyId: string) {
     return this.prisma.payment.findMany({
       where: {
@@ -33,6 +35,7 @@ export class PaymentsService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
   }
 

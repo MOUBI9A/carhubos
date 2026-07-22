@@ -17,10 +17,12 @@ export class RefusalLogsService {
     });
   }
 
+  // Capped, not paginated (P2 backlog) — orderBy existed, take didn't.
   async findAll(agencyId: string) {
     return this.prisma.refusalLog.findMany({
       where: { agencyId },
       orderBy: { createdAt: 'desc' },
+      take: 200,
     });
   }
 

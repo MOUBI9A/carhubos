@@ -233,4 +233,19 @@ describe('PaymentsService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
+
+  describe('findAllPending — list cap (P2 backlog)', () => {
+    it('caps the result at 100 rows, same rationale as findRecent', async () => {
+      const { prisma } = makePrisma();
+      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+
+      await svc.findAllPending('ag-1');
+
+      expect(prisma.payment.findMany.mock.calls[0][0].take).toBe(100);
+      expect(prisma.payment.findMany.mock.calls[0][0].where).toEqual({
+        status: 'PENDING',
+        invoice: { agencyId: 'ag-1' },
+      });
+    });
+  });
 });
