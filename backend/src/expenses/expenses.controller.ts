@@ -4,6 +4,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CreateExpenseDto, UpdateExpenseDto } from './dto/expenses.dto';
 
 @Controller('expenses')
 @UseGuards(AuthGuard, CapabilitiesGuard)
@@ -12,10 +13,7 @@ export class ExpensesController {
 
   @Post()
   @RequireCapabilities('expense.manage')
-  create(
-    @CurrentUser() user: any,
-    @Body() body: { category: string; description: string; amount: number; date?: string },
-  ) {
+  create(@CurrentUser() user: any, @Body() body: CreateExpenseDto) {
     return this.expensesService.create(user.agencyId, body);
   }
 
@@ -36,7 +34,7 @@ export class ExpensesController {
   update(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body() body: { category?: string; description?: string; amount?: number; status?: string },
+    @Body() body: UpdateExpenseDto,
   ) {
     return this.expensesService.update(user.agencyId, id, body);
   }

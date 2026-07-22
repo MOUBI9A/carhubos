@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateExpenseDto, UpdateExpenseDto } from './dto/expenses.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -7,7 +8,7 @@ export class ExpensesService {
 
   constructor(private prisma: PrismaService) {}
 
-  async create(agencyId: string, data: { category: string; description: string; amount: number; date?: string }) {
+  async create(agencyId: string, data: CreateExpenseDto) {
     return this.prisma.expense.create({
       data: {
         category: data.category,
@@ -48,7 +49,7 @@ export class ExpensesService {
     };
   }
 
-  async update(agencyId: string, id: string, data: { category?: string; description?: string; amount?: number; status?: string }) {
+  async update(agencyId: string, id: string, data: UpdateExpenseDto) {
     const expense = await this.prisma.expense.findFirst({
       where: { id, agencyId },
     });
