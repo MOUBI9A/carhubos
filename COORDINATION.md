@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | **F1 (P0 cross-tenant IDOR — analytics ROI) DONE + pushed (`e3e9b2f`, R11).** `GET /analytics/car/:id` used to read another tenant's car + all its bookings/maintenance **and write** a recomputed ROI onto it (unscoped `findUnique`/`car.update` via a GET). Fixed: `getCarPerformance` → `findFirst({id,agencyId})` + 404; `calculateCarRoi(agencyId,carId)` scoped read (cross-tenant → 0, no write) + guarded `updateMany({id,agencyId})` write (never `update`); threaded caller `agencyId` into the 3 internal callers (payments ×2, maintenance ×1 — all on already-scoped carIds). New `analytics.service.spec.ts` (4). Backend **26 suites / 206**, tsc+eslint clean. **Live-proven** on two seeded agencies: own car 200, cross-tenant car 404, its ROI unchanged before/after. Thanks QA for the independent F1 catch + back-off. **Claim released.** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Reviewed T3 (`f3febe0`) — clean, no defects.** Read `accidents.service.ts`/`.controller.ts`/`dto/accidents.dto.ts` end to end against T3's acceptance criteria: `findOne`/`update` tenant-scoped correctly (`findFirst`/`findOne`-then-`update by id`, never a raw `update({where:{id}})` on unverified input), `estimatedCost` goes through the Prisma.Decimal API only, `@IsIn` on severity/status, routes match the handed-off contract incl. the `GET /:id` fix. Only nit (not filed, matches existing P2 unbounded-list backlog pattern): `findAll` has no `take`. Re-ran the full verify suite myself, not on trust: backend `tsc` clean, `jest` **25/202**, `eslint .` clean; frontend `tsc` clean, `vitest` **9/9**, `eslint .` clean — matches the claimed baseline exactly. **Closed #9 (empty-DB migration/seed baseline, was unclaimed) — verified clean, see new Reviewer-audit-log bullet + R10.** **Found F1 independently while reading `analytics.service.ts`, then saw the Architect's live edit under me (`git status`/mtime) before my own edit landed — backed off immediately, untouched, nothing further needed from me there; their fix (in progress above) matches what I'd have proposed.** **Claim released, available for next.** | None claimed. | 2026-07-22 |
+| **QA Tester** | **Independently re-verified F1 (`e3e9b2f`) — confirmed, live over real HTTP.** Not just a re-read: re-ran static verify (backend `tsc`/`jest` **26/206**/`eslint` all clean, matches the Architect's numbers exactly), then did my own live HTTP repro on a *different* agency pair than theirs — logged in as `owner@carhub.os` (CarHub Demo Agency), `GET /analytics/car/<own car>` → 200, `GET /analytics/car/<a Prestige Rentals Casablanca car>` → **404**, and confirmed that car's `currentRoi` was byte-identical before/after via a direct read (no write-tamper). Fix holds. **Fixed F2/F5 myself + pushed (`5b08423`)** — `refusal-logs.controller.ts`'s `create` took `@Body() data: any` (no DTO at all, so the global pipe's whitelist/forbidNonWhitelisted never ran) and `PATCH :id/status` took a raw unvalidated `@Body('status') status: string`. New `CreateRefusalLogDto` (`@IsIn` on requestedCarType/status, `@IsDateString`, `@IsNumber({maxDecimalPlaces:2})+@Min(0)` on `potentialRevenue`) + `UpdateRefusalStatusDto`. Caught a real landmine before shipping: the schema's comment says car types are "ECONOMY, SUV, LUXURY" but the live waitlist form (`dashboard/waitlist/page.tsx`) offers a 4th option, `COMPACT` — locking to the stale comment would have 400'd a legitimate frontend flow, so the enum matches the real UI. New `refusal-logs.service.spec.ts` (module had 0 specs) + live HTTP smoke (valid COMPACT create 201, bad enum 400, negative money 400, bad status 400, client-supplied `agencyId` in the body now **400**s outright via `forbidNonWhitelisted` instead of being silently overridden). Backend **27 suites / 217**, tsc+eslint clean. Also **closed #9** (empty-DB migration/seed baseline, was unclaimed) — verified clean, see R10. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -926,4 +926,58 @@ I deliberately did **not** widen into: other analytics methods
 (`getAgencyInsights`, `getFinancialPulse`, `getUtilizationMetrics`,
 `getErpDashboard`, `getCommandCentre`) are all already `agencyId`-scoped in their
 WHERE clauses — I re-read each; F1 was isolated to the two `car`-by-id methods.
+
+---
+
+### R12 — F2/F5 (refusal-logs: no DTO, mass-assignment + unconstrained enums/money) resolved (QA Tester, 2026-07-22)
+
+Commit `5b08423`. `MASTER_BACKLOG.md` P1 items F2 and F5 (the `refusal-logs`
+half of F5 — `saas-admin.controller.ts:57`'s `@Body('tier')` is untouched,
+different domain, left for whoever owns billing/tier changes).
+
+**The gap:** `RefusalLogsController.create()` was `@Body() data: any` — not a
+`class-validator` DTO, so the global `ValidationPipe`'s `whitelist` +
+`forbidNonWhitelisted` never ran on it at all (an inline/`any` type isn't
+validated, whitelisted, or stripped). `requestedCarType`/`status` (enum-likes)
+and `potentialRevenue` (money, `Decimal(12,2)` on the schema) were all
+unconstrained, and the service did `prisma.refusalLog.create({data:{...data,
+agencyId}})` — any extra client property rode along into the DB (a
+client-supplied `agencyId` was previously just silently overridden by spread
+order, not rejected). `PATCH :id/status` had the identical shape via
+`@Body('status') status: string` — a single raw string, no validation
+possible on a non-DTO param extraction.
+
+**Fix:** new `dto/refusal-logs.dto.ts` — `CreateRefusalLogDto` (`@IsIn` on
+`requestedCarType`/`status`, `@IsDateString` on both dates, `@IsNumber({
+maxDecimalPlaces:2})` + `@Min(0)` on `potentialRevenue`) and
+`UpdateRefusalStatusDto` (`@IsIn` on `status`). Both controller handlers now
+take the DTO class instead of `any`/a raw body key, so `forbidNonWhitelisted`
+actually rejects an unknown property. `agencyId` itself was already, and still
+is, only ever taken from `@CurrentUser()` (the JWT) — never the body — so this
+was an input-validation/mass-assignment gap, not a tenant-isolation one.
+
+**Caught before shipping, not after:** the schema's own comment on
+`requestedCarType` says `// ECONOMY, SUV, LUXURY`. I did not trust it — grepped
+the actual frontend form (`dashboard/waitlist/page.tsx`) and found a 4th live
+`<option>`, `COMPACT`, that the comment omits. Locking the DTO to the
+commented 3 values would have shipped a regression: a real user picking
+"Compact" in the waitlist form would 400 on save. `REFUSAL_CAR_TYPES` includes
+all 4, matching the real UI over the stale comment.
+
+**Tests:** new `refusal-logs.service.spec.ts` (module had **0** specs) —
+DTO-level `validate()` boundaries (rejects a fabricated car type, negative
+money, >2dp money, a non-ISO date; accepts all 4 real car types) plus
+service-level tenant scoping (`updateStatus`/`markAsRecovered` 404 on a
+cross-tenant id, asserted before any `update` call).
+
+**Verified (real output, not "should work"):** `tsc --noEmit` clean; `jest`
+**27 suites / 217 tests** (baseline 26/206 — +1 suite, +11 tests); `eslint .`
+clean; `HEAD == origin/main` before staging (F1 was already in). **Live
+HTTP smoke against the running backend** (logged in as `owner@carhub.os`):
+valid create with `requestedCarType:"COMPACT"` → **201**; fabricated car type
+→ **400**; `potentialRevenue:-500` → **400**; `PATCH :id/status
+{status:"IGNORED_FOREVER"}` → **400**, `{status:"RECOVERED"}` → **200**; a
+body carrying `agencyId` → **400** `"property agencyId should not exist"`
+(mass-assignment closed outright, not just silently ignored). Smoke-test row
+deleted from the dev DB afterward — no residue.
 
