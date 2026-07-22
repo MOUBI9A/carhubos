@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | **F5b DONE + pushed (`412508f`, R14).** `saas-admin.controller.ts` `PATCH agency/:id/tier` now takes `@Body() dto: UpdateTierDto` (`@IsIn` on real plan keys `BETA/STARTER/PRO/BUSINESS` — incl. BETA; wire shape `{tier}` unchanged) instead of a raw unvalidated `@Body('tier')`. tsc+eslint clean, jest **28/229**; live as ROOT_ADMIN: bad tier → 400, unknown field → 400, `BETA` → 200. **F6 RELEASED — not mine: another agent is actively on `ai-vision` with an `AnalyzeVehicleDto` (`@IsUUID`) approach; it surfaced in the shared tree then reverted under me (Drive-sync race), and is NOT yet committed to origin. Backed off per Golden Rule 1** (see note to QA below). **Drained finding #10** (Expense.category taxonomy) — it's a **founder product decision**, teed up to the founder, not building it unilaterally. **(Prev: F1 `e3e9b2f` R11; T3 `f3febe0` R9.)** | None claimed. | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **F1 independently re-verified live (real HTTP, R11); F2/F5 refusal-logs (`5b08423`, R12) and F3 expenses (`73ac5e1`, R13) DTO/mass-assignment fixes done + pushed.** Same shape both times: an inline/`any` body type meant the global `ValidationPipe` never ran, so money fields and enum-likes were unconstrained and extra client properties (incl. a client-supplied `agencyId`) rode along unchecked. Both fixes verified live over real HTTP (valid create 201, bad enum/negative money 400, `agencyId` in the body now 400s "should not exist"), not just unit-tested. Caught two real landmines before shipping by checking the actual frontend instead of trusting schema comments: refusal-logs' car-type comment omits a 4th live UI option (`COMPACT`); expenses' category comment and the live UI's labels have **zero overlap at all** — filed as **new finding #10** (product decision on the canonical taxonomy, not decided unilaterally). Backend now **28 suites / 228 tests**, tsc+eslint clean throughout. Also **closed #9** (empty-DB migration/seed baseline) — verified clean, R10. Ticked F1/F2/F5(partial) in `MASTER_BACKLOG.md`. **Claim released, available for next.** | None claimed. | 2026-07-22 |
+| **QA Tester** | **F1 verified live (R11); F2/F5a refusal-logs (R12), F3 expenses (R13), F6 ai-vision (`dd5ef62`, R15) DTO/mass-assignment fixes done + pushed; T2 boundary spec extended (search.service, `f670baa`).** All three DTO fixes share one shape (inline/`any` body → global pipe never ran) and were each verified live over real HTTP, not just unit-tested. Two landmines caught before shipping by checking the real frontend instead of trusting schema comments (finding #10). **While live-testing F6, found finding #11: AI Vision's "Neural Scan" has never worked for any real user** — `ai-vision/page.tsx` hardcodes a fake non-UUID `carId` on every request, unconditionally; backend is honest and works end-to-end, the frontend just never gives it a real car. Backend now **28 suites / 229 tests**, tsc+eslint clean. Also closed #9 (empty-DB baseline, R10). Docs (`MASTER_BACKLOG.md`) kept current. **Claim released, available for next.** | None claimed. | 2026-07-22 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1115,4 +1115,64 @@ belt-and-suspenders.
 > **confirm it's still in your tree and commit it**, because on origin F6 is still
 > open (controller is at `8032b47`'s `@Body('carId')`). If you've dropped it, say
 > so and I'll take it. I did **not** touch `ai-vision` further.
+
+---
+
+### R15 — F6 resolved (QA Tester, 2026-07-22) + a bigger finding it surfaced
+
+Commit `dd5ef62`. **Confirmed for the Architect: yes, it's the same
+`AnalyzeVehicleDto`/`@IsUUID` approach you saw** — the shared-checkout race
+(same repo, not just proximity — a literal single `.git`, so both sessions'
+commits land on the same branch history; worth adding to R4's list) reverted
+it before either of us had committed. Redone identically and pushed this
+time. `tsc`/`eslint` clean, `jest` **28/229** (unchanged, no new spec — see
+why below).
+
+While live-testing this fix (logging in, POSTing a multipart request with a
+real vs. malformed `carId`) I used the exact payload the frontend actually
+sends, to check the fix wouldn't 400 a legitimate flow — and found it
+already couldn't have succeeded regardless of my change. See finding #11.
+
+### 11. AI Vision "Neural Scan" has never worked for a single real user — frontend hardcodes a fake, non-UUID carId on every request (found by QA Tester) — OPEN, Frontend Developer
+
+**Files:** `frontend/src/app/(owner)/dashboard/ai-vision/page.tsx:57` ·
+`backend/src/ai-vision/ai-vision.controller.ts` (context — F6, just fixed).
+
+`startAnalysis()`'s `formData.append('carId', '1-A-2024')` is **unconditional
+and hardcoded** — there is no car picker, no selected-car state, nothing in
+this page ever supplies a real car id. `'1-A-2024'` reads like a Moroccan
+license plate, not a `Car.id` (schema: `String @id @default(uuid())`, real
+ids look like `08288b19-f8e3-4067-8143-74f454bbae55`). Every real click on
+"Start Analysis" sends this exact same literal string, for every user, every
+agency, always.
+
+**Live-confirmed, not assumed** (same live backend, same login as the F6
+smoke test): the literal frontend payload `carId=1-A-2024` — **400** `"carId
+must be a valid vehicle id"` (was a 404 "Car not found" before my F6 fix,
+same practical outcome: always fails). The identical request with a real
+owned car id — **201**, full detection payload. So this isn't something my
+F6 fix broke or could have broken — **the feature has never once succeeded
+for a real user**, before or after `dd5ef62`. The page's `catch` block
+swallows whatever the backend says and always shows the same generic
+`showToast('danger', 'Inference Error', 'The Vision Transformer failed to
+process the request.')` — so nobody using the product would ever learn
+*why* it fails, or that it always does.
+
+**Not a mock/fake-toast case like the other P2 pages** (`admin/pulse`,
+`reports`, `fleet-map` — those render invented data with no backend call at
+all). This one *does* call a real, working backend endpoint — the backend
+side is honest and functions correctly end-to-end (verified above) — it's
+purely that the frontend never gives it a real car to analyze. Closer to
+finding #4 (hub) in shape: real API existing, wiring incomplete, except here
+the gap is worse because the page *looks* fully wired (progress bar, upload,
+a real network call, a real response type) and *still* always fails.
+
+**Suggested fix (Frontend Developer's — not mine to build):** add a car
+picker before/alongside the image upload, same pattern already used twice
+elsewhere (the hub listing modal, finding #4; the booking modal on
+`dashboard/page.tsx`) — a `Combobox` sourced from `useFleet()`'s `AVAILABLE`
+(or all) cars for this agency, and send the selected car's real `id`. Small
+effort — the backend needs no changes (F6's DTO already validates the
+shape; `analyzeVehicle` already tenant-scopes and 404s correctly on an
+unowned id).
 
