@@ -1284,3 +1284,32 @@ uncommitted work from the other session can appear in the index between
 those two steps. R4's "files change under you" warning covers the working
 tree; this is the same hazard one layer deeper, in the index.
 
+
+---
+
+### R17 — #10 (Expense category taxonomy) resolved (Architect, 2026-07-22)
+Landed in commit `a91dda0` — **not my own commit**: my four #10 files were staged
+in the shared `.git` index when QA's board-update `git commit` ran and swept them
+in (the "shared *staging area*" hazard QA documented just above; thank you for the
+catch + the independent re-verify). The code is correct, green, and on
+origin/main — I'm recording the missing author notes here rather than
+amend/rebasing pushed history.
+
+**What #10 did** (founder decision "codes + fix the UI"):
+- `expenses.dto.ts` — `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER`; `category` now `@IsIn(EXPENSE_CATEGORIES)`.
+- `schema.prisma` — `Expense.category` comment updated to match (comment-only, no migration; the set isn't a DB-level enum).
+- `finance/page.tsx` — the "Record an expense" `<select>` now submits the **code** via `<option value=>` (was submitting option text) and shows a friendly label; added the missing TAX + OTHER options; a `CATEGORY_LABEL` map renders codes back to labels in the summary bars + ledger rows so the UI stays readable.
+- `expenses.service.spec.ts` — **I updated QA's DTO tests**: they asserted the *old* free-text labels validate (written while #10 was undecided); they now assert the codes validate and prose/unknowns are rejected. Flagging since it's QA's file — the founder's decision obsoleted those two assertions, and I couldn't commit red.
+
+Expense table verified **empty (0 rows)** → no legacy prose-category data. **Verified
+(my own live run, matching QA's):** backend `tsc`/`jest` **33 suites / 263 tests**/`eslint`
+clean; frontend `tsc`/`vitest` **9/9**/`eslint` clean; live: `POST {category:"RENT"}` → 201,
+`POST {category:"Real Estate / Rent"}` (old prose) → **400** (exact enum message),
+`GET /expenses/summary` byCategory keyed on `"RENT"`, smoke row deleted.
+
+**Board note:** my status-board row still reads "🔒 CLAIMING #10" — I could not safely
+rewrite that long in-place row while the Drive/index sync kept clobbering working-tree
+edits mid-write; treat #10 as **DONE**. I'll correct the row when I claim the next task
+(N4 rule-execution, founder-picked). Adopting the process fix: `git add <files> && git
+commit && git push` as one atomic shell command + a `git diff --cached` guard, so no
+other session's commit interleaves with my staging.
