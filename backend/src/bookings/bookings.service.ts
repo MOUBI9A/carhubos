@@ -14,6 +14,7 @@ import { WebhooksService } from '../webhooks/webhooks.service';
 import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { TrustService } from '../trust/trust.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { AutomationEngine } from '../automations/automation-engine.service';
 
 @Injectable()
 export class BookingsService {
@@ -24,6 +25,10 @@ export class BookingsService {
     private pdfEngine: PdfEngineService,
     private trust: TrustService,
     private entitlements: EntitlementsService,
+    // Optional so the manual-construction unit specs (which pass the 6 deps
+    // above) keep compiling; Nest always injects it in the app since
+    // BookingsModule imports AutomationsModule.
+    private automationEngine?: AutomationEngine,
   ) {}
 
   async create(
@@ -240,6 +245,13 @@ export class BookingsService {
 
     // 9. TRIGGER WEBHOOK
     await this.webhooks.trigger(agencyId, 'BOOKING_CREATED', booking);
+
+    // 10. Fire this agency's BOOKING_CREATED automation rules (persisted user
+    // rules; safe actions only, never throws — see AutomationEngine.runTrigger).
+    await this.automationEngine?.runTrigger(agencyId, 'BOOKING_CREATED', {
+      subject: booking.id.slice(0, 8),
+      detail: `New booking ${booking.id} created.`,
+    });
 
     return booking;
   }
