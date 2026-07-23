@@ -73,6 +73,7 @@ export default function RenterPortal() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const pendingGrants = useMemo(() => grants.filter((g) => g.status === 'PENDING'), [grants]);
@@ -145,6 +146,19 @@ export default function RenterPortal() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       showToast('info', 'Copy Unavailable', 'Select and copy the code manually.');
+    }
+  };
+
+  const handleGenerateQr = async () => {
+    setIsGeneratingQr(true);
+    try {
+      await api.post('/portal/trust-qr');
+      await refetchMe();
+      showToast('success', 'QR Ready', 'Your Trust Vault code has been generated.');
+    } catch (err: any) {
+      showToast('danger', 'Failed', err?.response?.data?.message || 'Could not generate your QR code.');
+    } finally {
+      setIsGeneratingQr(false);
     }
   };
 
@@ -376,9 +390,20 @@ export default function RenterPortal() {
                     </div>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 py-1 text-text-faint">
-                    <QrCode className="w-5 h-5 shrink-0" />
-                    <p className="text-xs font-medium">QR not yet provisioned</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-text-faint">
+                      <QrCode className="w-5 h-5 shrink-0" />
+                      <p className="text-xs font-medium">QR not yet provisioned</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      isLoading={isGeneratingQr}
+                      onClick={handleGenerateQr}
+                    >
+                      Generate my QR
+                    </Button>
                   </div>
                 )}
               </Card>
@@ -538,8 +563,11 @@ export default function RenterPortal() {
             </div>
             <p className="text-sm font-semibold text-foreground">QR not yet provisioned</p>
             <p className="text-xs text-text-faint max-w-xs">
-              Your Trust Vault code will appear here once your agency verifies your identity.
+              Generate your Trust Vault code so agency staff can request access to your documents at the counter.
             </p>
+            <Button isLoading={isGeneratingQr} onClick={handleGenerateQr}>
+              Generate my QR
+            </Button>
           </div>
         )}
       </Modal>

@@ -11,6 +11,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RenterGuard } from './guards/renter.guard';
 import { PortalService } from './portal.service';
 import { ConsentService } from '../consent/consent.service';
+import { UsersService } from '../users/users.service';
 
 /**
  * Renter self-service portal. `AuthGuard` authenticates; `RenterGuard` restricts
@@ -24,11 +25,26 @@ export class PortalController {
   constructor(
     private readonly portalService: PortalService,
     private readonly consentService: ConsentService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Get('me')
   me(@CurrentUser() user: any) {
     return this.portalService.me(user.id);
+  }
+
+  /**
+   * (Re)issue the caller's own Trust Vault QR bearer token. Previously this
+   * was only ever set for the seeded demo renter (seed-roles.js) — no route
+   * called `UsersService.generateTrustQr` at all, so a real renter had no way
+   * to get one. Returns only `{ qrHash }`: the service's own update result is
+   * a full `User` row (includes the password hash), which must never reach
+   * the wire.
+   */
+  @Post('trust-qr')
+  async issueTrustQr(@CurrentUser() user: any) {
+    const updated = await this.usersService.generateTrustQr(user.id);
+    return { qrHash: updated.qrHash };
   }
 
   @Get('documents')
