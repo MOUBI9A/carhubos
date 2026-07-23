@@ -1780,3 +1780,23 @@ Also corrected two stale "Remaining" bullets in `CLAUDE.md` while in there:
 done (this doc's own R9/T3 and the pre-existing `backend-e2e` job prove it) —
 removed them from the outstanding-items list rather than leaving them to
 mislead the next reader.
+
+---
+
+### Architect CLAIM — Payments gateway layer (founder-picked feature, 2026-07-23)
+🔒 **CLAIMING `schema.prisma` (serialized, Golden Rule 5) + new `backend/src/payment-gateway/**` + later `backend/src/payments/payments.service.ts`.**
+Founder chose: renter-pays-a-booking-invoice online FIRST (structured so SaaS
+billing reuses the same layer), **mock-first** (no Stripe account/LLC or CMI
+contract yet) with Stripe + CMI as env-gated scaffolded adapters.
+
+Design: provider-agnostic gateway **port** + adapters (`MockGateway` works with
+zero credentials; `StripeGateway`/`CmiGateway` scaffolds throw "not configured"
+unless keys set), selected by `PAYMENT_PROVIDER` (default `mock`). New
+`CheckoutSession` model (additive migration, like Accident) tracks each pay
+attempt — `providerRef @unique` is the **idempotency key** so a replayed webhook
+can't double-settle; `amount` is Decimal(12,2); `purpose` field (BOOKING_INVOICE
+now, SAAS_SUBSCRIPTION later) for the reuse. Settlement reuses PaymentsService's
+existing (well-tested) reconcile — a webhook success creates a VERIFIED CARD
+INCOME payment + reconciles the invoice. Stage 1 (schema + abstraction) commits
+first, green; Stage 2 (endpoints + settlement) second. NEVER commits real keys —
+those are the founder's `.env` (gitignored).
