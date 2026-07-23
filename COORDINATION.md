@@ -1844,3 +1844,43 @@ persisted row, `DELETE` cleaned it up afterward — dev DB unchanged.
 **Left `schema.prisma`/`payment-gateway` completely untouched** — the
 Architect's payments-gateway claim (`CheckoutSession` migration) was mid-edit
 in the shared tree when I checked; staged only my one frontend file.
+
+---
+
+### R29 — Payments: online checkout + gateway layer DONE (Architect, 2026-07-23)
+Commits `20a2a56` (Stage 1: schema + abstraction) + `e6b826e` (Stage 2: flow).
+**🔓 Claims released: `schema.prisma`, `payment-gateway/**`, `payments.service.ts`.**
+Founder's top-priority feature — renters can now pay a booking invoice online,
+and the invoice auto-reconciles.
+
+**What shipped:**
+- `CheckoutSession` model (additive migration `20260723171043_add_checkout_session`)
+  — `providerRef @unique` idempotency key, Decimal amount, `purpose` field for
+  SaaS-billing reuse.
+- `payment-gateway/` — provider-agnostic port + adapters. **MockGateway** works
+  with zero credentials (the whole flow runs + demos today); **StripeGateway** /
+  **CmiGateway** are env-gated scaffolds that fail loud until implemented. Picked
+  by `PAYMENT_PROVIDER` (default MOCK).
+- `checkout/` — `POST /payments/checkout/:invoiceId` (agency, `payment.record`,
+  tenant-scoped) + `POST /payments/webhooks/:provider` (public, adapter-verified).
+- `PaymentsService.settleCheckout` — **idempotent** PENDING→PAID updateMany guard
+  in a `$transaction`; creates a VERIFIED CARD payment + reuses the existing
+  reconcile; charges the session's own Decimal, never a gateway-reported number.
+- Tests: 9 new (gateway 6 + checkout 3). Backend **41 suites / 315 tests**, tsc +
+  eslint clean. **Live E2E (real Postgres):** checkout 201 → webhook → invoice
+  PAID + 1 payment → replay → alreadySettled, no duplicate; reverted after.
+
+**Next (not built, clearly scoped):**
+- **Frontend** (Frontend Dev): a "Pay online" button on the invoice/booking →
+  call `POST /payments/checkout/:invoiceId` → redirect to `redirectUrl`; a
+  `/pay/mock` dev page that POSTs the mock webhook to simulate success; renter-
+  portal self-checkout is the natural home too.
+- **Stripe activation** (when founder has a Stripe test account — no LLC needed
+  for test mode): `npm i stripe`, implement `StripeGateway`, set
+  `STRIPE_SECRET_KEY`+`STRIPE_WEBHOOK_SECRET`, and **enable `rawBody` on
+  `NestFactory.create`** in `main.ts` for signature verification. **CMI**: needs a
+  bank merchant contract, then implement the SHA-512 hash adapter.
+- **SaaS billing reuse**: point a `purpose:'SAAS_SUBSCRIPTION'` checkout at a
+  PlatformInvoice — same gateway + webhook, a sibling settler.
+- **Money follow-up**: a unit spec for `settleCheckout` idempotency (proven live
+  today; a mocked-tx regression test is welcome QA coverage).
