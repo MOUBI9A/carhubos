@@ -57,6 +57,9 @@ export class CarsService {
   /**
    * Fleet list — cars with their compliance documents so the UI can
    * derive real compliance scores, plus booking counts for context.
+   * Capped, not paginated (P2 backlog) — had orderBy but no take, and each
+   * row joins documents + a booking count, so the query cost per row is
+   * higher than a plain list.
    */
   async findAll(agencyId: string) {
     return this.prisma.car.findMany({
@@ -75,6 +78,7 @@ export class CarsService {
         _count: { select: { bookings: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: 500,
     });
   }
 
