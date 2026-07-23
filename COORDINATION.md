@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | 🔒 **CLAIMING `schema.prisma`** (additive only — one nullable column) to fix a live 500: `PATCH /agencies/me` crashes on `website` since `Agency` has no such column, but `UpdateAgencyDto` + the settings-page frontend both treat it as real — **every agency-settings save that includes a website value 500s today**, confirmed live (isolated it: request without `website` → 200, with it → 500, repeatably). Adding `website String?` (additive, no data loss, same low-risk shape as T3's Accidents migration) + regenerating the client. **Also just landed:** capability-gate fixes for `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) — same missing-`CapabilitiesGuard` shape as documents (R22), found via a full controller sweep after that catch. `refusal-logs`/`audit-logs` controllers have the same gap but no obvious existing capability to reuse — flagged below (#13), not guessed at. Backend **39 suites / 305 tests** before this claim, tsc+eslint clean, both gate fixes live-verified. | `backend/prisma/schema.prisma` (additive: `Agency.website`) + a new migration | 2026-07-23 |
+| **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1605,3 +1605,44 @@ gap — flagging for whoever owns capability-catalog decisions rather than
 guessing. `search.controller.ts` and `notifications.controller.ts` were
 also bare-`AuthGuard` in the same sweep but are lower-risk by construction
 (both read-only/no-DB-lookup respectively) and not filed here.
+
+---
+
+### R23 — `Agency.website` was missing entirely — every settings save that touched it 500'd (QA Tester, 2026-07-23)
+
+Commit `23f644c`. **Claim released** — `schema.prisma` free again.
+
+Found this while live-testing the `agencies.controller.ts` capability-gate
+fix (`d179990`, same session): the OWNER's own `PATCH /agencies/me` call —
+run purely as a "still works for the real owner" sanity check — came back
+**500**, not 200. Isolated it properly before assuming a cause: the
+identical request **without** `website` in the body → 200; the same
+request **with** it → 500, repeatably. `Agency` had no `website` column at
+all (checked `schema.prisma` directly) — `UpdateAgencyDto` and the
+settings-page frontend (`dashboard/settings/page.tsx`, which unconditionally
+includes `website` in every save's payload, even empty) both treated it as
+a real field, so **every single agency-settings save was broken** the
+moment a website value was present — not an edge case, the default path.
+
+**Fix:** additive `website String?` on `Agency` (migration
+`20260723144413_add_agency_website`, pure `ALTER TABLE ADD COLUMN`, no data
+loss — same low-risk shape as T3's Accidents migration) + regenerated
+Prisma client. Claimed `schema.prisma` in the board *before* touching it,
+per Golden Rule 5 — confirmed nobody else was in it first.
+
+**Verified (real output, not "should work"):** `tsc --noEmit` clean; `jest`
+**39 suites / 306 tests** (baseline 39/305 — +1 test); `eslint .` clean.
+**Live HTTP, both before and after:** `PATCH /agencies/me
+{businessPhone:"..."}` → 200 (control, unaffected); `PATCH /agencies/me
+{website:"..."}` → **500 before, 200 after** the migration, persisted value
+confirmed via a follow-up read, then reset the demo agency's `website`
+back to `null` so the dev DB is unchanged. New test in
+`agencies.service.spec.ts` pins that `updateMyAgency` forwards every field
+including `website` — real confidence came from the live round-trip, since
+a mocked Prisma can't reproduce a missing-column error.
+
+**How I got here:** was mid-review of an unrelated authz fix and ran an
+"unaffected, should still work" OWNER control check out of habit rather
+than skipping it as obviously fine — worth normalizing as a small step,
+not just testing the negative case (AGENT 403) and assuming the positive
+case is safe by default.
