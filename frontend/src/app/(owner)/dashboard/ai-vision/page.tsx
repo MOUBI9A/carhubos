@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AgencyImage } from '@/components/ui/AgencyImage';
+import { Combobox } from '@/components/ui/Combobox';
 import {
   Scan,
   AlertTriangle,
@@ -12,12 +13,14 @@ import {
   BrainCircuit,
   Maximize2,
   Camera,
+  Car,
   ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+import { useFleet } from '../fleet/useFleet';
 
 export default function AiVision() {
   const t = useTranslations('ownerPages');
@@ -27,6 +30,22 @@ export default function AiVision() {
   const [activeAnalysis, setActiveAnalysis] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedCarId, setSelectedCarId] = useState('');
+
+  const { data: fleet, isLoading: isFleetLoading } = useFleet();
+  const carOptions = useMemo(
+    () =>
+      (fleet ?? []).map((c) => ({
+        id: c.id,
+        label: `${c.brand} ${c.model}`,
+        sublabel: c.licensePlate,
+      })),
+    [fleet],
+  );
+  const selectedCar = useMemo(
+    () => (fleet ?? []).find((c) => c.id === selectedCarId) ?? null,
+    [fleet, selectedCarId],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,6 +61,10 @@ export default function AiVision() {
       showToast('info', 'No Image', 'Please capture or upload a vehicle photo first.');
       return;
     }
+    if (!selectedCarId) {
+      showToast('info', 'No Vehicle Selected', 'Choose which car this photo belongs to before scanning.');
+      return;
+    }
 
     setIsScanning(true);
     setScanProgress(0);
@@ -54,7 +77,7 @@ export default function AiVision() {
     try {
       const formData = new FormData();
       formData.append('image', selectedFile);
-      formData.append('carId', '1-A-2024'); // Defaulting for demo
+      formData.append('carId', selectedCarId);
 
       const response = await api.post('/ai-vision/analyze', formData);
       const result = response.data;
@@ -85,7 +108,17 @@ export default function AiVision() {
             Vision model v4.2 · Online
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="w-full sm:w-64">
+            <Combobox
+              options={carOptions}
+              value={selectedCarId}
+              onChange={setSelectedCarId}
+              placeholder={isFleetLoading ? 'Loading vehicles…' : 'Select vehicle...'}
+              emptyText={isFleetLoading ? 'Loading vehicles…' : 'No vehicles in your fleet'}
+              icon={<Car className="w-4 h-4" />}
+            />
+          </div>
           <input
             type="file"
             id="ai-upload"
@@ -97,7 +130,7 @@ export default function AiVision() {
             <Camera className="w-4 h-4 me-2" />
             Capture image
           </Button>
-          <Button onClick={startAnalysis} disabled={isScanning || !selectedFile}>
+          <Button onClick={startAnalysis} disabled={isScanning || !selectedFile || !selectedCarId}>
             <Scan className="w-4 h-4 me-2" />
             Start scan
           </Button>
@@ -170,19 +203,21 @@ export default function AiVision() {
                 </div>
               ))}
 
-              <div className="absolute bottom-6 start-6 z-20">
-                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface-raised flex items-center justify-center border border-hairline">
-                       <ShieldCheck className="w-4 h-4 text-text-muted" />
-                    </div>
-                    <div>
-                       <p className="eyebrow">Asset identification</p>
-                       <p className="mt-0.5 text-sm font-medium text-foreground">
-                         Dacia Logan <span className="text-text-faint">·</span> <span className="font-mono tabular text-text-muted">PL-12345-A-1</span>
-                       </p>
-                    </div>
-                 </div>
-              </div>
+              {selectedCar && (
+                <div className="absolute bottom-6 start-6 z-20">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-surface-raised flex items-center justify-center border border-hairline">
+                         <ShieldCheck className="w-4 h-4 text-text-muted" />
+                      </div>
+                      <div>
+                         <p className="eyebrow">Asset identification</p>
+                         <p className="mt-0.5 text-sm font-medium text-foreground">
+                           {selectedCar.brand} {selectedCar.model} <span className="text-text-faint">·</span> <span className="font-mono tabular text-text-muted">{selectedCar.licensePlate}</span>
+                         </p>
+                      </div>
+                   </div>
+                </div>
+              )}
            </Card>
 
            <div className="grid grid-cols-3 gap-6">
