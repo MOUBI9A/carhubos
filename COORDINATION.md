@@ -1646,3 +1646,79 @@ a mocked Prisma can't reproduce a missing-column error.
 than skipping it as obviously fine — worth normalizing as a small step,
 not just testing the negative case (AGENT 403) and assuming the positive
 case is safe by default.
+
+---
+
+### R24 — finding #12 resolved: renters can now self-issue their Trust Vault QR (Frontend Developer, 2026-07-23)
+
+Commits `c4797c9`'s follow-up (backend + frontend, this session) — see also
+`39ef838` (e2e rebrand fixes) and `c4797c9` (AI Vision fake-`carId` fix)
+earlier the same session.
+
+Neither `UsersService.generateTrustQr` nor `verifyRenter` was wired to any
+route — `qrHash` was only ever set for the seeded demo renter
+(`seed-roles.js`'s `DEMO_QR`), so a real renter had no way to get a Trust
+Vault code at all, and the portal UI's own empty state said it'd "appear
+once your agency verifies your identity" — a flow that doesn't exist.
+
+**Fix (renter self-service, per the finding's suggested shape):** new
+`POST /portal/trust-qr` (`portal.controller.ts`, `RenterGuard` — self or
+ROOT_ADMIN only) calls the existing, already-hardened
+`UsersService.generateTrustQr(user.id)` and returns **only** `{ qrHash }` —
+the service's raw update result is a full `User` row including the
+password hash, so the controller picks the one field before it reaches the
+wire. `PortalModule` now imports `UsersModule` to get there. Frontend: a
+"Generate my QR" button in both the dashboard card's and the modal's empty
+states, wired to the new endpoint + `refetchMe()`; updated the modal copy
+off the old "your agency verifies" framing.
+
+**`verifyRenter` intentionally left alone** — the finding flagged it has no
+`trustScore` bounds validation, and picking a scale (0–100? 0–5?) to
+validate against is a product decision nobody's made, not mine to guess.
+
+**Verified (real output):** `tsc`/`eslint` clean, backend **jest 39/306**
+unaffected. Live round-trip on the seeded renter: `GET /portal/me` showed
+the seeded `DEMO_QR`; `POST /portal/trust-qr` → **201**, body was exactly
+`{"qrHash":"<64-hex>"}` (no password/other fields); `GET /portal/me`
+reflected the new value. Capability check: OWNER and AGENT → **403** on the
+same POST. Reset the demo renter's `qrHash` back to the seeded
+`FDR-VAULT-SAMI-8F2A4C7E` afterward so the dev DB is unchanged.
+
+**Left alone, mid-edit by the concurrent session:** `audit-logs.controller.ts`
+and `refusal-logs.controller.ts` had uncommitted local changes (finding #13's
+gate) when I checked — not staged, not touched, per Golden Rule 1/3.
+
+---
+
+### R25 — finding #13 resolved (refusal-logs + audit-logs capability/role gates) (Architect, 2026-07-23)
+Commit `3264611`. QA flagged both controllers as bare `@UseGuards(AuthGuard)` in
+the gate sweep and left the *policy* call to the capability-catalog owner
+(Architect). Made the call:
+
+- **refusal-logs** → `CapabilitiesGuard`: `customer.view` (reads) / `customer.manage`
+  (writes). A refusal log is a would-be **customer's** demand record (name, phone,
+  requested type, potential revenue), so the customer capability is the right fit;
+  AGENT holds both (front-desk logging refusals is their job — the intent), while a
+  RENTER portal account or any minimal staff-preset lacking them is now excluded.
+  Consistent with the capability gating QA applied to maintenance/agencies/documents
+  in the same sweep.
+- **audit-logs** → `RolesGuard` + `@Roles(OWNER, MANAGER, ROOT_ADMIN)`. Read-only,
+  but it exposes sensitive oversight (price changes, staff-management, blacklist
+  actions), so it's management-level. Chose a **role** gate over a capability
+  deliberately: no existing capability fits "view the audit trail", and minting a
+  new `audit.view` would sit ungranted on every live membership until a re-seed
+  (the same reason QA reused `settings.manage` for webhooks in R6). Role-based
+  needs no re-seed and states the policy plainly.
+
+**Verified live** across the seeded roles (owner/agent/renter, admin123): `GET
+/audit-logs` → owner **200**, agent **403**, renter **403**; `GET /refusal-logs`
+→ agent **200**, renter **403**; `POST /refusal-logs` → agent passes the gate
+(**400** validation, i.e. NOT a 403 block), renter **403**. No rows created. tsc +
+eslint clean, 6 affected suites / 48 tests green, boots 200.
+
+**Follow-up (QA-appropriate):** a small metadata-reflection regression spec
+asserting the decorators stay wired (the guards themselves — `capabilities.guard`,
+`roles.guard` — are already unit-tested, so this is belt-and-suspenders). Also
+note `search`/`notifications` were bare-`AuthGuard` in QA's sweep too but judged
+lower-risk (read-only/no-DB) and not filed — worth a glance if someone wants the
+sweep fully closed.
