@@ -14,6 +14,12 @@ import {
   IssueInvoiceDto,
   UpdateSubscriptionDto,
 } from './dto/founder-billing.dto';
+
+// Founder tenant roster is bounded (flat array preserved; P2 backlog). Platform
+// scale needs real pagination — a high cap keeps the console snappy until then.
+// (getFounderMetrics deliberately stays uncapped: it sums MRR across ALL
+// subscriptions, so a cap would corrupt the number — that wants a DB aggregate.)
+const TENANT_ROSTER_CAP = 500;
 import { ProvisionTenantDto } from './dto/provision-tenant.dto';
 
 @Injectable()
@@ -146,6 +152,7 @@ export class SaasAdminService {
         _count: { select: { cars: true, bookings: true, users: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: TENANT_ROSTER_CAP,
     });
 
     return {

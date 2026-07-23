@@ -7,6 +7,12 @@ import {
 
 const EXPIRING_SOON_DAYS = 30;
 
+// Backward-compatible caps (P2 backlog — flat array preserved; orderBy existed,
+// take didn't). A car's document set is small; the agency-wide Vault view grows
+// with the fleet, so bound it. Pagination is the real fix past these ceilings.
+const CAR_DOC_CAP = 100;
+const AGENCY_DOC_CAP = 500;
+
 @Injectable()
 export class DocumentsService {
   constructor(private prisma: PrismaService) {}
@@ -63,6 +69,7 @@ export class DocumentsService {
     return this.prisma.carDocument.findMany({
       where: { carId },
       orderBy: { expiryDate: 'asc' },
+      take: CAR_DOC_CAP,
     });
   }
 
@@ -74,6 +81,7 @@ export class DocumentsService {
         car: { select: { brand: true, model: true, licensePlate: true } },
       },
       orderBy: { expiryDate: 'asc' },
+      take: AGENCY_DOC_CAP,
     });
   }
 
