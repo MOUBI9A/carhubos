@@ -10,8 +10,8 @@ test.describe('Role-based login routing', () => {
 
   const cases = [
     { role: 'ROOT_ADMIN', email: 'root@carhub.os', landing: '/admin', marker: 'Global Pulse' },
-    { role: 'OWNER', email: 'owner@carhub.os', landing: '/dashboard', marker: 'Infinity Control' },
-    { role: 'MANAGER', email: 'manager@carhub.os', landing: '/dashboard', marker: 'Infinity Control' },
+    { role: 'OWNER', email: 'owner@carhub.os', landing: '/dashboard', marker: 'Command center' },
+    { role: 'MANAGER', email: 'manager@carhub.os', landing: '/dashboard', marker: 'Command center' },
     { role: 'AGENT', email: 'agent@carhub.os', landing: '/agent', marker: 'Operations' },
     { role: 'RENTER', email: 'renter@carhub.os', landing: '/portal', marker: 'My Vault' },
   ];
@@ -21,7 +21,7 @@ test.describe('Role-based login routing', () => {
       await page.goto('/login');
       await page.getByPlaceholder('name@agency.com').fill(c.email);
       await page.locator('input[type="password"]').fill('admin123');
-      await page.getByRole('button', { name: /secure login/i }).click();
+      await page.locator('form button[type="submit"]').click();
 
       await page.waitForURL(`**${c.landing}`);
       await expect(page.getByText(c.marker, { exact: false }).first()).toBeVisible();
@@ -33,7 +33,7 @@ test.describe('Role-based login routing', () => {
     await page.goto('/login');
     await page.getByPlaceholder('name@agency.com').fill('renter@carhub.os');
     await page.locator('input[type="password"]').fill('admin123');
-    await page.getByRole('button', { name: /secure login/i }).click();
+    await page.locator('form button[type="submit"]').click();
     await page.waitForURL('**/portal');
 
     await page.goto('/dashboard');

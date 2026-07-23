@@ -8,6 +8,6 @@ test.describe('Authentication gate', () => {
   test('redirects an unauthenticated visitor from the dashboard to /login', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForURL('**/login**');
-    await expect(page.getByRole('button', { name: /secure login/i })).toBeVisible();
+    await expect(page.locator('form button[type="submit"]')).toBeVisible();
   });
 });

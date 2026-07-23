@@ -13,7 +13,7 @@ test.describe('Booking flow', () => {
 
   test('creates a booking through the comboboxes and closes optimistically', async ({ page }) => {
     await page.getByRole('button', { name: 'New Booking' }).click();
-    await expect(page.getByRole('heading', { name: 'Initialize Booking' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New booking' })).toBeVisible();
 
     const triggers = page.locator('button[aria-haspopup="listbox"]');
 
@@ -39,9 +39,9 @@ test.describe('Booking flow', () => {
     await page.locator('input[name="endDate"]').fill('2026-08-05');
 
     // --- Submit: modal closes immediately (optimistic), success toast follows ---
-    await page.getByRole('button', { name: 'Execute Reservation' }).click();
+    await page.getByRole('button', { name: 'Confirm booking' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Initialize Booking' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'New booking' })).toBeHidden();
     await expect(page.getByText('Booking Confirmed')).toBeVisible();
   });
 
@@ -61,10 +61,10 @@ test.describe('Booking flow', () => {
     // comboboxes (which aren't native form fields) empty so the JS guard runs.
     await page.locator('input[name="startDate"]').fill('2026-08-01');
     await page.locator('input[name="endDate"]').fill('2026-08-05');
-    await page.getByRole('button', { name: 'Execute Reservation' }).click();
+    await page.getByRole('button', { name: 'Confirm booking' }).click();
 
     // Client-side validation fires a toast and the modal stays open.
     await expect(page.getByText('Missing Fields')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Initialize Booking' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New booking' })).toBeVisible();
   });
 });

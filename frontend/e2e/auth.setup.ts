@@ -87,7 +87,10 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   await page.goto('/login');
   await page.getByPlaceholder('name@agency.com').fill(account.email);
   await page.locator('input[type="password"]').fill(account.password);
-  await page.getByRole('button', { name: /secure login/i }).click();
+  // Locale-independent: the sign-in copy is translated (FR "Se connecter" is
+  // the actual default-locale text; "Secure Login" never appears in any
+  // locale), so target the login form's one submit button instead of text.
+  await page.locator('form button[type="submit"]').click();
 
   await page.waitForURL('**/dashboard**');
   await expect(page.getByRole('button', { name: 'New Booking' })).toBeVisible();

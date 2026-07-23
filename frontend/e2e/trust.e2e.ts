@@ -21,7 +21,7 @@ test.describe('Client Risk Assessment (booking flow)', () => {
   test('shows the risk panel with a NEW state for an unknown renter', async ({ page }) => {
     await pickCustomer(page, 'Test Renter');
     await expect(page.getByText('Client Risk Assessment')).toBeVisible();
-    await expect(page.getByText('No Network History', { exact: true })).toBeVisible();
+    await expect(page.getByText('No network history', { exact: true })).toBeVisible();
   });
 
   test('hard-locks the booking for a blacklisted renter until overridden', async ({ page }) => {
@@ -45,12 +45,12 @@ test.describe('Client Risk Assessment (booking flow)', () => {
     await locked.click();
     await expect(page.getByText('Renter Blocked')).toBeVisible();
     // Modal stays open (booking refused).
-    await expect(page.getByRole('heading', { name: 'Initialize Booking' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New booking' })).toBeVisible();
 
     // Provide an override reason — the button flips to allow the booking.
     await page
       .getByPlaceholder(/Audit Trail/i)
       .fill('Owner vouches personally; double cash deposit taken.');
-    await expect(page.getByRole('button', { name: /Override & Deploy/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Override & confirm/i })).toBeVisible();
   });
 });
