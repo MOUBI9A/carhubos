@@ -42,15 +42,32 @@ export class AutomationEngine {
    * Evaluate one agency's active rules for `trigger` and dispatch their actions.
    * Tenant-scoped (agencyId is in the WHERE). Returns per-run counts so callers
    * and tests can assert what happened.
+   *
+   * The ENTIRE method is exception-safe, not just the per-rule dispatch loop:
+   * callers on the request path (bookings.service.ts's create(), which awaits
+   * this synchronously right after the booking/invoice/payment are already
+   * committed) must never see this throw. A DB hiccup while loading rules used
+   * to propagate out of runTrigger and turn an already-successful booking
+   * creation into a 500 to the client — same failure shape as a bad rule, just
+   * one step earlier, so it gets the same treatment: log and return a safe,
+   * zeroed result rather than reject.
    */
   async runTrigger(
     agencyId: string,
     trigger: string,
     context: AutomationContext = {},
   ): Promise<{ matched: number; dispatched: number; deferred: number }> {
-    const rules = await this.prisma.automationRule.findMany({
-      where: { agencyId, trigger, isActive: true },
-    });
+    let rules: Array<{ name: string; action: string }>;
+    try {
+      rules = await this.prisma.automationRule.findMany({
+        where: { agencyId, trigger, isActive: true },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to load automation rules for ${trigger}: ${(err as Error).message}`,
+      );
+      return { matched: 0, dispatched: 0, deferred: 0 };
+    }
 
     let dispatched = 0;
     let deferred = 0;

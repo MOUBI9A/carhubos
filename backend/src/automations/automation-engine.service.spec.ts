@@ -101,4 +101,18 @@ describe('AutomationEngine.runTrigger', () => {
     expect(result.matched).toBe(2);
     expect(taskCreate).toHaveBeenCalledTimes(2);
   });
+
+  it('swallows a failure loading the rules themselves, not just a dispatch failure — never rejects', async () => {
+    // bookings.service.ts's create() awaits runTrigger synchronously right
+    // after the booking/invoice/payment are already committed — a DB hiccup
+    // here must resolve to a safe empty result, never reject, or an
+    // already-successful booking would 500 to the client.
+    const findMany = jest.fn().mockRejectedValue(new Error('db down'));
+    const prisma = { automationRule: { findMany } };
+    const engine = new AutomationEngine(prisma as any);
+
+    await expect(
+      engine.runTrigger(AGENCY_A, 'BOOKING_CREATED'),
+    ).resolves.toEqual({ matched: 0, dispatched: 0, deferred: 0 });
+  });
 });

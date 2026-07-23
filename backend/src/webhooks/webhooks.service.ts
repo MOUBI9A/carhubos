@@ -34,12 +34,25 @@ export class WebhooksService {
   }
 
   /**
-   * Triggers webhooks for a specific event
+   * Triggers webhooks for a specific event. Callers (bookings.service.ts's
+   * create()/updateStatus(), on the request path) await this synchronously
+   * right after the booking/invoice/payment are already committed — this must
+   * never throw, or a DB hiccup here turns an already-successful booking into
+   * a 500 to the client. Per-subscription sends are already fire-and-forget
+   * (.catch, not awaited); the lookup itself was the one unguarded step.
    */
   async trigger(agencyId: string, event: string, payload: any) {
-    const subscriptions = await this.prisma.webhookSubscription.findMany({
-      where: { agencyId, event, isActive: true },
-    });
+    let subscriptions: Array<{ url: string }>;
+    try {
+      subscriptions = await this.prisma.webhookSubscription.findMany({
+        where: { agencyId, event, isActive: true },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to load webhook subscriptions for ${event}: ${(err as Error).message}`,
+      );
+      return;
+    }
 
     for (const sub of subscriptions) {
       this.sendPayload(sub, event, payload).catch((err) => {

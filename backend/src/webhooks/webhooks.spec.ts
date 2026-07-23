@@ -6,6 +6,7 @@ import {
   isBlockedWebhookHost,
 } from './dto/subscribe-webhook.dto';
 import { WebhooksController } from './webhooks.controller';
+import { WebhooksService } from './webhooks.service';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { CAPABILITIES_KEY } from '../common/decorators/require-capabilities.decorator';
 
@@ -161,5 +162,40 @@ describe('WebhooksController — capability gating (finding #6)', () => {
         makeContext({ id: 'u-owner', agencyId: 'a1', role: 'OWNER' }),
       ),
     ).resolves.toBe(true);
+  });
+});
+
+describe('WebhooksService.trigger — exception safety', () => {
+  it('swallows a failure loading subscriptions — never rejects', async () => {
+    // bookings.service.ts's create()/updateStatus() await this synchronously
+    // right after the booking/invoice/payment (or status change) is already
+    // committed — a DB hiccup here must never turn an already-successful
+    // request into a 500 to the client. Per-subscription sends are already
+    // fire-and-forget (.catch, not awaited); the lookup itself was the one
+    // step that could still reject.
+    const findMany = jest.fn().mockRejectedValue(new Error('db down'));
+    const service = new WebhooksService({
+      webhookSubscription: { findMany },
+    } as any);
+
+    await expect(
+      service.trigger('agency-a', 'BOOKING_CREATED', {}),
+    ).resolves.toBeUndefined();
+  });
+
+  it('still fires real subscriptions when the lookup succeeds', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([{ id: 'sub-1', url: 'https://example.com/hook' }]);
+    const service = new WebhooksService({
+      webhookSubscription: { findMany },
+    } as any);
+    const sendSpy = jest
+      .spyOn(service as any, 'sendPayload')
+      .mockResolvedValue(undefined);
+
+    await service.trigger('agency-a', 'BOOKING_CREATED', { id: 'b1' });
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
   });
 });
