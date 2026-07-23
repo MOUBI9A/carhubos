@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Found + fixed two real bugs in `documents.service.ts` while reviewing R21's cap fix (`f341fb1`, R22)** — reading the full file, not just the diff, paid off. (1) Guardian Vault showed **stale compliance status**: `CarDocument.status` is only ever written at create/renew time and nothing recomputes it as real time passes (grepped every write — confirmed), so a document could show "VALID" on-screen long after its real expiry date — reproduced with a failing test first, fixed by deriving status fresh on every read, live-verified by forcing a stale value directly in Postgres. (2) `documents.controller.ts` had **no capability gate at all** (bare `AuthGuard`), unlike its fleet-domain siblings — any role including AGENT could delete a car's legal compliance documents; gated the same way as `cars`/`accidents` (`fleet.view`/`fleet.manage`), live-verified AGENT create now 403s (was 201). New `documents.service.spec.ts` (module had 0 specs, 7 tests). Backend **39 suites / 305 tests**, tsc+eslint clean. Also reviewed + confirmed clean: R20's fix, R21's last P2 caps (see prior rows for detail on both). **Claim released, available for next.** | None claimed. | 2026-07-23 |
+| **QA Tester** | 🔒 **CLAIMING `schema.prisma`** (additive only — one nullable column) to fix a live 500: `PATCH /agencies/me` crashes on `website` since `Agency` has no such column, but `UpdateAgencyDto` + the settings-page frontend both treat it as real — **every agency-settings save that includes a website value 500s today**, confirmed live (isolated it: request without `website` → 200, with it → 500, repeatably). Adding `website String?` (additive, no data loss, same low-risk shape as T3's Accidents migration) + regenerating the client. **Also just landed:** capability-gate fixes for `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) — same missing-`CapabilitiesGuard` shape as documents (R22), found via a full controller sweep after that catch. `refusal-logs`/`audit-logs` controllers have the same gap but no obvious existing capability to reuse — flagged below (#13), not guessed at. Backend **39 suites / 305 tests** before this claim, tsc+eslint clean, both gate fixes live-verified. | `backend/prisma/schema.prisma` (additive: `Agency.website`) + a new migration | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1569,3 +1569,39 @@ Cross-tenant 404 on `findAllForCar` is already covered in
 **Verified (real output):** `tsc --noEmit` clean; `jest` **39 suites / 305
 tests** (baseline 38/298 — +1 suite, +7 tests); `eslint .` clean. Smoke-test
 document rows deleted from the dev DB afterward — no residue.
+
+---
+
+### 13. `refusal-logs` and `audit-logs` controllers have no capability gate — OPEN, needs a product call on which capability
+
+**Files:** `backend/src/refusal-logs/refusal-logs.controller.ts` ·
+`backend/src/audit-logs/audit-logs.controller.ts`.
+
+Found via a full controller sweep (`grep` every `@Controller`'s class-level
+`@UseGuards`) after catching the same shape in `documents.controller.ts`
+(R22) and fixing it in `maintenance.controller.ts` (`5f4edc5`) and
+`agencies.controller.ts` (`d179990`). Both are bare `@UseGuards(AuthGuard)`
+— no `CapabilitiesGuard`, no `@RequireCapabilities` — so any authenticated
+role of an agency, including AGENT, can create/update refusal-log entries
+or read the full audit trail.
+
+**Not fixed, unlike the other three:** those all had an obvious, already-
+established capability to reuse (`fleet.*` for the fleet-asset trio,
+`settings.manage` for agency-wide config). Neither of these has one:
+
+- `refusal-logs` (waitlist/demand tracking) could plausibly go under
+  `customer.view`/`customer.manage` (demand tied to a would-be customer) or
+  a `booking.*` capability (demand for a booking that didn't happen) — no
+  existing precedent points at one over the other.
+- `audit-logs` is read-only (`GET` only, no mutation risk) but could
+  reasonably warrant restricting to OWNER/MANAGER — audit entries include
+  things like blacklist actions, price changes, and staff management, which
+  might not be intended for AGENT-level visibility. Equally plausible that
+  "any staff member can see their own agency's history" is the deliberate
+  design; nothing in the codebase says which.
+
+Picking either would be inventing a policy, not just closing a validation
+gap — flagging for whoever owns capability-catalog decisions rather than
+guessing. `search.controller.ts` and `notifications.controller.ts` were
+also bare-`AuthGuard` in the same sweep but are lower-risk by construction
+(both read-only/no-DB-lookup respectively) and not filed here.
