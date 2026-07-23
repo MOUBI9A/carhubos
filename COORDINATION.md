@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Reviewed N4-exec's BOOKING_CREATED wiring (`fa7b9f0`) — found a real gap, fixed it (`069b425`).** Checked the "runTrigger never throws" claim against the code instead of trusting the docstring: only the per-rule dispatch loop was try/caught — the initial `automationRule.findMany` (loading the rules) was NOT, so a DB hiccup there would propagate straight through `bookings.service.ts create()`'s synchronous `await` **after the booking/invoice/payment had already committed** — an already-successful booking would 500 to the client. Reproduced with a failing test first. Checked whether this was new or pre-existing: `WebhooksService.trigger` (what `runTrigger` explicitly mirrors, sitting at the same two bookings.service.ts call sites) had the **identical, pre-existing** gap — fixed both the same way (wrap the lookup in try/catch, log, return a safe empty result). New regression tests on both (webhooks.spec.ts had **zero** coverage on `trigger()` itself). Backend **38 suites / 298 tests**, tsc+eslint clean. Live end-to-end: created a real booking, both webhook + automation engine fired without error, cleaned up. Also **capped `cars.service.ts` (`3cfed1a`) and `customers.service.ts` (`e2af059`)** — last two P2 unbounded reads (`documents`/`saas-admin.service.ts` still open, tagged M, left for the Executor); customers' fix also closed a previously-noted case-sensitive-search bug in the same lines. **Claim released, available for next.** | None claimed. | 2026-07-23 |
+| **QA Tester** | **Found + fixed two real bugs in `documents.service.ts` while reviewing R21's cap fix (`f341fb1`, R22)** — reading the full file, not just the diff, paid off. (1) Guardian Vault showed **stale compliance status**: `CarDocument.status` is only ever written at create/renew time and nothing recomputes it as real time passes (grepped every write — confirmed), so a document could show "VALID" on-screen long after its real expiry date — reproduced with a failing test first, fixed by deriving status fresh on every read, live-verified by forcing a stale value directly in Postgres. (2) `documents.controller.ts` had **no capability gate at all** (bare `AuthGuard`), unlike its fleet-domain siblings — any role including AGENT could delete a car's legal compliance documents; gated the same way as `cars`/`accidents` (`fleet.view`/`fleet.manage`), live-verified AGENT create now 403s (was 201). New `documents.service.spec.ts` (module had 0 specs, 7 tests). Backend **39 suites / 305 tests**, tsc+eslint clean. Also reviewed + confirmed clean: R20's fix, R21's last P2 caps (see prior rows for detail on both). **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1505,3 +1505,67 @@ cap corrupts the figure (wants a DB aggregate). Both noted in-code.
 This closes the P2 unbounded-list lane. `tsc`/`eslint` clean, backend **38 suites
 / 298 tests**. Landed via the atomic `add && commit && push` + `git diff --cached`
 guard (only the 2 service files staged).
+
+---
+
+### R22 — Guardian Vault showed stale compliance status; `documents.controller.ts` had no capability gate at all (QA Tester, 2026-07-23)
+
+Commit `f341fb1`. Reading `documents.service.ts` fully while reviewing R21's cap
+fix (not just the diff) surfaced two real, live bugs — both reproduced before
+being fixed, neither assumed.
+
+**Bug 1 — stale status.** `CarDocument.status` (VALID/EXPIRING_SOON/EXPIRED) is
+derived from `expiryDate` and persisted at `create()`/`renew()` time. Grepped
+every write to that column in the whole backend: those are the **only** two.
+Nothing — no cron, no read-time recompute — ever updates it as real time
+passes. The cron's own expiry alert (`handleDocumentExpiryChecks`) queries the
+real `expiryDate` directly, so *alerting* still worked, but the Guardian
+Vault views (`findAllForCar`/`findAllForAgency` — what a human actually looks
+at) returned the frozen, potentially year-stale column verbatim. A document
+created "VALID" with a distant expiry stays "VALID" in the DB forever, even
+long after the real date has passed — **a car's actually-expired insurance or
+registration could show as fully compliant** on the one screen whose entire
+purpose is fleet compliance tracking.
+
+Reproduced with a failing test first (mocked a stored `VALID` row with a
+past `expiryDate`, asserted the service returned `'EXPIRED'` — it returned
+`'VALID'`, confirming the bug), then fixed: both list methods now recompute
+`status` from `expiryDate` on every read via the existing `deriveStatus()`
+rather than trusting the column. The persisted value is still correct
+*at write time*; it just isn't the last word anymore. **Live-verified** by
+forcing a stale `VALID` directly in Postgres (`UPDATE "CarDocument" SET
+status='VALID'` on a row whose real `expiryDate` was in 2020) and confirming
+the API still returned `'EXPIRED'`.
+
+**Bug 2 — no capability gate at all.** `documents.controller.ts` was
+`@UseGuards(AuthGuard)` only — no `CapabilitiesGuard`, no
+`@RequireCapabilities`, unlike its fleet-domain sibling `cars.controller.ts`
+(`fleet.view`/`fleet.manage`) and `accidents.controller.ts` (same pattern,
+explicitly reused for the same reason). Any authenticated role — including
+AGENT, who holds `fleet.view` only everywhere else in this exact domain
+(can see cars/accidents, can't edit them) — could create, renew, or **delete**
+a car's legal compliance documents. Gated the same way as its siblings: reads
+`fleet.view`, mutations `fleet.manage`. **Live-verified**: AGENT `POST
+/documents` → **403** `"Missing required capability: fleet.manage"` (was
+**201** before the fix); AGENT `GET /documents/car/:id` → still **200**;
+OWNER unaffected. No re-seed needed — `fleet.view`/`fleet.manage` are
+already granted on every existing membership per the accidents precedent.
+
+**Also noted, not fixed (dead code, lower priority):** `findExpiringSoon()`
+and `createCarDocument()` in the same file are unreachable — grepped every
+caller, neither is invoked anywhere (the cron does its own separate inline
+query instead of calling `findExpiringSoon`). Same shape as finding #12
+(`generateTrustQr`) — a "legacy helper" comment that's now stale. Not urgent
+since it's unreachable, but `findExpiringSoon`'s own `status:'VALID'` filter
+would inherit the exact same staleness bug the moment someone wires it up.
+
+**Tests:** new `documents.service.spec.ts` (module had **0** specs) — the
+staleness fix pinned for both list methods plus a genuinely-still-valid
+control case (proves the fix doesn't just always return EXPIRED), both new
+P2 list caps, and `create()`/`renew()`'s status derivation at write time.
+Cross-tenant 404 on `findAllForCar` is already covered in
+`common/multi-tenant-boundary.spec.ts` — not duplicated.
+
+**Verified (real output):** `tsc --noEmit` clean; `jest` **39 suites / 305
+tests** (baseline 38/298 — +1 suite, +7 tests); `eslint .` clean. Smoke-test
+document rows deleted from the dev DB afterward — no residue.
