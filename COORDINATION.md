@@ -1485,3 +1485,23 @@ against the running backend + dev Postgres: created a real booking
 automation engine ran without error on the happy path (no regression from
 adding the guard), then cleaned up the booking/invoice/payment and restored
 the car's status — no residue left in the shared dev DB.
+
+---
+
+### R21 — last P2 unbounded reads capped (Architect, 2026-07-23)
+Commit `d528968`. The two P2 reads QA explicitly left for the Executor after they
+capped cars/customers/tasks/maintenance/payments. Backward-compatible caps (flat
+array + existing orderBy preserved, just a `take` ceiling — no consumer change).
+
+- `documents.service.ts`: `findAllForAgency` (Guardian Vault, agency-wide) →
+  `take 500`; `findAllForCar` (one car's docs) → `take 100`.
+- `saas-admin.service.ts`: `getPlatformOverview` tenant roster → `take 500`.
+
+**Deliberately NOT capped** (capping would be a correctness bug, not a fix):
+`documents.findExpiringSoon` — the cron compliance sweep must see every expiring
+doc; `saas-admin.getFounderMetrics` — it sums MRR across ALL subscriptions, so a
+cap corrupts the figure (wants a DB aggregate). Both noted in-code.
+
+This closes the P2 unbounded-list lane. `tsc`/`eslint` clean, backend **38 suites
+/ 298 tests**. Landed via the atomic `add && commit && push` + `git diff --cached`
+guard (only the 2 service files staged).
