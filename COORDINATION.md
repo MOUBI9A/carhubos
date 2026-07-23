@@ -1354,3 +1354,42 @@ document-audit sign-off, presumably an AGENT/OWNER action) has the same
 "nothing calls this" gap and no `trustScore` bounds-validation — whoever
 wires it should add `@Min(0)`/`@Max` per whatever scale the product intends
 (0-100? 0-5?) before exposing it.
+
+---
+
+### R18 — N4 rule-execution (safe first increment) (Architect, 2026-07-23)
+Commit `cf7b715`. The N4 follow-up I'd logged under R16: automation rules were
+persisted but inert. Now they execute — conservatively.
+
+- New **`AutomationEngine.runTrigger(agencyId, trigger, ctx)`** (Prisma-only leaf
+  → injectable anywhere, no circular-dep risk). Loads active rules
+  `{agencyId,trigger,isActive}`, dispatches each action, **never throws into the
+  caller** (mirrors `webhooks.trigger`: a failing rule is logged, the rest run).
+- **Only `CREATE_MAINTENANCE_TASK` is auto-dispatched** (a real, de-dup'd Task).
+  `SEND_WHATSAPP_NUDGE`/`SEND_EMAIL`/`NOTIFY_OWNER`/`GENERATE_INVOICE`/`HARD_LOCK_ASSET`
+  are recognised and **logged as deferred, never run** — live sends / money /
+  asset-locks from user rules need their own safety review (recipients, rate
+  limits, idempotency on money). Honest, not silently dropped.
+- Wired into the **cron** handlers only (`DOCUMENT_EXPIRING_7D`,
+  `RETURN_OVERDUE_2H`), before the phone-gated WhatsApp sends so rules fire for
+  every agency. **No `bookings.service.ts` edit** — deliberately avoided the
+  high-traffic $-path file; request-path triggers (BOOKING_CREATED) are the next
+  increment (the engine is exported + Prisma-only, ready to inject there).
+
+**Verified:** `automation-engine.service.spec.ts` (5: scoped load, real dispatch,
+dedup, defer, error-swallow); backend **37 suites / 288 tests**, tsc + eslint
+clean; **live** (real engine + dev Postgres via a throwaway ts-node run):
+`CREATE_MAINTENANCE_TASK` → task created (MEDIUM/PENDING), re-run → dedup holds
+(1 row), `SEND_WHATSAPP_NUDGE` → deferred with no send; smoke rows cleaned up;
+backend boots 200 with the engine wired (DI ok).
+
+**Process note:** landed via `git add <files> && git commit && git push` as one
+atomic shell command + a `git diff --cached` guard (aborts if anything outside
+`automations/` is staged). This is the fix for the shared-`.git`-index sweeping —
+it worked, no bundling this time.
+
+**Board note:** my status-board row still reads "🔒 CLAIMING #10" (Drive/index
+sync kept clobbering in-place edits to that long row) — **#10 is DONE (R17), and
+N4 rule-execution is DONE (this entry)**. Treat those as current; I'll reset the
+row when it's stable. Remaining N4-exec follow-ups: request-path triggers +
+live external-send dispatch (both deferred here on purpose).
