@@ -49,10 +49,14 @@ export class CustomersService {
 
     const where: Prisma.CustomerWhereInput = { agencyId };
     if (search) {
-      // SQLite: 'contains' is case-insensitive by default (no `mode` support)
+      // Postgres 'contains' is case-sensitive by default — mode:'insensitive'
+      // on the name fields so e.g. "amine" still finds "Amine" (previously
+      // missed on this DB; the stale comment above claimed SQLite behavior
+      // this app hasn't run on since Phase 2). phone is numeric — no case to
+      // fold, matching search.service.ts's own precedent for the same field.
       where.OR = [
-        { firstName: { contains: search } },
-        { lastName: { contains: search } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
       ];
     }
@@ -65,9 +69,13 @@ export class CustomersService {
       orderBy: { createdAt: 'desc' },
     } satisfies Prisma.CustomerFindManyArgs;
 
-    // Legacy shape — bare array — when pagination isn't requested
+    // Legacy shape — bare array — when pagination isn't requested. Capped
+    // (P2 backlog: this was the one unbounded default path), not paginated,
+    // so the existing flat-array consumers (useCustomers/useBookings on the
+    // frontend) are unchanged; callers who need the whole directory can
+    // still opt into the paginated envelope below.
     if (page === undefined && limit === undefined) {
-      return this.prisma.customer.findMany(listArgs);
+      return this.prisma.customer.findMany({ ...listArgs, take: 500 });
     }
 
     const currentPage = page ?? 1;

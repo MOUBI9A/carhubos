@@ -260,3 +260,45 @@ describe('CustomersService.findOne — tenant scope + lifetimeSpend', () => {
     });
   });
 });
+
+describe('CustomersService.findAll — legacy bare-array path (P2 backlog)', () => {
+  it('caps the legacy (no page/limit) path at 500 rows, scoped by agencyId', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CustomersService({ customer: { findMany } } as any, makeAudit() as any);
+
+    await svc.findAll(AGENCY);
+
+    expect(findMany.mock.calls[0][0].take).toBe(500);
+    expect(findMany.mock.calls[0][0].where).toEqual({ agencyId: AGENCY });
+  });
+
+  it('search is case-insensitive on name fields (Postgres contains is case-sensitive by default)', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CustomersService({ customer: { findMany } } as any, makeAudit() as any);
+
+    await svc.findAll(AGENCY, { search: 'amina' });
+
+    const where = findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual([
+      { firstName: { contains: 'amina', mode: 'insensitive' } },
+      { lastName: { contains: 'amina', mode: 'insensitive' } },
+      { phone: { contains: 'amina' } },
+    ]);
+  });
+
+  it('does NOT cap the paginated envelope path — take comes from limit instead', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const prisma = {
+      customer: { findMany, count },
+      $transaction: jest.fn((ops: any[]) => Promise.all(ops)),
+    };
+    const svc = new CustomersService(prisma as any, makeAudit() as any);
+
+    const result = await svc.findAll(AGENCY, { page: 2, limit: 10 });
+
+    expect(findMany.mock.calls[0][0].take).toBe(10);
+    expect(findMany.mock.calls[0][0].skip).toBe(10);
+    expect(result).toEqual({ items: [], total: 0, page: 2, limit: 10 });
+  });
+});
