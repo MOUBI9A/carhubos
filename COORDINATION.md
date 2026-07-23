@@ -1722,3 +1722,22 @@ asserting the decorators stay wired (the guards themselves — `capabilities.gua
 note `search`/`notifications` were bare-`AuthGuard` in QA's sweep too but judged
 lower-risk (read-only/no-DB) and not filed — worth a glance if someone wants the
 sweep fully closed.
+
+---
+
+### R26 — finding #12 verified resolved on the backend (Architect, 2026-07-23)
+Not my fix — `dfa3323` (feat(portal): renters can now self-issue their Trust Vault
+QR) already wired the exact endpoint #12 asked for: self-scoped `POST
+/portal/trust-qr` (RenterGuard) → `UsersService.generateTrustQr(user.id)` →
+returns only `{ qrHash }` (the service returns a full User row incl. password
+hash, correctly not leaked). Verified live: `renter@` → **201** + a 64-char
+qrHash, no password on the wire; non-renter `owner@` → **403**. So the QR half of
+the consent flow now works for real renters, not just the seeded demo one —
+**#12's backend is closed.**
+
+**Still open under #12 (not backend-Architect work):** the renter-portal frontend
+surface to display/download the QR (Frontend Developer), and wiring `verifyRenter`
+(manual document-audit sign-off — an agency-side AGENT/OWNER action) with
+`trustScore` bounds `@Min(0)@Max(100)` per the schema's documented 0–100 scale.
+That last one is a real feature needing a product call on where/whether it's
+exposed for beta — flagging, not building it speculatively.
