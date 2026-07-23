@@ -1800,3 +1800,47 @@ existing (well-tested) reconcile — a webhook success creates a VERIFIED CARD
 INCOME payment + reconciles the invoice. Stage 1 (schema + abstraction) commits
 first, green; Stage 2 (endpoints + settlement) second. NEVER commits real keys —
 those are the founder's `.env` (gitignored).
+
+---
+
+### R28 — Automations page: "New rule" and rule-toggle silently faked success on every real failure (Frontend Developer, 2026-07-23)
+
+**File:** `frontend/src/app/(owner)/dashboard/automations/page.tsx`. No backend
+change — `automations.controller.ts`/`.service.ts` already fully implement
+GET/POST/PATCH/DELETE (capability-gated `settings.manage`, per R16/R18-R20).
+
+Found while sweeping the frontend for other `ai-vision`-shaped bugs (finding
+#11's pattern: looks fully wired, real network call, still always fails).
+`handleCreateRule`'s POST body was `{ name, trigger, action, isActive: true,
+type: 'CRM' }` — `type` is a client-only icon-grouping concept
+(`SYSTEM|MAINTENANCE|CRM|FINANCE`) with no column on `AutomationRule` at all;
+the global `ValidationPipe`'s `forbidNonWhitelisted` rejects it every time.
+**Live-confirmed, not assumed:** identical payload without `type` → **201**;
+with it → **400** `"property type should not exist"`, repeatably. The
+`catch` block didn't surface that — it fabricated a fake local rule with a
+`custom-${Date.now()}` id, added it to state, and showed a **success** toast
+("Decision tree is now active in the system"). `toggleRule` had the same
+shape: a failed PATCH silently flipped the local `isActive` anyway and
+called it "Status Toggled." Reload the page and every "created"/"toggled"
+rule from a failed call is just gone — never persisted, never real.
+
+**Also fixed, same sweep:** `res.data`/fetched rows from the real backend
+never have `.type` (it's not a column), but the render unconditionally
+displays `{rule.type}` in the "Type" column — every real (non-fake) rule
+was rendering the literal text `undefined` there. Defaulted to `'CRM'`
+client-side (the only category this form can create) instead.
+
+**Fix:** dropped `type` from the POST body; both `handleCreateRule` and
+`toggleRule` now show a real `danger` toast with the backend's actual
+message (`apiErrorMessage`, same helper as `accidents/page.tsx`) on failure
+instead of faking state; `fetchAutomations`'s catch now also toasts instead
+of silently going empty.
+
+**Verified (real output):** `tsc`/`eslint` clean, `vitest` 9/9 unaffected
+(no backend touched). Live round-trip as OWNER: old payload → 400 (proved
+the bug existed), fixed payload → 201, `GET /automations` showed the real
+persisted row, `DELETE` cleaned it up afterward — dev DB unchanged.
+
+**Left `schema.prisma`/`payment-gateway` completely untouched** — the
+Architect's payments-gateway claim (`CheckoutSession` migration) was mid-edit
+in the shared tree when I checked; staged only my one frontend file.

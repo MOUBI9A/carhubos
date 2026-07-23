@@ -95,6 +95,14 @@ const SYSTEM_RULES: Automation[] = [
   },
 ];
 
+function apiErrorMessage(err: unknown, fallback: string): string {
+  const msg =
+    (err as any)?.response?.data?.message ||
+    (err as any)?.message ||
+    fallback;
+  return Array.isArray(msg) ? msg.join(' ') : String(msg);
+}
+
 export default function AutomationHub() {
   const t = useTranslations('ownerPages');
   const { showToast } = useToast();
@@ -107,14 +115,18 @@ export default function AutomationHub() {
     try {
       setIsLoading(true);
       const res = await api.get('/automations');
-      setCustomRules(res.data);
-    } catch {
-      // Endpoint may not be REST-based (it's cron-only backend), show system rules only
+      // `type` is a client-only icon-grouping concept the backend doesn't
+      // store (see handleCreateRule) — every rule made through this UI is
+      // CRM-triggered today, so default the fetched (real) rows the same way
+      // rather than rendering `undefined` in the "Type" column.
+      setCustomRules(res.data.map((r: Automation) => ({ ...r, type: r.type ?? 'CRM' })));
+    } catch (err) {
       setCustomRules([]);
+      showToast('danger', 'Could Not Load Rules', apiErrorMessage(err, 'Failed to fetch your automation rules.'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchAutomations();
@@ -128,24 +140,15 @@ export default function AutomationHub() {
     const action = formData.get('action') as string;
 
     try {
-      const res = await api.post('/automations', { name, trigger, action, isActive: true, type: 'CRM' });
-      setCustomRules(prev => [res.data, ...prev]);
+      // `type` is a client-only icon-grouping concept — AutomationRule has no
+      // such column, and the global ValidationPipe's forbidNonWhitelisted
+      // rejects it with 400 if sent, so it must never go on the wire.
+      const res = await api.post('/automations', { name, trigger, action, isActive: true });
+      setCustomRules(prev => [{ ...res.data, type: 'CRM' }, ...prev]);
       setIsAddRuleModalOpen(false);
       showToast('success', 'Rule Deployed', 'New automation rule is now active.');
-    } catch {
-      // If POST isn't implemented, add locally for demo
-      const newRule: Automation = {
-        id: `custom-${Date.now()}`,
-        name,
-        trigger,
-        action,
-        isActive: true,
-        type: 'CRM',
-        executionCount: 0,
-      };
-      setCustomRules(prev => [newRule, ...prev]);
-      setIsAddRuleModalOpen(false);
-      showToast('success', 'Rule Constructed', 'Decision tree is now active in the system.');
+    } catch (err) {
+      showToast('danger', 'Could Not Create Rule', apiErrorMessage(err, 'The backend rejected this rule.'));
     }
   };
 
@@ -156,10 +159,8 @@ export default function AutomationHub() {
       await api.patch(`/automations/${rule.id}`, { isActive: newStatus });
       setCustomRules(prev => prev.map(r => r.id === rule.id ? { ...r, isActive: newStatus } : r));
       showToast('info', 'Status Updated', `Rule "${rule.name}" ${newStatus ? 'activated' : 'paused'}.`);
-    } catch {
-      // Optimistic local toggle if no endpoint
-      setCustomRules(prev => prev.map(r => r.id === rule.id ? { ...r, isActive: newStatus } : r));
-      showToast('info', 'Status Toggled', `Rule state changed locally.`);
+    } catch (err) {
+      showToast('danger', 'Update Failed', apiErrorMessage(err, `Could not update "${rule.name}".`));
     } finally {
       setTogglingId(null);
     }
