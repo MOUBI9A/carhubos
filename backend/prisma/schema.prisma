@@ -22,6 +22,7 @@ model Agency {
   logoUrl          String? // Cloud storage URL
   contactEmail     String    @unique
   businessPhone    String?
+  website          String? // Public site shown on the settings page + landing profile
   status           String    @default("ACTIVE") // ACTIVE, SUSPENDED
   subscriptionTier String    @default("STARTER") // STARTER, PRO, BUSINESS
   createdAt        DateTime  @default(now())

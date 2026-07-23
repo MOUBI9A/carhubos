@@ -129,3 +129,36 @@ describe('AgenciesService.getMyAgency — tombstone filter', () => {
     );
   });
 });
+
+describe('AgenciesService.updateMyAgency', () => {
+  // Regression guard for the live bug this session: `website` was accepted
+  // by the DTO/frontend but had no backing column on Agency, so any update
+  // including it 500'd (fixed by the additive `website` column + migration
+  // 20260723144413_add_agency_website). A mocked Prisma can't catch a
+  // missing-column error itself (that only surfaces against the real DB —
+  // verified live via HTTP), but this pins that the service forwards every
+  // field, including website, so a future edit can't silently drop it again.
+  it('forwards every updatable field, including website, to prisma.agency.update', async () => {
+    const update = jest.fn((args: any) => Promise.resolve({ id: 'a1', ...args.data }));
+    const svc = new AgenciesService({ agency: { update } } as any);
+
+    await svc.updateMyAgency('a1', {
+      name: 'New Name',
+      contactEmail: 'new@x.ma',
+      businessPhone: '+212600000000',
+      address: '123 Rue',
+      website: 'https://example.com',
+    });
+
+    expect(update.mock.calls[0][0]).toEqual({
+      where: { id: 'a1' },
+      data: {
+        name: 'New Name',
+        contactEmail: 'new@x.ma',
+        businessPhone: '+212600000000',
+        address: '123 Rue',
+        website: 'https://example.com',
+      },
+    });
+  });
+});
