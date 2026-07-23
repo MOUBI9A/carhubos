@@ -39,6 +39,8 @@ import { ConsentModule } from './consent/consent.module';
 import { PortalModule } from './portal/portal.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { AccidentsModule } from './accidents/accidents.module';
+import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
@@ -86,6 +88,8 @@ import { AccidentsModule } from './accidents/accidents.module';
     PortalModule,
     EntitlementsModule,
     AccidentsModule,
+    PaymentGatewayModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [

@@ -191,6 +191,59 @@ export class PaymentsService {
     return updatedPayment;
   }
 
+  /**
+   * Settle an online CheckoutSession from a confirmed gateway payment. Called by
+   * the webhook path (no auth context — the gateway is the caller; the session's
+   * own agencyId/invoice are the authority). IDEMPOTENT: the PENDING→PAID
+   * transition is an updateMany guard inside the transaction, so a webhook the
+   * gateway delivers more than once (or two racing deliveries) settles the
+   * invoice exactly once — only the delivery that actually flips the row creates
+   * the VERIFIED payment and reconciles. The amount charged is the session's own
+   * Prisma.Decimal (set from the invoice at checkout time) — never a
+   * gateway-reported number — so a tampered webhook amount can't over-settle.
+   * Reuses reconcileInvoice, the same path manual payments use.
+   */
+  async settleCheckout(providerRef: string, method = 'CARD') {
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.checkoutSession.findUnique({
+        where: { providerRef },
+        include: { invoice: true },
+      });
+      if (!session) {
+        throw new NotFoundException('Checkout session not found.');
+      }
+      if (!session.invoiceId || !session.invoice) {
+        // Non-invoice checkout (e.g. a future SaaS-subscription purpose) — no
+        // invoice to reconcile here; leave that to its own settler.
+        return { settled: false as const, reason: 'no-invoice' };
+      }
+
+      // Idempotency guard: only the first delivery flips PENDING → PAID.
+      const flip = await tx.checkoutSession.updateMany({
+        where: { id: session.id, status: 'PENDING' },
+        data: { status: 'PAID', paidAt: new Date() },
+      });
+      if (flip.count === 0) {
+        return { settled: false as const, alreadySettled: true };
+      }
+
+      await tx.payment.create({
+        data: {
+          amount: session.amount,
+          method,
+          type: 'INCOME',
+          status: 'VERIFIED',
+          reference: providerRef,
+          invoiceId: session.invoiceId,
+          date: new Date(),
+        },
+      });
+
+      await this.reconcileInvoice(tx, session.invoiceId, session.invoice.amount);
+      return { settled: true as const };
+    });
+  }
+
   /** Net verified INCOME − REFUND in integer cents for an invoice. */
   private async netVerifiedIncomeCents(invoiceId: string): Promise<number> {
     const [incomeAgg, refundAgg] = await Promise.all([
