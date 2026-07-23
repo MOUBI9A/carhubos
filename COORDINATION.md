@@ -90,7 +90,7 @@ push **is** the message.
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
 | **Frontend Developer** | **Finding #4 (Hub page wiring) DONE + pushed (`748aed5`).** Marketplace grid now sources `GET /hub/discover` via new colocated `useHubDiscover()` hook (TanStack Query) — real loading (skeleton)/error (reconnect)/empty states; stats row is now real aggregates computed over the feed, not the old fabricated KPIs. Listing modal got a car picker (reused `Combobox`, same pattern as the owner-dashboard booking modal) sourced from this agency's own AVAILABLE fleet via the existing `useFleet()` hook, so `POST /hub/list` finally gets a real `carId` — new `useListOnHub()` mutation invalidates the discover query on success and surfaces the backend's own 409/404 on error. "My fleet listings" tab and the B2B "Request" button stay honestly unwired (no endpoint returns this agency's own listings; no B2B request endpoint exists) instead of showing fake data — see note below. Scanned Open lanes/findings for a next unclaimed frontend-appropriate item: nothing qualifies right now (Lane 1 needs Architect-owned schema/backend work first; finding #2's "unclaimed" tag looks stale against R2, which already covers `erp`+`TrustConsole` a11y). **Claim released, available for next assignment.** | None claimed. | 2026-07-21 |
-| **QA Tester** | **Reviewed N4-exec (`cf7b715`) — clean** (tenant-scoped rule load, conservative auto-dispatch allowlist, per-rule error-swallowing, correct per-row `agencyId` threading — see prior row for detail). **Capped `cars.service.ts` (`3cfed1a`) and `customers.service.ts` (`e2af059`)** — the last two P2-flagged unbounded reads I'm picking up (`documents`/`saas-admin.service.ts` still open, tagged M, leaving for the Executor). Customers' fix also closed a previously-noted-but-unfixed bug in the same lines: search's stale "SQLite is case-insensitive" comment (app's been on Postgres since Phase 2) meant a lowercase query like `?search=omar` silently missed `"Omar Fassi"` — added `mode:'insensitive'` on the name fields, live-verified the exact query now finds the seeded customer. Backend **38 suites / 295 tests**, tsc+eslint clean. **That's every P2 unbounded-list item now closed except `documents.service.ts` and `saas-admin.service.ts` (both M, both left for the Executor).** **Claim released, available for next.** | None claimed. | 2026-07-23 |
+| **QA Tester** | **Reviewed N4-exec's BOOKING_CREATED wiring (`fa7b9f0`) — found a real gap, fixed it (`069b425`).** Checked the "runTrigger never throws" claim against the code instead of trusting the docstring: only the per-rule dispatch loop was try/caught — the initial `automationRule.findMany` (loading the rules) was NOT, so a DB hiccup there would propagate straight through `bookings.service.ts create()`'s synchronous `await` **after the booking/invoice/payment had already committed** — an already-successful booking would 500 to the client. Reproduced with a failing test first. Checked whether this was new or pre-existing: `WebhooksService.trigger` (what `runTrigger` explicitly mirrors, sitting at the same two bookings.service.ts call sites) had the **identical, pre-existing** gap — fixed both the same way (wrap the lookup in try/catch, log, return a safe empty result). New regression tests on both (webhooks.spec.ts had **zero** coverage on `trigger()` itself). Backend **38 suites / 298 tests**, tsc+eslint clean. Live end-to-end: created a real booking, both webhook + automation engine fired without error, cleaned up. Also **capped `cars.service.ts` (`3cfed1a`) and `customers.service.ts` (`e2af059`)** — last two P2 unbounded reads (`documents`/`saas-admin.service.ts` still open, tagged M, left for the Executor); customers' fix also closed a previously-noted case-sensitive-search bug in the same lines. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
 > `.github/workflows/ci.yml` + `backend/test/*.e2e-spec.ts`) — no collision
@@ -1425,3 +1425,63 @@ dispatch — `SEND_WHATSAPP_NUDGE`, `SEND_EMAIL`, `NOTIFY_OWNER`, `GENERATE_INVO
 `HARD_LOCK_ASSET` are still recognised-and-logged, not executed. Firing those from
 user rules needs its own safety design (recipients, rate limits, idempotency on
 money/asset state) — a dedicated task, not a tail-of-session add.
+
+---
+
+### R20 — `runTrigger`/`trigger` could still throw on the request path, breaking an already-successful booking (QA Tester, 2026-07-23)
+
+Commit `069b425`. Reviewing R19's `BOOKING_CREATED` wiring (`fa7b9f0` —
+`bookings.service.ts create()` now `await`s `automationEngine.runTrigger(...)`
+synchronously, right after the booking/invoice/payment `$transaction` has
+already committed), I checked the engine's own claim — "NEVER throw into the
+caller" — against the code instead of taking the docstring at its word.
+
+**The gap:** `AutomationEngine.runTrigger` wrapped the per-rule dispatch loop
+in try/catch, but the *first* line — `this.prisma.automationRule.findMany({
+where: {agencyId, trigger, isActive: true} })`, loading the rules — had no
+guard at all. **Reproduced with a failing test before touching any source**:
+a rejected `findMany` propagated straight out of `runTrigger` as a rejected
+promise.
+
+**Why it matters more than a typical try/catch gap:** the call site is
+`bookings.service.ts create()`, *after* the money-critical transaction
+(booking + invoice + payment) has already committed successfully. A
+transient DB hiccup landing at exactly that moment — connection pool
+exhaustion, a brief network blip, anything — would have turned an
+**already-successful booking** into a `500` response to the client. The
+booking, invoice and payment all exist correctly in the DB; the renter/agent
+just sees a failure, and may retry (risking a second booking attempt) or
+lose trust in the product. Not reachable today in the sense of "someone
+found an exploit" — this is a reliability/correctness gap under transient
+infra failure, not an authz/tenant bug — but real and worth closing before
+go-live, not after an incident.
+
+**Checked whether this was novel or inherited** before writing it up:
+`WebhooksService.trigger` — the exact pattern `runTrigger`'s own docstring
+says it mirrors, sitting at the *same two* `bookings.service.ts` call sites
+(`BOOKING_CREATED` and `BOOKING_STATUS_UPDATED`) — had the **identical,
+pre-existing** gap: `webhookSubscription.findMany` was unguarded (the
+per-subscription sends were already safe — fire-and-forget `.catch()`, not
+awaited — only the lookup wasn't). This predates today; the automations
+work just added a second, adjacent instance of the same shape, which is
+what surfaced it.
+
+**Fix, identical shape in both files:** wrap the lookup in try/catch, log
+the error, return a safe default (`{matched:0,dispatched:0,deferred:0}` /
+`undefined`) instead of letting the rejection propagate. Per-item work in
+both was already exception-safe; only the lookup step wasn't.
+
+**Tests:** the failing repro was promoted to a permanent regression test in
+`automation-engine.service.spec.ts` (asserts `runTrigger` *resolves*, not
+rejects, on a `findMany` failure). New `WebhooksService.trigger` describe
+block in `webhooks.spec.ts` — that method had **zero** prior coverage —
+covering the same resolve-not-reject guarantee plus a happy-path sanity
+check that real subscriptions still fire when the lookup succeeds.
+
+**Verified (real output):** `tsc --noEmit` clean; `jest` **38 suites / 298
+tests** (baseline 38/295 — +3 tests); `eslint .` clean. **Live end-to-end**
+against the running backend + dev Postgres: created a real booking
+(`POST /bookings` → 201), confirmed both the webhook trigger and the
+automation engine ran without error on the happy path (no regression from
+adding the guard), then cleaned up the booking/invoice/payment and restored
+the car's status — no residue left in the shared dev DB.
