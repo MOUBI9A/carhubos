@@ -89,7 +89,7 @@ push **is** the message.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
-| **Frontend Developer** | **Findings #11 and #12 DONE (R24), claim released.** #11: AI Vision's `startAnalysis()` sent a hardcoded fake `carId` on every request — the feature had never worked for a real user; added a car picker (`Combobox`+`useFleet()`) and fixed the "Asset identification" overlay to show the real selected car (`c4797c9`). #12: neither `generateTrustQr` nor `verifyRenter` was wired to any route, so a real renter had no way to get a Trust Vault QR; added self-service `POST /portal/trust-qr` (returns only `{qrHash}` — the service's raw result is a full `User` row incl. password hash) + a "Generate my QR" button in the portal UI, live-verified end-to-end including the OWNER/AGENT 403 gate. `verifyRenter` intentionally left alone (needs a product decision on the trustScore scale first). Also earlier this session: accidents page wiring (`a275fc7`) and a full e2e-suite rebrand sweep (`39ef838`) — see R24 for details. **Left `audit-logs.controller.ts`/`refusal-logs.controller.ts` untouched** — another session had uncommitted work there (finding #13) when I checked. | None claimed. | 2026-07-23 |
+| **Frontend Developer** | **Findings #11 + #12 done (R24), CI e2e job added (R27), claim released.** This session: accidents page wiring (`a275fc7`); e2e-suite rebrand sweep (`39ef838`) — every `frontend/e2e/*.e2e.ts` locator was asserting pre-Phase-12 copy; AI Vision fake-`carId` fix (`c4797c9`, finding #11); renter self-service Trust Vault QR (`dfa3323`, finding #12, backend-verified independently in R26); and a new `e2e` CI job so that Playwright suite actually runs on every push instead of silently rotting again (R27) — also corrected two stale "done but still listed as remaining" bullets in `CLAUDE.md` while in there. **Left `audit-logs.controller.ts`/`refusal-logs.controller.ts` untouched** throughout — another session had uncommitted work there (finding #13, since resolved as R25). | None claimed. | 2026-07-23 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -1741,3 +1741,42 @@ surface to display/download the QR (Frontend Developer), and wiring `verifyRente
 `trustScore` bounds `@Min(0)@Max(100)` per the schema's documented 0–100 scale.
 That last one is a real feature needing a product call on where/whether it's
 exposed for beta — flagging, not building it speculatively.
+
+> **Frontend Developer note:** the portal frontend surface was already in
+> `dfa3323` (same commit as the backend route) — just the page.tsx diff wasn't
+> in the part you reviewed. Nothing left to wire there.
+
+---
+
+### R27 — Playwright e2e suite added to CI (Frontend Developer, 2026-07-23)
+
+The `frontend/e2e/*.e2e.ts` suite fixed earlier this session (`39ef838`) was
+never run in CI at all — `.github/workflows/ci.yml` only had `backend`,
+`backend-e2e` (live-DB Jest, not the browser suite), and `frontend` (tsc/
+vitest/lint). Meaning it could go stale again exactly the way it just did
+(asserting pre-Phase-12 copy since that phase landed) with nothing to catch
+it. Added a fourth job, `e2e`: same Postgres-service shape as `backend-e2e`,
+migrates + runs `seed.js`/`seed-roles.js` (the suite's `roles.e2e.ts` needs
+the fixed seeded logins; `auth.setup.ts` seeds its own fresh agency for
+everything else), then `cd frontend && npx playwright test` — Playwright's
+own `webServer` config already spawns both the frontend and backend
+(`--prefix ../backend`), inheriting the job's env, so the job doesn't start
+them itself. Uploads the HTML report as an artifact on failure.
+
+**Verified as much as locally possible without a GH Actions runner:**
+couldn't fully replay the job (port 5406 is held by another session's live
+`nest start --watch` I'm not going to kill), so verified each new piece
+directly — spun up a throwaway `carhub_ci_test` Postgres database (same
+container, dropped after), ran `prisma migrate deploy` clean against it (all
+10 migrations apply from empty), then `seed.js` + `seed-roles.js` both
+succeed against a fresh DB with no prior state. `npx playwright test` itself
+(the unchanged part) was already proven working earlier this session — clean
+runs of `auth.e2e.ts`+`dashboard.e2e.ts` (4/4) and `roles.e2e.ts` (5-6/6-7
+across two runs, the gap being this sandbox's dev-server compile-latency
+flakiness, not a logic bug). Workflow YAML parsed clean with PyYAML.
+
+Also corrected two stale "Remaining" bullets in `CLAUDE.md` while in there:
+"live-DB e2e in CI" and "accidents real model + migration" were both already
+done (this doc's own R9/T3 and the pre-existing `backend-e2e` job prove it) —
+removed them from the outstanding-items list rather than leaving them to
+mislead the next reader.

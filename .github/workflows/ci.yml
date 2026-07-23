@@ -114,3 +114,72 @@ jobs:
 
       - name: Lint
         run: npx eslint .
+
+  e2e:
+    name: E2E (Playwright, full stack)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: carhub_ci
+          POSTGRES_PASSWORD: carhub_ci
+          POSTGRES_DB: carhub_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carhub_ci -d carhub_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://carhub_ci:carhub_ci@localhost:5432/carhub_ci?schema=public
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-real
+      IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
+      ALLOWED_ORIGINS: http://localhost:3002
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      # The frontend's Playwright config spawns the backend itself (`npm run
+      # start:dev --prefix ../backend`) as one of its two webServers, so the
+      # DB just needs to be migrated + seeded here — the servers are started
+      # by Playwright, not this job.
+      - name: Prisma generate + migrate + seed
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          node prisma/seed.js
+          node prisma/seed-roles.js
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e suite
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
