@@ -17,7 +17,15 @@ const AGENCY_DOC_CAP = 500;
 export class DocumentsService {
   constructor(private prisma: PrismaService) {}
 
-  /** VALID / EXPIRING_SOON (≤30 days) / EXPIRED, derived from the expiry date. */
+  /**
+   * VALID / EXPIRING_SOON (≤30 days) / EXPIRED, derived from the expiry date.
+   * Used at write time (create/renew) AND at read time (findAllForCar/
+   * findAllForAgency) — nothing else in the backend ever updates the stored
+   * `status` column as real time passes, so trusting it verbatim on read
+   * would drift stale (a document created "VALID" stays "VALID" in the DB
+   * forever, even long after its real expiryDate has passed). Always
+   * recompute from `expiryDate` wherever status is displayed.
+   */
   private deriveStatus(expiryDate: Date): string {
     const now = new Date();
     if (expiryDate <= now) return 'EXPIRED';
@@ -66,16 +74,17 @@ export class DocumentsService {
 
   async findAllForCar(agencyId: string, carId: string) {
     await this.assertCarOwnership(agencyId, carId);
-    return this.prisma.carDocument.findMany({
+    const docs = await this.prisma.carDocument.findMany({
       where: { carId },
       orderBy: { expiryDate: 'asc' },
       take: CAR_DOC_CAP,
     });
+    return docs.map((d) => ({ ...d, status: this.deriveStatus(d.expiryDate) }));
   }
 
   /** Agency-wide compliance view (Guardian Vault) — every document across the fleet. */
   async findAllForAgency(agencyId: string) {
-    return this.prisma.carDocument.findMany({
+    const docs = await this.prisma.carDocument.findMany({
       where: { car: { agencyId } },
       include: {
         car: { select: { brand: true, model: true, licensePlate: true } },
@@ -83,6 +92,7 @@ export class DocumentsService {
       orderBy: { expiryDate: 'asc' },
       take: AGENCY_DOC_CAP,
     });
+    return docs.map((d) => ({ ...d, status: this.deriveStatus(d.expiryDate) }));
   }
 
   /** Renewal: new expiry date recomputes the compliance status. */
