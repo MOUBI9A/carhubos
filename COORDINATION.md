@@ -1393,3 +1393,35 @@ sync kept clobbering in-place edits to that long row) — **#10 is DONE (R17), a
 N4 rule-execution is DONE (this entry)**. Treat those as current; I'll reset the
 row when it's stable. Remaining N4-exec follow-ups: request-path triggers +
 live external-send dispatch (both deferred here on purpose).
+
+---
+
+### R19 — N4 rule-execution: BOOKING_CREATED request-path (Architect, 2026-07-23)
+Commit `fa7b9f0`. Continuation of R18 (founder-picked next step). Automation
+rules now also fire on the **request path**, not just cron: creating a booking
+runs the agency's active `BOOKING_CREATED` rules.
+
+- `BookingsService` injects `AutomationEngine` (Prisma-only, exported by
+  `AutomationsModule` — no cycle, it imports only `NotificationsModule`). Injected
+  as an **optional** constructor param so the **8** manual `new BookingsService(6
+  deps)` sites across `bookings.service.spec.ts` + `deposit-lifecycle.spec.ts`
+  keep compiling untouched — Nest still injects it in the app (no `@Optional()`,
+  so it's a required resolution; boot 200 confirms it resolved). Guarded
+  `this.automationEngine?.runTrigger(...)` for the unit-test path.
+- Call sits right after the existing webhook trigger; `runTrigger` never throws,
+  so a rule can't break booking creation. Same conservative dispatch as cron —
+  `CREATE_MAINTENANCE_TASK` only; risky actions deferred+logged.
+
+**Verified:** tsc + eslint clean; backend **38 suites / 295 tests** (both bookings
+specs unchanged + green — the optional param avoided an 8-site cascade); **live
+E2E** on the running app + dev Postgres: created a `BOOKING_CREATED →
+CREATE_MAINTENANCE_TASK` rule, `POST /bookings` → **201**, the rule **fired and
+created the task** (MEDIUM/PENDING); booking+invoice+payment+task+rule all cleaned
+up, car status restored. Landed via the atomic `add && commit && push` + guard
+(only the 2 `bookings/` files staged — no sweep despite the high-traffic file).
+
+**N4-exec remaining (deferred on purpose):** live external-send / stateful
+dispatch — `SEND_WHATSAPP_NUDGE`, `SEND_EMAIL`, `NOTIFY_OWNER`, `GENERATE_INVOICE`,
+`HARD_LOCK_ASSET` are still recognised-and-logged, not executed. Firing those from
+user rules needs its own safety design (recipients, rate limits, idempotency on
+money/asset state) — a dedicated task, not a tail-of-session add.
