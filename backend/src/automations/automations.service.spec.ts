@@ -19,9 +19,10 @@ describe('AutomationsService — rule CRUD tenant boundary (N4)', () => {
     const prisma = { automationRule };
     return new AutomationsService(
       prisma as any,
-      {} as any,
-      {} as any,
-      {} as any,
+      {} as any, // twilio
+      {} as any, // notifications
+      {} as any, // trust
+      {} as any, // automation engine (unused by CRUD)
     );
   }
 

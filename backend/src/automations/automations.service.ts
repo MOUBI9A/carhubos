@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TwilioService } from '../integrations/twilio/twilio.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TrustService } from '../trust/trust.service';
+import { AutomationEngine } from './automation-engine.service';
 import {
   CreateAutomationDto,
   UpdateAutomationDto,
@@ -18,14 +19,17 @@ export class AutomationsService {
     private twilio: TwilioService,
     private notifications: NotificationsService,
     private trust: TrustService,
+    private engine: AutomationEngine,
   ) {}
 
   // ── Agency-configurable rules (CRUD) ──────────────────────────────────────
   // Every query is scoped by the caller's agencyId (from the JWT, never the
   // body); a cross-tenant id makes updateMany/deleteMany affect 0 rows → 404
-  // (CLAUDE.md §5.1). NOTE: these rows are persisted but NOT consulted by the
-  // @Cron handlers below — the built-in automations are still hardcoded. Wiring
-  // rule execution is a tracked follow-up; a stored rule is a definition for now.
+  // (CLAUDE.md §5.1). Execution: the @Cron handlers below now evaluate these
+  // rows via AutomationEngine.runTrigger for the DOCUMENT_EXPIRING_7D and
+  // RETURN_OVERDUE_2H triggers (safe CREATE_MAINTENANCE_TASK dispatch; other
+  // actions deferred). Request-path triggers (e.g. BOOKING_CREATED) are the next
+  // increment — the engine is Prisma-only + exported, ready to inject there.
 
   async findAll(agencyId: string) {
     return this.prisma.automationRule.findMany({
@@ -114,7 +118,15 @@ export class AutomationsService {
         });
       }
 
-      // 2. BP Pillar D: Send real WhatsApp nudge to the Agency Owner
+      // 2. Fire this agency's DOCUMENT_EXPIRING_7D automation rules (persisted
+      // user rules — tenant-scoped + dedup'd inside the engine; placed before the
+      // phone-gated send below so it runs even for agencies with no WhatsApp).
+      await this.engine.runTrigger(doc.car.agencyId, 'DOCUMENT_EXPIRING_7D', {
+        subject: doc.car.licensePlate,
+        detail: `${doc.type} on ${doc.car.brand} ${doc.car.model} (${doc.car.licensePlate}) expires ${doc.expiryDate.toLocaleDateString()}.`,
+      });
+
+      // 3. BP Pillar D: Send real WhatsApp nudge to the Agency Owner
       const daysLeft = Math.ceil((doc.expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       const agencyPhone = doc.car.agency.businessPhone?.trim();
       if (!agencyPhone) {
@@ -171,6 +183,13 @@ export class AutomationsService {
           status: 'PENDING',
           agencyId: booking.agencyId,
         },
+      });
+
+      // Fire this agency's RETURN_OVERDUE_2H automation rules (before the send
+      // below, so a throw in the WhatsApp path can't skip them).
+      await this.engine.runTrigger(booking.agencyId, 'RETURN_OVERDUE_2H', {
+        subject: booking.car.licensePlate,
+        detail: `${booking.car.brand} ${booking.car.model} (${booking.car.licensePlate}) overdue — customer ${booking.customer.firstName} ${booking.customer.lastName}.`,
       });
 
       // 2. Send real WhatsApp alert to the Customer
