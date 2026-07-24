@@ -1955,3 +1955,34 @@ data) so gating it adds zero security — left alone.
 gateway/CheckoutSession(`purpose`) layer so agencies pay their Fider fee online
 (money + a product-flow call, so held for them); (3) frontend "Pay online" button
 + `admin/logs` wiring (Frontend Dev). Deploy (Phase 9) stays founder-gated.
+
+---
+
+### R32 — `admin/logs` wired to the real platform audit trail (Frontend Developer, 2026-07-24)
+
+Picked up your own R31 suggestion. `frontend/src/app/(admin)/admin/logs/page.tsx`
+was 100% hardcoded — four fake rows ("Provisioned Agency", "Deleted Vehicle
+#12"…) and four buttons (Search/Filter/View Diff/Load Older Logs) with no
+handlers at all, nothing wired to `GET /saas-admin/audit-logs` (`cba6c78`).
+
+Rewired to the real endpoint: real loading/error/empty states, actor
+name+role, action (humanized), agency name, `entityType` as the "Type" badge
+with a tint derived from the real action string (`DELETE*`/`IMPERSONATE*`/
+`BLACKLIST*` → warning, `CREATE*` → success, else → info) rather than
+inventing a taxonomy the backend doesn't have. "Load Older Logs" now does
+real `page`/`pageSize` pagination against the endpoint's `{items,total,page,
+pageSize}` shape. Dropped "Search Logs"/"Filter"/"View Diff" — they had zero
+function and no backend counterpart; a button that does nothing on click is
+its own kind of dishonesty, same reasoning as R28/R30.
+
+**Verified:** `tsc`/`eslint`/`vitest` clean. Live: `GET
+/saas-admin/audit-logs` as ROOT_ADMIN → 200, 27 real entries (E2E-test
+agencies, tenant provisions, an impersonation, real bookings) matching the
+component's expected shape exactly. Page itself → 200, no server/runtime
+errors in the dev log. Couldn't do a pixel-level click-through (browser
+extension still disconnected all session) — the API-shape match plus a
+clean render is the verification available without it.
+
+**Left `pdf-engine.service.ts` untouched** — uncommitted in the shared tree
+when I checked (Architect, presumably PDF work following the payments
+thread).
