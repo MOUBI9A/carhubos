@@ -6,6 +6,24 @@ export class PdfEngineService {
   private readonly logger = new Logger(PdfEngineService.name);
 
   /**
+   * HTML-escape user-controlled values before interpolating them into the
+   * contract template. Without this, a customer/car/agency field containing
+   * markup (e.g. a name like `</div><script>…`) would be injected into the
+   * rendered contract — tampering with the legal document and executing in the
+   * Puppeteer page (setContent runs scripts). Applied to every user-editable
+   * string below; numbers/dates are coerced/formatted and can't carry markup.
+   */
+  private esc(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
    * High-fidelity Digital Contract Generator
    */
   async generateContract(booking: any): Promise<Buffer> {
@@ -13,9 +31,9 @@ export class PdfEngineService {
       <div style="font-family: Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: auto;">
         <div style="display: flex; justify-content: space-between; align-items: start; border-bottom: 4px solid #7c3aed; padding-bottom: 20px;">
           <div>
-            <h1 style="text-transform: uppercase; font-weight: 900; color: #7c3aed; margin: 0; font-size: 32px;">${booking.agency.name}</h1>
-            <p style="color: #64748b; font-size: 12px; margin-top: 5px;">${booking.agency.address || 'Address Pending'}</p>
-            <p style="color: #64748b; font-size: 11px; font-weight: bold;">${booking.agency.taxId || ''}</p>
+            <h1 style="text-transform: uppercase; font-weight: 900; color: #7c3aed; margin: 0; font-size: 32px;">${this.esc(booking.agency.name)}</h1>
+            <p style="color: #64748b; font-size: 12px; margin-top: 5px;">${this.esc(booking.agency.address || 'Address Pending')}</p>
+            <p style="color: #64748b; font-size: 11px; font-weight: bold;">${this.esc(booking.agency.taxId || '')}</p>
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #1e293b; font-size: 18px;">CONTRAT DE LOCATION</h2>
@@ -26,15 +44,15 @@ export class PdfEngineService {
         <div style="margin-top: 30px; display: grid; grid-template-cols: 1fr 1fr; gap: 40px;">
           <div style="border: 1px solid #f1f5f9; padding: 15px; border-radius: 8px;">
             <h4 style="text-transform: uppercase; color: #94a3b8; font-size: 10px; margin-bottom: 10px;">Locataire (Customer)</h4>
-            <p style="margin: 0; font-weight: bold; font-size: 16px;">${booking.customer.firstName} ${booking.customer.lastName}</p>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">CIN/Passport: ${booking.customer.identityNumber}</p>
-            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Phone: ${booking.customer.phone}</p>
+            <p style="margin: 0; font-weight: bold; font-size: 16px;">${this.esc(booking.customer.firstName)} ${this.esc(booking.customer.lastName)}</p>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">CIN/Passport: ${this.esc(booking.customer.identityNumber)}</p>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Phone: ${this.esc(booking.customer.phone)}</p>
           </div>
           <div style="border: 1px solid #f1f5f9; padding: 15px; border-radius: 8px;">
             <h4 style="text-transform: uppercase; color: #94a3b8; font-size: 10px; margin-bottom: 10px;">Véhicule (Asset)</h4>
-            <p style="margin: 0; font-weight: bold; font-size: 16px;">${booking.car.brand} ${booking.car.model}</p>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Matricule: ${booking.car.licensePlate}</p>
-            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Kilométrage: ${booking.car.mileage} KM</p>
+            <p style="margin: 0; font-weight: bold; font-size: 16px;">${this.esc(booking.car.brand)} ${this.esc(booking.car.model)}</p>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Matricule: ${this.esc(booking.car.licensePlate)}</p>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Kilométrage: ${this.esc(booking.car.mileage)} KM</p>
           </div>
         </div>
 
@@ -76,28 +94,34 @@ export class PdfEngineService {
     `;
 
     this.logger.log(`[PUPPETEER] Spinning up headless browser to generate contract PDF...`);
+    let browser: puppeteer.Browser | undefined;
     try {
-      const browser = await puppeteer.launch({ 
+      browser = await puppeteer.launch({
         headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       });
       const page = await browser.newPage();
       await page.setContent(html);
-      
+
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
       });
 
-      await browser.close();
       this.logger.log(`[PUPPETEER] Successfully generated PDF buffer.`);
-      
       return Buffer.from(pdfBuffer);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`[PUPPETEER ERROR] Failed to generate PDF: ${message}`);
       throw new Error('PDF Generation failed');
+    } finally {
+      // Always release the browser. Previously close() sat on the success path
+      // only, so a throw in newPage/setContent/pdf() leaked the Chromium process
+      // (memory + handle exhaustion under repeated failures).
+      if (browser) {
+        await browser.close().catch(() => undefined);
+      }
     }
   }
 }
