@@ -5,8 +5,11 @@ import {
   HttpCode,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { CheckoutService } from './checkout.service';
 import { CreateCheckoutDto } from './dto/checkout.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -41,22 +44,21 @@ export class CheckoutController {
    * provider is accepted. Always 200 so the gateway doesn't retry-storm on a
    * duplicate we've already settled (settlement is idempotent).
    *
-   * NOTE: main.ts has no rawBody, so the parsed JSON body is re-stringified here.
-   * That's fine for MOCK; a real Stripe adapter needs the raw bytes for
-   * signature verification — enable `rawBody` on NestFactory.create and read
-   * req.rawBody (documented in stripe.gateway.ts).
+   * Signature verification (Stripe) needs the EXACT raw bytes, so we pass
+   * req.rawBody (main.ts enables rawBody). MOCK has no signature and just
+   * re-parses JSON, so the stringified parsed body is a fine fallback.
    */
   @Post('webhooks/:provider')
   @HttpCode(200)
   handleWebhook(
     @Param('provider') provider: string,
+    @Req() req: RawBodyRequest<Request>,
     @Body() body: unknown,
     @Headers() headers: Record<string, string | undefined>,
   ) {
-    return this.checkout.handleWebhook(
-      provider,
-      JSON.stringify(body ?? {}),
-      headers,
-    );
+    const raw = req.rawBody
+      ? req.rawBody.toString('utf8')
+      : JSON.stringify(body ?? {});
+    return this.checkout.handleWebhook(provider, raw, headers);
   }
 }

@@ -72,9 +72,17 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
   });
 
   it('STRIPE/CMI adapters fail loud until configured — never silently no-op', async () => {
-    await expect(
-      new StripeGateway().createCheckout({} as any),
-    ).rejects.toThrow(/not implemented\/configured/i);
+    const key = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    try {
+      // Stripe is real now but dormant without a key.
+      await expect(
+        new StripeGateway().createCheckout({} as any),
+      ).rejects.toThrow(/STRIPE_SECRET_KEY/i);
+    } finally {
+      if (key !== undefined) process.env.STRIPE_SECRET_KEY = key;
+    }
+    // CMI is still a scaffold (needs a bank merchant contract).
     await expect(new CmiGateway().createCheckout({} as any)).rejects.toThrow(
       /not implemented\/configured/i,
     );

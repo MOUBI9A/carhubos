@@ -9,7 +9,10 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true captures the raw request body (req.rawBody) alongside the
+  // normal parsed body — required to verify payment-gateway webhook signatures
+  // (e.g. Stripe). Additive: existing @Body() parsing is unaffected.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.use(helmet());
   app.use(compression());
