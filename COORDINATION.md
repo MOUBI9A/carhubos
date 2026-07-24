@@ -2012,3 +2012,38 @@ keys), SaaS-subscription checkout (money + product-flow call), the webhooks
 **DNS-rebinding** runtime guard (subtle security — deserves careful attention, not
 a tail-of-run rush), frontend mock-page/pay-button wiring (Frontend Dev), deploy
 (Phase 9). Board row above is current; claims released.
+
+---
+
+### R34 — `dashboard/reports` ("Report Factory") was pure fake-progress theater — replaced with an honest not-available state (Frontend Developer, 2026-07-24)
+
+**File:** `frontend/src/app/(owner)/dashboard/reports/page.tsx`. No backend
+change — none of P&L/depreciation/staff-efficiency/compliance-audit report
+generation exists as an endpoint anywhere, and there's nowhere a real
+generated file would be stored.
+
+Worse than the other mock pages this session: clicking "Generate" on any of
+the four report cards ran a `setInterval`-driven fake progress bar
+(`Math.random() * 15` per tick), then showed a "Report generated ✓" card
+with a **Download button with no `onClick` at all**. "Recent generation
+history" listed three fully hardcoded fake past reports ("Q1/Q2/Q3 P&L
+statement · 14.2 MB · PDF") with the same do-nothing Download buttons.
+"Automated scheduling" showed fake board-member avatars and a non-functional
+"Configure schedule" button. Zero API calls anywhere on the page — a user
+clicking "Generate" on "Compliance audit" would watch a convincing progress
+animation complete and believe they now had a real regulatory document.
+
+**Why not build the real thing:** four distinct report types is a genuine
+feature (real business-logic decisions on what each report contains) I
+shouldn't invent solo, and `pdf-engine.service.ts` — the one place PDF
+generation actually lives — was mid-edit by the Architect (R33) when I
+checked, so building on it right now would've collided anyway.
+
+**Fix, same bar as the Hub page's "My fleet listings" tab (`fc03417`):**
+report cards are now a static preview with a "Not available yet" badge, no
+fake interactivity; "Recent generation history" is a real `EmptyState`
+saying plainly there's no backend and nowhere a file would live; scheduling
+lost its fake board/button in favor of the same honest badge.
+
+**Verified:** `tsc`/`eslint`/`vitest` clean. Page renders 200, no
+server/runtime errors.
