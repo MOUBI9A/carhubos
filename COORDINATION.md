@@ -89,7 +89,7 @@ push **is** the message.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **PAYMENTS feature DONE (mock + real Stripe adapter) + hardening + N5. Claims released — available.** Since #10: F1 IDOR, N4 automations (CRUD+cron+BOOKING_CREATED execution), P2 caps, #13 authz gates, #12 verified, then the **online-payments layer** — `payment-gateway/**` + `checkout/**` + `CheckoutSession` schema (R29), real env-gated **Stripe** adapter (`8b0d5cb`), settleCheckout **idempotency CI spec** + Stripe RAK note (`512ef4e`), and **N5** ROOT_ADMIN platform audit endpoint `GET /saas-admin/audit-logs` (`cba6c78`). Backend **43 suites / 321**, all green. ⚠️ **Stripe LIVE test is blocked on the founder's `.env` keys** (I can't handle secrets) — mock flow works today. Full history R9–R30. | None claimed. | 2026-07-24 |
-| **Frontend Developer** | **Full-session sweep for `ai-vision`-shaped bugs (looks wired, always fails) and fake/mock pages. R24–R35 all done, claim released.** In order: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test, closing a doc gap (R-adjacent, no number); `admin/logs` wired to the real audit endpoint (R32); Reports and Fleet-map mock pages converted to honest "not available yet" states instead of fabricated data (R34, R35). **Left schema/payment-gateway/pdf-engine files untouched throughout** — Architect had claimed or was mid-editing them each time I checked. **Remaining known gaps, deliberately not touched:** `admin/pulse` (same fake-telemetry shape as fleet-map, same fix would apply), Vault file storage (genuine feature, not a wire-up). | None claimed. | 2026-07-24 |
+| **Frontend Developer** | **Full-session sweep for `ai-vision`-shaped bugs (looks wired, always fails) and fake/mock pages. R24–R36 all done, claim released.** In order: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test, closing a doc gap; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep closed out — Reports, Fleet-map, Infra Pulse (R34–R36) all converted from fabricated data to honest not-available states, including catching a fake `$4.2M` GMV sitting next to the admin home page's real figure. **Left schema/payment-gateway/pdf-engine files untouched throughout** — Architect had claimed or was mid-editing them each time I checked. **Remaining known gap, deliberately not touched:** Vault file storage (genuine upload/storage feature, not a wire-up). | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2077,3 +2077,36 @@ I'm stopping the mock-page sweep here for now; Vault file storage is a
 genuine upload/storage feature (multer + where files actually live +
 auth-scoped serving), not a quick wire-up, and was already correctly scoped
 out as a real follow-up rather than a bug.
+
+---
+
+### R36 — `admin/pulse` ("Infra Pulse") finished off the mock-page sweep (Frontend Developer, 2026-07-24)
+
+**File:** `frontend/src/app/(admin)/admin/pulse/page.tsx`. Decided to close
+this out rather than leave it flagged — same shape as R34/R35, and this app
+isn't even deployed yet (Phase 9 founder-gated) so there's no real infra to
+report on regardless.
+
+Fully invented: fake multi-region health (`US-East-1`/`EU-West-1`/…, none of
+which exist — single-instance, undeployed app), fake DB throughput/server-
+latency sparklines, fake S3/Redis/compute utilization (not in the stack at
+all — NestJS+Prisma+Postgres per `CLAUDE.md`, no Redis/S3 mentioned
+anywhere), and a **separate, fake `$4.2M Global GMV`** sitting right next to
+the *admin home page's* real `platformGMV` figure — two different numbers
+for the same claimed metric, one of them fabricated. "Export Logs"/"Live
+Sync"/"Run Security Audit" buttons had no handlers.
+
+**Fix:** honest `EmptyState` explaining there's no infra to monitor yet and
+no APM integration, pointing to the real Global Pulse page (admin home) for
+actual business metrics. Didn't try to partially wire the GMV/tenant/churn
+numbers from `getFounderMetrics()` here — that would just recreate the
+duplicate-page problem from R30 (two pages showing the same real metric),
+when the admin home page already owns that correctly.
+
+**Verified:** `tsc`/`eslint`/`vitest` clean. Page renders 200, no
+server/runtime errors.
+
+This closes the mock-page sweep — `admin/pulse`, `dashboard/reports`,
+`dashboard/fleet-map` (R34–R36) all converted from fabricated data to
+honest not-available states. Only Vault file storage remains as a known,
+deliberately-deferred gap (a real feature, not this shape of bug).
