@@ -5,12 +5,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { SaasAdminService } from './saas-admin.service';
 import { ForensicService } from './forensic.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -42,11 +44,28 @@ export class SaasAdminController {
   constructor(
     private readonly saasAdminService: SaasAdminService,
     private readonly forensic: ForensicService,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
   @Get('overview')
   getOverview() {
     return this.saasAdminService.getPlatformOverview();
+  }
+
+  /**
+   * Platform-wide audit trail across every agency (finding N5 — unblocks the
+   * SuperAdmin logs page). ROOT_ADMIN only via the class-level @Roles; paginated
+   * + hard-capped in the service.
+   */
+  @Get('audit-logs')
+  getPlatformAuditLogs(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.auditLogs.findAllPlatform(
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined,
+    );
   }
 
   @Get('metrics')
