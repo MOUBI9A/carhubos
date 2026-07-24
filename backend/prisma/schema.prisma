@@ -50,6 +50,7 @@ model Agency {
   platformInvoices PlatformInvoice[]
   accidents        Accident[]
   checkoutSessions CheckoutSession[]
+  vaultFiles       VaultFile[]
 
   @@index([deletedAt])
 }
@@ -96,10 +97,11 @@ model User {
   renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
 
   // 🪪 Renter portal & consent subsystem back-relations
-  customerRecords Customer[] // agency Customer rows that link to this portal account
-  consentGrants   ConsentGrant[] // document-access grants this renter has issued
-  notifications   Notification[]
-  renterDocuments RenterDocument[] // the renter's OWN global identity-document vault
+  customerRecords    Customer[] // agency Customer rows that link to this portal account
+  consentGrants      ConsentGrant[] // document-access grants this renter has issued
+  notifications      Notification[]
+  renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
+  vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
 
   @@index([agencyId])
 }
@@ -208,10 +210,10 @@ model Accident {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  agencyId String
-  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId    String
-  car      Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
   bookingId String?
   booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
@@ -365,6 +367,29 @@ model CheckoutSession {
 
   @@index([agencyId])
   @@index([invoiceId])
+}
+
+// 🗄️ Vault — generic tenant-scoped file storage (Supabase Storage backend).
+// The actual bytes live in a private Supabase bucket, namespaced per-agency
+// (`<agencyId>/<uuid>-<filename>`); this row is metadata only. `storagePath`
+// is the bucket object key — never served directly, always via a short-lived
+// backend-generated signed URL (vault.service.ts) so a leaked/guessed path
+// alone can't reach the file without also passing the tenant-scope check.
+model VaultFile {
+  id          String   @id @default(uuid())
+  filename    String
+  storagePath String   @unique
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  agencyId     String
+  agency       Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  @@index([agencyId])
+  @@index([agencyId, filename])
 }
 
 model Expense {

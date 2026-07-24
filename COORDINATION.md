@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Now sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep — Reports, Fleet-map, Infra Pulse (R34–R36) converted from fabricated data to honest states. **Now picking up the Architect's flagged security follow-up: webhooks DNS-rebinding SSRF guard (R37).** | `backend/src/webhooks/**` — claiming now. | 2026-07-24 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37). **Vault file storage backend scaffolding DONE (R38)** — Supabase Storage-backed, per founder spec (schema + `backend/src/vault/**` + tests). **Frontend wiring is next.** Stripe live test + SaaS-subscription checkout are **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -275,11 +275,12 @@ repeal of the protocol.
 
 Pick a lane that doesn't touch the other agent's files. Current backlog (details in `PROGRESS.md`):
 
-- **Lane 1 — Accidents domain** (backend + a Prisma migration + wire `accidents/page.tsx`). Touches `schema.prisma` → serialize; announce first. The last "not wired" stub.
-- **Lane 2 — Public routing / input validation** (subdomain, public endpoints). **Appears claimed by Session B.**
-- **Lane 3 — Rate tiers / seasonality** on bookings (Phase 4). Product decision on the pricing model first; touches money math + `schema.prisma`.
-- **Lane 4 — Infra/CI** — live-DB e2e job in `.github/workflows/ci.yml` (Postgres service container), Vault file storage. No app-code overlap.
-- **Lane 5 — Founder-gated (do NOT start without the founder):** Phase 9 deploy, Phase 10 final review, making CI a required PR check.
+- ~~Lane 1 — Accidents domain~~ **DONE** (T3 backend + migration, R9; frontend wiring, `a275fc7`).
+- ~~Lane 2 — Public routing / input validation~~ **DONE** (R1, R6).
+- **Lane 3 — Rate tiers / seasonality** on bookings (Phase 4). Product decision on the pricing model first; touches money math + `schema.prisma`. Still open, still needs a founder call — not blocking anything else.
+- ~~Lane 4 — Infra/CI~~ **DONE** (live-DB e2e job + Playwright e2e job both in `.github/workflows/ci.yml`, R27).
+- ~~Lane 4b — Vault file storage~~ **Backend DONE** (R38, Supabase Storage-backed). Frontend upload/list/download UI is the remaining slice. See "Vault file storage — architecture" below for the full spec.
+- **Lane 5 — Founder-gated (do NOT start without the founder):** Phase 9 deploy, Phase 10 final review, making CI a required PR check, **Stripe live test** (needs real `.env` keys — founder's), **SaaS-subscription checkout** (agencies paying their Fider fee online — needs a founder product-call on the flow, reuses the existing gateway/CheckoutSession layer once unblocked). **Blocked by Founder as of 2026-07-24** — the founder will provide keys + business logic later; not being worked in the meantime.
 
 ## Open findings — flagged by one agent, owned by the other
 
@@ -444,6 +445,80 @@ Left entirely alone to avoid colliding with T1. All minor:
 
 ## Current state (2026-07-21)
 `main` @ `fc03417`, all green: backend **21 suites / 138 tests**, frontend **9 vitest**, tsc + eslint clean both sides — **re-verified independently by the reviewer, not taken on trust.** Recent Session-A work: windowed scheduler, OVERDUE fix, multi-tenant boundary spec (12 domains), staff privilege spec, enum `@IsIn` hardening, chart a11y (+ tap/focus half), founder provisioning (`/saas-admin/provision`) + live smoke test, email normalization.
+
+---
+
+## Vault file storage — architecture (founder-directed, 2026-07-24)
+
+High-level spec, logged before/alongside execution per the founder's request.
+Full build log is R38 in the Resolution log below.
+
+**Storage strategy.** Supabase Storage (`@supabase/supabase-js`), founder's
+explicit call — not the local-disk adapter originally sketched. Files live in
+one **private** bucket (`SUPABASE_VAULT_BUCKET`, default `vault-files`);
+nothing is ever public. Reads happen through short-lived **backend-generated
+signed URLs** (5 min default) — the client fetches bytes directly from
+Supabase using that URL, never proxied through this backend. `VaultStorageService`
+(`backend/src/vault/vault-storage.service.ts`) is the only file that touches
+the Supabase SDK — same env-gated-adapter shape as the Stripe payment
+gateway: real code, but throws a clear `ServiceUnavailableException` if
+`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` aren't set, rather than silently
+no-op'ing. **Dormant until the founder provides real project keys** — same
+situation as Stripe.
+
+**Database schema — `VaultFile`** (new model, additive migration
+`20260724142846_add_vault_file`, no data loss):
+```
+VaultFile { id, filename, storagePath (unique), mimeType, sizeBytes, createdAt,
+            agencyId → Agency, uploadedById → User }
+```
+Maps to the founder's requested `vault_files(id, tenant_id, filename,
+storage_path, mime_type, size_bytes, uploaded_by_id, created_at)` — translated
+to this codebase's actual conventions rather than introduced as a parallel
+naming scheme: camelCase fields (matches all ~25 other models), and
+**`agencyId`, not a new `tenantId`** — `agencyId` is the tenant-scoping field
+used by literally every other tenant-scoped model in this schema, so a
+second name for the same concept would be pure inconsistency debt. `storagePath`
+is a UUID-prefixed key, not the raw filename — `<agencyId>/<uuid>-<sanitized
+filename>`, so the bucket itself is tenant-namespaced as a second, defense-
+in-depth isolation layer on top of the DB-level `agencyId` check every query
+performs.
+
+**Endpoints** (`backend/src/vault/vault.controller.ts`, `@Controller('vault/files')`):
+- `POST /vault/files` — multipart upload (`FileInterceptor`).
+- `GET /vault/files?search=&page=&limit=` — list/search, tenant-scoped;
+  no `page`/`limit` → capped bare array (backward-compatible "give me
+  everything" call, still bounded); either present → `{items,total,page,limit}`
+  envelope. Built capped from day one — not left as a P2 unbounded-list bug to
+  catch later (the exact shape R21 fixed elsewhere).
+- `GET /vault/files/:id/download-url` — signed URL (not a file stream).
+- `DELETE /vault/files/:id` — removes the Supabase object (best-effort) + the
+  metadata row.
+
+**Size limit / validation.** 8MB per file. Allowed MIME types: `application/pdf`,
+`image/jpeg`, `image/png`, `image/webp` — rejecting everything else server-side
+(not just by field name) is the real boundary; an SVG/HTML upload accepted as
+a "document" is a stored-XSS vector the moment anything renders it inline.
+Enforced at **two layers**: multer's `fileFilter`/`limits` on the controller
+(fast rejection, never reaches Supabase) and a re-check in `VaultService`
+(defense in depth — a single validation layer is never the actual boundary).
+
+**Access control.** Every handler is tenant-scoped by `agencyId` from the JWT
+(never body/param) — cross-tenant `:id` → 404, matching CLAUDE.md §5.1.
+Capability gate: `settings.manage` on all four handlers — **a judgment call,
+flagged not guessed**: Vault has no capability of its own yet, and there's no
+founder decision on whether MANAGER/AGENT should read/write it, so it reuses
+the same agency-wide capability `webhooks`/`agencies`-settings already reuse
+rather than mint an ungoverned new one (which would also need a
+`ROLE_PRESETS` + reseed change). Broadening read access is a one-line
+follow-up once the founder decides who should see vault files.
+
+**Not built (flagged, not guessed):** a dedicated `vault.view`/`vault.manage`
+capability (needs a product call + reseed); linking `VaultFile` to a specific
+domain entity (CarDocument/RenterDocument) — the founder's spec describes a
+standalone tenant-wide vault with no entity-link field, so none was added;
+frontend upload/list/download UI (backend-only this pass, per the founder's
+"let me know when the backend scaffolding is ready").
 
 ---
 
@@ -2181,3 +2256,59 @@ companion vector (an allowed public endpoint 302'ing to an internal URL).
   deleted after.
 - Backend **45 suites / 331 tests** (baseline 44/324, +1 suite +7 tests),
   `tsc --noEmit` clean, `eslint .` clean.
+
+---
+
+### R38 — Vault file storage: backend scaffolding done (sole developer, 2026-07-24)
+
+Founder-directed feature (see "Vault file storage — architecture" above for
+the full spec). Storage strategy landed mid-build: originally scoped as a
+local-disk adapter bound to `CarDocument`; the founder then set the actual
+direction — Supabase Storage, a standalone `vault_files`-shaped table, signed
+URLs, specific CRUD endpoints. Built to that revised spec, not the original
+sketch.
+
+**Shipped:**
+- `npm i @supabase/supabase-js` (backend).
+- Migration `20260724142846_add_vault_file` — new `VaultFile` model (additive,
+  no data loss), back-relations on `Agency`/`User`.
+- `backend/src/vault/` — `vault-storage.service.ts` (Supabase wrapper,
+  env-gated), `vault.service.ts` (tenant scoping + validation + cleanup-on-
+  partial-failure), `vault.controller.ts` (`FileInterceptor` + capability
+  gate), `vault.module.ts`, registered in `app.module.ts`.
+- `.env.example` — `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/
+  `SUPABASE_VAULT_BUCKET` documented (placeholders only, no real values).
+
+**Verified (real output):**
+- `vault.service.spec.ts` (14 tests, fake storage object — no Supabase SDK
+  touched): mime/size rejection happens before storage is ever called;
+  storage path is namespaced under the caller's own `agencyId`; a path-
+  traversal filename (`../../etc/passwd`) is sanitized out of the storage key;
+  a metadata-insert failure after a successful upload triggers a cleanup
+  delete of the orphaned object; list/search/paginate/download/delete all
+  re-verify `agencyId` and 404 (not leak) on a cross-tenant id, never calling
+  storage for a file that isn't the caller's.
+- `vault-storage.service.spec.ts` (6 tests, mocks `@supabase/supabase-js`'s
+  `createClient` entirely): throws `ServiceUnavailableException` — not a
+  silent no-op — when unconfigured; constructs the client once and reuses it;
+  calls `upload`/`createSignedUrl`/`remove` with the right arguments; honors
+  `SUPABASE_VAULT_BUCKET`; translates a Supabase-reported error into the
+  app's own exception type; `remove()` logs but doesn't throw on failure
+  (best-effort, matches the DB-row delete always proceeding).
+- **Live, against the real running backend** (no real Supabase project
+  exists yet, so this is as far as verification can go without the founder's
+  keys — same situation R31 documented for Stripe): `GET /vault/files` as
+  OWNER → 200 `[]`; AGENT (lacks `settings.manage`) → 403; a disallowed
+  mime type upload → 400, rejected by multer's `fileFilter` before the
+  request ever reaches `VaultService` or Supabase; a valid-mimetype PDF
+  upload → clean **503** `"Vault storage is not configured…"` (no crash, no
+  orphaned metadata row — confirmed the list stayed empty after); a
+  cross-tenant/nonexistent id on both `download-url` and `DELETE` → 404.
+- Backend **47 suites / 351 tests** (baseline 45/331, +2 suites +20 tests),
+  `tsc --noEmit` clean, `eslint .` clean.
+
+**Not built this pass (flagged in the architecture spec above, not
+guessed):** frontend upload/list/download UI, a dedicated `vault.*`
+capability, entity-linking to `CarDocument`/`RenterDocument`. Backend
+scaffolding is ready for the founder to review / provide real Supabase
+credentials for a live end-to-end test.
