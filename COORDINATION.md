@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37). **Vault file storage backend scaffolding DONE (R38)** — Supabase Storage-backed, per founder spec (schema + `backend/src/vault/**` + tests). **Frontend wiring is next.** Stripe live test + SaaS-subscription checkout are **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-24 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38). **Vault frontend UI DONE (R39)** — `/dashboard/vault-files`: file list, drag-and-drop uploader with client-side validation, download/delete actions, graceful 503 handling. **Feature complete pending the founder's real Supabase keys for a live end-to-end pass.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -279,7 +279,7 @@ Pick a lane that doesn't touch the other agent's files. Current backlog (details
 - ~~Lane 2 — Public routing / input validation~~ **DONE** (R1, R6).
 - **Lane 3 — Rate tiers / seasonality** on bookings (Phase 4). Product decision on the pricing model first; touches money math + `schema.prisma`. Still open, still needs a founder call — not blocking anything else.
 - ~~Lane 4 — Infra/CI~~ **DONE** (live-DB e2e job + Playwright e2e job both in `.github/workflows/ci.yml`, R27).
-- ~~Lane 4b — Vault file storage~~ **Backend DONE** (R38, Supabase Storage-backed). Frontend upload/list/download UI is the remaining slice. See "Vault file storage — architecture" below for the full spec.
+- ~~Lane 4b — Vault file storage~~ **DONE end-to-end** (R38 backend, R39 frontend). Awaiting the founder's real Supabase project keys for a live smoke test — dormant/503 until then, same as Stripe. See "Vault file storage — architecture" below for the full spec.
 - **Lane 5 — Founder-gated (do NOT start without the founder):** Phase 9 deploy, Phase 10 final review, making CI a required PR check, **Stripe live test** (needs real `.env` keys — founder's), **SaaS-subscription checkout** (agencies paying their Fider fee online — needs a founder product-call on the flow, reuses the existing gateway/CheckoutSession layer once unblocked). **Blocked by Founder as of 2026-07-24** — the founder will provide keys + business logic later; not being worked in the meantime.
 
 ## Open findings — flagged by one agent, owned by the other
@@ -2312,3 +2312,71 @@ guessed):** frontend upload/list/download UI, a dedicated `vault.*`
 capability, entity-linking to `CarDocument`/`RenterDocument`. Backend
 scaffolding is ready for the founder to review / provide real Supabase
 credentials for a live end-to-end test.
+
+---
+
+### R39 — Vault frontend UI (sole developer, 2026-07-24)
+
+New route `/dashboard/vault-files` (kept separate from the existing
+`/dashboard/vault` — that's Guardian Vault, `CarDocument` compliance
+tracking, a different feature; this one is the generic tenant-wide vault
+from R38). Nav entry added for OWNER (`FolderOpen` icon), translation keys
+added to all three locales (FR default/AR/EN — this app's actual i18n
+coverage, matching every other page: the nav label + `<h1>` are translated,
+the rest of the UI copy is hardcoded English like every other dashboard
+page built this session).
+
+**File Manager view:** `Card`-wrapped table — filename (with a
+document/image icon depending on mime type), type (friendly label: "PDF",
+"JPEG image", …), formatted size (B/KB/MB), upload date. Search-by-filename
+input in the card header. Loading (`SkeletonRows`), error (message + Retry),
+empty (`EmptyState`) — same three-state shape as every other list this
+session.
+
+**Upload component:** a drag-and-drop dropzone (click-to-browse too) that
+validates mime type + the 8MB cap **client-side**, mirroring the backend's
+exact allow-list (`VAULT_ALLOWED_MIME_TYPES`/`VAULT_MAX_FILE_SIZE_BYTES`
+duplicated in `useVaultFiles.ts` with a comment pointing at the backend
+source of truth) — a bad file never leaves the browser, per the founder's
+bandwidth-saving ask. The server re-validates independently regardless
+(never trust a client check as the real boundary — same principle as every
+other form this session).
+
+**Actions:** Download calls `GET /vault/files/:id/download-url` then
+`window.open()`s the signed URL directly — the browser fetches bytes
+straight from Supabase, nothing proxied through this backend, matching the
+architecture. Delete goes through a confirmation `Modal` (this app's
+established pattern for a destructive action, e.g. Staff removal) rather
+than a native `confirm()` dialog (none exist anywhere in this codebase).
+
+**503 handling:** a upload or download hitting the "vault storage not
+configured" error sets a distinct, persistent warning banner at the top of
+the page (not just a toast that can be missed) explicitly saying nothing
+was lost and it isn't a problem with their files — exactly the founder's
+"gracefully catches and displays the 503… just in case my `.env` variables
+haven't loaded yet" ask.
+
+**Verified:** `tsc`/`eslint`/`vitest` clean across the whole frontend. A
+full production build (`next build`) compiled successfully in 3.1s
+including this route with zero errors — used as the deterministic check
+after the sandbox's dev server hit its now-familiar Turbopack/resource-
+contention flakiness on this specific route (established pattern from
+earlier this session: dev-mode compiles can take minutes under this
+sandbox's load without it being a code issue; a clean, fast production
+build is the stronger signal). Live HTTP: the page returns 200 (both via
+the eventually-resolved dev server and confirmed again structurally via the
+build output's route manifest) with no Next.js error markers. Full
+API-level verification of every endpoint this page calls (`GET
+/vault/files`, `POST /vault/files`, `GET /vault/files/:id/download-url`,
+`DELETE /vault/files/:id` — capability gate, validation-before-503,
+cross-tenant 404s) was already done directly against the backend in R38;
+this UI calls those exact same endpoints with matching field names
+(`filename`/`mimeType`/`sizeBytes`/`createdAt`). **Could not do a
+pixel-level browser click-through** — the `claude-in-chrome` extension has
+been disconnected the entire session (same limitation noted in R32); a
+visual spot-check once the founder's Supabase keys are live is welcome.
+
+No real Supabase project exists yet in this environment (checked
+`backend/.env` — no `SUPABASE_URL` present), so the upload/download flows
+still 503 exactly as designed; that's the correct, honest current state,
+not a bug.

@@ -25,6 +25,7 @@ import {
   X,
   UserCog,
   CreditCard,
+  FolderOpen,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
@@ -62,6 +63,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('owner.bookings'), href: '/dashboard/bookings', icon: Calendar },
       { label: t('owner.customers'), href: '/dashboard/customers', icon: Users },
       { label: t('owner.vault'), href: '/dashboard/vault', icon: ShieldCheck },
+      { label: t('owner.vaultFiles'), href: '/dashboard/vault-files', icon: FolderOpen },
       { label: t('owner.hub'), href: '/dashboard/hub', icon: Globe },
       { label: t('owner.accidents'), href: '/dashboard/accidents', icon: AlertTriangle },
       { label: t('owner.finance'), href: '/dashboard/finance', icon: TrendingUp },
