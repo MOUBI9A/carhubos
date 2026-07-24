@@ -88,7 +88,7 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
+| **Architect** | **PAYMENTS feature DONE (mock + real Stripe adapter) + hardening + N5. Claims released — available.** Since #10: F1 IDOR, N4 automations (CRUD+cron+BOOKING_CREATED execution), P2 caps, #13 authz gates, #12 verified, then the **online-payments layer** — `payment-gateway/**` + `checkout/**` + `CheckoutSession` schema (R29), real env-gated **Stripe** adapter (`8b0d5cb`), settleCheckout **idempotency CI spec** + Stripe RAK note (`512ef4e`), and **N5** ROOT_ADMIN platform audit endpoint `GET /saas-admin/audit-logs` (`cba6c78`). Backend **43 suites / 321**, all green. ⚠️ **Stripe LIVE test is blocked on the founder's `.env` keys** (I can't handle secrets) — mock flow works today. Full history R9–R30. | None claimed. | 2026-07-24 |
 | **Frontend Developer** | **Sweeping the frontend for `ai-vision`-shaped bugs (looks wired, always fails). R24/#11/#12, R27 (CI e2e job), R28 (automations fake-success), R30 (settings' broken staff-management duplicate) all done, claim released.** Full list this session: accidents wiring (`a275fc7`); e2e-suite rebrand sweep (`39ef838`); AI Vision fake-`carId` (`c4797c9`); renter self-service Trust Vault QR (`dfa3323`); e2e added to CI (R27); automations create/toggle fake-success (R28); settings page's broken duplicate staff UI removed in favor of the real `/dashboard/staff` (R30, live-verified that target first). **Left schema/payment-gateway files untouched throughout** — Architect had claimed/was mid-editing them each time I checked. | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
@@ -1922,3 +1922,36 @@ the redirect target actually works before pointing anyone at it: `POST
 /agency/staff` (real name/email/password/preset) → **201**; `DELETE
 /agency/staff/:userId` → **200** `{deleted:true}`. Cleaned up the test
 staffer afterward.
+
+---
+
+### R31 — Payments hardening + N5 (Architect, 2026-07-24, autonomous)
+Founder stepped away and asked me to keep working through valuable items. Also
+fixed my status-board row above (was stale-stuck on "CLAIMING #10" from the
+Drive/index-sync clobbering — now current).
+
+- **Validated the real Stripe adapter** against Stripe's own best-practices skill
+  (now installed via the founder's `npx skills add`): the integration is
+  conformant — Checkout Sessions, **no `payment_method_types`** (dynamic methods),
+  signature-verified webhook, no deprecated APIs. Documented the one production
+  gap (prefer a **restricted key `rk_`**, secrets vault, IP-allowlist) in
+  `stripe.gateway.ts`. `512ef4e`.
+- **settleCheckout idempotency → CI** (`512ef4e`): `settle-checkout.spec.ts` (3)
+  locks the money-critical double-settle guard (was only proven via live smoke) —
+  PENDING settles once (ONE VERIFIED CARD payment, amount a Prisma.Decimal),
+  replay on an already-PAID session no-ops, unknown ref 404s.
+- **N5 — platform audit endpoint** (`cba6c78`): `GET /saas-admin/audit-logs`
+  (ROOT_ADMIN), `AuditLogsService.findAllPlatform` paginated+capped across all
+  agencies, agency+actor enriched; spec (3, module had 0). Live: root 200
+  (total 27), owner 403. Unblocks the `admin/logs` SuperAdmin page (FE wiring).
+
+**Checked and deliberately NOT done:** the `forensic.service` spec already exists
+(backlog's "0 specs" was stale); `search` has no controller and
+`notifications/whatsapp-link` is a pure query-param string builder (no DB/tenant
+data) so gating it adds zero security — left alone.
+
+**Best next (needs the founder):** (1) **Stripe live test** — blocked on their
+`.env` keys + restart; (2) **SaaS-subscription checkout** — reuse this exact
+gateway/CheckoutSession(`purpose`) layer so agencies pay their Fider fee online
+(money + a product-flow call, so held for them); (3) frontend "Pay online" button
++ `admin/logs` wiring (Frontend Dev). Deploy (Phase 9) stays founder-gated.
