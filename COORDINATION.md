@@ -76,6 +76,28 @@ it (see the existing `Session A →` notes above for the pattern), and push that
 as its own commit. The other role receives it on its next `git pull` — that
 push **is** the message.
 
+## Solo mode (2026-07-24, founder-set) — the 3-agent protocol is suspended
+
+The Architect session hit its usage limit and is offline for good — this is
+not a temporary gap to hold a claim open for. One session (still using the
+Frontend Developer identity in the log below, but now covering all three
+roles) is the sole active developer: Architect + Frontend Developer + QA
+Tester, executing directly with no handoffs to wait on.
+
+**What changes:** Golden Rule 4's number-collision risk and Rule 1's
+"only edit your own row" no longer apply — there's one row now, one owner of
+`schema.prisma`, no risk of two sessions picking the same finding number. The
+append-only Resolution log format stays exactly as-is (it's the project's
+running history, not just a coordination mechanism) — keep numbering `R`
+entries sequentially and keep verifying before every commit
+(`tsc`/`jest`/`eslint` backend, `tsc`/`vitest`/`eslint` frontend). Push each
+verified unit of work on its own, same as before.
+
+**What doesn't change:** if the founder or another human ever resumes a
+second session on this checkout, Golden Rules 1–4 immediately apply again —
+this section describes the current single-session reality, not a permanent
+repeal of the protocol.
+
 ## 🔴 Live status board — Session A/B/C cohort (history — keep updating your own row if you're still mid-task; new joiners use the table below instead)
 
 | Agent | Working on | Files it owns right now | Last update |
@@ -88,8 +110,8 @@ push **is** the message.
 
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
-| **Architect** | **PAYMENTS feature DONE (mock + real Stripe adapter) + hardening + N5. Claims released — available.** Since #10: F1 IDOR, N4 automations (CRUD+cron+BOOKING_CREATED execution), P2 caps, #13 authz gates, #12 verified, then the **online-payments layer** — `payment-gateway/**` + `checkout/**` + `CheckoutSession` schema (R29), real env-gated **Stripe** adapter (`8b0d5cb`), settleCheckout **idempotency CI spec** + Stripe RAK note (`512ef4e`), and **N5** ROOT_ADMIN platform audit endpoint `GET /saas-admin/audit-logs` (`cba6c78`). Backend **43 suites / 321**, all green. ⚠️ **Stripe LIVE test is blocked on the founder's `.env` keys** (I can't handle secrets) — mock flow works today. Full history R9–R30. | None claimed. | 2026-07-24 |
-| **Frontend Developer** | **Full-session sweep for `ai-vision`-shaped bugs (looks wired, always fails) and fake/mock pages. R24–R36 all done, claim released.** In order: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test, closing a doc gap; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep closed out — Reports, Fleet-map, Infra Pulse (R34–R36) all converted from fabricated data to honest not-available states, including catching a fake `$4.2M` GMV sitting next to the admin home page's real figure. **Left schema/payment-gateway/pdf-engine files untouched throughout** — Architect had claimed or was mid-editing them each time I checked. **Remaining known gap, deliberately not touched:** Vault file storage (genuine upload/storage feature, not a wire-up). | None claimed. | 2026-07-24 |
+| **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
+| **Frontend Developer** | **Now sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep — Reports, Fleet-map, Infra Pulse (R34–R36) converted from fabricated data to honest states. **Now picking up the Architect's flagged security follow-up: webhooks DNS-rebinding SSRF guard (R37).** | `backend/src/webhooks/**` — claiming now. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2110,3 +2132,52 @@ This closes the mock-page sweep — `admin/pulse`, `dashboard/reports`,
 `dashboard/fleet-map` (R34–R36) all converted from fabricated data to
 honest not-available states. Only Vault file storage remains as a known,
 deliberately-deferred gap (a real feature, not this shape of bug).
+
+---
+
+### R37 — webhooks DNS-rebinding SSRF guard closed (sole developer, 2026-07-24)
+
+Picked up the Architect's own flagged follow-up (R31/R33's "best next" list)
+after they went offline. R6 (2026-07-21) closed input validation on `POST
+/webhooks/subscribe` — `isBlockedWebhookHost()` rejects a literal
+loopback/private/link-local hostname or IP at subscribe time — but explicitly
+left the sink open: "the sink itself (`sendPayload` → `axios.post`) still has
+no runtime DNS-rebinding guard — the DTO blocks a literal internal *host*,
+but a public hostname that **resolves** to a private IP at request time would
+still reach it."
+
+**Why a naive fix doesn't work:** resolving the hostname once to check it,
+then letting `axios` independently resolve again to connect, still has a gap
+— a rebinding-capable DNS server is built to answer differently on two rapid
+queries, which is exactly what that pattern would do twice. The check and the
+connection have to use the *same* resolution.
+
+**Fix:** `backend/src/webhooks/webhook-ssrf-guard.ts` — `createSsrfSafeLookup()`,
+a `dns.lookup`-compatible function passed as the `lookup` option on a fresh
+`http.Agent`/`https.Agent` per send (`webhooks.service.ts`'s `sendPayload`).
+It resolves the hostname (`{all:true}`), rejects the connection outright if
+*any* resolved address is loopback/link-local/private (reusing the existing
+`isBlockedWebhookHost`), and otherwise pins the connection to the one
+validated address — so there is exactly one DNS resolution, used for both the
+check and the actual TCP connect, closing the rebinding window entirely.
+Also set `maxRedirects: 0` on the same call: a redirect response is the
+companion vector (an allowed public endpoint 302'ing to an internal URL).
+
+**Verified (real output):**
+- `webhook-ssrf-guard.spec.ts` (7 new tests, mocked `dns.lookup`): public
+  single address allowed + pinned; loopback and cloud-metadata-range
+  addresses blocked; a batch with one public + one private address rejected
+  as a whole (not just skipping the bad entry); a real DNS error passed
+  through unchanged; empty resolver response rejected; the 2-arg
+  `(hostname, callback)` call form Node uses when `options` is omitted.
+- **Real (unmocked) DNS integration check**, run directly against Node's
+  actual resolver: `example.com` → allowed, pinned to its real public IP
+  (`104.20.23.154`); `localhost` → blocked, resolved to `::1` and caught;
+  `metadata.google.internal` → safely errored (NXDOMAIN in this environment;
+  a real cloud env where it resolves to `169.254.169.254` hits the same
+  block path `localhost` did).
+- Live subscribe+list round-trip against the running backend (`https://
+  httpbin.org/post`, a real public endpoint) — subscribed clean, test row
+  deleted after.
+- Backend **45 suites / 331 tests** (baseline 44/324, +1 suite +7 tests),
+  `tsc --noEmit` clean, `eslint .` clean.

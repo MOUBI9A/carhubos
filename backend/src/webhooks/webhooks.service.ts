@@ -3,6 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SubscribeWebhookDto } from './dto/subscribe-webhook.dto';
 import axios from 'axios';
 import * as crypto from 'crypto';
+import * as http from 'http';
+import * as https from 'https';
+import { createSsrfSafeLookup } from './webhook-ssrf-guard';
 
 @Injectable()
 export class WebhooksService {
@@ -83,7 +86,18 @@ export class WebhooksService {
       headers['X-CarHub-Signature'] = signature;
     }
 
-    await axios.post(subscription.url, body, { headers, timeout: 5000 });
+    // DNS-rebinding guard: a fresh Agent per send, so every trigger re-resolves
+    // and re-validates the target's IP rather than trusting the subscribe-time
+    // hostname check (see webhook-ssrf-guard.ts). maxRedirects: 0 closes the
+    // companion vector — a redirect response body pointing at an internal URL.
+    const lookup = createSsrfSafeLookup();
+    await axios.post(subscription.url, body, {
+      headers,
+      timeout: 5000,
+      maxRedirects: 0,
+      httpAgent: new http.Agent({ lookup }),
+      httpsAgent: new https.Agent({ lookup }),
+    });
     this.logger.log(`Webhook triggered: ${event} -> ${subscription.url}`);
   }
 }
