@@ -89,7 +89,7 @@ push **is** the message.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **PAYMENTS feature DONE (mock + real Stripe adapter) + hardening + N5. Claims released — available.** Since #10: F1 IDOR, N4 automations (CRUD+cron+BOOKING_CREATED execution), P2 caps, #13 authz gates, #12 verified, then the **online-payments layer** — `payment-gateway/**` + `checkout/**` + `CheckoutSession` schema (R29), real env-gated **Stripe** adapter (`8b0d5cb`), settleCheckout **idempotency CI spec** + Stripe RAK note (`512ef4e`), and **N5** ROOT_ADMIN platform audit endpoint `GET /saas-admin/audit-logs` (`cba6c78`). Backend **43 suites / 321**, all green. ⚠️ **Stripe LIVE test is blocked on the founder's `.env` keys** (I can't handle secrets) — mock flow works today. Full history R9–R30. | None claimed. | 2026-07-24 |
-| **Frontend Developer** | **Sweeping the frontend for `ai-vision`-shaped bugs (looks wired, always fails). R24/#11/#12, R27 (CI e2e job), R28 (automations fake-success), R30 (settings' broken staff-management duplicate) all done, claim released.** Full list this session: accidents wiring (`a275fc7`); e2e-suite rebrand sweep (`39ef838`); AI Vision fake-`carId` (`c4797c9`); renter self-service Trust Vault QR (`dfa3323`); e2e added to CI (R27); automations create/toggle fake-success (R28); settings page's broken duplicate staff UI removed in favor of the real `/dashboard/staff` (R30, live-verified that target first). **Left schema/payment-gateway files untouched throughout** — Architect had claimed/was mid-editing them each time I checked. | None claimed. | 2026-07-24 |
+| **Frontend Developer** | **Full-session sweep for `ai-vision`-shaped bugs (looks wired, always fails) and fake/mock pages. R24–R35 all done, claim released.** In order: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test, closing a doc gap (R-adjacent, no number); `admin/logs` wired to the real audit endpoint (R32); Reports and Fleet-map mock pages converted to honest "not available yet" states instead of fabricated data (R34, R35). **Left schema/payment-gateway/pdf-engine files untouched throughout** — Architect had claimed or was mid-editing them each time I checked. **Remaining known gaps, deliberately not touched:** `admin/pulse` (same fake-telemetry shape as fleet-map, same fix would apply), Vault file storage (genuine feature, not a wire-up). | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2047,3 +2047,33 @@ lost its fake board/button in favor of the same honest badge.
 
 **Verified:** `tsc`/`eslint`/`vitest` clean. Page renders 200, no
 server/runtime errors.
+
+---
+
+### R35 — `dashboard/fleet-map` was fake GPS telemetry — same treatment (Frontend Developer, 2026-07-24)
+
+**File:** `frontend/src/app/(owner)/dashboard/fleet-map/page.tsx`. No
+backend change — `Car` has no location/GPS columns at all
+(checked `schema.prisma` directly) and there's no tracker-hardware
+integration anywhere in this app, so unlike `admin/logs` there was nothing
+real to wire this to.
+
+Three hardcoded "ghost cars" (`Range Rover`, `Dacia Logan`, `Renault Clio`)
+moving on a fake grid with invented speed/fuel/location, plus an "AI
+Prediction" widget inventing an ETA delay for `#Clio-987` — a car that
+doesn't exist in the seed data or anywhere else. Same shape and same fix
+as R34 (Reports) and the Hub page precedent: this needs real GPS hardware
+in vehicles before it can be anything but decoration, so it's now a single
+honest `EmptyState` explaining exactly that, instead of a Range
+Rover that was never actually "82 km/h at Casablanca Port."
+
+**Verified:** `tsc`/`eslint`/`vitest` clean. Page renders 200, no
+server/runtime errors.
+
+**Both `admin/pulse` (infra/DB-throughput telemetry — same "no real data
+source" shape) and Vault file storage are left as-is** — flagging rather
+than touching: `admin/pulse` would need the same honest-state treatment but
+I'm stopping the mock-page sweep here for now; Vault file storage is a
+genuine upload/storage feature (multer + where files actually live +
+auth-scoped serving), not a quick wire-up, and was already correctly scoped
+out as a real follow-up rather than a bug.
