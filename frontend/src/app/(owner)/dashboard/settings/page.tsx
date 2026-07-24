@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -61,13 +62,11 @@ const labelCls = 'eyebrow block px-1 mb-1.5';
 
 export default function OwnerSettings() {
   const t = useTranslations('ownerPages');
+  const router = useRouter();
   const { showToast } = useToast();
-  const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [isSubdomainModal, setIsSubdomainModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isInviting, setIsInviting] = useState(false);
-  const [removingId, setRemovingId] = useState<string | null>(null);
   const [nudges, setNudges] = useState<Record<string, boolean>>({
     whatsapp_confirm: true,
     guardian_alerts: true,
@@ -117,43 +116,6 @@ export default function OwnerSettings() {
       showToast('danger', 'Save Failed', err?.response?.data?.message || 'Could not save settings.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    setIsInviting(true);
-    try {
-      await api.post('/auth/register', {
-        name: formData.get('name') as string,
-        email: formData.get('email') as string,
-        password: `Fider#${Math.random().toString(36).slice(2, 10)}`, // temp password
-        role: formData.get('role') as string,
-        agencyId: agency?.id,
-      });
-      setIsAddingStaff(false);
-      showToast('success', 'Staff Member Added', `${formData.get('name')} has been added to the agency.`);
-      fetchAgency();
-    } catch (err: any) {
-      showToast('danger', 'Invite Failed', err?.response?.data?.message || 'Could not create staff member.');
-    } finally {
-      setIsInviting(false);
-    }
-  };
-
-  const handleRemoveStaff = async (userId: string, userName: string) => {
-    setRemovingId(userId);
-    try {
-      await api.delete(`/users/${userId}`);
-      setAgency(prev => prev ? { ...prev, users: prev.users.filter(u => u.id !== userId) } : prev);
-      showToast('info', 'Staff Removed', `${userName}'s access has been revoked.`);
-    } catch {
-      // If DELETE not implemented, remove locally
-      setAgency(prev => prev ? { ...prev, users: prev.users.filter(u => u.id !== userId) } : prev);
-      showToast('info', 'Staff Removed', `${userName}'s access has been revoked.`);
-    } finally {
-      setRemovingId(null);
     }
   };
 
@@ -308,15 +270,15 @@ export default function OwnerSettings() {
                 <CardDescription>Manage staff roles and platform permissions</CardDescription>
               </div>
             </div>
-            <Button onClick={() => setIsAddingStaff(true)} size="sm">
+            <Button onClick={() => router.push('/dashboard/staff')} size="sm">
               <Plus className="w-4 h-4 me-2" />
-              Add member
+              Manage staff
             </Button>
           </CardHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
             {(agency?.users ?? []).map((member) => (
-              <div key={member.id} className="p-4 bg-surface border border-hairline rounded-2xl flex items-center justify-between gap-3 group hover:border-primary/30 transition-colors">
+              <div key={member.id} className="p-4 bg-surface border border-hairline rounded-2xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar name={member.name} size={40} />
                   <div className="min-w-0">
@@ -325,16 +287,6 @@ export default function OwnerSettings() {
                     <p className="text-xs text-text-faint mt-1 truncate">{member.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRemoveStaff(member.id, member.name)}
-                  disabled={removingId === member.id}
-                  aria-label={`Remove ${member.name}`}
-                  className="p-2 text-text-faint hover:text-danger hover:bg-danger/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50 shrink-0"
-                >
-                  {removingId === member.id
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                </button>
               </div>
             ))}
 
@@ -348,50 +300,14 @@ export default function OwnerSettings() {
               </div>
             )}
           </div>
+          <p className="mt-4 text-xs text-text-faint">
+            This is a read-only overview — add, remove, and edit capabilities from{' '}
+            <button onClick={() => router.push('/dashboard/staff')} className="text-primary underline underline-offset-2">
+              Staff &amp; Access
+            </button>.
+          </p>
         </Card>
       </div>
-
-      {/* Invite Staff Modal */}
-      <Modal
-        isOpen={isAddingStaff}
-        onClose={() => setIsAddingStaff(false)}
-        title="Add staff member"
-        description="Grant access to the agency ecosystem"
-      >
-        <form onSubmit={handleAddStaff} className="space-y-6">
-          <div className="space-y-1.5">
-            <p className={labelCls}>Full name</p>
-            <input name="name" required className={inputCls} placeholder="e.g. Amine Alami" />
-          </div>
-          <div className="space-y-1.5">
-            <p className={labelCls}>Professional email</p>
-            <div className="relative">
-              <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
-              <input name="email" type="email" required className={cn(inputCls, 'ps-11')} placeholder="name@agency.ma" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <p className={labelCls}>Assigned role</p>
-            <div className="grid grid-cols-2 gap-3">
-              {['AGENT', 'MANAGER'].map((role) => (
-                <label key={role} className="cursor-pointer group">
-                  <input type="radio" name="role" value={role} defaultChecked={role === 'AGENT'} className="sr-only peer" />
-                  <div className="p-4 rounded-xl border border-hairline bg-surface text-center peer-checked:border-primary peer-checked:bg-primary/10 transition-all group-hover:border-primary/40">
-                    <p className="text-sm font-medium text-foreground">{role}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="pt-4 flex gap-3">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsAddingStaff(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={isInviting}>
-              {isInviting ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
-              {isInviting ? 'Adding...' : 'Add member'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Subdomain Modal */}
       <Modal

@@ -89,7 +89,7 @@ push **is** the message.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | 🔒 **CLAIMING #10 (Expense taxonomy — atomic BE+FE, founder go-ahead).** Applying the founder's **codes + fix-UI** decision in ONE commit (no 400-window): `EXPENSE_CATEGORIES = SALARY,RENT,UTILITIES,MARKETING,TAX,MAINTENANCE,OTHER` → `@IsIn` on `expenses.dto.ts` `category`, schema comment (comment-only, **no migration**), finance `<select value=>` submits codes (+ a code→label display map so summaries stay readable). Expense table verified **empty (0 rows)** so no legacy prose data. Then N4 rule-execution (founder-picked next). **(Prev: N4 `c792970` R16; F5b `412508f` R14; F1 `e3e9b2f` R11; T3 `f3febe0` R9. N4 FE-handoff + execution-follow-up in R16.)** | `backend/src/expenses/dto/expenses.dto.ts` · `backend/prisma/schema.prisma` (comment only) · `frontend/src/app/(owner)/dashboard/finance/page.tsx` | 2026-07-22 |
-| **Frontend Developer** | **Findings #11 + #12 done (R24), CI e2e job added (R27), claim released.** This session: accidents page wiring (`a275fc7`); e2e-suite rebrand sweep (`39ef838`) — every `frontend/e2e/*.e2e.ts` locator was asserting pre-Phase-12 copy; AI Vision fake-`carId` fix (`c4797c9`, finding #11); renter self-service Trust Vault QR (`dfa3323`, finding #12, backend-verified independently in R26); and a new `e2e` CI job so that Playwright suite actually runs on every push instead of silently rotting again (R27) — also corrected two stale "done but still listed as remaining" bullets in `CLAUDE.md` while in there. **Left `audit-logs.controller.ts`/`refusal-logs.controller.ts` untouched** throughout — another session had uncommitted work there (finding #13, since resolved as R25). | None claimed. | 2026-07-23 |
+| **Frontend Developer** | **Sweeping the frontend for `ai-vision`-shaped bugs (looks wired, always fails). R24/#11/#12, R27 (CI e2e job), R28 (automations fake-success), R30 (settings' broken staff-management duplicate) all done, claim released.** Full list this session: accidents wiring (`a275fc7`); e2e-suite rebrand sweep (`39ef838`); AI Vision fake-`carId` (`c4797c9`); renter self-service Trust Vault QR (`dfa3323`); e2e added to CI (R27); automations create/toggle fake-success (R28); settings page's broken duplicate staff UI removed in favor of the real `/dashboard/staff` (R30, live-verified that target first). **Left schema/payment-gateway files untouched throughout** — Architect had claimed/was mid-editing them each time I checked. | None claimed. | 2026-07-24 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -1884,3 +1884,41 @@ and the invoice auto-reconciles.
   PlatformInvoice — same gateway + webhook, a sibling settler.
 - **Money follow-up**: a unit spec for `settleCheckout` idempotency (proven live
   today; a mocked-tx regression test is welcome QA coverage).
+
+---
+
+### R30 — Settings page's "Workforce access" card was a broken duplicate of the real Staff & Access page — remove could tell an owner they'd revoked access when they hadn't (Frontend Developer, 2026-07-24)
+
+**File:** `frontend/src/app/(owner)/dashboard/settings/page.tsx`. No backend
+change — `agency-staff.controller.ts` (`/agency/staff`, live-verified below)
+already does everything this card was trying to do, correctly.
+
+Found continuing the sweep for `ai-vision`/`automations`-shaped bugs (a form
+that looks wired but always fails). Two handlers here, both broken, one of
+them dangerous:
+
+- **Add:** `POST /auth/register` with `{ name, email, password, role,
+  agencyId }` — `RegisterDto` has no `agencyId` field at all, so
+  `forbidNonWhitelisted` 400s every time. (At least honest about it — showed
+  a real danger toast, no fake success here.)
+- **Remove:** `DELETE /users/:id` — **there is no controller in
+  `backend/src/users/` at all**, so this 404s every time. Unlike add,
+  the catch **faked it**: filtered the member out of local state and showed
+  `'Staff Removed' / "…access has been revoked"` — an owner clicking remove
+  on a departing employee would see a clean success message while that
+  person's login stayed fully active. Reload the page and they're back.
+
+**Why not just fix the calls:** `/dashboard/staff` (Phase 5A) already does
+this correctly and more completely — real `POST/DELETE /agency/staff`,
+a required password field this card's modal didn't even collect, capability
+presets, 409-conflict handling. Patching this card to call the right
+endpoint would just be a second, thinner copy of that page. Removed the
+broken add-modal and per-row remove button; the card is now a read-only
+roster (`GET /agencies/me`'s real `users` list, unchanged) with a link to
+`/dashboard/staff` for actually managing anyone.
+
+**Verified (real output):** `tsc`/`eslint`/`vitest` clean. Live-confirmed
+the redirect target actually works before pointing anyone at it: `POST
+/agency/staff` (real name/email/password/preset) → **201**; `DELETE
+/agency/staff/:userId` → **200** `{deleted:true}`. Cleaned up the test
+staffer afterward.
