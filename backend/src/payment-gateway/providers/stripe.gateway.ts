@@ -18,6 +18,14 @@ import {
  * (gitignored); this code only reads env vars, never embeds a key. Live charges
  * need a business entity; Stripe isn't offered to Morocco-based entities
  * directly (use CMI for a Moroccan merchant, or a foreign entity for Stripe).
+ *
+ * PRODUCTION HARDENING (per Stripe best-practices): prefer a RESTRICTED key
+ * (`rk_`, least privilege — only Checkout Sessions write + webhook) over the full
+ * secret key; keep it in a real secrets vault, not a committed file; and
+ * IP-allowlist Stripe's webhook source ranges on the endpoint. This adapter takes
+ * an `rk_` or `sk_` transparently — only the STRIPE_SECRET_KEY env value changes.
+ * The integration follows the current guidance: Checkout Sessions, no
+ * `payment_method_types` (dynamic payment methods), signature-verified webhook.
  */
 @Injectable()
 export class StripeGateway implements PaymentGatewayProvider {
