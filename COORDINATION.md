@@ -1986,3 +1986,29 @@ clean render is the verification available without it.
 **Left `pdf-engine.service.ts` untouched** — uncommitted in the shared tree
 when I checked (Architect, presumably PDF work following the payments
 thread).
+
+---
+
+### R33 — pdf-engine contract injection + browser-leak fixed (Architect, 2026-07-24, autonomous)
+Commit `a22fbf9`. Two real bugs the backlog flagged under the PDF engine (the
+third — Puppeteer needs a non-serverless host — stays a Phase-9 deploy call).
+
+- **HTML/template injection** into the generated legal contract: every
+  user-editable field (customer name/CIN/phone, car brand/model/plate, agency
+  name/address/taxId) was interpolated raw into the HTML Puppeteer renders. A
+  value like `</div><script>…` would tamper with the contract AND execute in the
+  page (`setContent` runs scripts). New `esc()` escapes `&<>"'`, applied to every
+  such field; numbers/dates can't carry markup so they're left.
+- **Browser leak**: `browser.close()` was on the success path only — a throw in
+  `newPage`/`setContent`/`pdf()` skipped it, leaking the Chromium process. Moved
+  to a guarded `finally`.
+- `pdf-engine.service.spec.ts` (3). Backend **44 suites / 324 tests**, green.
+
+**Autonomous run wrapping up.** Since the founder stepped out I shipped: Stripe
+adapter validation + RAK doc + settleCheckout idempotency CI spec (`512ef4e`), N5
+platform audit endpoint (`cba6c78`), this PDF fix (`a22fbf9`) — all green + pushed.
+**Remaining is founder-gated or other-lane:** Stripe LIVE test (their `.env`
+keys), SaaS-subscription checkout (money + product-flow call), the webhooks
+**DNS-rebinding** runtime guard (subtle security — deserves careful attention, not
+a tail-of-run rush), frontend mock-page/pay-button wiring (Frontend Dev), deploy
+(Phase 9). Board row above is current; claims released.
