@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38); Vault frontend UI (R39). **Vault Playwright suite DONE (R40)** — 7 tests, all vault network calls mocked (neither the real backend nor Supabase touched). Bucket name double-checked against the founder's real `vault-files` — already an exact match, no patch needed. Founder is doing a live manual UI pass with real Supabase keys in parallel. Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38); Vault frontend UI (R39); Vault Playwright suite (R40). **Vault verified LIVE end-to-end against the founder's real Supabase project (R41)** — real upload/list/signed-download/delete round-trip all confirmed, incl. cross-checking a CDN-caching red herring against Supabase's Storage API directly rather than assuming a bug. **Vault feature is complete.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2446,3 +2446,47 @@ the 5 failures elsewhere (`booking-flow`, `roles`, `trust`) are the exact
 same known-flaky tests already documented in this session's history — not
 touched or caused by this work. Backend unaffected (47 suites/351 tests,
 untouched this round).
+
+---
+
+### R41 — Vault verified live end-to-end against the founder's real Supabase project (sole developer, 2026-07-25)
+
+Two separate blockers hit while the founder brought their real keys online,
+both resolved same session:
+
+1. **`EADDRINUSE` on the founder's restart.** Not their Supabase change —
+   one of this session's own long-running `nest start --watch` instances
+   (alive since early in the session) still held port 5406. Killed it;
+   nudged the founder's own watcher to recompile (a trivial comment
+   add-then-revert in `main.ts`, since bare `touch` didn't trigger their
+   watcher — needs an actual content hash change). Their instance came up
+   clean afterward with `PaymentGatewayService: STRIPE` active, confirming
+   their real `.env` was loading.
+2. **First real key attempt didn't land.** After "restarted," `backend/.env`
+   still had no `SUPABASE_*` lines at all (checked directly) and a live
+   `POST /vault/files` still 503'd — flagged this back rather than assume
+   success from the founder's own report.
+
+**Once the keys actually landed** (confirmed via `.env`'s fresh mtime, values
+not printed): full live round-trip against the real bucket —
+`POST /vault/files` → **201**, real `storagePath` correctly namespaced
+under the caller's `agencyId`; `GET /vault/files` lists it; the signed
+download URL returns the exact original bytes; `DELETE` returns
+`{deleted:true}` and the list goes empty. One thing worth flagging, not a
+bug: right after delete, re-fetching the SAME signed URL still returned 200
+with the old content — `cf-cache-status: HIT` in the response headers
+showed this was Supabase's Cloudflare-fronted Smart CDN serving a cached
+copy of that specific signed URL, not the object surviving deletion.
+Verified the real state directly against Supabase's Storage `list` API
+(bypasses the CDN entirely) — the prefix came back empty, confirming the
+object was genuinely gone. All test data cleaned up after.
+
+**Security note:** the founder's Supabase URL and `service_role` key (a
+full-admin, RLS-bypassing credential) were pasted directly into chat despite
+being asked not to. Used them to unblock the verification since the
+exposure had already happened, flagged clearly that the key should be
+treated as burned and rotated in the Supabase dashboard afterward. Never
+printed the key value in any tool output or file listing from that point on.
+
+**Vault feature is now fully verified end-to-end, not just unit/integration
+tested.** No code changes this entry — pure live verification.
