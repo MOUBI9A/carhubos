@@ -10,6 +10,7 @@ export interface CarDocument {
   expiryDate: string;
   issueDate?: string | null;
   fileUrl?: string | null;
+  vaultFileId?: string | null;
   isMandatory: boolean;
 }
 

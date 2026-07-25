@@ -31,11 +31,15 @@ import {
   Gauge,
   CalendarDays,
   RefreshCw,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
+import { getVaultDownloadUrl } from '@/lib/vault';
 import { useCarDetail } from './useCarDetail';
+import { VaultFileAttachment, type AttachedVaultFile } from './VaultFileAttachment';
 import {
   CAR_STATUSES,
   STATUS_STYLES,
@@ -87,6 +91,8 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [renewingDoc, setRenewingDoc] = useState<CarDocument | null>(null);
   const [isMutating, setIsMutating] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<AttachedVaultFile | null>(null);
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   // ── Mutations ─────────────────────────────────────────────────────
   const handleUpdateStatus = async (newStatus: CarStatus) => {
@@ -173,8 +179,10 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
         type,
         expiryDate,
         ...(issueDate ? { issueDate } : {}),
+        ...(attachedFile ? { vaultFileId: attachedFile.id } : {}),
       });
       setIsDocModalOpen(false);
+      setAttachedFile(null);
       showToast('success', 'Document Registered', `${formatDocType(type)} is now tracked by Guardian.`);
       refetch();
     } catch (err: any) {
@@ -197,8 +205,12 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
 
     setIsMutating(true);
     try {
-      await api.patch(`/documents/${renewingDoc.id}`, { expiryDate });
+      await api.patch(`/documents/${renewingDoc.id}`, {
+        expiryDate,
+        ...(attachedFile ? { vaultFileId: attachedFile.id } : {}),
+      });
       setRenewingDoc(null);
+      setAttachedFile(null);
       showToast('success', 'Document Renewed', `${formatDocType(renewingDoc.type)} compliance window extended.`);
       refetch();
     } catch (err: any) {
@@ -206,6 +218,33 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       showToast('danger', 'Renewal Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
     } finally {
       setIsMutating(false);
+    }
+  };
+
+  const closeDocModal = () => {
+    setIsDocModalOpen(false);
+    setAttachedFile(null);
+  };
+
+  const closeRenewModal = () => {
+    setRenewingDoc(null);
+    setAttachedFile(null);
+  };
+
+  const handleViewDocument = async (doc: CarDocument) => {
+    if (!doc.vaultFileId) return;
+    setViewingDocId(doc.id);
+    try {
+      const url = await getVaultDownloadUrl(doc.vaultFileId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      const msg =
+        err?.response?.status === 503
+          ? 'Vault storage isn’t configured yet.'
+          : err?.response?.data?.message || 'Could not generate a download link.';
+      showToast('danger', 'View Failed', msg);
+    } finally {
+      setViewingDocId(null);
     }
   };
 
@@ -545,10 +584,28 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                         )}>
                           <FileText className="w-5 h-5" />
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setRenewingDoc(doc)}>
-                          <RefreshCw className="w-3.5 h-3.5 me-1.5" />
-                          Renew
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {doc.vaultFileId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              disabled={viewingDocId === doc.id}
+                              onClick={() => handleViewDocument(doc)}
+                              aria-label={`View ${formatDocType(doc.type)} file`}
+                            >
+                              {viewingDocId === doc.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-text-muted" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5 text-text-muted" />
+                              )}
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => setRenewingDoc(doc)}>
+                            <RefreshCw className="w-3.5 h-3.5 me-1.5" />
+                            Renew
+                          </Button>
+                        </div>
                       </div>
                       <h3 className="font-semibold tracking-tight text-foreground">{formatDocType(doc.type)}</h3>
                       <p className="mt-1 text-xs text-text-faint">
@@ -844,7 +901,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       {/* ═══════ Add Document Modal ═══════ */}
       <Modal
         isOpen={isDocModalOpen}
-        onClose={() => setIsDocModalOpen(false)}
+        onClose={closeDocModal}
         title="Register document"
         description="Track a legal document in the Guardian vault"
       >
@@ -867,8 +924,14 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               <input name="expiryDate" type="date" required className={inputCls} />
             </div>
           </div>
+          <VaultFileAttachment
+            value={attachedFile}
+            onChange={setAttachedFile}
+            disabled={isMutating}
+            helperText="Attach a scan (optional)"
+          />
           <div className="flex gap-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDocModalOpen(false)} disabled={isMutating}>
+            <Button type="button" variant="outline" className="flex-1" onClick={closeDocModal} disabled={isMutating}>
               Cancel
             </Button>
             <Button type="submit" className="flex-1" isLoading={isMutating}>
@@ -881,7 +944,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
       {/* ═══════ Renew Document Modal ═══════ */}
       <Modal
         isOpen={renewingDoc !== null}
-        onClose={() => setRenewingDoc(null)}
+        onClose={closeRenewModal}
         title="Renew document"
         description={renewingDoc ? `Extend ${formatDocType(renewingDoc.type)} compliance window` : ''}
       >
@@ -895,8 +958,14 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
               <p className="eyebrow px-1">New expiry date *</p>
               <input name="expiryDate" type="date" required className={inputCls} />
             </div>
+            <VaultFileAttachment
+              value={attachedFile}
+              onChange={setAttachedFile}
+              disabled={isMutating}
+              helperText="Attach a new scan (optional — keeps the existing file if skipped)"
+            />
             <div className="flex gap-4">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setRenewingDoc(null)} disabled={isMutating}>
+              <Button type="button" variant="outline" className="flex-1" onClick={closeRenewModal} disabled={isMutating}>
                 Cancel
               </Button>
               <Button type="submit" className="flex-1" isLoading={isMutating}>
