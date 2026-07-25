@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38). **Vault frontend UI DONE (R39)** — `/dashboard/vault-files`: file list, drag-and-drop uploader with client-side validation, download/delete actions, graceful 503 handling. **Feature complete pending the founder's real Supabase keys for a live end-to-end pass.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-24 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38); Vault frontend UI (R39). **Vault Playwright suite DONE (R40)** — 7 tests, all vault network calls mocked (neither the real backend nor Supabase touched). Bucket name double-checked against the founder's real `vault-files` — already an exact match, no patch needed. Founder is doing a live manual UI pass with real Supabase keys in parallel. Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2380,3 +2380,69 @@ No real Supabase project exists yet in this environment (checked
 `backend/.env` — no `SUPABASE_URL` present), so the upload/download flows
 still 503 exactly as designed; that's the correct, honest current state,
 not a bug.
+
+---
+
+### R40 — Vault Playwright suite + bucket-name check (sole developer, 2026-07-25)
+
+**Bucket name check (founder's ask):** `vault-storage.service.ts`'s default
+(`process.env.SUPABASE_VAULT_BUCKET ?? 'vault-files'`) and `.env.example`'s
+placeholder both already read exactly `vault-files` — matches the founder's
+real bucket name precisely. No patch needed; verified by direct read, not
+assumed. (This environment still has no `SUPABASE_URL`/`SUPABASE_SERVICE_
+ROLE_KEY` in `backend/.env` — the founder's real keys are on their own
+machine, so a live end-to-end pass here still isn't possible; that's expected
+and matches the Stripe situation.)
+
+**New spec:** `frontend/e2e/vault-files.e2e.ts`, 7 tests. Per the founder's
+ask, every request that would reach the real Supabase-backed endpoints
+(`GET/POST/DELETE /vault/files`, `GET .../download-url`) is intercepted with
+`page.route('**/api/vault/files**', …)` and answered with canned JSON — the
+real backend's vault routes and real Supabase are never touched by this
+file (auth/sidebar calls still hit the real running backend normally; only
+vault-specific paths are mocked). Covers exactly what was asked:
+
+- **Empty state** — mocked `GET` returns `[]`, `EmptyState` renders.
+- **Drag-and-drop validation** — a real synthetic HTML5 `drop` event
+  (`DataTransfer` + `File`, dispatched via `page.evaluateHandle` +
+  `dispatchEvent`) with a disallowed mime type (`text/plain`), proving the
+  actual `onDrop` handler — not just the file input — runs the same
+  validation. Asserts the rejection toast AND that zero `POST` requests
+  fired.
+- **Client-side rejections** — the 8MB-cap case via `setInputFiles` with a
+  real 9MB buffer (efficient; a synthetic drop with a byte array that size
+  would serialize far too slowly through `page.evaluate`). Same
+  zero-network-calls assertion.
+- **A valid upload** — proves the success path still reaches the (mocked)
+  API and the list refetches.
+- **The 503 "not configured" state** — proves the persistent banner (not
+  just the toast) renders with the "nothing was lost" reassurance.
+- **Delete modal** — cancel (no `DELETE` call, file stays) vs. confirm
+  (`DELETE` fires once, list reflects the removal).
+
+**Three real bugs found and fixed while getting this suite green** (not
+environment flakiness — genuine `strict mode violation` / logic errors):
+1. `getByText('insurance-policy.pdf')` collided with the success toast's
+   sentence containing the same filename as a substring — fixed with
+   `{ exact: true }` (4 call sites).
+2. `getByText('PDF')` collided with the dropzone's own static hint text
+   ("PDF, JPEG, PNG or WebP…") — fixed by scoping to
+   `getByRole('cell', { name: 'PDF', exact: true })`.
+3. The upload test's test-specific `POST` route override shadows
+   `mockVaultApi`'s own counter-incrementing branch (Playwright's
+   later-registered handler wins) — the override wasn't incrementing
+   `calls.post` itself, so the "one network call happened" assertion was
+   trivially wrong (asserting an OUTER counter a different, shadowed
+   handler owned). Fixed by counting inside the override.
+
+**Verified:** `tsc`/`eslint` clean. This sandbox's now-familiar Turbopack
+dev-server flakiness (documented repeatedly this session — first-compile
+latency and load-spike-driven `net::ERR_ABORTED` on `page.goto`, never a
+logic failure) hit this route too on cold/contended runs; pre-warming the
+route with a direct request before invoking Playwright made it fully
+reliable — **8/8 clean twice in a row** once warm. Ran the FULL existing
+e2e suite alongside this new file: the 7 vault tests were green both times;
+the 5 failures elsewhere (`booking-flow`, `roles`, `trust`) are the exact
+same known-flaky tests already documented in this session's history — not
+touched or caused by this work. Backend unaffected (47 suites/351 tests,
+untouched this round).
