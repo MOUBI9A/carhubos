@@ -55,8 +55,30 @@ export class DocumentsService {
     return doc;
   }
 
+  /**
+   * A caller-supplied vaultFileId is just a string until proven otherwise —
+   * verify the referenced VaultFile actually belongs to the caller's own
+   * agency before linking it. Without this, an agency could attach another
+   * tenant's already-uploaded file to their own compliance record just by
+   * guessing/observing its id (an IDOR on the link, not the file's contents,
+   * but still a real cross-tenant reference — the linked record would then
+   * expose that id + its signed-download path to this agency's own users).
+   */
+  private async assertVaultFileOwnership(agencyId: string, vaultFileId: string) {
+    const file = await this.prisma.vaultFile.findFirst({
+      where: { id: vaultFileId, agencyId },
+      select: { id: true },
+    });
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+  }
+
   async create(agencyId: string, dto: CreateCarDocumentDto) {
     await this.assertCarOwnership(agencyId, dto.carId);
+    if (dto.vaultFileId) {
+      await this.assertVaultFileOwnership(agencyId, dto.vaultFileId);
+    }
     const expiry = new Date(dto.expiryDate);
 
     return this.prisma.carDocument.create({
@@ -66,6 +88,7 @@ export class DocumentsService {
         expiryDate: expiry,
         issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
         fileUrl: dto.fileUrl ?? null,
+        vaultFileId: dto.vaultFileId ?? null,
         isMandatory: dto.isMandatory ?? true,
         status: this.deriveStatus(expiry),
       },
@@ -98,6 +121,9 @@ export class DocumentsService {
   /** Renewal: new expiry date recomputes the compliance status. */
   async renew(agencyId: string, documentId: string, dto: RenewCarDocumentDto) {
     await this.findOwnedDocument(agencyId, documentId);
+    if (dto.vaultFileId) {
+      await this.assertVaultFileOwnership(agencyId, dto.vaultFileId);
+    }
     const expiry = new Date(dto.expiryDate);
 
     return this.prisma.carDocument.update({
@@ -107,6 +133,7 @@ export class DocumentsService {
         status: this.deriveStatus(expiry),
         ...(dto.issueDate ? { issueDate: new Date(dto.issueDate) } : {}),
         ...(dto.fileUrl !== undefined ? { fileUrl: dto.fileUrl } : {}),
+        ...(dto.vaultFileId !== undefined ? { vaultFileId: dto.vaultFileId } : {}),
       },
     });
   }

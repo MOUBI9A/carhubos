@@ -1,5 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { VaultStorageService } from '../vault/vault-storage.service';
+import {
+  VAULT_ALLOWED_MIME_TYPES,
+  VAULT_MAX_FILE_SIZE_BYTES,
+} from '../vault/dto/vault-file.dto';
+import { CreateRenterDocumentDto } from './dto/create-renter-document.dto';
+
+/** Strips anything unsafe in a storage-object key/path segment. */
+function sanitizeFilename(name: string): string {
+  const base = name.split(/[/\\]/).pop() ?? 'file';
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 150);
+  return cleaned || 'file';
+}
 
 /**
  * Renter self-service reads. EVERY method is keyed on the caller's own `userId`
@@ -8,7 +27,12 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Injectable()
 export class PortalService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PortalService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly vaultStorage: VaultStorageService,
+  ) {}
 
   /** The renter's profile + their global trust summary (if identity-linked). */
   async me(userId: string) {
@@ -66,12 +90,83 @@ export class PortalService {
         type: true,
         label: true,
         fileUrl: true,
+        storagePath: true,
+        mimeType: true,
+        sizeBytes: true,
         verified: true,
         createdAt: true,
         updatedAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Upload a real file into the renter's own identity-document vault. Reuses
+   * VaultStorageService (same Supabase bucket/mechanics as the agency Vault)
+   * but deliberately does NOT create a VaultFile row — VaultFile.agencyId is
+   * required (single-tenant), and RenterDocument is cross-tenant by design
+   * (owned by the renter, read by many agencies via ConsentGrant — see
+   * ConsentService.readDocuments). storagePath is namespaced under the
+   * renter's own userId, not any agency, keeping it out of every
+   * agency-scoped Vault query entirely.
+   */
+  async createDocument(
+    userId: string,
+    dto: CreateRenterDocumentDto,
+    file: { originalname: string; mimetype: string; size: number; buffer: Buffer },
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided.');
+    }
+    // Defense in depth — the controller's FileInterceptor already enforces
+    // this via multer's fileFilter/limits, but a single validation layer is
+    // never the actual security boundary.
+    if (!VAULT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
+      throw new BadRequestException(
+        `Unsupported file type "${file.mimetype}". Allowed: ${VAULT_ALLOWED_MIME_TYPES.join(', ')}.`,
+      );
+    }
+    if (file.size > VAULT_MAX_FILE_SIZE_BYTES) {
+      throw new BadRequestException(
+        `File exceeds the ${VAULT_MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB limit.`,
+      );
+    }
+
+    const storagePath = `renter-documents/${userId}/${randomUUID()}-${sanitizeFilename(file.originalname)}`;
+    await this.vaultStorage.upload(storagePath, file.buffer, file.mimetype);
+
+    try {
+      return await this.prisma.renterDocument.create({
+        data: {
+          type: dto.type,
+          label: dto.label ?? null,
+          storagePath,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          ownerUserId: userId,
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Metadata insert failed after a successful upload for ${storagePath}; cleaning up. ${(err as Error).message}`,
+      );
+      await this.vaultStorage.remove(storagePath);
+      throw err;
+    }
+  }
+
+  /** Self-serve signed download URL for the renter's OWN document. */
+  async getDocumentDownloadUrl(userId: string, documentId: string) {
+    const doc = await this.prisma.renterDocument.findFirst({
+      where: { id: documentId, ownerUserId: userId },
+      select: { storagePath: true, label: true, type: true },
+    });
+    if (!doc || !doc.storagePath) {
+      throw new NotFoundException('Document not found.');
+    }
+    const url = await this.vaultStorage.createSignedUrl(doc.storagePath);
+    return { url, expiresInSeconds: 300 };
   }
 
   /** The renter's bookings, newest first, with car + status + dates + price. */

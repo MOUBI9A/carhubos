@@ -36,6 +36,14 @@ export class CreateCarDocumentDto {
   @IsOptional()
   @IsBoolean()
   isMandatory?: boolean;
+
+  // Real, Supabase-backed attachment (Vault entity-linking) — an id from a
+  // prior POST /vault/files upload. Ownership of the referenced VaultFile is
+  // re-verified against the caller's own agencyId in the service (never
+  // trust that a caller-supplied id belongs to them just because it parses).
+  @IsOptional()
+  @IsString()
+  vaultFileId?: string;
 }
 
 export class RenewCarDocumentDto {
@@ -50,4 +58,8 @@ export class RenewCarDocumentDto {
   @IsOptional()
   @IsString()
   fileUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  vaultFileId?: string;
 }

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { VaultStorageService } from '../vault/vault-storage.service';
 import { RequestConsentDto } from './dto/consent.dto';
 
 /** Default consent window applied on approval. */
@@ -31,7 +32,10 @@ const APPROVAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export class ConsentService {
   private readonly logger = new Logger(ConsentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly vaultStorage: VaultStorageService,
+  ) {}
 
   private normalizeScope(scope: string[]): string[] {
     return [...new Set(scope)].sort();
@@ -158,6 +162,9 @@ export class ConsentService {
         type: true,
         label: true,
         fileUrl: true,
+        storagePath: true,
+        mimeType: true,
+        sizeBytes: true,
         verified: true,
         createdAt: true,
         updatedAt: true,
@@ -171,6 +178,51 @@ export class ConsentService {
       expiresAt: grant.expiresAt,
       documents,
     };
+  }
+
+  /**
+   * Signed download URL for ONE of a renter's documents, gated on the exact
+   * same active-grant + in-scope check as readDocuments — re-verified here,
+   * not inherited from a prior call, since this is a separate request that
+   * could arrive well after the grant expired or was revoked. A document
+   * outside the grant's scope, or with no real uploaded file yet
+   * (storagePath null — only a legacy fileUrl, or nothing), 404s rather than
+   * ever reaching VaultStorageService.
+   */
+  async getConsentedDocumentDownloadUrl(
+    agencyId: string,
+    renterUserId: string,
+    documentId: string,
+  ) {
+    const now = new Date();
+    const grant = await this.prisma.consentGrant.findFirst({
+      where: {
+        agencyId,
+        grantorUserId: renterUserId,
+        status: 'APPROVED',
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      orderBy: { approvedAt: 'desc' },
+    });
+    if (!grant) {
+      throw new ForbiddenException('No active consent grant');
+    }
+
+    const doc = await this.prisma.renterDocument.findFirst({
+      where: {
+        id: documentId,
+        ownerUserId: renterUserId,
+        type: { in: grant.scope },
+      },
+      select: { storagePath: true },
+    });
+    if (!doc || !doc.storagePath) {
+      throw new NotFoundException('Document not found.');
+    }
+
+    const url = await this.vaultStorage.createSignedUrl(doc.storagePath);
+    return { url, expiresInSeconds: 300 };
   }
 
   /** A renter's own grants (pending + active + past), with agency name. */

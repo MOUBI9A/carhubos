@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 
 /**
@@ -136,5 +137,74 @@ describe('DocumentsService.create/renew — status derivation at write time', ()
     });
 
     expect(update.mock.calls[0][0].data.status).toBe('VALID');
+  });
+});
+
+describe('DocumentsService — vaultFileId linking (Vault entity-linking)', () => {
+  it('create() 404s on a vaultFileId belonging to another agency, and never creates the document', async () => {
+    const create = jest.fn();
+    const prisma = {
+      car: { findFirst: jest.fn().mockResolvedValue({ id: 'car-1' }) },
+      // The VaultFile lookup is scoped by {id, agencyId} — a cross-tenant id
+      // simply matches nothing, same 404-not-403 shape as every other
+      // ownership check in this codebase.
+      vaultFile: { findFirst: jest.fn().mockResolvedValue(null) },
+      carDocument: { create },
+    };
+    const svc = new DocumentsService(prisma as any);
+
+    await expect(
+      svc.create('agency-a', {
+        carId: 'car-1',
+        type: 'INSURANCE',
+        expiryDate: new Date(Date.now() + 86400000).toISOString(),
+        vaultFileId: 'someone-elses-file',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.vaultFile.findFirst.mock.calls[0][0].where).toEqual({
+      id: 'someone-elses-file',
+      agencyId: 'agency-a',
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('create() links a vaultFileId that does belong to the caller\'s own agency', async () => {
+    const create = jest.fn((args: any) => Promise.resolve(args.data));
+    const prisma = {
+      car: { findFirst: jest.fn().mockResolvedValue({ id: 'car-1' }) },
+      vaultFile: { findFirst: jest.fn().mockResolvedValue({ id: 'file-1' }) },
+      carDocument: { create },
+    };
+    const svc = new DocumentsService(prisma as any);
+
+    await svc.create('agency-a', {
+      carId: 'car-1',
+      type: 'INSURANCE',
+      expiryDate: new Date(Date.now() + 86400000).toISOString(),
+      vaultFileId: 'file-1',
+    });
+
+    expect(create.mock.calls[0][0].data.vaultFileId).toBe('file-1');
+  });
+
+  it('renew() 404s on a cross-tenant vaultFileId and never updates the document', async () => {
+    const update = jest.fn();
+    const prisma = {
+      carDocument: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'doc-1', car: { agencyId: 'agency-a' } }),
+        update,
+      },
+      vaultFile: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const svc = new DocumentsService(prisma as any);
+
+    await expect(
+      svc.renew('agency-a', 'doc-1', {
+        expiryDate: new Date(Date.now() + 86400000).toISOString(),
+        vaultFileId: 'someone-elses-file',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(update).not.toHaveBeenCalled();
   });
 });

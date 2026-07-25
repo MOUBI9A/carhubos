@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend (R38); Vault frontend UI (R39); Vault Playwright suite (R40). **Vault verified LIVE end-to-end against the founder's real Supabase project (R41)** — real upload/list/signed-download/delete round-trip all confirmed, incl. cross-checking a CDN-caching red herring against Supabase's Storage API directly rather than assuming a bug. **Vault feature is complete.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41). **Vault entity-linking DONE (R42)** — `CarDocument.vaultFileId` FK (real link, IDOR-checked) + `RenterDocument.storagePath/mimeType/sizeBytes` (own columns, no `VaultFile` FK — cross-tenant/consent-gated, doesn't fit `VaultFile`'s single-agency model). New `POST /portal/documents` (RenterDocument's first-ever upload endpoint) + consent-gated agency download-url. Live-verified against real Postgres + real Supabase, full consent lifecycle included; all test data cleaned up. **Backend-only this round** — frontend upload UI for Guardian Vault / renter portal is the natural next slice. Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -514,11 +514,12 @@ rather than mint an ungoverned new one (which would also need a
 follow-up once the founder decides who should see vault files.
 
 **Not built (flagged, not guessed):** a dedicated `vault.view`/`vault.manage`
-capability (needs a product call + reseed); linking `VaultFile` to a specific
-domain entity (CarDocument/RenterDocument) — the founder's spec describes a
-standalone tenant-wide vault with no entity-link field, so none was added;
-frontend upload/list/download UI (backend-only this pass, per the founder's
-"let me know when the backend scaffolding is ready").
+capability (needs a product call + reseed); frontend upload/list/download UI
+(backend-only this pass, per the founder's "let me know when the backend
+scaffolding is ready"). ~~Linking `VaultFile` to a specific domain entity~~
+— **done, R42**: `CarDocument` links directly (`vaultFileId` FK);
+`RenterDocument` reuses the storage layer via its own columns instead (see
+R42 for why a direct FK doesn't fit its cross-tenant/consent-gated model).
 
 ---
 
@@ -2490,3 +2491,92 @@ printed the key value in any tool output or file listing from that point on.
 
 **Vault feature is now fully verified end-to-end, not just unit/integration
 tested.** No code changes this entry — pure live verification.
+
+---
+
+### R42 — Vault entity-linking: CarDocument + RenterDocument now use the real Supabase-backed storage (sole developer, 2026-07-25)
+
+Founder-directed follow-up to R38/R39 (which deliberately left this out —
+"linking VaultFile to a specific domain entity... none was added"). Presented
+the architecture as two options before writing anything, per the founder's
+explicit ask:
+
+- **Option A** — one shared `VaultFile` table for both, requiring
+  `VaultFile.agencyId` to become nullable + a DB check constraint, since
+  `RenterDocument` is cross-tenant/consent-gated and doesn't fit a
+  single-agency model.
+- **Option C** — `CarDocument` gets a real `vaultFileId` FK into the
+  unchanged `VaultFile` table (clean fit — a car always has exactly one
+  owning agency); `RenterDocument` gets its own `storagePath`/`mimeType`/
+  `sizeBytes` columns instead, reusing the same Supabase bucket/
+  `VaultStorageService` under the hood without touching `VaultFile`'s
+  invariant at all.
+
+**Founder chose Option C.** `VaultFile` itself is unchanged — no nullable
+columns, no constraint surgery, zero risk to the file storage every other
+Vault consumer already depends on.
+
+**Schema** (migration `20260725140835_vault_entity_linking`, additive, no
+data loss): `CarDocument.vaultFileId String? @unique` →
+`VaultFile` (`onDelete: SetNull` — deleting the file unattaches the
+compliance record, never deletes it); `RenterDocument` gets
+`storagePath`/`mimeType`/`sizeBytes String?/String?/Int?`. Existing rows
+with only a legacy `fileUrl` are untouched and keep rendering exactly as
+before.
+
+**Backend, corrected from the founder's initial framing** (`cars`/
+`customers` controllers were never actually in the picture — verified by
+reading every read/write site before touching anything):
+- `documents/dto/documents.dto.ts` + `documents.service.ts` —
+  `CreateCarDocumentDto`/`RenewCarDocumentDto` take an optional
+  `vaultFileId`; a new `assertVaultFileOwnership()` re-verifies the
+  referenced `VaultFile.agencyId` matches the caller's own agency before
+  linking — closes an IDOR where a caller could otherwise attach another
+  tenant's already-uploaded file by guessing/observing its id.
+- **`portal.controller.ts`/`portal.service.ts`** (not `customers` —
+  `RenterDocument` has never had a create endpoint anywhere; this is its
+  first one) — new `POST /portal/documents` (multipart, same 8MB/PDF+JPEG+
+  PNG+WebP validation as the agency Vault) and `GET /portal/documents/:id/
+  download-url`, both self-scoped on the caller's own `userId`.
+  `storagePath` is namespaced `renter-documents/<userId>/...` — never an
+  `agencyId` prefix.
+- **`consent.service.ts`/`consent.controller.ts`** — `readDocuments`'s
+  select now includes the new columns; new
+  `getConsentedDocumentDownloadUrl` re-verifies the SAME active-grant +
+  in-scope check as `readDocuments` (not inherited from a prior call) before
+  generating a signed URL — a revoked/expired grant or an out-of-scope
+  document type never reaches `VaultStorageService`.
+- `vault.module.ts` now exports `VaultStorageService` so `portal`/`consent`
+  can reuse it directly without going through `VaultFile`/`VaultService` at
+  all (Option C's whole point).
+
+**Verified (real output):**
+- 12 new unit tests (3 `documents.service.spec.ts` — cross-tenant
+  `vaultFileId` 404s and never creates the document; 5
+  `portal.service.spec.ts` — validation-before-storage, userId-namespaced
+  path, cleanup-on-metadata-failure, self-scoped download 404; 4
+  `consent.service.spec.ts` — no-grant Forbidden without touching storage,
+  out-of-scope 404, no-file 404, valid signed URL). Backend **47 suites /
+  363 tests** (baseline 47/351, +12), `tsc`/`eslint` clean both times
+  (before and after a stray unnecessary type-assertion lint error was
+  fixed).
+- **Live, against the real Supabase project and real Postgres** (not
+  mocked): uploaded a real file via `POST /vault/files`, linked it to a
+  real `CarDocument` via the new `vaultFileId` — persisted correctly;
+  attempting to link a nonexistent/cross-tenant id → **404**, document not
+  created. Uploaded a real renter document via the new `POST /portal/
+  documents` — `storagePath` correctly prefixed `renter-documents/<the
+  renter's own id>/`, never an agency's. Confirmed the full consent
+  lifecycle live: agency read **403** with no grant → requested a real
+  grant → renter approved it → agency read **200** (showing the new real
+  row *and* the pre-existing legacy-seeded row side by side, the legacy one
+  correctly showing `storagePath: null`) → agency's new consent-gated
+  download-url → real signed URL → all test data (DB rows + the Supabase
+  object itself) deleted afterward, confirmed the bucket is empty again.
+
+**Not built (out of scope for this ask, not guessed at):** no DELETE
+endpoint for `RenterDocument` (cleanup this session was done directly
+against Postgres + the Supabase Storage API, same as prior sessions);
+frontend upload UI for either Guardian Vault (`/dashboard/vault`) or the
+renter portal — this entry is backend-only, matching how R38 (Vault
+backend) preceded R39 (Vault frontend) as a separate step.

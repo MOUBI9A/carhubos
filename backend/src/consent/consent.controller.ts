@@ -30,4 +30,18 @@ export class ConsentController {
   ) {
     return this.consentService.readDocuments(user.agencyId, renterUserId);
   }
+
+  @Get('documents/:renterUserId/:documentId/download-url')
+  @RequireCapabilities('customer.view')
+  getDocumentDownloadUrl(
+    @CurrentUser() user: any,
+    @Param('renterUserId') renterUserId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    return this.consentService.getConsentedDocumentDownloadUrl(
+      user.agencyId,
+      renterUserId,
+      documentId,
+    );
+  }
 }

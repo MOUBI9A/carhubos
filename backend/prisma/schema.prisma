@@ -162,7 +162,7 @@ model Car {
 model CarDocument {
   id          String    @id @default(uuid())
   type        String // INSURANCE, CARTE_GRISE, TECHNICAL_INSPECTION, VIGNETTE
-  fileUrl     String?
+  fileUrl     String? // legacy/external URL — kept for existing rows, not written by new uploads
   issueDate   DateTime?
   expiryDate  DateTime
   status      String    @default("VALID") // VALID, EXPIRING_SOON, EXPIRED
@@ -172,6 +172,14 @@ model CarDocument {
 
   carId String
   car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  // Real, Supabase-backed attachment (Vault entity-linking). Nullable: an
+  // existing row may have only the legacy fileUrl, or no file at all.
+  // onDelete: SetNull, not Cascade — deleting the file must not delete the
+  // compliance record itself, just leave it unattached (the existing "no
+  // file attached" empty state already handles that).
+  vaultFileId String?    @unique
+  vaultFile   VaultFile? @relation(fields: [vaultFileId], references: [id], onDelete: SetNull)
 
   @@index([carId])
   @@index([expiryDate])
@@ -387,6 +395,12 @@ model VaultFile {
   agency       Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  // Prisma-side only (no physical column here — the FK lives on
+  // CarDocument.vaultFileId). RenterDocument deliberately does NOT link here:
+  // it's cross-tenant/consent-gated, which doesn't fit this table's
+  // single-agencyId model — see its own storagePath/mimeType/sizeBytes below.
+  carDocument CarDocument?
 
   @@index([agencyId])
   @@index([agencyId, filename])
@@ -686,10 +700,20 @@ model RenterDocument {
   id        String   @id @default(cuid())
   type      String // CIN_FRONT, CIN_BACK, DRIVING_LICENSE, PASSPORT, ...
   label     String?
-  fileUrl   String?
+  fileUrl   String? // legacy/external URL — kept for existing rows, not written by new uploads
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Real, Supabase-backed attachment — same bucket/VaultStorageService as
+  // VaultFile, but deliberately NOT a VaultFile FK: VaultFile.agencyId is
+  // required (single-tenant), and this document is cross-tenant by design
+  // (owned by the renter, read by many agencies via ConsentGrant). Keeping
+  // its own columns here means it stays scoped by ownerUserId/consent only,
+  // never by agencyId.
+  storagePath String?
+  mimeType    String?
+  sizeBytes   Int?
 
   ownerUserId String
   owner       User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)

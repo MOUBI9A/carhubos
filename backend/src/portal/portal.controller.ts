@@ -1,17 +1,27 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RenterGuard } from './guards/renter.guard';
 import { PortalService } from './portal.service';
 import { ConsentService } from '../consent/consent.service';
 import { UsersService } from '../users/users.service';
+import { CreateRenterDocumentDto } from './dto/create-renter-document.dto';
+import {
+  VAULT_ALLOWED_MIME_TYPES,
+  VAULT_MAX_FILE_SIZE_BYTES,
+} from '../vault/dto/vault-file.dto';
 
 /**
  * Renter self-service portal. `AuthGuard` authenticates; `RenterGuard` restricts
@@ -50,6 +60,37 @@ export class PortalController {
   @Get('documents')
   documents(@CurrentUser() user: any) {
     return this.portalService.documents(user.id);
+  }
+
+  @Post('documents')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: VAULT_MAX_FILE_SIZE_BYTES },
+      fileFilter: (_req, file, cb) => {
+        if (!VAULT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
+          cb(
+            new BadRequestException(
+              `Unsupported file type "${file.mimetype}". Allowed: ${VAULT_ALLOWED_MIME_TYPES.join(', ')}.`,
+            ),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  uploadDocument(
+    @CurrentUser() user: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: CreateRenterDocumentDto,
+  ) {
+    return this.portalService.createDocument(user.id, dto, file);
+  }
+
+  @Get('documents/:id/download-url')
+  getDocumentDownloadUrl(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.portalService.getDocumentDownloadUrl(user.id, id);
   }
 
   @Get('bookings')
