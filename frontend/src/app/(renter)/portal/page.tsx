@@ -22,6 +22,9 @@ import {
   Copy,
   FileText,
   Lock,
+  Upload,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
@@ -33,6 +36,7 @@ import {
   usePortalNotifications,
   usePortalDocuments,
 } from './usePortalData';
+import { UploadDocumentModal } from './UploadDocumentModal';
 import {
   CONSENT_STATUS_STYLES,
   RISK_LEVEL_STYLES,
@@ -42,6 +46,7 @@ import {
   formatRelativeToNow,
   type ConsentGrant,
   type PortalNotification,
+  type RenterDocument,
 } from './types';
 
 export default function RenterPortal() {
@@ -70,8 +75,10 @@ export default function RenterPortal() {
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
@@ -146,6 +153,29 @@ export default function RenterPortal() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       showToast('info', 'Copy Unavailable', 'Select and copy the code manually.');
+    }
+  };
+
+  const handleDocumentUploaded = () => {
+    setIsUploadDocOpen(false);
+    showToast('success', 'Document Uploaded', 'Your file was added to your private vault.');
+    refetchDocs();
+  };
+
+  const handleViewDocument = async (doc: RenterDocument) => {
+    if (!doc.storagePath) return;
+    setViewingDocId(doc.id);
+    try {
+      const res = await api.get<{ url: string }>(`/portal/documents/${doc.id}/download-url`);
+      window.open(res.data.url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      const msg =
+        err?.response?.status === 503
+          ? 'Vault storage isn’t configured yet.'
+          : err?.response?.data?.message || 'Could not generate a download link.';
+      showToast('danger', 'View Failed', msg);
+    } finally {
+      setViewingDocId(null);
     }
   };
 
@@ -415,6 +445,10 @@ export default function RenterPortal() {
           <Card>
             <CardHeader>
               <CardTitle>{t('documents')}</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setIsUploadDocOpen(true)}>
+                <Upload className="w-3.5 h-3.5 me-1.5" />
+                Upload
+              </Button>
             </CardHeader>
             {docsLoading ? (
               <SkeletonRows rows={2} />
@@ -441,6 +475,22 @@ export default function RenterPortal() {
                       </p>
                       <p className="eyebrow truncate mt-0.5">{scopeLabel(doc.type)}</p>
                     </div>
+                    {doc.storagePath && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-8 h-8 p-0 shrink-0"
+                        disabled={viewingDocId === doc.id}
+                        onClick={() => handleViewDocument(doc)}
+                        aria-label={`View ${doc.label ?? scopeLabel(doc.type)} file`}
+                      >
+                        {viewingDocId === doc.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-text-muted" />
+                        ) : (
+                          <Download className="w-3.5 h-3.5 text-text-muted" />
+                        )}
+                      </Button>
+                    )}
                     {doc.verified ? (
                       <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-success">
                         <ShieldCheck className="w-3.5 h-3.5" /> Verified
@@ -571,6 +621,12 @@ export default function RenterPortal() {
           </div>
         )}
       </Modal>
+
+      <UploadDocumentModal
+        isOpen={isUploadDocOpen}
+        onClose={() => setIsUploadDocOpen(false)}
+        onUploaded={handleDocumentUploaded}
+      />
     </div>
   );
 }

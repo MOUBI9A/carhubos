@@ -57,10 +57,22 @@ export interface RenterDocument {
   type: string;
   label: string | null;
   fileUrl: string | null;
+  storagePath?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
   verified: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Matches backend RENTER_DOCUMENT_TYPES (portal/dto/create-renter-document.dto.ts) —
+ *  the subset of SCOPE_LABELS a renter can actually upload a file for. */
+export const RENTER_DOCUMENT_TYPES = [
+  'CIN_FRONT',
+  'CIN_BACK',
+  'DRIVING_LICENSE',
+  'PASSPORT',
+] as const;
 
 export type BookingStatus =
   | 'REQUESTED'

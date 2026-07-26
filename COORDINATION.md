@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42). **Guardian Vault car-document upload UI DONE (R43, Phase 1 of 2)** — `VaultFileAttachment` wired into the fleet detail page's Register/Renew document modals, "View file" action on linked docs, new `frontend/src/lib/vault.ts` shared helper. New Playwright spec 6/6, `vault-files.e2e.ts` re-run clean (13/13), tsc/eslint/vitest all green (`4032ba8`). **Phase 2 next: renter portal upload UI + agency consent-gated document viewer.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | `frontend/src/lib/vault.ts`, `frontend/src/app/(owner)/dashboard/fleet/**`, `frontend/src/app/(renter)/portal/**` (Phase 2, about to start), `frontend/src/app/(owner)/dashboard/customers/**` (Phase 2, about to start) | 2026-07-26 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes); the rest of `docs/AUDIT_2026-07-26.md`'s findings (font-black in shared Modal/EmptyState, refund-verification race, billing capability gate, dependency vulns, etc.) are unclaimed, for the founder to prioritize. | None claimed. | 2026-07-26 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2631,3 +2631,74 @@ prior entries.)
 
 **Not built:** Phase 2 (renter portal upload UI + agency-side consent-gated
 document viewer) — up next, tracked separately.
+
+### R44 — Renter portal upload UI + agency consent-gated document viewer, Phase 2 of R42's frontend follow-up (sole developer, 2026-07-26)
+
+**New:** `frontend/src/app/(renter)/portal/UploadDocumentModal.tsx` — a single
+atomic multipart POST to `POST /portal/documents` (type + optional label +
+file), unlike Guardian Vault's two-step upload-then-link flow, since
+`RenterDocument` doesn't go through `VaultFile` at all (R42). Wired into the
+renter portal's existing "My documents" card via a new "Upload" button; a
+"View" action appears on any document with a real `storagePath`, calling the
+existing self-scoped `GET /portal/documents/:id/download-url`.
+`frontend/src/app/(owner)/dashboard/customers/[id]/VaultAccessPanel.tsx` —
+the agency-side viewer, embedded in the customer detail page's sidebar.
+
+**Real gap found, flagged not guessed (matches R42's cars/customers
+correction):** the founder's "likely under the customer detail view" framing
+assumed `Customer` (the agency's own CRM record) has some link to a portal
+`User` — it doesn't; `ConsentGrant`/`RenterDocument` are keyed on `User.id`,
+resolved only via `qrHash` or `renterUserId` (`consent.dto.ts`), and there is
+no agency-facing "list my grants" endpoint at all (`listForRenter` is
+renter-only). Bridged this client-side rather than guessing a schema change:
+staff enter the renter's Trust Vault code once, `POST /agency/consent/request`
+resolves and returns the real `grantorUserId`, which is cached in
+`localStorage` per `customerId` (`fider:vault-consent-renter:{id}`) purely to
+avoid re-typing it every page load — every actual read still goes through the
+real consent-gated endpoints (`GET /agency/consent/documents/:renterUserId`,
+`.../download-url`), so this bridge can't bypass the grant invariant, only
+save a keystroke.
+
+**Security finding caught by a concurrent independent audit
+(`docs/AUDIT_2026-07-26.md`, finding #1, High — not committed by me, left for
+whoever ran it) and fixed same-day:** that localStorage bridge had no
+identity cross-check — nothing stopped staff from linking the wrong renter's
+code to a customer's page (easy at a busy desk), silently showing a
+*different* person's private ID/license/passport under an unrelated
+customer's profile. Not a server-side authz bypass (the grant itself is
+real), but a real PII-misattribution risk. No safe automatic fix exists
+without either a schema link or a new cross-agency "look up any user"
+endpoint (itself a PII-leak vector this codebase's 404-not-403 convention
+exists to avoid) — both are product/schema calls, not mine to make unasked.
+Fix applied: `VaultAccessPanel` now takes `customerName`/`customerIdentity`
+and always renders a warning ("Fider cannot verify a Trust Vault code
+belongs to this client — confirm the renter's identity matches {name}
+({CIN/passport}) in person...") so the check is manual and impossible to
+miss, matching the audit's own suggested fix. `customer-vault-access.e2e.ts`
+re-verified green after the change (5/5).
+
+**Verified:** `tsc --noEmit` and `eslint . --max-warnings=0` clean across the
+whole frontend. `vitest run` 9/9. New
+`frontend/e2e/portal-document-upload.e2e.ts` (6 scenarios: client-side
+mime/size rejection, a real upload wiring type+file through, the 503 path,
+the "View" popup) and `frontend/e2e/customer-vault-access.e2e.ts` (4
+scenarios: request-form validation, request→"no active consent" state, a
+granted state listing consented documents with a working signed-URL "View",
+and unlink clearing the localStorage key) — every individual test passed at
+least once, most runs fully green; the renter-portal spec's real login step
+(same pattern as `roles.e2e.ts`) intermittently timed out under a severe,
+externally-caused load spike this session (`uptime` load average briefly
+15–34) — confirmed via `uptime`/`ps` that this was NOT orphaned Playwright
+browsers or anything this session started, and confirmed by re-running each
+affected test in isolation once load eased, all passing. Consistent with
+this environment's already-documented flakiness pattern (R40/R41/R43); not a
+code defect.
+
+**Not built (flagged, not guessed):** the agency-Customer↔renter-User schema
+link itself (would let this feature work without the localStorage bridge —
+a real product/schema decision); anything else raised in
+`docs/AUDIT_2026-07-26.md` outside finding #1 (font-black in shared
+`Modal.tsx`/`EmptyState.tsx`, the refund-verification race, missing
+capability gate on `GET /agency/billing`, dependency vulnerabilities, etc.)
+— all pre-existing or orthogonal to this Vault frontend slice, left for the
+founder to prioritize separately.

@@ -32,6 +32,7 @@ import { AgencyImage } from '@/components/ui/AgencyImage';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
 import { useCustomerDetail } from './useCustomerDetail';
+import { VaultAccessPanel } from './VaultAccessPanel';
 import {
   CUSTOMER_STATUS_STYLES,
   formatDocType,
@@ -408,6 +409,12 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               </div>
             )}
           </Card>
+
+          <VaultAccessPanel
+            customerId={customer.id}
+            customerName={fullName(customer)}
+            customerIdentity={`${customer.identityType} · ${customer.identityNumber}`}
+          />
 
           <Card>
             <CardHeader className="p-0 mb-5">
