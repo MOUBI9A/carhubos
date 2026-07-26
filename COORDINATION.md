@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41). **Vault entity-linking DONE (R42)** — `CarDocument.vaultFileId` FK (real link, IDOR-checked) + `RenterDocument.storagePath/mimeType/sizeBytes` (own columns, no `VaultFile` FK — cross-tenant/consent-gated, doesn't fit `VaultFile`'s single-agency model). New `POST /portal/documents` (RenterDocument's first-ever upload endpoint) + consent-gated agency download-url. Live-verified against real Postgres + real Supabase, full consent lifecycle included; all test data cleaned up. **Backend-only this round** — frontend upload UI for Guardian Vault / renter portal is the natural next slice. Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | None claimed. | 2026-07-25 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42). **Guardian Vault car-document upload UI DONE (R43, Phase 1 of 2)** — `VaultFileAttachment` wired into the fleet detail page's Register/Renew document modals, "View file" action on linked docs, new `frontend/src/lib/vault.ts` shared helper. New Playwright spec 6/6, `vault-files.e2e.ts` re-run clean (13/13), tsc/eslint/vitest all green (`4032ba8`). **Phase 2 next: renter portal upload UI + agency consent-gated document viewer.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes). | `frontend/src/lib/vault.ts`, `frontend/src/app/(owner)/dashboard/fleet/**`, `frontend/src/app/(renter)/portal/**` (Phase 2, about to start), `frontend/src/app/(owner)/dashboard/customers/**` (Phase 2, about to start) | 2026-07-26 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2580,3 +2580,54 @@ against Postgres + the Supabase Storage API, same as prior sessions);
 frontend upload UI for either Guardian Vault (`/dashboard/vault`) or the
 renter portal — this entry is backend-only, matching how R38 (Vault
 backend) preceded R39 (Vault frontend) as a separate step.
+
+### R43 — Guardian Vault car-document upload UI, Phase 1 of R42's frontend follow-up (sole developer, 2026-07-25)
+
+Founder approved proceeding straight into the frontend for R42's entity
+links, split into two phases. This entry is Phase 1 (Guardian Vault /
+`CarDocument`); Phase 2 (renter portal upload + agency consent-gated
+document view) is next.
+
+**New:** `frontend/src/lib/vault.ts` — the vault constants
+(`VAULT_ALLOWED_MIME_TYPES`/`VAULT_MAX_FILE_SIZE_BYTES`), a client-side
+`validateVaultFile()`, and `uploadToVault()`/`getVaultDownloadUrl()`
+helpers, factored out so Phase 2's renter-portal uploader (and any future
+vault consumer) shares one copy instead of re-deriving it — the existing
+`vault-files/useVaultFiles.ts` was left untouched rather than refactored
+onto this, since it's already e2e-covered and working.
+`frontend/src/app/(owner)/dashboard/fleet/[id]/VaultFileAttachment.tsx` — a
+controlled drag-and-drop/click attachment widget (empty → attached →
+inline-error states) that uploads on selection, not on form submit, so the
+parent form only ever carries a `vaultFileId`.
+
+**Modified:** `fleet/types.ts` gets `CarDocument.vaultFileId`.
+`fleet/[id]/page.tsx` embeds `VaultFileAttachment` in both the
+Register-document and Renew-document modals (`handleAddDocument`/
+`handleRenewDocument` now pass `vaultFileId` through when attached — renew
+only overwrites it if the founder actually attaches a replacement, matching
+`documents.service.ts`'s `dto.vaultFileId !== undefined` semantics from
+R42); Guardian doc cards gained a "View file" icon-button (visible only
+when `doc.vaultFileId` is set) that calls the signed download-url endpoint
+and opens it in a new tab. No backend changes — R42 already shipped
+`vaultFileId` support on both DTOs/services.
+
+**Verified:** `tsc --noEmit` and `eslint .` clean across the whole
+frontend (0 warnings). `vitest run` 9/9. New
+`frontend/e2e/fleet-car-documents.e2e.ts` (fully network-mocked, same
+approach as `vault-files.e2e.ts` — car detail GET, documents POST/PATCH,
+and vault upload/download-url all intercepted so nothing touches the real
+backend or real Supabase) — 6/6 covering client-side mime/size rejection,
+attach-then-create wiring the real `vaultFileId` through, the 503 path, and
+the "View file" popup. One real bug caught and fixed during this: the
+popup test initially failed because `window.open()`'s navigation isn't
+covered by a page-scoped `page.route()` (only XHR/fetch from that page
+is) — fixed with a `page.context().route()` fulfilling the fake signed-URL
+host directly. Re-ran `vault-files.e2e.ts` alongside as a regression check:
+13/13 passed, no impact from the new shared `lib/vault.ts`. (Also hit the
+documented environment flakiness once mid-session — the `setup` project's
+own login timed out under a load spike unrelated to this code, confirmed
+by a clean re-run after re-warming; not a code defect, consistent with
+prior entries.)
+
+**Not built:** Phase 2 (renter portal upload UI + agency-side consent-gated
+document viewer) — up next, tracked separately.
