@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. | None claimed. | 2026-07-27 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: font-black finding #2 closed** — `Modal.tsx`/`EmptyState.tsx` migrated off raw `text-white uppercase font-black` to the existing design tokens (`font-display`/`.eyebrow`/`text-text-faint`/`border-hairline`); `Combobox.tsx`/`CommandPalette.tsx` (finding #10, larger unmigrated-component job) and dead `guided-action.tsx` (#20) left alone by design, still tracked. `CLAUDE.md`'s Phase 12 "0 files app-wide" claim corrected. tsc/eslint clean. | None claimed. | 2026-07-27 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2806,3 +2806,53 @@ here.
 
 **Not built:** everything in the HIGH/TECH-DEBT tier from the triage above —
 unclaimed, scheduled separately, no founder go-ahead requested yet.
+
+### R47 — finding #2 (font-black in shared Modal/EmptyState) resolved (sole developer, 2026-07-27)
+
+Picked up the next item from `docs/AUDIT_2026-07-26.md`'s "What to do next"
+list (step 2, "cheap, high-visibility, closes out an inaccurate Phase 12
+claim") since R45/R46 closed everything founder-gated ahead of it and Lane
+3/Lane 5b are both blocked on decisions only the founder can make.
+
+`Modal.tsx` (every dialog title in the app, including the Vault upload
+modal) and `EmptyState.tsx` (used by, among others, `VaultAccessPanel`'s
+"No active consent" state) were still on the pre-Phase-12 raw styling —
+`text-white uppercase font-black tracking-widest/tighter`, plus raw
+`border-white/5|10` and `text-white/NN` opacity hacks — even though
+`globals.css:115-122` explicitly documents "Calm, human headings — NO
+forced uppercase / font-black" as a Phase 12 rule, with `.eyebrow` as the
+one sanctioned exception for small uppercase labels. Migrated both to the
+existing tokens/utilities already used elsewhere (`Card.tsx`,
+`dashboard/page.tsx`, etc.): dialog titles → `font-display text-foreground`
+(no forced uppercase/weight — the global `h2` rule already sets weight
+600), secondary/label text → `.eyebrow` (which already carries the
+uppercase micro-caps look at the correct weight/tracking/color), icons and
+hairlines → `text-text-faint`/`border-hairline`.
+
+**Scope call:** left `Combobox.tsx` and `CommandPalette.tsx` alone even
+though the audit's grep also caught a few `font-black` lines in them —
+those two files are hardcoded to the old dark theme throughout (inline
+`rgba(9,12,20,0.98)`, `bg-white/5`, `border-white/10` everywhere, not just
+on the flagged lines), which is the audit's own separately-tracked, larger
+finding #10 ("Combobox entirely unmigrated to design tokens") — patching
+only the `font-black` substrings there would leave them half-migrated and
+inconsistent with the rest of each file. `guided-action.tsx` also carries
+it but is dead code (finding #20, zero imports) — deleting or migrating it
+is a different, non-blocking cleanup. Updated `CLAUDE.md`'s Phase 12 line
+to stop claiming "0 files app-wide" and instead say what's actually true:
+the two shared, everywhere-used components are now clean; the two
+unmigrated legacy files and the dead file are tracked separately.
+
+**Verified:** `tsc --noEmit` and `eslint` clean on both changed files
+(symlinked `frontend/node_modules` into the worktree rather than
+reinstalling, since only two `.tsx` files changed). No test suite touches
+these components' class names directly, so no test changes needed.
+`grep -rn "font-black" frontend/src` now returns only the two
+already-tracked, non-blocking files (`Combobox.tsx`, `CommandPalette.tsx`)
+plus dead code (`guided-action.tsx`) and unrelated one-off emphasis spans
+(`ImpersonationBanner.tsx`, `ToastContext.tsx` — never flagged by the
+audit, not headings).
+
+**Not built:** #7 (ai-vision upload limits), #8 (Vault UI i18n), #9/#10
+(toast/Combobox a11y), #14/#15 (`npm audit fix`), #16 (`.env.example`
+regeneration) — all still open from the same audit, unclaimed.

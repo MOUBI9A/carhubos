@@ -120,11 +120,11 @@ export function Modal({
       >
         <div className="p-8 pb-0 flex items-start justify-between">
           <div>
-            <h2 id={titleId} className="text-2xl font-black tracking-tighter text-white uppercase">
+            <h2 id={titleId} className="text-2xl font-display text-foreground tracking-tight">
               {title}
             </h2>
             {description && (
-              <p id={descId} className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">
+              <p id={descId} className="eyebrow mt-1">
                 {description}
               </p>
             )}
@@ -134,14 +134,14 @@ export function Modal({
             aria-label="Close dialog"
             className="p-2 hover:bg-white/5 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <X className="w-5 h-5 text-white/40" />
+            <X className="w-5 h-5 text-text-faint" />
           </button>
         </div>
 
         <div className="p-8 max-h-[70vh] overflow-y-auto">{children}</div>
 
         {footer && (
-          <div className="p-6 bg-white/5 border-t border-white/5 flex items-center justify-end gap-4">
+          <div className="p-6 bg-white/5 border-t border-hairline flex items-center justify-end gap-4">
             {footer}
           </div>
         )}

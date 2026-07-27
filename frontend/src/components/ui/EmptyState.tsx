@@ -27,12 +27,12 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="w-16 h-16 rounded-3xl bg-white/[0.03] border border-white/5 flex items-center justify-center mb-5">
-        <Icon className="w-7 h-7 text-white/15" />
+      <div className="w-16 h-16 rounded-3xl bg-white/[0.03] border border-hairline flex items-center justify-center mb-5">
+        <Icon className="w-7 h-7 text-text-faint" />
       </div>
-      <p className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">{title}</p>
+      <p className="eyebrow">{title}</p>
       {description && (
-        <p className="text-[11px] font-medium text-white/25 mt-2 max-w-xs leading-relaxed">
+        <p className="text-[11px] font-medium text-text-faint mt-2 max-w-xs leading-relaxed">
           {description}
         </p>
       )}
