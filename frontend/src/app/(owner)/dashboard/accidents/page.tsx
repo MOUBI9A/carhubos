@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { formatDate } from '@/lib/format';
+import api from '@/lib/api';
 import { useFleet } from '../fleet/useFleet';
 import {
   ACCIDENT_SEVERITIES,
@@ -138,6 +139,7 @@ export default function AccidentsPage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Report form state
   const [carId, setCarId] = useState('');
@@ -288,6 +290,41 @@ export default function AccidentsPage() {
   const handleMarkResolved = () => {
     if (!selectedAccident || selectedAccident.status === 'RESOLVED') return;
     handleStatusChange('RESOLVED');
+  };
+
+  /**
+   * `GET /accidents/:id/report` (capability `fleet.view`) streams a real PDF
+   * (same Puppeteer pipeline as the booking contract) — same blob-download
+   * pattern as `bookings/page.tsx`'s `downloadContract`. Cross-tenant/unknown
+   * id 404s server-side before Puppeteer ever launches.
+   */
+  const downloadReport = async (accidentId: string) => {
+    setIsDownloading(true);
+    try {
+      const response = await api.get(`/accidents/${accidentId}/report`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `accident-${accidentId.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('success', 'Report ready', 'The dossier PDF has been downloaded.');
+    } catch {
+      // The error body arrives as a Blob (responseType: 'blob'), so it can't be
+      // parsed as the usual JSON `{message}` shape here — a generic message is
+      // more honest than mis-parsing it.
+      showToast(
+        'danger',
+        'Export failed',
+        'The PDF engine could not render this dossier.',
+      );
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -443,13 +480,9 @@ export default function AccidentsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    showToast(
-                      'info',
-                      'Not available yet',
-                      'Incident dossier export isn’t built yet.',
-                    )
-                  }
+                  isLoading={isDownloading}
+                  disabled={isDownloading}
+                  onClick={() => void downloadReport(selectedAccident.id)}
                 >
                   Export PDF
                 </Button>
