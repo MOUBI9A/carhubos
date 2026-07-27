@@ -282,14 +282,14 @@ chrome    --color-border · --color-input · --color-ring · --radius-{sm,md,lg,
 auth          POST /auth/register /login /logout · GET /auth/me · POST /auth/exit-impersonation
 agencies      GET/PATCH /agencies/me · GET /agencies/me/stats
 agency-staff  GET/POST /agency/staff · PATCH /agency/staff/:userId/capabilities · DELETE /agency/staff/:userId
-cars          POST/GET /cars · GET/PATCH/DELETE /cars/:id
+cars          POST/GET /cars (optional page,limit,search → {items,total,page,limit}; omit all → flat array) · GET/PATCH/DELETE /cars/:id
 bookings      POST/GET /bookings (optional status,from,to,page,pageSize → {items,total,page,pageSize}; omit all → flat array)
               GET /bookings/:id · PATCH /bookings/:id/status · POST/PATCH /bookings/:id/deposit · GET /bookings/:id/contract
 customers     POST/GET /customers · GET /customers/blacklisted · GET/PATCH/DELETE /customers/:id
               PATCH /customers/:id/blacklist · /unblacklist
 contracts     POST /contracts/generate/:bookingId · GET /contracts/:id · PATCH /contracts/:id/sign
 inspections   POST /inspections · GET /inspections/car/:carId · /booking/:bookingId · /booking/:bookingId/diff
-payments      GET /payments/pending · /recent · POST /payments · PATCH /payments/:id/verify
+payments      GET /payments/pending · /recent (both: optional page,limit → {items,total,page,limit}; omit all → flat array) · POST /payments · PATCH /payments/:id/verify
 expenses      POST/GET /expenses · GET /expenses/summary · PATCH/DELETE /expenses/:id
 maintenance   POST /maintenance · GET /maintenance/car/:carId · /agency
 documents     POST/GET /documents · GET /documents/car/:carId · PATCH/DELETE /documents/:id
@@ -347,15 +347,15 @@ app           GET / · GET /health
 **Done:** Phases 0 (security) · 1 (correctness & authz) · 2 (Postgres + money Decimal + soft-delete) · 3 (financial lifecycle: deposits, partial payments, refunds) · 4 (rental lifecycle: OVERDUE, e-sign, inspection damage flow, late fees) · 5A (capability engine) · 5B (renter portal + consent/QR) · 6 (performance: SQL aggregates, hot-path indexes, bookings pagination) · 7 (a11y/i18n, mostly) · 8 (tests + CI, mostly) · 11 (SaaS business layer) · 12 (design rebuild "Fider Lux"). Guardian Vault wired to a real endpoint.
 
 **Open lanes** (claim in `COORDINATION.md` before starting — one owner per file):
-1. **Accidents domain** — backend + a migration + wire `accidents/page.tsx`. The last "not wired" stub. Touches `schema.prisma` → serialized.
-2. **Public routing / input validation.**
+1. ~~Accidents domain~~ **DONE** — backend + migration R9 (`f3febe0`), frontend wiring (`a275fc7`), real "Export PDF" dossier report R47.
+2. ~~Public routing / input validation~~ **DONE** (R1, R6).
 3. **Rate tiers / seasonality** on bookings — needs a founder pricing decision first; touches money math + schema.
-4. **Infra/CI** — live-DB e2e job (Postgres service container), Vault file storage. No app-code overlap.
+4. ~~Infra/CI~~ **DONE** (live-DB e2e + Playwright e2e jobs both in `.github/workflows/ci.yml`, R27). Vault file storage **DONE** end-to-end (R38–R44).
 5. **Founder-gated, do NOT start:** Phase 9 deploy, Phase 10 final review, making CI a required PR check.
 
-**Open finding #3 (unowned):** `GET /public/fleet` (`backend/src/public/public.controller.ts:12-49`) is unbounded (no `take`/pagination) and its `city: { contains }` filter can't use an index. It's the only list a logged-out stranger can trigger.
+**Open finding #3 — RESOLVED.** `GET /public/fleet` (`backend/src/public/public.controller.ts`) was already bounded/paginated/`startsWith`-filtered by `dcc7000` (2026-07-21) — this line was stale, not a real gap. Confirmed via git + tests in R48 (`COORDINATION.md` R48 entry) rather than rebuilt; that round instead closed the pagination audit of `/cars` and `/payments` below.
 
-**Other follow-ups:** chart tap/focus a11y beyond the sr-only tables, unbounded customers/cars/payments lists, Vault file storage.
+**Other follow-ups:** chart tap/focus a11y beyond the sr-only tables. ~~Unbounded customers/cars/payments lists~~ **DONE** — `/customers` (`ListCustomersQueryDto`, pre-existing), `/cars` + `/payments/pending` + `/payments/recent` (R48, additive `{items,total,page,limit}` envelope, same shape).
 
 ---
 

@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: picked up "Lane 1 — Accidents domain" per the brief, found it already DONE** (backend R9 `f3febe0`, frontend `a275fc7` — `PROGRESS.md`'s "LEFT TO DO" list just hadn't been updated); closed the one real remaining gap instead — "Export PDF" now streams a genuine Puppeteer-rendered dossier PDF (`GET /accidents/:id/report`, reusing `pdf-engine`) instead of an honest-but-permanent "not built yet" toast. Backend **49 suites / 389 tests**, tsc/jest/eslint clean; frontend tsc/vitest/eslint clean. Fixed the stale docs (`PROGRESS.md`, `CLAUDE.md` §4). See R47 below for full detail. | None claimed. | 2026-07-27 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: picked up "Lane 1 — Accidents domain" per the brief, found it already DONE** (backend R9 `f3febe0`, frontend `a275fc7` — `PROGRESS.md`'s "LEFT TO DO" list just hadn't been updated); closed the one real remaining gap instead — "Export PDF" now streams a genuine Puppeteer-rendered dossier PDF (`GET /accidents/:id/report`, reusing `pdf-engine`) instead of an honest-but-permanent "not built yet" toast. Backend **49 suites / 389 tests**, tsc/jest/eslint clean; frontend tsc/vitest/eslint clean. Fixed the stale docs (`PROGRESS.md`, `CLAUDE.md` §4). See R47 below for full detail. **R48: picked up "Open finding #3 — `/public/fleet` unbounded" per the brief, found it already fully closed** (`dcc7000`, 2026-07-21 — bounded, paginated, `startsWith` city filter, both frontend consumers already on the envelope, full spec coverage). Moved to the brief's own fallback: pagination audit of `/cars` and `/payments`. Both already had a `take` cap from earlier P2 fixes (not literally unbounded) but no way to page past it — added the same additive `{items,total,page,limit}` envelope as `ListCustomersQueryDto` to `GET /cars` (+ optional `search`) and `GET /payments/pending` / `GET /payments/recent`; bare calls unchanged. Backend **49 suites / 398 tests**, tsc/jest/eslint clean. See R48 below for full detail. | None claimed. | 2026-07-27 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -288,7 +288,7 @@ Pick a lane that doesn't touch the other agent's files. Current backlog (details
 Too cross-cutting for the finder to patch unilaterally. Claim one in the board if
 you take it.
 
-### 3. `GET /public/fleet` is unbounded and its city filter is unindexed (found by B) — OPEN
+### 3. `GET /public/fleet` is unbounded and its city filter is unindexed (found by B) — RESOLVED
 **File:** `backend/src/public/public.controller.ts:12-49` (`getPublicFleet`).
 
 Two separate problems on the app's only unauthenticated list endpoint:
@@ -319,6 +319,25 @@ it, so it's not a reviewer drive-by. *(Not a regression — pre-existing.)*
 > Cars themselves have `@@index([agencyId])` + `@@index([status])`, and `Agency`
 > has `@@index([deletedAt])`, so the `status` + soft-delete predicates are fine.
 > Only the `city` path and the missing bound are at issue.
+
+> **✅ RESOLVED (`dcc7000`, 2026-07-21, logged at R-era "T1 + finding #3 DONE" in
+> the status board above).** `GET /public/fleet` now takes optional
+> `page`/`pageSize`: bare call returns a `take: 60`-capped flat array (was
+> unbounded), either param present returns `{items,total,page,pageSize}`
+> (clamped to `pageSize<=100`, NaN-safe). `city` filter switched
+> `contains` → `startsWith` (case-insensitive), same reasoning as
+> `search.service.ts`. Both frontend consumers
+> (`(renter)/portal/book/page.tsx`, `(public)/agency/[subdomain]/page.tsx`)
+> already read the paginated envelope. Full coverage in
+> `public-soft-delete.spec.ts`'s `is bounded (finding #3)` block (cap, envelope
+> shape, oversized-pageSize clamp, NaN fallback, count/findMany WHERE parity).
+> **R48 (2026-07-27) picked up this lane expecting to build it — per this
+> codebase's "verify relayed reports" discipline, checked git/tests before
+> writing code and found it already fully closed.** Only `project_status.md`
+> §9's "Open finding #3 (unowned)" line hadn't been updated to match — fixed
+> in the same pass. See PROGRESS.md / project_status.md for the doc fix and
+> R48's actual work (pagination audit of `/cars` and `/payments`, the
+> secondary task this brief specified for exactly this "already done" case).
 
 ### 1. Email case is unnormalized app-wide — needs a data migration (found by B)
 `auth.service.ts` (register + login) and `saas-admin.service.ts`
@@ -2907,3 +2926,104 @@ didn't mention `pdf-engine` now serving two document types — both added.
   those are pre-existing drift from many rounds ago, unrelated to this lane,
   and rewriting them risked scope creep on a docs-only fix. Flagged here for
   whoever next does a full docs pass.
+
+### R48 — `/public/fleet` finding verified already-closed, pagination audit of `/cars` + `/payments` (sole developer, 2026-07-27)
+
+Picked up this session's brief expecting to close `project_status.md`'s
+"Open finding #3 (unowned)" — `GET /public/fleet` unbounded with an
+unindexed `city` filter. Per this codebase's own "verify relayed reports"
+discipline (burned twice already: R47's accidents lane, and the original
+stale-docs pattern this note itself is named after), checked git before
+writing any code.
+
+**Finding #3 was already fully closed, over a week before this session:**
+`dcc7000` (2026-07-21) bounded `GET /public/fleet` — bare call now
+`take: 60`-capped (was unbounded), `page`/`pageSize` query params switch to
+`{items,total,page,pageSize}` (clamped `pageSize<=100`, NaN-safe), and the
+`city` filter was already switched `contains` → `startsWith`
+(case-insensitive), matching `search.service.ts`'s Phase 6 precedent. Both
+frontend consumers (`(renter)/portal/book/page.tsx`,
+`(public)/agency/[subdomain]/page.tsx`) already read the paginated
+envelope. `public-soft-delete.spec.ts`'s `is bounded (finding #3)` block
+already covers the cap, the envelope shape, an oversized-`pageSize` clamp,
+a junk-input NaN fallback, and count/findMany WHERE parity. The status
+board itself already said "finding #3 DONE + pushed" back at the 2026-07-21
+entry (line ~105) — only `project_status.md` §9's "Open lanes" /
+"Open finding #3 (unowned)" section hadn't been updated to say so. Fixed
+that doc in this pass (see below) and marked finding #3 **RESOLVED** above
+with a pointer to this entry, rather than leaving the stale "OPEN" heading
+for a future session to re-discover the same dead end.
+
+**Moved to the brief's own documented fallback for exactly this situation:**
+the pagination audit of `/cars` and `/payments`, which `PROGRESS.md`'s
+"Smaller follow-ups" flagged as still needed after `/customers` got
+`ListCustomersQueryDto`. Both turned out to already have a `take` cap from
+earlier P2 fixes (`3cfed1a` capped `cars.findAll` at 500; `ef18530` capped
+`payments.findAllPending`/`findRecent` at 100/200) — so neither was
+literally "unbounded" the way `/public/fleet` briefly was, but past that
+cap there was no way to reach rows beyond the first page, which is the real
+substance of "perf holds at 10k+" for a growing fleet or payment ledger.
+
+**Built, matching `CustomersService.findAll`'s exact additive shape** (bare
+call = unchanged flat capped array, zero risk to today's frontend which
+never passes these params; `page`/`limit` present = `{items,total,page,
+limit}` envelope):
+
+- **`GET /cars`** — new `ListCarsQueryDto` (`page`, `limit<=100`, optional
+  `search` over brand/model/licensePlate, `contains`+`insensitive` — a
+  tenant-scoped internal list, not the public-facing index-pressure case
+  `/public/fleet` had). `CarsService.findAll(agencyId, query = {})`: bare
+  call keeps the existing `take: 500` cap; paginated path does
+  `$transaction([findMany, count])` the same way `CustomersService.findAll`
+  does.
+- **`GET /payments/pending`** and **`GET /payments/recent`** — new shared
+  `ListPaymentsQueryDto` (`page`, `limit<=200`). Bare calls keep their
+  existing caps (100 rows each). `findRecent` previously took a raw
+  `limit` number param that no caller ever passed — replaced with the same
+  DTO shape as `findAllPending` for consistency; no behavioral change since
+  nothing called it with an explicit limit.
+- Neither controller's route contract changed for a caller that doesn't
+  send `page`/`limit` — verified by grepping every frontend call site
+  (`useBookings`, `useFleet`, the finance page, agent inspections/tasks
+  pages, vault upload picker): all call `/cars`, `/payments/pending`,
+  `/payments/recent` bare, so this is a pure additive backend change: no
+  frontend files touched.
+
+**Tests:** `cars.service.spec.ts` — 3 new cases (flat-array back-compat,
+paginated envelope with `skip`/`take` math, `search` building the right
+`OR` without dropping the `agencyId` scope) alongside the existing take-cap
+test, plus a `$transaction` mock upgraded to handle both the callback form
+(unused here) and the array form (`Promise.all`), same dual-shape pattern
+`customers.service.spec.ts` already uses. `payments.service.spec.ts` — 5 new
+cases across `findAllPending`/`findRecent` (back-compat, paginated envelope,
+count/findMany WHERE parity), plus a `payment.count` mock added and the
+shared `$transaction` mock upgraded the same way.
+
+**Verified (real output):** backend `tsc --noEmit` clean; `jest` **49
+suites / 398 tests** (was 49/389, +9 new, 0 removed/skipped); `eslint .`
+clean. No frontend files changed this round, so frontend verification was
+not re-run (last known-green state from R47 stands).
+
+**Docs fixed to match reality:** `project_status.md` §9's "Open lanes" /
+"Open finding #3 (unowned)" both updated to point at this entry instead of
+restating the stale 2026-07-21 finding as open. `PROGRESS.md`'s "Smaller
+follow-ups" line for `/cars`/`/payments` marked done with the same detail
+level as its other closed items.
+
+**Deliberately not built:**
+- **No `@@index([city])` migration on `Agency`.** Not needed — the
+  `startsWith` fix already landed in `dcc7000` makes the predicate
+  index-friendly *if* an index existed, but this app doesn't yet have one
+  on `Agency.city` and nothing in this session's findings called for adding
+  one (no measured slow-query evidence, and it's schema-touching /
+  serialized work per `CLAUDE.md` §9's parallel-work rules — out of scope
+  for a perf-audit-only round).
+- **No frontend adoption of the new `/cars`/`/payments` paginated shape.**
+  Same reasoning Phase 6 used for `/bookings`: land the backend contract
+  additively first, adopt it in a UI only when a real "past the cap" need
+  shows up (a fleet or ledger actually approaching 500/100 rows). No
+  current seed/demo data is anywhere near that scale.
+- Did not re-audit `/notifications`, `/tasks`, `/search`, or any other list
+  endpoint beyond what this brief named (`/cars`, `/payments`) — out of
+  scope for this round, not flagged as a known gap either (no evidence
+  they're unbounded; a future full sweep could confirm).
