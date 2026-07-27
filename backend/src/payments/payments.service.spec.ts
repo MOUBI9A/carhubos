@@ -30,6 +30,14 @@ function makePrisma(overrides: any = {}) {
       findUnique: jest.fn(async ({ where }: any) =>
         state.payments.find((p) => p.id === where.id) ?? null,
       ),
+      count: jest.fn(async ({ where }: any) =>
+        state.payments.filter((p) => {
+          if (where?.status && p.status !== where.status) return false;
+          if (where?.invoice?.agencyId && p.invoice?.agencyId !== where.invoice.agencyId)
+            return false;
+          return true;
+        }).length,
+      ),
       create: jest.fn(async ({ data }: any) => {
         const row = {
           id: `pay-${state.payments.length + 1}`,
@@ -79,7 +87,13 @@ function makePrisma(overrides: any = {}) {
     // tests below (netVerifiedIncomeCents reading tx state that reflects
     // an already-committed concurrent refund).
     $queryRaw: jest.fn().mockResolvedValue(undefined),
-    $transaction: jest.fn(async (fn: any) => fn(prisma)),
+    // Supports both the callback form (money reconciliation) and the
+    // array form (`Promise.all` of a findMany + count) that the paginated
+    // findAllPending/findRecent envelope uses — same dual-shape mock
+    // pattern as customers.service.spec.ts.
+    $transaction: jest.fn((arg: any) =>
+      typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
+    ),
     ...overrides,
   };
 
@@ -386,7 +400,7 @@ describe('PaymentsService', () => {
     });
   });
 
-  describe('findAllPending — list cap (P2 backlog)', () => {
+  describe('findAllPending — list cap + pagination (P2 backlog)', () => {
     it('caps the result at 100 rows, same rationale as findRecent', async () => {
       const { prisma } = makePrisma();
       const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
@@ -398,6 +412,74 @@ describe('PaymentsService', () => {
         status: 'PENDING',
         invoice: { agencyId: 'ag-1' },
       });
+    });
+
+    it('still returns a flat array when unpaginated, so old callers keep working', async () => {
+      const { prisma } = makePrisma();
+      prisma.payment.findMany.mockResolvedValueOnce([{ id: 'p1' }]);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      await expect(svc.findAllPending('ag-1')).resolves.toEqual([{ id: 'p1' }]);
+    });
+
+    it('returns a paginated envelope only when page/limit are supplied', async () => {
+      const { prisma } = makePrisma();
+      prisma.payment.findMany.mockResolvedValueOnce([{ id: 'p1' }]);
+      prisma.payment.count.mockResolvedValueOnce(240);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      const result = await svc.findAllPending('ag-1', { page: 2, limit: 10 });
+
+      expect(result).toEqual({ items: [{ id: 'p1' }], total: 240, page: 2, limit: 10 });
+      expect(prisma.payment.findMany.mock.calls[0][0].skip).toBe(10); // (page-1)*limit
+      expect(prisma.payment.findMany.mock.calls[0][0].take).toBe(10);
+    });
+
+    it('counts with the same WHERE the page is drawn from', async () => {
+      const { prisma } = makePrisma();
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      await svc.findAllPending('ag-1', { page: 1, limit: 5 });
+
+      expect(prisma.payment.count).toHaveBeenCalledWith({
+        where: prisma.payment.findMany.mock.calls[0][0].where,
+      });
+    });
+  });
+
+  describe('findRecent — list cap + pagination (P2 backlog)', () => {
+    it('caps the bare call at 100 rows, scoped to VERIFIED payments', async () => {
+      const { prisma } = makePrisma();
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      await svc.findRecent('ag-1');
+
+      expect(prisma.payment.findMany.mock.calls[0][0].take).toBe(100);
+      expect(prisma.payment.findMany.mock.calls[0][0].where).toEqual({
+        status: 'VERIFIED',
+        invoice: { agencyId: 'ag-1' },
+      });
+    });
+
+    it('still returns a flat array when unpaginated, so old callers keep working', async () => {
+      const { prisma } = makePrisma();
+      prisma.payment.findMany.mockResolvedValueOnce([{ id: 'p1' }]);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      await expect(svc.findRecent('ag-1')).resolves.toEqual([{ id: 'p1' }]);
+    });
+
+    it('returns a paginated envelope only when page/limit are supplied', async () => {
+      const { prisma } = makePrisma();
+      prisma.payment.findMany.mockResolvedValueOnce([{ id: 'p1' }]);
+      prisma.payment.count.mockResolvedValueOnce(530);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
+
+      const result = await svc.findRecent('ag-1', { page: 3, limit: 50 });
+
+      expect(result).toEqual({ items: [{ id: 'p1' }], total: 530, page: 3, limit: 50 });
+      expect(prisma.payment.findMany.mock.calls[0][0].skip).toBe(100); // (page-1)*limit
+      expect(prisma.payment.findMany.mock.calls[0][0].take).toBe(50);
     });
   });
 });

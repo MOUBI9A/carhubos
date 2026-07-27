@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { CarsService } from './cars.service';
-import { CreateCarDto, UpdateCarDto } from './dto/cars.dto';
+import { CreateCarDto, ListCarsQueryDto, UpdateCarDto } from './dto/cars.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
@@ -19,8 +19,8 @@ export class CarsController {
 
   @Get()
   @RequireCapabilities('fleet.view')
-  findAll(@CurrentUser() user: any) {
-    return this.carsService.findAll(user.agencyId);
+  findAll(@CurrentUser() user: any, @Query() query: ListCarsQueryDto) {
+    return this.carsService.findAll(user.agencyId, query);
   }
 
   @Get(':id')

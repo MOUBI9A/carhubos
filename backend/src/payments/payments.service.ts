@@ -9,7 +9,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
-import { CreatePaymentDto } from './dto/payments.dto';
+import { CreatePaymentDto, ListPaymentsQueryDto } from './dto/payments.dto';
 
 @Injectable()
 export class PaymentsService {
@@ -19,14 +19,25 @@ export class PaymentsService {
     private auditLogs: AuditLogsService,
   ) {}
 
-  // Capped like findRecent below (100 rows) — same "stays snappy, full
-  // history is a reports job" rationale, this endpoint just had no cap yet.
-  async findAllPending(agencyId: string) {
-    return this.prisma.payment.findMany({
-      where: {
-        status: 'PENDING',
-        invoice: { agencyId },
-      },
+  /**
+   * Pending payments awaiting owner/manager verification.
+   *
+   * Backward compatible, same additive shape as CustomersService.findAll /
+   * CarsService.findAll: with no page/limit it returns the bare, take-capped
+   * array exactly as before (the take:100 cap alone already closed the P2
+   * unbounded-list finding — "stays snappy, full history is a reports job");
+   * passing either switches to a paginated { items, total, page, limit }
+   * envelope.
+   */
+  async findAllPending(agencyId: string, query: ListPaymentsQueryDto = {}) {
+    const { page, limit } = query;
+
+    const where: Prisma.PaymentWhereInput = {
+      status: 'PENDING',
+      invoice: { agencyId },
+    };
+    const listArgs = {
+      where,
       include: {
         invoice: {
           include: {
@@ -37,20 +48,43 @@ export class PaymentsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
-    });
+    } satisfies Prisma.PaymentFindManyArgs;
+
+    if (page === undefined && limit === undefined) {
+      return this.prisma.payment.findMany({ ...listArgs, take: 100 });
+    }
+
+    const currentPage = page ?? 1;
+    const pageSize = limit ?? 50;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.payment.findMany({
+        ...listArgs,
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.payment.count({ where }),
+    ]);
+
+    return { items, total, page: currentPage, limit: pageSize };
   }
 
   /**
    * Recent verified payments (income + refunds) for the finance ledger.
-   * Caps at 100 rows so the UI stays snappy; full history is a later reports job.
+   * Same additive pagination shape as findAllPending above: bare call stays
+   * a flat, take-capped array (100 rows, "stays snappy, full history is a
+   * later reports job"); page/limit switches to a paginated envelope so a
+   * ledger past 100 rows is still fully reachable, capped at 200/page.
    */
-  async findRecent(agencyId: string, limit = 100) {
-    return this.prisma.payment.findMany({
-      where: {
-        status: 'VERIFIED',
-        invoice: { agencyId },
-      },
+  async findRecent(agencyId: string, query: ListPaymentsQueryDto = {}) {
+    const { page, limit } = query;
+
+    const where: Prisma.PaymentWhereInput = {
+      status: 'VERIFIED',
+      invoice: { agencyId },
+    };
+    const listArgs = {
+      where,
       include: {
         invoice: {
           include: {
@@ -61,8 +95,25 @@ export class PaymentsService {
         },
       },
       orderBy: { date: 'desc' },
-      take: Math.min(Math.max(limit, 1), 200),
-    });
+    } satisfies Prisma.PaymentFindManyArgs;
+
+    if (page === undefined && limit === undefined) {
+      return this.prisma.payment.findMany({ ...listArgs, take: 100 });
+    }
+
+    const currentPage = page ?? 1;
+    const pageSize = limit ?? 50;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.payment.findMany({
+        ...listArgs,
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.payment.count({ where }),
+    ]);
+
+    return { items, total, page: currentPage, limit: pageSize };
   }
 
   /**

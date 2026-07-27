@@ -1,13 +1,17 @@
 import {
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export const PAYMENT_METHODS = ['CASH', 'CARD', 'TRANSFER', 'CHEQUE'] as const;
 export const PAYMENT_TYPES = ['INCOME', 'REFUND'] as const;
@@ -44,4 +48,25 @@ export class CreatePaymentDto {
    */
   @IsOptional()
   autoVerify?: boolean;
+}
+
+/**
+ * Optional pagination for GET /payments/pending and GET /payments/recent —
+ * same additive shape as ListCustomersQueryDto/ListCarsQueryDto: omitting
+ * page & limit keeps returning the bare, take-capped array exactly as
+ * before; passing either switches to { items, total, page, limit }.
+ */
+export class ListPaymentsQueryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  page?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  @IsOptional()
+  limit?: number;
 }

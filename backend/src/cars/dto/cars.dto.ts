@@ -8,6 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
 
 // Fleet lifecycle states (schema stores as String; matches the schema comment
@@ -57,3 +58,28 @@ export class CreateCarDto {
 }
 
 export class UpdateCarDto extends PartialType(CreateCarDto) {}
+
+/**
+ * Optional pagination/search for GET /cars — same additive shape as
+ * ListCustomersQueryDto: omitting page & limit keeps returning the bare,
+ * take-capped array exactly as before; passing either switches to
+ * { items, total, page, limit }.
+ */
+export class ListCarsQueryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  page?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @IsOptional()
+  limit?: number;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
+}
