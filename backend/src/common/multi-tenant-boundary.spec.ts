@@ -192,7 +192,11 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
         }),
       },
     };
-    const svc = new PaymentsService(prisma as any, {} as any);
+    const svc = new PaymentsService(
+      prisma as any,
+      {} as any,
+      { log: jest.fn() } as any,
+    );
 
     await expect(
       svc.verify(RESOURCE_ID, 'user-a', 'OWNER', AGENCY_A),

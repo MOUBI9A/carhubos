@@ -90,6 +90,10 @@ function makeAnalytics() {
   return { calculateCarRoi: jest.fn().mockResolvedValue(undefined) };
 }
 
+function makeAuditLogs() {
+  return { log: jest.fn().mockResolvedValue(undefined) };
+}
+
 describe('PaymentsService', () => {
   describe('create — partial income + reconcile', () => {
     it('records VERIFIED INCOME and marks invoice PARTIAL when underpaid', async () => {
@@ -101,7 +105,7 @@ describe('PaymentsService', () => {
         status: 'DUE',
         booking: { carId: 'car-1' },
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       const pay = await svc.create('ag-1', 'user-1', 'OWNER', {
         invoiceId: 'inv-1',
@@ -130,7 +134,7 @@ describe('PaymentsService', () => {
         status: 'VERIFIED',
         type: 'INCOME',
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       await svc.create('ag-1', 'user-1', 'OWNER', {
         invoiceId: 'inv-1',
@@ -157,7 +161,7 @@ describe('PaymentsService', () => {
         status: 'VERIFIED',
         type: 'INCOME',
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       await expect(
         svc.create('ag-1', 'user-1', 'OWNER', {
@@ -205,7 +209,7 @@ describe('PaymentsService', () => {
         return { _sum: { amount: refundAggregateCalls === 1 ? dec(0) : dec(700) } };
       });
 
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       await expect(
         svc.create('ag-1', 'user-1', 'OWNER', {
@@ -228,7 +232,7 @@ describe('PaymentsService', () => {
         status: 'DUE',
         booking: { carId: 'car-1' },
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       const pay = await svc.create('ag-1', 'user-1', 'OWNER', {
         invoiceId: 'inv-1',
@@ -250,7 +254,7 @@ describe('PaymentsService', () => {
         status: 'DUE',
         booking: {},
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       await expect(
         svc.create('ag-1', 'user-1', 'OWNER', {
@@ -265,7 +269,7 @@ describe('PaymentsService', () => {
   describe('verify', () => {
     it('rejects non-owner/manager roles', async () => {
       const { prisma } = makePrisma();
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
       await expect(
         svc.verify('pay-1', 'u', 'AGENT', 'ag-1'),
       ).rejects.toBeInstanceOf(UnauthorizedException);
@@ -285,7 +289,7 @@ describe('PaymentsService', () => {
           booking: { carId: 'c1' },
         },
       });
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
       await expect(
         svc.verify('pay-1', 'u', 'OWNER', 'ag-1'),
       ).rejects.toBeInstanceOf(ConflictException);
@@ -320,7 +324,7 @@ describe('PaymentsService', () => {
       it('locks the invoice row (SELECT ... FOR UPDATE) before flipping a refund to VERIFIED', async () => {
         const { prisma, state } = makePrisma();
         pushRefundScenario(state);
-        const svc = new PaymentsService(prisma, makeAnalytics() as any);
+        const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
         await svc.verify('pay-refund', 'u', 'OWNER', 'ag-1');
 
@@ -368,7 +372,7 @@ describe('PaymentsService', () => {
           type: 'REFUND',
           invoice: { agencyId: 'ag-1', amount: dec(1000), booking: { carId: 'car-1' } },
         });
-        const svc = new PaymentsService(prisma, makeAnalytics() as any);
+        const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
         await expect(
           svc.verify('pay-refund-mine', 'u', 'OWNER', 'ag-1'),
@@ -385,7 +389,7 @@ describe('PaymentsService', () => {
   describe('findAllPending — list cap (P2 backlog)', () => {
     it('caps the result at 100 rows, same rationale as findRecent', async () => {
       const { prisma } = makePrisma();
-      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+      const svc = new PaymentsService(prisma, makeAnalytics() as any, makeAuditLogs() as any);
 
       await svc.findAllPending('ag-1');
 

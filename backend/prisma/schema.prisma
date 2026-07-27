@@ -373,8 +373,19 @@ model CheckoutSession {
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
+  // SAAS_SUBSCRIPTION purpose only: the plan this checkout upgrades to (set at
+  // creation) and the platform invoice it settles into (set at settlement, once
+  // paid — never created for a session that fails, so there's no orphaned
+  // ISSUED invoice for a payment that never happened).
+  targetPlanId      String?
+  targetPlan        Plan?            @relation(fields: [targetPlanId], references: [id], onDelete: SetNull)
+  platformInvoiceId String?
+  platformInvoice   PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: SetNull)
+
   @@index([agencyId])
   @@index([invoiceId])
+  @@index([targetPlanId])
+  @@index([platformInvoiceId])
 }
 
 // 🗄️ Vault — generic tenant-scoped file storage (Supabase Storage backend).
@@ -747,7 +758,8 @@ model Plan {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  subscriptions Subscription[]
+  subscriptions    Subscription[]
+  checkoutSessions CheckoutSession[]
 }
 
 /// One agency's current subscription — one row per agency (unique agencyId), the
@@ -795,6 +807,8 @@ model PlatformInvoice {
   agency         Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   subscriptionId String?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  checkoutSessions CheckoutSession[]
 
   @@index([agencyId])
   @@index([status])

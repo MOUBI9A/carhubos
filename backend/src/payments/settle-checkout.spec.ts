@@ -46,7 +46,11 @@ describe('PaymentsService.settleCheckout — idempotent gateway settlement', () 
       invoice: { update: jest.fn().mockResolvedValue({}) },
     };
     const prisma = { $transaction: (cb: any) => cb(tx) };
-    const svc = new PaymentsService(prisma as any, {} as any);
+    const svc = new PaymentsService(
+      prisma as any,
+      {} as any,
+      { log: jest.fn() } as any,
+    );
     return { svc, tx };
   }
 

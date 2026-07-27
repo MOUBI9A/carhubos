@@ -12,6 +12,7 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { CheckoutService } from './checkout.service';
 import { CreateCheckoutDto } from './dto/checkout.dto';
+import { CreateSubscriptionCheckoutDto } from './dto/checkout-subscription.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
@@ -20,6 +21,23 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('payments')
 export class CheckoutController {
   constructor(private readonly checkout: CheckoutService) {}
+
+  /**
+   * Agency owner starts an online checkout to upgrade their Fider plan →
+   * returns the hosted redirect URL. Gated on billing.manage (OWNER-only).
+   * MUST stay registered before `checkout/:invoiceId` below — Nest/Express
+   * matches routes in declaration order, and `:invoiceId` would otherwise
+   * swallow the literal segment `subscription` as a param value.
+   */
+  @Post('checkout/subscription')
+  @UseGuards(AuthGuard, CapabilitiesGuard)
+  @RequireCapabilities('billing.manage')
+  createSubscriptionCheckout(
+    @CurrentUser() user: any,
+    @Body() dto: CreateSubscriptionCheckoutDto,
+  ) {
+    return this.checkout.createSubscriptionCheckout(user.agencyId, dto);
+  }
 
   /**
    * Agency starts an online checkout for a booking invoice → returns the hosted

@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreatePaymentDto } from './dto/payments.dto';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private analytics: AnalyticsService,
+    private auditLogs: AuditLogsService,
   ) {}
 
   // Capped like findRecent below (100 rows) — same "stays snappy, full
@@ -236,14 +238,18 @@ export class PaymentsService {
     return this.prisma.$transaction(async (tx) => {
       const session = await tx.checkoutSession.findUnique({
         where: { providerRef },
-        include: { invoice: true },
+        include: { invoice: true, targetPlan: true },
       });
       if (!session) {
         throw new NotFoundException('Checkout session not found.');
       }
+
+      if (session.purpose === 'SAAS_SUBSCRIPTION') {
+        return this.settleSubscriptionCheckout(tx, session);
+      }
+
       if (!session.invoiceId || !session.invoice) {
-        // Non-invoice checkout (e.g. a future SaaS-subscription purpose) — no
-        // invoice to reconcile here; leave that to its own settler.
+        // Non-invoice, non-subscription checkout — nothing to reconcile.
         return { settled: false as const, reason: 'no-invoice' };
       }
 
@@ -271,6 +277,112 @@ export class PaymentsService {
       await this.reconcileInvoice(tx, session.invoiceId, session.invoice.amount);
       return { settled: true as const };
     });
+  }
+
+  /**
+   * Settle a SAAS_SUBSCRIPTION checkout (V1, founder-locked 2026-07-27):
+   * one-shot, full new-plan price, no proration, applies immediately on this
+   * settlement. Mirrors SaasAdminService.updateSubscription's field writes
+   * (Subscription.planId + status, Agency.subscriptionTier mirror, an
+   * AuditLog 'SUBSCRIPTION_UPDATE' with the same before/after shape) so the
+   * founder console's manual path and this webhook path stay consistent no
+   * matter which one touched a given agency last — the founder accepted the
+   * concurrent-write risk between them for V1 rather than adding cross-path
+   * locking.
+   *
+   * The PlatformInvoice is created HERE, already PAID — not at
+   * checkout-creation time — so a failed/expired checkout never leaves a
+   * phantom ISSUED invoice behind. V1's failed-payment rule is a silent
+   * no-op: the CheckoutSession fails (handled generically in
+   * CheckoutService.handleWebhook) and nothing else ever changes.
+   */
+  private async settleSubscriptionCheckout(
+    tx: Prisma.TransactionClient,
+    session: Prisma.CheckoutSessionGetPayload<{
+      include: { invoice: true; targetPlan: true };
+    }>,
+  ) {
+    // Idempotency guard: only the first delivery flips PENDING → PAID.
+    const flip = await tx.checkoutSession.updateMany({
+      where: { id: session.id, status: 'PENDING' },
+      data: { status: 'PAID', paidAt: new Date() },
+    });
+    if (flip.count === 0) {
+      return { settled: false as const, alreadySettled: true };
+    }
+
+    if (!session.targetPlanId || !session.targetPlan) {
+      // Defensive: createSubscriptionCheckout always sets this. A session
+      // that reaches here without it is a data-integrity error, not a normal
+      // decline — surface it rather than silently "succeeding" into a
+      // no-op plan change nobody would ever notice.
+      throw new ConflictException(
+        'Subscription checkout is missing its target plan.',
+      );
+    }
+
+    const sub = await tx.subscription.findUnique({
+      where: { agencyId: session.agencyId },
+      include: { plan: true },
+    });
+    if (!sub) {
+      throw new NotFoundException('Subscription not found for this agency.');
+    }
+
+    // Sequential-ish human invoice number: FIDER-<year>-<seq> — same scheme
+    // as SaasAdminService.issueInvoice's manual invoices.
+    const year = new Date().getFullYear();
+    const count = await tx.platformInvoice.count();
+    const number = `FIDER-${year}-${String(count + 1).padStart(4, '0')}`;
+    const periodStart = new Date();
+    const periodEnd = new Date(periodStart);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+    const invoice = await tx.platformInvoice.create({
+      data: {
+        number,
+        agencyId: session.agencyId,
+        subscriptionId: sub.id,
+        amount: session.amount,
+        status: 'PAID',
+        periodStart,
+        periodEnd,
+        paidAt: new Date(),
+        note: `Self-serve upgrade to ${session.targetPlan.name} via ${session.provider}.`,
+      },
+    });
+
+    await tx.checkoutSession.update({
+      where: { id: session.id },
+      data: { platformInvoiceId: invoice.id },
+    });
+
+    const updatedSub = await tx.subscription.update({
+      where: { agencyId: session.agencyId },
+      data: { planId: session.targetPlanId, status: 'ACTIVE' },
+      include: { plan: { select: { key: true, name: true } } },
+    });
+
+    await tx.agency.update({
+      where: { id: session.agencyId },
+      data: { subscriptionTier: session.targetPlan.key },
+    });
+
+    await this.auditLogs.log(
+      session.agencyId,
+      `webhook:${session.provider}`,
+      'SUBSCRIPTION_UPDATE',
+      'SUBSCRIPTION',
+      updatedSub.id,
+      { plan: sub.plan.key, status: sub.status, trialEndsAt: sub.trialEndsAt },
+      {
+        plan: updatedSub.plan.key,
+        status: updatedSub.status,
+        trialEndsAt: updatedSub.trialEndsAt,
+      },
+    );
+
+    return { settled: true as const };
   }
 
   /**

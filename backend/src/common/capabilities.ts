@@ -18,6 +18,8 @@
  * Agency capability catalog — everything a member of an agency tenant may be
  * granted. Order is intentional (grouped by domain: fleet, booking, customer,
  * finance, contracts, deposits, trust, inspection, reports, hub, admin).
+ * `billing.manage` (self-serve SaaS plan upgrades) is OWNER-only — excluded
+ * from MANAGER's filter below and never added to AGENT's explicit list.
  */
 export const AGENCY_CAPABILITIES = [
   'fleet.view',
@@ -43,6 +45,7 @@ export const AGENCY_CAPABILITIES = [
   'hub.manage',
   'staff.manage',
   'settings.manage',
+  'billing.manage',
 ] as const;
 
 /**
@@ -70,15 +73,17 @@ export type PlatformCapability = (typeof PLATFORM_CAPABILITIES)[number];
  * a membership; the owner may edit per staff member afterward.
  *
  *   OWNER   — the whole agency catalog.
- *   MANAGER — everything EXCEPT staff.manage + settings.manage (can run ops, not
- *             hire staff or change agency settings).
+ *   MANAGER — everything EXCEPT staff.manage + settings.manage + billing.manage
+ *             (can run ops, not hire staff, change agency settings, or upgrade
+ *             the SaaS plan).
  *   AGENT   — front-line operational subset (no finance.view / payment.verify /
  *             expense.manage / hub.manage / staff.manage / settings.manage).
  */
 export const ROLE_PRESETS: Record<string, string[]> = {
   OWNER: [...AGENCY_CAPABILITIES],
   MANAGER: AGENCY_CAPABILITIES.filter(
-    (c) => c !== 'staff.manage' && c !== 'settings.manage',
+    (c) =>
+      c !== 'staff.manage' && c !== 'settings.manage' && c !== 'billing.manage',
   ),
   AGENT: [
     'fleet.view',
