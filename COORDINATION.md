@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes); the rest of `docs/AUDIT_2026-07-26.md`'s findings (font-black in shared Modal/EmptyState, refund-verification race, billing capability gate, dependency vulns, etc.) are unclaimed, for the founder to prioritize. | None claimed. | 2026-07-26 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. Stripe live test + SaaS-subscription checkout stay **Blocked by Founder** (see Open lanes) — the financial-race and billing-authz blockers the founder flagged against that work are now closed. | None claimed. | 2026-07-27 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -2702,3 +2702,106 @@ a real product/schema decision); anything else raised in
 capability gate on `GET /agency/billing`, dependency vulnerabilities, etc.)
 — all pre-existing or orthogonal to this Vault frontend slice, left for the
 founder to prioritize separately.
+
+### R45 — `docs/AUDIT_2026-07-26.md` triaged and its four CRITICAL findings closed (sole developer, 2026-07-27)
+
+Founder reviewed R44's mention of the concurrent `docs/AUDIT_2026-07-26.md`
+(22 findings, none scored Critical by the audit itself) and set the bar:
+"we cannot move forward with live Stripe or Phase 9 while financial race
+conditions and billing authz gaps exist." Findings were triaged and
+presented to the founder before any code was touched, per their explicit
+ask. Founder's CRITICAL tier (confirmed): **#3** refund-verification race,
+**#4** deposit CLAIM race (both H/M-scored by the audit but the same
+check-then-act race shape, and #4 was left unpatched would've been an
+inconsistent half-fix of #3's bug class), **#5** mock payment gateway's
+missing production fail-safe (directly gates the "live Stripe" criterion —
+an unsigned proof-of-payment body is a real fraud vector once real money is
+involved), **#6** `GET /agency/billing`'s missing capability gate. Everything
+else (font-black in shared `Modal`/`EmptyState`, dependency vulnerabilities,
+i18n/a11y gaps, `.env.example` drift, dead code, etc.) stays scheduled,
+non-blocking, unclaimed.
+
+**#3 + #4 — both closed with the SAME root cause and a matching fix
+pattern, per the founder's ask to "utilize `prisma.$transaction` correctly":**
+
+- **#3 `payments.service.ts`** — `netVerifiedIncomeCents()` used to read via
+  `this.prisma`, outside and before the `$transaction` that flips a refund
+  to VERIFIED. Two concurrent `verify()` calls on two DIFFERENT PENDING
+  refunds for the same invoice could each read the same pre-commit
+  net-income figure, both pass the affordability check, both commit —
+  over-refunding past net verified income (the exact Phase 3 invariant this
+  violated). Fixed with a `SELECT ... FOR UPDATE` row lock on the invoice
+  (`lockInvoiceForRefund`, via `tx.$queryRaw`) acquired at the top of the
+  transaction, with the net-income re-check now reading through `tx` (so it
+  sees whatever a rival transaction already committed before this one got
+  the lock). Applied in both `verify()` (moved the whole check inside the
+  transaction) and `create()`'s auto-verify path (kept the existing
+  outside-tx check as a fast advisory pre-check, since a non-auto-verified
+  PENDING refund doesn't touch the aggregate yet, but added the same
+  lock+re-check inside the transaction for the case that actually mutates
+  state immediately).
+- **#4 `bookings.service.ts` `updateDeposit` CLAIM branch** — same shape:
+  `depositStatus !== 'HELD'` was checked once via `this.prisma` before the
+  transaction opened; `tx.booking.update` had no compound guard, so two
+  concurrent CLAIM calls could each create their own `claimExtra` INCOME
+  payment — a double damage-charge. Fixed with a compound-`where` guard
+  (`tx.booking.updateMany({ where: { id, depositStatus: 'HELD' }, ... })`) —
+  simpler than a raw lock since the guarded state lives on the same row
+  being written. A `count === 0` result (the loser) throws
+  `ConflictException` before ever creating a payment row; the winner's
+  updated row is re-fetched via `findUniqueOrThrow` for the return value.
+
+**#5 `payment-gateway.service.ts` — fail-fast, no fallbacks (same idiom as
+JWT_SECRET/IDENTITY_PEPPER):** `MockGateway` accepts an unsigned
+`{providerRef, status:'PAID'}` body as proof of payment — fine for local
+dev, but in production a customer could `POST /payments/webhooks/mock`
+directly and settle their own invoice for free. The constructor now throws
+at boot (refuses to start) if the resolved active provider is `MOCK` while
+`NODE_ENV === 'production'` — whether that's because `PAYMENT_PROVIDER` was
+left unset, misspelled, or explicitly set to `mock`. STRIPE/CMI in
+production still boot normally.
+
+**#6 `entitlements.controller.ts` — `GET /agency/billing` gated on
+`finance.view`:** was `AuthGuard`-only, so any authenticated staff member —
+including a 14-capability AGENT, whose preset excludes `finance.view` —
+could read the agency's subscription plan, usage meters, and full
+`PlatformInvoice` history. Reused the existing `finance.view` capability
+(already has the right role-preset shape: OWNER/MANAGER/Accountant hold it,
+AGENT and the Front-desk/Fleet-manager staff presets don't) rather than
+minting a new one. `GET /platform/plans` (the public pricing page) stays
+deliberately unguarded.
+
+**Verified:** `tsc --noEmit` and `eslint src` clean across the backend.
+Full Jest suite: **48 suites / 377 tests** (baseline 47/363, +1 suite +14
+tests), all green. New coverage: `payments.service.spec.ts` — a
+counter-based adversarial-mock test proving `create()`'s in-transaction
+re-check (not just the outer pre-check) is what actually catches a refund
+that raced past a rival refund's commit, plus a `verify()` test asserting
+the lock (`$queryRaw`) is invoked strictly before `payment.update` via
+Jest's `invocationCallOrder`, plus a business-rule regression test
+(rejects a refund once a rival's already-VERIFIED refund has consumed the
+headroom). `deposit-lifecycle.spec.ts` — new test simulating the CLAIM
+race's loser (`updateMany` returns `count: 0`) and proving it aborts with
+`ConflictException` before ever calling `payment.create`; existing CLAIM
+tests updated for the `update`→`updateMany`+`findUniqueOrThrow` shape
+change. `payment-gateway.service.spec.ts` — 5 new tests covering the
+production fail-safe (unset/misspelled/explicit-mock all refused under
+`NODE_ENV=production`; MOCK still allowed outside production; a real
+provider still boots fine in production). New
+`entitlements.controller.spec.ts` — same two-part pattern as
+`webhooks.spec.ts`'s capability-gating coverage: asserts the
+`@RequireCapabilities` metadata is actually present on `billing` (and
+absent on the still-public `plans`), then exercises the real
+`CapabilitiesGuard` to prove an AGENT lacking `finance.view` gets a 403 and
+an OWNER/MANAGER holding it doesn't.
+
+**Housekeeping caught during this pass:** the new `entitlements.controller.spec.ts`
+initially failed to even load under a bare `npx jest` invocation — `JWT_SECRET
+environment variable is not set` thrown at import time by `auth.guard.ts`
+(transitively imported by the controller). Not a real bug; this codebase's
+own established fix (`auth.guard.spec.ts`/`auth.service.spec.ts`) is to set
+`process.env.JWT_SECRET` before the import — applied the same one-line fix
+here.
+
+**Not built:** everything in the HIGH/TECH-DEBT tier from the triage above —
+unclaimed, scheduled separately, no founder go-ahead requested yet.

@@ -72,6 +72,13 @@ function makePrisma(overrides: any = {}) {
         return inv;
       }),
     },
+    // Tagged-template mock — the refund-race fix locks the invoice row via
+    // `tx.$queryRaw`SELECT ... FOR UPDATE`` before re-checking net income.
+    // The mocked Prisma has no real locking semantics, so this is a no-op
+    // here; the race-closing behavior itself is proven by the ordering
+    // tests below (netVerifiedIncomeCents reading tx state that reflects
+    // an already-committed concurrent refund).
+    $queryRaw: jest.fn().mockResolvedValue(undefined),
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
     ...overrides,
   };
@@ -161,6 +168,57 @@ describe('PaymentsService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('REFUND race (audit 2026-07-26 #3): an auto-verified refund is re-checked under lock inside the transaction, not just by the outer pre-check', async () => {
+      // Simulates the exact race: the outer advisory pre-check (outside any
+      // transaction) sees "no refunds yet" and passes. By the time this
+      // transaction acquires the invoice's row lock, a RIVAL refund of 700
+      // MAD has already committed — leaving only 300 MAD of headroom, not
+      // enough for this 500 MAD refund. Only the fix's in-transaction
+      // re-check (added because of this finding) catches this; the old
+      // single outside-tx check could not have, since it never re-read
+      // after the rival committed.
+      const { prisma, state } = makePrisma();
+      state.invoices.push({
+        id: 'inv-1',
+        agencyId: 'ag-1',
+        amount: dec(1000),
+        status: 'PAID',
+        booking: { carId: 'car-1' },
+      });
+      state.payments.push({
+        id: 'pay-income',
+        invoiceId: 'inv-1',
+        amount: dec(1000),
+        status: 'VERIFIED',
+        type: 'INCOME',
+      });
+
+      let refundAggregateCalls = 0;
+      prisma.payment.aggregate = jest.fn(async ({ where }: any) => {
+        if (where.type === 'INCOME') {
+          return { _sum: { amount: dec(1000) } };
+        }
+        refundAggregateCalls++;
+        // Call #1 = the outer pre-check (sees 0 — plenty of room, passes).
+        // Every call after = inside the transaction, after the rival's 700
+        // MAD refund has "already committed".
+        return { _sum: { amount: refundAggregateCalls === 1 ? dec(0) : dec(700) } };
+      });
+
+      const svc = new PaymentsService(prisma, makeAnalytics() as any);
+
+      await expect(
+        svc.create('ag-1', 'user-1', 'OWNER', {
+          invoiceId: 'inv-1',
+          amount: 500,
+          type: 'REFUND',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      // The whole point: the loser must never actually create its refund row.
+      expect(state.payments.some((p) => p.type === 'REFUND')).toBe(false);
+    });
+
     it('lands as PENDING when autoVerify is false', async () => {
       const { prisma, state } = makePrisma();
       state.invoices.push({
@@ -231,6 +289,96 @@ describe('PaymentsService', () => {
       await expect(
         svc.verify('pay-1', 'u', 'OWNER', 'ag-1'),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    describe('REFUND race (audit 2026-07-26 #3)', () => {
+      function pushRefundScenario(state: any) {
+        state.invoices.push({
+          id: 'inv-1',
+          agencyId: 'ag-1',
+          amount: dec(1000),
+          status: 'PAID',
+          booking: { carId: 'car-1' },
+        });
+        state.payments.push({
+          id: 'pay-income',
+          invoiceId: 'inv-1',
+          amount: dec(1000),
+          status: 'VERIFIED',
+          type: 'INCOME',
+        });
+        state.payments.push({
+          id: 'pay-refund',
+          invoiceId: 'inv-1',
+          amount: dec(300),
+          status: 'PENDING',
+          type: 'REFUND',
+          invoice: { agencyId: 'ag-1', amount: dec(1000), booking: { carId: 'car-1' } },
+        });
+      }
+
+      it('locks the invoice row (SELECT ... FOR UPDATE) before flipping a refund to VERIFIED', async () => {
+        const { prisma, state } = makePrisma();
+        pushRefundScenario(state);
+        const svc = new PaymentsService(prisma, makeAnalytics() as any);
+
+        await svc.verify('pay-refund', 'u', 'OWNER', 'ag-1');
+
+        expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+        // The lock must be acquired strictly before the row is written —
+        // otherwise a concurrent transaction could still slip in between.
+        const lockOrder = (prisma.$queryRaw as jest.Mock).mock.invocationCallOrder[0];
+        const updateOrder = (prisma.payment.update as jest.Mock).mock.invocationCallOrder[0];
+        expect(lockOrder).toBeLessThan(updateOrder);
+      });
+
+      it('rejects a refund that would exceed net income once a rival refund has already committed', async () => {
+        // Simulates the loser of the race directly, in terms of end state:
+        // a second refund (600 MAD) already landed as VERIFIED — this
+        // transaction's own fresh, in-lock read of the aggregate must see
+        // it and correctly refuse to also verify this 500 MAD refund
+        // (400 MAD headroom remains, not enough).
+        const { prisma, state } = makePrisma();
+        state.invoices.push({
+          id: 'inv-1',
+          agencyId: 'ag-1',
+          amount: dec(1000),
+          status: 'PAID',
+          booking: { carId: 'car-1' },
+        });
+        state.payments.push({
+          id: 'pay-income',
+          invoiceId: 'inv-1',
+          amount: dec(1000),
+          status: 'VERIFIED',
+          type: 'INCOME',
+        });
+        state.payments.push({
+          id: 'pay-refund-rival',
+          invoiceId: 'inv-1',
+          amount: dec(600),
+          status: 'VERIFIED',
+          type: 'REFUND',
+        });
+        state.payments.push({
+          id: 'pay-refund-mine',
+          invoiceId: 'inv-1',
+          amount: dec(500),
+          status: 'PENDING',
+          type: 'REFUND',
+          invoice: { agencyId: 'ag-1', amount: dec(1000), booking: { carId: 'car-1' } },
+        });
+        const svc = new PaymentsService(prisma, makeAnalytics() as any);
+
+        await expect(
+          svc.verify('pay-refund-mine', 'u', 'OWNER', 'ag-1'),
+        ).rejects.toBeInstanceOf(BadRequestException);
+
+        // The whole point: this refund must never flip to VERIFIED.
+        expect(
+          state.payments.find((p) => p.id === 'pay-refund-mine')!.status,
+        ).toBe('PENDING');
+      });
     });
   });
 

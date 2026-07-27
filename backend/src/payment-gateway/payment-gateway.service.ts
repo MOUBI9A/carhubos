@@ -36,6 +36,21 @@ export class PaymentGatewayService {
       );
       this.active = 'MOCK';
     }
+
+    // Fail-fast, no fallbacks (CLAUDE.md §3, same idiom as JWT_SECRET/
+    // IDENTITY_PEPPER). MockGateway accepts an unsigned {providerRef,
+    // status:'PAID'} body as proof of payment — fine for local dev, but in
+    // production it would let anyone settle their own invoice for free via
+    // a direct POST to /payments/webhooks/mock. Refuse to boot rather than
+    // silently run it, whether MOCK is active because PAYMENT_PROVIDER was
+    // left unset, misspelled, or explicitly set to mock.
+    if (this.active === 'MOCK' && process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'PAYMENT_PROVIDER resolved to MOCK while NODE_ENV=production — refusing to start. ' +
+          'Set PAYMENT_PROVIDER to STRIPE or CMI (see backend/.env.example).',
+      );
+    }
+
     this.logger.log(`Payment gateway active provider: ${this.active}`);
   }
 

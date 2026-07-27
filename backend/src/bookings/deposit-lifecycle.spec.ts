@@ -236,10 +236,20 @@ describe('BookingsService.updateDeposit — RETURN', () => {
 });
 
 describe('BookingsService.updateDeposit — CLAIM', () => {
-  function makeTx(invoiceAmount: number, priorIncomeCents: number, priorRefundCents: number) {
-    const bookingUpdate = jest.fn((args: any) =>
-      Promise.resolve({ id: 'booking-1', ...args.data }),
-    );
+  function makeTx(
+    invoiceAmount: number,
+    priorIncomeCents: number,
+    priorRefundCents: number,
+    // count: 0 simulates the loser of a concurrent CLAIM race — a rival
+    // transaction already flipped depositStatus away from HELD before this
+    // one's compound-where updateMany ran.
+    updateManyCount = 1,
+  ) {
+    const bookingUpdateMany = jest.fn().mockResolvedValue({ count: updateManyCount });
+    const bookingFindUniqueOrThrow = jest.fn().mockResolvedValue({
+      id: 'booking-1',
+      depositStatus: 'CLAIMED',
+    });
     const paymentCreate = jest.fn().mockResolvedValue({ id: 'pay-claim' });
     const paymentAggregate = jest.fn(({ where }: any) => {
       if (where.type === 'INCOME') {
@@ -249,7 +259,7 @@ describe('BookingsService.updateDeposit — CLAIM', () => {
     });
     const invoiceUpdate = jest.fn().mockResolvedValue({});
     return {
-      booking: { update: bookingUpdate },
+      booking: { updateMany: bookingUpdateMany, findUniqueOrThrow: bookingFindUniqueOrThrow },
       payment: { create: paymentCreate, aggregate: paymentAggregate },
       invoice: { update: invoiceUpdate },
       invoiceAmount,
@@ -292,7 +302,10 @@ describe('BookingsService.updateDeposit — CLAIM', () => {
       action: 'CLAIM',
     } as any);
 
-    expect(tx.booking.update.mock.calls[0][0].data).toEqual({ depositStatus: 'CLAIMED' });
+    expect(tx.booking.updateMany).toHaveBeenCalledWith({
+      where: { id: 'booking-1', depositStatus: 'HELD' },
+      data: { depositStatus: 'CLAIMED' },
+    });
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(tx.invoice.update).not.toHaveBeenCalled();
     expect(result.depositStatus).toBe('CLAIMED');
@@ -374,6 +387,29 @@ describe('BookingsService.updateDeposit — CLAIM', () => {
     await expect(
       svc.updateDeposit('agency-a', 'booking-1', 'actor-1', { action: 'CLAIM' } as any),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(tx.booking.update).not.toHaveBeenCalled();
+    expect(tx.booking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('CLAIM race: a loser whose compound-where updateMany matches zero rows aborts before creating a damage payment', async () => {
+    // Both racers' outer `booking.depositStatus !== 'HELD'` check reads the
+    // SAME pre-transaction snapshot (HELD) and passes — the real guard is
+    // the updateMany's own `where: { depositStatus: 'HELD' }` inside the
+    // transaction, which only the winner's write actually matches. Simulate
+    // the loser: a rival transaction already flipped the row, so this
+    // transaction's updateMany matches 0 rows.
+    const booking = makeBooking({ depositStatus: 'HELD', depositAmount: money(500) });
+    const tx = makeTx(1000, 0, 0, /* updateManyCount */ 0);
+    const { svc } = makeSvc(booking, tx);
+
+    await expect(
+      svc.updateDeposit('agency-a', 'booking-1', 'actor-1', {
+        action: 'CLAIM',
+        claimAmount: 300,
+      } as any),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    // The whole point: the loser must never book its own damage charge.
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(tx.invoice.update).not.toHaveBeenCalled();
   });
 });

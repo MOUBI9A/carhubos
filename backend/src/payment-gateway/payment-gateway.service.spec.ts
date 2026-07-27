@@ -87,4 +87,42 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
       /not implemented\/configured/i,
     );
   });
+
+  describe('MOCK gateway production fail-safe (audit 2026-07-26 #5)', () => {
+    const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+    afterEach(() => {
+      if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    });
+
+    it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is unset (would silently default to MOCK)', () => {
+      delete process.env.PAYMENT_PROVIDER;
+      process.env.NODE_ENV = 'production';
+      expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+    });
+
+    it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is explicitly "mock"', () => {
+      process.env.PAYMENT_PROVIDER = 'mock';
+      process.env.NODE_ENV = 'production';
+      expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+    });
+
+    it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is unrecognized (falls back to MOCK)', () => {
+      process.env.PAYMENT_PROVIDER = 'paypal';
+      process.env.NODE_ENV = 'production';
+      expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+    });
+
+    it('still allows MOCK outside production', () => {
+      delete process.env.PAYMENT_PROVIDER;
+      process.env.NODE_ENV = 'test';
+      expect(make().activeProvider).toBe('MOCK');
+    });
+
+    it('allows a real provider (STRIPE) in production', () => {
+      process.env.PAYMENT_PROVIDER = 'stripe';
+      process.env.NODE_ENV = 'production';
+      expect(make().activeProvider).toBe('STRIPE');
+    });
+  });
 });

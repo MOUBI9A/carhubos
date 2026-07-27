@@ -95,8 +95,13 @@ export class PaymentsService {
     const status = autoVerify ? 'VERIFIED' : 'PENDING';
 
     if (dto.type === 'REFUND') {
-      // Refunds cannot exceed net verified income already on this invoice.
-      const netCents = await this.netVerifiedIncomeCents(invoice.id);
+      // Fast, advisory pre-check outside any transaction — rejects an
+      // obviously-bad refund immediately with a clear message. NOT the
+      // enforcement boundary: a PENDING (non-auto-verified) refund doesn't
+      // touch the net-income aggregate until it's later verified, and an
+      // auto-verified refund is re-checked below UNDER LOCK, which is what
+      // actually closes the race.
+      const netCents = await this.netVerifiedIncomeCents(this.prisma, invoice.id);
       const refundCents = amount.times(100).toNumber();
       if (refundCents > netCents) {
         throw new BadRequestException(
@@ -107,6 +112,23 @@ export class PaymentsService {
     }
 
     const payment = await this.prisma.$transaction(async (tx) => {
+      // An auto-verified refund mutates the aggregate immediately (unlike a
+      // PENDING one), so THIS is the actual race window — re-check under
+      // the invoice row lock, using a read through `tx` so it sees any
+      // concurrent refund that committed while this transaction waited for
+      // the lock.
+      if (dto.type === 'REFUND' && autoVerify) {
+        await this.lockInvoiceForRefund(tx, invoice.id);
+        const netCents = await this.netVerifiedIncomeCents(tx, invoice.id);
+        const refundCents = amount.times(100).toNumber();
+        if (refundCents > netCents) {
+          throw new BadRequestException(
+            `Refund of ${amount.toFixed(2)} MAD exceeds net verified income ` +
+              `(${(netCents / 100).toFixed(2)} MAD) on this invoice.`,
+          );
+        }
+      }
+
       const created = await tx.payment.create({
         data: {
           amount,
@@ -155,20 +177,27 @@ export class PaymentsService {
       throw new ConflictException('Only pending payments can be verified.');
     }
 
-    if (payment.type === 'REFUND') {
-      // When verifying a pending refund, ensure net income still covers it
-      // (excluding this payment which is still PENDING).
-      const netCents = await this.netVerifiedIncomeCents(payment.invoiceId);
-      const refundCents = payment.amount.times(100).toNumber();
-      if (refundCents > netCents) {
-        throw new BadRequestException(
-          `Refund of ${payment.amount.toFixed(2)} MAD exceeds net verified income ` +
-            `(${(netCents / 100).toFixed(2)} MAD) on this invoice.`,
-        );
-      }
-    }
-
     const updatedPayment = await this.prisma.$transaction(async (tx) => {
+      if (payment.type === 'REFUND') {
+        // THE RACE this closes: two concurrent verify() calls on two
+        // DIFFERENT pending refunds for the same invoice. Previously this
+        // check read via `this.prisma` outside any transaction, so both
+        // could read the same pre-commit net-income figure, both pass, both
+        // commit — refunding more than was ever paid in. Locking the
+        // invoice row first serializes the two transactions; the second to
+        // acquire the lock re-reads (via `tx`) an aggregate that already
+        // reflects the first's committed refund.
+        await this.lockInvoiceForRefund(tx, payment.invoiceId);
+        const netCents = await this.netVerifiedIncomeCents(tx, payment.invoiceId);
+        const refundCents = payment.amount.times(100).toNumber();
+        if (refundCents > netCents) {
+          throw new BadRequestException(
+            `Refund of ${payment.amount.toFixed(2)} MAD exceeds net verified income ` +
+              `(${(netCents / 100).toFixed(2)} MAD) on this invoice.`,
+          );
+        }
+      }
+
       const verified = await tx.payment.update({
         where: { id: paymentId },
         data: {
@@ -244,14 +273,23 @@ export class PaymentsService {
     });
   }
 
-  /** Net verified INCOME − REFUND in integer cents for an invoice. */
-  private async netVerifiedIncomeCents(invoiceId: string): Promise<number> {
+  /**
+   * Net verified INCOME − REFUND in integer cents for an invoice. Takes an
+   * explicit client so callers protecting against the refund race (see
+   * `lockInvoiceForRefund`) can pass the transaction's own `tx` and read
+   * under that transaction's row lock, instead of always reading through
+   * `this.prisma` outside any transaction.
+   */
+  private async netVerifiedIncomeCents(
+    client: Pick<PrismaService, 'payment'> | Prisma.TransactionClient,
+    invoiceId: string,
+  ): Promise<number> {
     const [incomeAgg, refundAgg] = await Promise.all([
-      this.prisma.payment.aggregate({
+      client.payment.aggregate({
         where: { invoiceId, status: 'VERIFIED', type: 'INCOME' },
         _sum: { amount: true },
       }),
-      this.prisma.payment.aggregate({
+      client.payment.aggregate({
         where: { invoiceId, status: 'VERIFIED', type: 'REFUND' },
         _sum: { amount: true },
       }),
@@ -259,6 +297,21 @@ export class PaymentsService {
     const income = (incomeAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
     const refund = (refundAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
     return income - refund;
+  }
+
+  /**
+   * Pessimistic row lock on the invoice for the lifetime of the current
+   * transaction — closes the refund-verification race (two concurrent
+   * verifies of two DIFFERENT PENDING refunds on the SAME invoice, each
+   * reading the same pre-commit net-income figure via `this.prisma` before
+   * either committed, both passing the affordability check, both over-
+   * refunding). `SELECT ... FOR UPDATE` blocks a second transaction taking
+   * the same lock until the first commits/rolls back, so the second
+   * transaction's own `netVerifiedIncomeCents` read (below, using `tx`)
+   * always sees the first refund's committed effect before deciding its own.
+   */
+  private async lockInvoiceForRefund(tx: Prisma.TransactionClient, invoiceId: string) {
+    await tx.$queryRaw`SELECT id FROM "Invoice" WHERE id = ${invoiceId} FOR UPDATE`;
   }
 
   /**

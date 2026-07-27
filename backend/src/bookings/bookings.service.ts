@@ -651,10 +651,24 @@ export class BookingsService {
 
     const invoice = booking.invoices[0];
     const updated = await this.prisma.$transaction(async (tx) => {
-      const b = await tx.booking.update({
-        where: { id: bookingId },
+      // Compound-`where` guard closes the check-then-act race: the outer
+      // `depositStatus !== 'HELD'` check above reads via `this.prisma`
+      // before this transaction opens, so two concurrent CLAIM calls can
+      // both pass it before either commits. Re-asserting `depositStatus:
+      // 'HELD'` in the update's own `where` means only the FIRST to commit
+      // actually flips the row; a loser's `updateMany` matches zero rows
+      // and aborts here — before it ever creates a claimExtra payment —
+      // instead of both racers each booking their own damage charge.
+      const claimResult = await tx.booking.updateMany({
+        where: { id: bookingId, depositStatus: 'HELD' },
         data: { depositStatus: 'CLAIMED' },
       });
+      if (claimResult.count === 0) {
+        throw new ConflictException(
+          'CLAIM requires depositStatus HELD — this deposit was already updated by another request.',
+        );
+      }
+      const b = await tx.booking.findUniqueOrThrow({ where: { id: bookingId } });
 
       // Optional extra damage charge beyond the forfeited deposit — booked as
       // verified INCOME so invoice reconciliation reflects the real total due.
