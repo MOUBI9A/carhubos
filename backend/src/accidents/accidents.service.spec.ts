@@ -26,7 +26,7 @@ describe('AccidentsService.findOne — tenant boundary', () => {
   function makeService(findFirstImpl: (args: any) => any) {
     const findFirst = jest.fn(findFirstImpl);
     const prisma = { accident: { findFirst } };
-    return { svc: new AccidentsService(prisma as any), findFirst };
+    return { svc: new AccidentsService(prisma as any, {} as any), findFirst };
   }
 
   it('returns the accident when it belongs to the caller agency, scoping on { id, agencyId }', async () => {
@@ -81,7 +81,7 @@ describe('AccidentsService.create / update — ownership guards', () => {
       car: { findFirst: carFindFirst },
       accident: { create: accidentCreate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await expect(
       svc.create(AGENCY_A, {
@@ -105,7 +105,7 @@ describe('AccidentsService.create / update — ownership guards', () => {
       car: { findFirst: carFindFirst },
       accident: { create: accidentCreate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await svc.create(AGENCY_A, {
       carId: 'car-1',
@@ -128,11 +128,50 @@ describe('AccidentsService.create / update — ownership guards', () => {
     const prisma = {
       accident: { findFirst: accidentFindFirst, update: accidentUpdate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await expect(
       svc.update(AGENCY_A, 'someone-elses-accident', { status: 'RESOLVED' } as any),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(accidentUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('AccidentsService.generateReportPdf — tenant boundary + engine handoff', () => {
+  const AGENCY_A = 'agency-aaaa';
+
+  it('cross-tenant/unknown id 404s before Puppeteer ever launches', async () => {
+    const accidentFindFirst = jest.fn().mockResolvedValue(null);
+    const generateAccidentReport = jest.fn();
+    const prisma = { accident: { findFirst: accidentFindFirst } };
+    const pdfEngine = { generateAccidentReport };
+    const svc = new AccidentsService(prisma as any, pdfEngine as any);
+
+    await expect(
+      svc.generateReportPdf(AGENCY_A, 'someone-elses-accident'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(accidentFindFirst.mock.calls[0][0].where).toEqual({
+      id: 'someone-elses-accident',
+      agencyId: AGENCY_A,
+    });
+    expect(generateAccidentReport).not.toHaveBeenCalled();
+  });
+
+  it('hands the tenant-scoped accident (with car+agency) to the PDF engine and returns its buffer', async () => {
+    const accident = {
+      id: 'acc-1',
+      agencyId: AGENCY_A,
+      car: { id: 'car-1', brand: 'Dacia', model: 'Duster', licensePlate: '1-A-1' },
+      agency: { name: 'Fider Rent', address: 'Casablanca' },
+    };
+    const accidentFindFirst = jest.fn().mockResolvedValue(accident);
+    const pdfBuffer = Buffer.from('pdf-bytes');
+    const generateAccidentReport = jest.fn().mockResolvedValue(pdfBuffer);
+    const prisma = { accident: { findFirst: accidentFindFirst } };
+    const pdfEngine = { generateAccidentReport };
+    const svc = new AccidentsService(prisma as any, pdfEngine as any);
+
+    await expect(svc.generateReportPdf(AGENCY_A, 'acc-1')).resolves.toBe(pdfBuffer);
+    expect(generateAccidentReport).toHaveBeenCalledWith(accident);
   });
 });

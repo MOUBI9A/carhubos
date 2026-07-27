@@ -5,8 +5,10 @@ import {
   Param,
   Patch,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AccidentsService } from './accidents.service';
 import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -41,6 +43,29 @@ export class AccidentsController {
   @RequireCapabilities('fleet.view')
   findOne(@CurrentUser() user: any, @Param('id') id: string) {
     return this.accidentsService.findOne(user.agencyId, id);
+  }
+
+  /**
+   * Streams the dossier as a PDF (same Puppeteer pipeline as the booking
+   * contract, `pdf-engine`). Read-level capability — matches `findOne`/`findAll`,
+   * exporting a dossier isn't a mutation.
+   */
+  @Get(':id/report')
+  @RequireCapabilities('fleet.view')
+  async getReport(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.accidentsService.generateReportPdf(user.agencyId, id);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=accident-${id.slice(0, 8)}.pdf`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
   }
 
   @Post()

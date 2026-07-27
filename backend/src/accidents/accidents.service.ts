@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
 
 /**
@@ -13,7 +14,10 @@ import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
  */
 @Injectable()
 export class AccidentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pdfEngine: PdfEngineService,
+  ) {}
 
   /** Verify a car belongs to the caller's agency before linking an accident to it. */
   private async assertCarOwnership(agencyId: string, carId: string) {
@@ -123,5 +127,24 @@ export class AccidentsService {
     }
 
     return this.prisma.accident.update({ where: { id }, data });
+  }
+
+  /**
+   * Render one dossier as a PDF (reuses the contract-PDF pipeline in
+   * `pdf-engine`). Tenant-scoped via the same `findOne` guard as every other
+   * read — a cross-tenant/unknown id 404s before Puppeteer ever launches.
+   */
+  async generateReportPdf(agencyId: string, id: string) {
+    const accident = await this.prisma.accident.findFirst({
+      where: { id, agencyId },
+      include: {
+        car: { select: { id: true, brand: true, model: true, licensePlate: true } },
+        agency: { select: { name: true, address: true } },
+      },
+    });
+    if (!accident) {
+      throw new NotFoundException('Accident not found');
+    }
+    return this.pdfEngine.generateAccidentReport(accident);
   }
 }
