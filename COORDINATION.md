@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. | None claimed. | 2026-07-27 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: picked up "Lane 1 — Accidents domain" per the brief, found it already DONE** (backend R9 `f3febe0`, frontend `a275fc7` — `PROGRESS.md`'s "LEFT TO DO" list just hadn't been updated); closed the one real remaining gap instead — "Export PDF" now streams a genuine Puppeteer-rendered dossier PDF (`GET /accidents/:id/report`, reusing `pdf-engine`) instead of an honest-but-permanent "not built yet" toast. Backend **49 suites / 389 tests**, tsc/jest/eslint clean; frontend tsc/vitest/eslint clean. Fixed the stale docs (`PROGRESS.md`, `CLAUDE.md` §4). See R47 below for full detail. | None claimed. | 2026-07-27 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -275,7 +275,7 @@ repeal of the protocol.
 
 Pick a lane that doesn't touch the other agent's files. Current backlog (details in `PROGRESS.md`):
 
-- ~~Lane 1 — Accidents domain~~ **DONE** (T3 backend + migration, R9; frontend wiring, `a275fc7`).
+- ~~Lane 1 — Accidents domain~~ **DONE** (T3 backend + migration, R9; frontend wiring, `a275fc7`; real "Export PDF" dossier report, R47).
 - ~~Lane 2 — Public routing / input validation~~ **DONE** (R1, R6).
 - **Lane 3 — Rate tiers / seasonality** on bookings (Phase 4). Product decision on the pricing model first; touches money math + `schema.prisma`. Still open, still needs a founder call — not blocking anything else.
 - ~~Lane 4 — Infra/CI~~ **DONE** (live-DB e2e job + Playwright e2e job both in `.github/workflows/ci.yml`, R27).
@@ -2806,3 +2806,104 @@ here.
 
 **Not built:** everything in the HIGH/TECH-DEBT tier from the triage above —
 unclaimed, scheduled separately, no founder go-ahead requested yet.
+
+### R47 — Accidents domain: found already DONE, closed the last stub (real "Export PDF") + fixed stale `PROGRESS.md` (sole developer, 2026-07-27)
+
+Picked up this session's brief expecting to build Lane 1 — the Accidents
+domain — from scratch per `PROGRESS.md`'s "LEFT TO DO" list, which still
+described it as *"the LAST 'not wired' stub… Still open."* Per this
+codebase's own "verify relayed reports" discipline, checked git before
+writing any code: **the backend (schema + migration + module, R9, `f3febe0`)
+and the frontend wiring (real `GET/POST/PATCH /accidents`, `a275fc7`) were
+both already committed to `main`**, and this file's own "Open lanes" section
+(line ~278) already read `~~Lane 1 — Accidents domain~~ **DONE**`. Only
+`PROGRESS.md`'s "LEFT TO DO" list hadn't been updated to match — a doc-sync
+miss from an earlier round, not a real gap. Ran the full stack of live
+smoke-checks (tsc/jest/eslint/vitest) before touching anything to confirm
+the tree was genuinely green and stable, per the "another AI may also work
+this repo" caution in `PROGRESS.md`.
+
+**What was genuinely still a stub:** the owner page's "Export PDF" button
+on a dossier still showed an honest `'info'` toast ("Incident dossier
+export isn't built yet.") — a deliberate, documented Phase-7 decision at
+the time (no fake success), but the app already had a real PDF pipeline
+(`pdf-engine`, Puppeteer-backed, used today for booking contracts via
+`GET /bookings/:id/contract`) that a dossier export could reuse instead of
+staying a permanent stub. Built it for real rather than re-affirming the
+"not available" state:
+
+- **`pdf-engine.service.ts`** — refactored the Puppeteer launch/render/
+  cleanup into a shared private `render(html, logLabel)` (both `generateContract`
+  and the new `generateAccidentReport` now share it — same browser-leak-safe
+  `finally { browser.close() }` pattern, no behavior change to the existing
+  contract path). Added `generateAccidentReport(accident)`: a red-accented
+  incident-dossier template (agency, vehicle, status/severity, occurred-at,
+  location, third-party flag, estimated cost, free-text description) with
+  every user-editable field passed through the same `esc()` HTML-injection
+  guard the contract template uses — the incident `description`/`location`
+  are free text, so this isn't optional.
+- **`accidents.service.ts`** — new `generateReportPdf(agencyId, id)`: the
+  same tenant-scoped `findFirst({ id, agencyId })` guard as `findOne` (a
+  cross-tenant/unknown id 404s **before Puppeteer ever launches**, no wasted
+  browser spin-up on an IDOR attempt), `include`s `car` + `agency{name,address}`,
+  hands the row straight to `pdfEngine.generateAccidentReport`.
+- **`accidents.controller.ts`** — `GET /accidents/:id/report`, same
+  `fleet.view` capability as the other reads (exporting a dossier isn't a
+  mutation), streams `application/pdf` with a `Content-Disposition:
+  attachment` header — copy of the `bookings.controller.ts` contract-download
+  shape (`@Res() res: Response`, `res.set(...)`, `res.end(pdfBuffer)`).
+  `accidents.module.ts` now imports `PdfEngineModule`.
+- **Frontend (`accidents/page.tsx`)** — the "Export PDF" button now calls a
+  `downloadReport()` matching `bookings/page.tsx`'s `downloadContract`
+  pattern exactly (same shared `api` axios client, `withCredentials` cookie
+  auth, `responseType: 'blob'` → `URL.createObjectURL` → synthetic
+  `<a download>` click → `revokeObjectURL`), with an `isDownloading` loading
+  state on the button. The error path shows a generic honest failure toast
+  rather than trying to parse the error body as JSON — with
+  `responseType: 'blob'`, a non-2xx response body also arrives as a `Blob`,
+  so reading `.message` off it would silently misreport (this differs from
+  the existing `apiErrorMessage` helper the create/update mutations use,
+  which assumes a JSON error body — noted inline in the code so a future
+  editor doesn't "fix" it into a bug).
+
+**Tests:** `accidents.service.spec.ts` gained a new describe block —
+`generateReportPdf — tenant boundary + engine handoff` (2 tests): a
+cross-tenant/unknown id 404s with the PDF engine never invoked (asserts
+`generateAccidentReport` was never called, not just that it threw), and a
+happy-path test asserting the exact tenant-scoped row is handed to the
+engine and its returned buffer is passed straight through. Existing
+`new AccidentsService(prisma as any)` call sites updated to the new
+two-arg constructor (`{} as any` for the unused `pdfEngine` mock in specs
+that don't touch the PDF path — same convention `bookings.service.spec.ts`
+already uses for its own `pdfEngine: {}` mock).
+
+**Verified (real output):** backend `tsc --noEmit` clean; `jest` **49
+suites / 389 tests** (was 49/387, +2 new); `eslint .` clean. Frontend
+`tsc --noEmit` clean; `vitest run` **3 files / 9 tests** green (unchanged —
+no new frontend unit tests added, see below); `eslint .` clean.
+
+**Docs fixed to match reality:** `PROGRESS.md`'s "LEFT TO DO" list dropped
+the stale "accidents… Still open" line (moved to "DONE" with the corrected
+history — R9 backend, `a275fc7` frontend, this session's PDF export).
+`CLAUDE.md` §4's backend-module list was missing `accidents` entirely and
+didn't mention `pdf-engine` now serving two document types — both added.
+
+**Deliberately not built:**
+- **No new Playwright e2e spec.** Checked `frontend/e2e/` first — there's no
+  existing precedent anywhere in this codebase for e2e-testing a Puppeteer-
+  backed PDF *download* (not even the older, more heavily-used booking
+  contract download has one), so there was no established pattern to mirror,
+  and standing one up (intercepting a blob download + asserting on binary
+  PDF content in a Playwright browser context) is a meaningfully separate
+  infra lift from this slice. The backend unit tests above cover the
+  tenant-boundary + engine-handoff contract; this is a real gap (flagged,
+  not silently skipped) rather than a claim of full e2e coverage.
+- **Photo/constat upload and insurance-notify on the report form** — the
+  create-incident modal already says this honestly ("Photo/constat upload
+  and insurance notify are not wired yet") from the original `a275fc7`
+  wiring; unchanged, still accurate, out of scope for this slice.
+- Did not touch `PROGRESS.md`'s top summary line ("Last updated at commit
+  …, 16 suites/108 tests") or its historical model-count claims elsewhere —
+  those are pre-existing drift from many rounds ago, unrelated to this lane,
+  and rewriting them risked scope creep on a docs-only fix. Flagged here for
+  whoever next does a full docs pass.
