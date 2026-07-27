@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: picked up "Lane 1 — Accidents domain" per the brief, found it already DONE** (backend R9 `f3febe0`, frontend `a275fc7` — `PROGRESS.md`'s "LEFT TO DO" list just hadn't been updated); closed the one real remaining gap instead — "Export PDF" now streams a genuine Puppeteer-rendered dossier PDF (`GET /accidents/:id/report`, reusing `pdf-engine`) instead of an honest-but-permanent "not built yet" toast. Backend **49 suites / 389 tests**, tsc/jest/eslint clean; frontend tsc/vitest/eslint clean. Fixed the stale docs (`PROGRESS.md`, `CLAUDE.md` §4). See R47 below for full detail. **R48: picked up "Open finding #3 — `/public/fleet` unbounded" per the brief, found it already fully closed** (`dcc7000`, 2026-07-21 — bounded, paginated, `startsWith` city filter, both frontend consumers already on the envelope, full spec coverage). Moved to the brief's own fallback: pagination audit of `/cars` and `/payments`. Both already had a `take` cap from earlier P2 fixes (not literally unbounded) but no way to page past it — added the same additive `{items,total,page,limit}` envelope as `ListCustomersQueryDto` to `GET /cars` (+ optional `search`) and `GET /payments/pending` / `GET /payments/recent`; bare calls unchanged. Backend **49 suites / 398 tests**, tsc/jest/eslint clean. See R48 below for full detail. | None claimed. | 2026-07-27 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: picked up "Lane 1 — Accidents domain" per the brief, found it already DONE** (backend R9 `f3febe0`, frontend `a275fc7` — `PROGRESS.md`'s "LEFT TO DO" list just hadn't been updated); closed the one real remaining gap instead — "Export PDF" now streams a genuine Puppeteer-rendered dossier PDF (`GET /accidents/:id/report`, reusing `pdf-engine`) instead of an honest-but-permanent "not built yet" toast. Backend **49 suites / 389 tests**, tsc/jest/eslint clean; frontend tsc/vitest/eslint clean. Fixed the stale docs (`PROGRESS.md`, `CLAUDE.md` §4). See R47 below for full detail. **R48: picked up "Open finding #3 — `/public/fleet` unbounded" per the brief, found it already fully closed** (`dcc7000`, 2026-07-21 — bounded, paginated, `startsWith` city filter, both frontend consumers already on the envelope, full spec coverage). Moved to the brief's own fallback: pagination audit of `/cars` and `/payments`. Both already had a `take` cap from earlier P2 fixes (not literally unbounded) but no way to page past it — added the same additive `{items,total,page,limit}` envelope as `ListCustomersQueryDto` to `GET /cars` (+ optional `search`) and `GET /payments/pending` / `GET /payments/recent`; bare calls unchanged. Backend **49 suites / 398 tests**, tsc/jest/eslint clean. See R48 below for full detail. **R49: picked up "add a Playwright-e2e-in-CI job" per the brief, found it already fully done** (R27, `b999db2`, 2026-07-23 — a `postgres:15-alpine` service container job that migrates/seeds/runs the full Playwright suite, HTML report on artifact). Re-verified the exact CI command sequence locally end-to-end instead: `prisma migrate deploy` (clean) → `seed.js`/`seed-roles.js` → `npx playwright test` (no pre-started servers, matching the job) → **26/36 passed**; the 10 failures all match this sandbox's own already-documented "dev-server compile-latency flakiness" signature from R27/R40/R41/R43/R44, not new regressions — not re-run a second time, flagged rather than asserted clean. No app code touched. Fixed `PROGRESS.md` (Phase 8 "Left" + "Smaller follow-ups", both still said this job didn't exist) and `CLAUDE.md` (§7 said "3 jobs" and §10 said "No live-DB e2e in CI yet" — both stale, the latter self-contradicting the correct e2e-job note two paragraphs below it in the same file). See R49 below for full detail. | None claimed. | 2026-07-27 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -3027,3 +3027,113 @@ level as its other closed items.
   endpoint beyond what this brief named (`/cars`, `/payments`) — out of
   scope for this round, not flagged as a known gap either (no evidence
   they're unbounded; a future full sweep could confirm).
+
+### R49 — Playwright-e2e-in-CI brief: found already DONE (R27), locally re-verified the sequence instead (sole developer, 2026-07-27)
+
+Picked up a brief to add a third/fourth CI job running the Playwright e2e
+suite against a real ephemeral Postgres (`services:` service container,
+migrate + seed + start backend + run `npx playwright test`). Per this
+codebase's own "verify before writing new code" discipline (R47, R48), read
+`.github/workflows/ci.yml` before touching anything — **the `e2e` job
+already exists, fully matching the brief**, added seven days earlier at
+**R27** (`b999db2`, 2026-07-23): `postgres:15-alpine` service container
+(same version as `docker-compose.yml`'s `db` service), `DATABASE_URL`
+pointed at `localhost:5432` with a throwaway CI-only `JWT_SECRET`/
+`IDENTITY_PEPPER`, `npm ci` for both backend and frontend, `prisma generate`
++ `migrate deploy` + `seed.js` + `seed-roles.js`, `npx playwright install
+--with-deps chromium`, then `npx playwright test` — Playwright's own
+`webServer` config (`frontend/playwright.config.ts`) spawns both the
+Next.js dev server and `npm run start:dev --prefix ../backend` itself,
+polling each URL until it responds, so the job doesn't need a separate
+health-check step. HTML report uploaded as an artifact on `always()`. No
+`continue-on-error`, and branch-protection/required-status-check is
+correctly left untouched (repo-admin-only, already flagged for the founder
+in both `PROGRESS.md` and `CLAUDE.md`).
+
+**So there was no CI YAML to write.** Redirected effort to what the brief's
+own "verify locally" instruction actually calls for: proving the exact
+documented sequence still works end-to-end, since the job hasn't been
+touched since R27 and several features have landed since (Vault, accidents,
+SaaS billing) that could plausibly have drifted the same way the specs
+themselves drifted pre-R27.
+
+**Verified locally, real output:**
+- `docker compose up -d db` was already up (`carhub-db`, `postgres:15-alpine`,
+  healthy).
+- `cd backend && npx prisma migrate deploy` — 14 migrations, all already
+  applied, none pending (schema hasn't drifted from the last deploy).
+- `node -r dotenv/config prisma/seed.js` → `node -r dotenv/config
+  prisma/seed-roles.js` → `node -r dotenv/config prisma/seed-plans.js` (the
+  third isn't run by the CI job itself — checked first: no `e2e/*.e2e.ts`
+  spec touches plans/subscriptions/billing, all vault-related specs mock
+  `**/api/vault/files**` etc. client-side via `page.route`, never hit a real
+  Supabase-backed endpoint — so its absence from the CI job is correct, not
+  a gap) — all three ran clean against the freshly-migrated DB.
+- `cd frontend && npx playwright test` (no servers pre-started — this is
+  the exact invocation the CI job runs, Playwright spawning both webServers
+  itself): **26 passed / 10 failed, 7.3 minutes.** The 10: 3× `roles.e2e.ts`
+  (ROOT_ADMIN/OWNER/AGENT login routing — `page.waitForURL` timeout, page
+  snapshot shows still sitting on the filled-in login form, never
+  navigated), 2× `booking-flow.e2e.ts` (one blocked on a `getByRole('option')`
+  locator that resolved to a stray `<option value="fr">Français</option>`
+  instead of the intended booking combobox — an unscoped locator picking up
+  the page's own language-select markup, not a product bug; the other's
+  `beforeEach` timed out on "New Booking" not appearing, a knock-on from
+  running serially in the same context after the first failure), 1×
+  `trust.e2e.ts` (same stray-`<option>`/locale-select symptom), 4×
+  `vault-files.e2e.ts` (`page.goto` timeouts / `net::ERR_ABORTED`, first-hit
+  navigation to `/dashboard/vault-files` never completing in 30s).
+- Every one of these failures reproduces the **exact signature this repo
+  already has three rounds of history documenting as environment flakiness,
+  not logic bugs**: R27 itself (`roles.e2e.ts` "5-6/6-7 across two runs, the
+  gap being this sandbox's dev-server compile-latency flakiness"), and
+  repeated again at R40/R41/R43/R44 — `next dev`'s on-demand per-route
+  compilation stalling past the 30s test timeout on a route's first hit in
+  a resource-constrained sandbox, worse under single-worker serial
+  execution with trace/video/screenshot capture all enabled. Did **not**
+  re-run the suite a second time to separate "reliably fails here" from
+  "flaked this once" — a second ~7-minute run was judged lower value than
+  getting this written up, so treat the specific 10-test list above as
+  **evidence of the known pattern, not a confirmed-stable regression list**.
+  No app code was touched this round, so there is nothing to fix even if
+  some of these turn out to be real — flagging, not silently asserting
+  green.
+- Local processes cleaned up after: Playwright tears down the two
+  `webServer` processes it spawned itself once the run exits (confirmed —
+  nothing of mine was left listening on 3002 or 5406 afterward); the
+  `frontend/test-results/`/`frontend/playwright-report/` artifacts the run
+  left behind were removed and the one pre-existing tracked file inside
+  `test-results/` (`.last-run.json`, apparently committed by accident in
+  this repo's very first commit, unrelated to this session) was restored
+  via `git checkout HEAD --` rather than left deleted.
+
+**Unverified on real GitHub Actions** (can't trigger an actual Actions run
+from this sandbox): the exact service-container networking (`localhost:5432`
+from the job runner reaching the `postgres` service — this is the standard,
+well-documented GH Actions pattern and matches what `backend-e2e` already
+does successfully, so low risk, but not something this session watched
+happen on a real runner); whether a real Actions runner's `next dev`
+first-compile latency is better or worse than this local sandbox's (a
+GitHub-hosted runner is a dedicated 2-4 vCPU box with no other load, so
+plausibly *less* prone to this flakiness than a shared dev sandbox, but
+that's an inference, not a measurement).
+
+**Docs fixed to match reality:** `PROGRESS.md`'s Phase 8 "Left" bullet and
+its "Smaller follow-ups" list both still said the Playwright/live-DB e2e CI
+job "isn't wired into CI" / "needs a Postgres service container" — both
+marked done with a pointer to R27 + this round's re-verification.
+`CLAUDE.md` §7 said "3 jobs" and §10's Phase 8 bullet said "No live-DB e2e
+in CI yet" — both stale and, worse, **self-contradicting** the correct
+`e2e`-job description already sitting two paragraphs later in the same
+file's Phase-8-remaining note. Fixed both to say 4 jobs and describe the
+`e2e` job.
+
+**Deliberately not built:** no fix attempted for any of the 10 local
+failures (out of scope for a CI-config brief, no app code was meant to be
+touched, and the established pattern is environment flakiness rather than
+a known-actionable bug); no change to `.github/workflows/ci.yml` itself
+(nothing was missing from it); no branch-protection/required-status-check
+change (repo-admin-only, correctly left to the founder per the existing
+docs). No commit touches `frontend/e2e/*.e2e.ts` or any backend/frontend
+app code, so the standard `tsc`/`jest`/`vitest`/`eslint` gates weren't
+re-run this round (only docs changed).
