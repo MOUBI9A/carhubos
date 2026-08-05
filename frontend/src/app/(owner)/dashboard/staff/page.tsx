@@ -212,11 +212,11 @@ export default function StaffPage() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-medium text-foreground">Staff directory offline</p>
+          <p className="text-sm font-medium text-foreground">{t('staffDirectoryOffline')}</p>
           <p className="text-xs text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> {t('reconnect')}
         </Button>
       </div>
     );
@@ -230,16 +230,16 @@ export default function StaffPage() {
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {t('teamAccess')}
           </h1>
-          <p className="mt-1.5 text-sm text-text-muted">Team roles and capability management</p>
+          <p className="mt-1.5 text-sm text-text-muted">{t('teamRolesAndCapabilities')}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={refetch}>
             <RefreshCw className="w-4 h-4 me-2" />
-            Refresh
+            {t('refresh')}
           </Button>
           <Button onClick={() => setIsAddOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            Add staff
+            {t('addStaff')}
           </Button>
         </div>
       </header>
@@ -253,13 +253,13 @@ export default function StaffPage() {
         <Card className="flex flex-col items-center gap-5 py-14 text-center">
           <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
           <div>
-            <p className="font-medium text-foreground">No staff yet</p>
+            <p className="font-medium text-foreground">{t('noStaffYet')}</p>
             <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
-              Add your first teammate to start delegating fleet, booking and finance work.
+              {t('addFirstTeammate')}
             </p>
           </div>
           <Button onClick={() => setIsAddOpen(true)}>
-            <Plus className="w-4 h-4 me-2" /> Add your first teammate
+            <Plus className="w-4 h-4 me-2" /> {t('addYourFirstTeammate')}
           </Button>
         </Card>
       ) : (
@@ -304,14 +304,14 @@ export default function StaffPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="mt-2.5 text-xs text-text-faint">No capabilities assigned</p>
+                    <p className="mt-2.5 text-xs text-text-faint">{t('noCapabilitiesAssigned')}</p>
                   )}
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
                   <Button variant="outline" size="sm" onClick={() => openEdit(member)}>
                     <Pencil className="w-3.5 h-3.5 me-2" />
-                    Edit
+                    {t('edit')}
                   </Button>
                   <button
                     onClick={() => setRemovingMember(member)}
@@ -328,24 +328,24 @@ export default function StaffPage() {
       )}
 
       {/* ═══════ Add Staff Modal ═══════ */}
-      <Modal isOpen={isAddOpen} onClose={closeAddModal} title="Add staff" description="Create a teammate account">
+      <Modal isOpen={isAddOpen} onClose={closeAddModal} title={t('addStaff')} description={t('createTeammateAccount')}>
         <form onSubmit={handleCreate} className="space-y-5">
           <div>
             <label htmlFor="staff-name" className={labelCls}>
-              Full name
+              {t('fullName')}
             </label>
             <input
               id="staff-name"
               className={inputCls}
               value={createForm.name}
               onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Amine Alami"
+              placeholder={t('exampleName')}
               required
             />
           </div>
           <div>
             <label htmlFor="staff-email" className={labelCls}>
-              Email
+              {t('businessEmail')}
             </label>
             <div className="relative">
               <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
@@ -355,14 +355,14 @@ export default function StaffPage() {
                 className={cn(inputCls, 'ps-11')}
                 value={createForm.email}
                 onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="name@agency.ma"
+                placeholder={t('emailPlaceholder')}
                 required
               />
             </div>
           </div>
           <div>
             <label htmlFor="staff-password" className={labelCls}>
-              Temporary password
+              {t('temporaryPassword')}
             </label>
             <div className="relative">
               <Lock className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
@@ -372,7 +372,7 @@ export default function StaffPage() {
                 className={cn(inputCls, 'ps-11')}
                 value={createForm.password}
                 onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
-                placeholder="Min. 8 characters"
+                placeholder={t('minEightCharacters')}
                 minLength={8}
                 required
               />
@@ -380,7 +380,7 @@ export default function StaffPage() {
           </div>
           <div>
             <label htmlFor="staff-preset" className={labelCls}>
-              Preset
+              {t('preset')}
             </label>
             <select
               id="staff-preset"
@@ -395,16 +395,16 @@ export default function StaffPage() {
               ))}
             </select>
             <p className="text-xs text-text-faint mt-1.5 px-1">
-              Sets starting capabilities — edit exact access anytime after.
+              {t('setsStartingCapabilities')}
             </p>
           </div>
           <div className="pt-2 flex gap-3">
             <Button type="button" variant="outline" className="flex-1" onClick={closeAddModal}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={isCreating}>
               {isCreating ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
-              {isCreating ? 'Adding...' : 'Add staff'}
+              {isCreating ? t('addingEllipsis') : t('addStaff')}
             </Button>
           </div>
         </form>
@@ -414,13 +414,13 @@ export default function StaffPage() {
       <Modal
         isOpen={!!editingMember}
         onClose={closeEdit}
-        title="Edit capabilities"
+        title={t('editCapabilities')}
         description={editingMember ? `${editingMember.name} · ${editingMember.email}` : undefined}
         size="xl"
         footer={
           <>
             <Button variant="outline" onClick={closeEdit}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleSaveCaps} disabled={isSavingCaps}>
               {isSavingCaps ? (
@@ -436,7 +436,7 @@ export default function StaffPage() {
         {editingMember && (
           <div className="space-y-6">
             <div>
-              <p className={labelCls}>Quick fill from preset</p>
+              <p className={labelCls}>{t('quickFillFromPreset')}</p>
               <div className="flex flex-wrap gap-2">
                 {CREATE_STAFF_PRESETS.map((preset) => (
                   <button
@@ -453,7 +453,7 @@ export default function StaffPage() {
                   onClick={() => setEditCaps(new Set())}
                   className="px-3 py-1.5 rounded-lg border border-hairline bg-surface text-xs font-medium text-text-faint hover:border-danger/50 hover:text-danger transition-colors"
                 >
-                  Clear all
+                  {t('clearAll')}
                 </button>
               </div>
             </div>
@@ -521,8 +521,8 @@ export default function StaffPage() {
       <Modal
         isOpen={!!removingMember}
         onClose={() => setRemovingMember(null)}
-        title="Remove staff"
-        description="This revokes their access immediately"
+        title={t('removeStaff')}
+        description={t('revokesAccessImmediately')}
       >
         {removingMember && (
           <div className="space-y-6">

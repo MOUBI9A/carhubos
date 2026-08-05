@@ -48,13 +48,6 @@ interface Agency {
   users: AgencyMember[];
 }
 
-const NUDGE_PRESETS = [
-  { id: 'whatsapp_confirm', title: 'WhatsApp Confirmations', desc: 'Send auto-receipts to customers' },
-  { id: 'guardian_alerts', title: 'Guardian Early Alerts', desc: 'Notify 30 days before document expiry' },
-  { id: 'maintenance_reminders', title: 'Maintenance Reminders', desc: 'Alert 500km before oil change' },
-  { id: 'blacklist_check', title: 'Blacklist Check', desc: 'Cross-reference agency risk database' },
-];
-
 const inputCls =
   'w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors placeholder:text-text-faint';
 
@@ -62,6 +55,12 @@ const labelCls = 'eyebrow block px-1 mb-1.5';
 
 export default function OwnerSettings() {
   const t = useTranslations('ownerPages');
+  const NUDGE_PRESETS = [
+    { id: 'whatsapp_confirm', title: t('whatsappConfirmations'), desc: t('sendAutoReceiptsCustomers') },
+    { id: 'guardian_alerts', title: t('guardianEarlyAlerts'), desc: t('notifyDocumentExpiry') },
+    { id: 'maintenance_reminders', title: t('maintenanceReminders'), desc: t('alertOilChange') },
+    { id: 'blacklist_check', title: t('blacklistCheck'), desc: t('crossReferenceRiskDatabase') },
+  ];
   const router = useRouter();
   const { showToast } = useToast();
   const [isSubdomainModal, setIsSubdomainModal] = useState(false);
@@ -140,7 +139,7 @@ export default function OwnerSettings() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('agencySettings')}</h1>
-          <p className="mt-1.5 text-sm text-text-muted">Operational rules and preferences</p>
+          <p className="mt-1.5 text-sm text-text-muted">{t('operationalRulesPreferences')}</p>
         </div>
         <div className="flex items-center gap-3">
           {agency && (
@@ -151,7 +150,7 @@ export default function OwnerSettings() {
           )}
           <Button variant="outline" onClick={fetchAgency}>
             <RefreshCw className="w-4 h-4 me-2" />
-            Refresh
+            {t('refresh')}
           </Button>
         </div>
       </header>
@@ -164,16 +163,16 @@ export default function OwnerSettings() {
               <div className="w-10 h-10 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center">
                 <Briefcase className="w-5 h-5 text-text-muted" />
               </div>
-              <CardTitle>Business identity</CardTitle>
+              <CardTitle>{t('businessIdentity')}</CardTitle>
             </div>
           </CardHeader>
           <div className="space-y-4 flex-1">
             {[
-              { key: 'name', label: 'Agency name', placeholder: 'e.g. CIG CAR Casablanca', icon: Briefcase },
-              { key: 'contactEmail', label: 'Contact email', placeholder: 'contact@agency.ma', icon: Mail },
-              { key: 'businessPhone', label: 'Business phone', placeholder: '+212 6...', icon: Phone },
-              { key: 'address', label: 'Address', placeholder: 'City, Country', icon: MapPin },
-              { key: 'website', label: 'Website', placeholder: 'https://...', icon: Globe },
+              { key: 'name', label: t('agencyNameLabel'), placeholder: t('agencyNamePlaceholder'), icon: Briefcase },
+              { key: 'contactEmail', label: t('contactEmailLabel'), placeholder: t('contactEmailPlaceholder'), icon: Mail },
+              { key: 'businessPhone', label: t('businessPhoneLabel'), placeholder: t('businessPhonePlaceholder'), icon: Phone },
+              { key: 'address', label: t('addressLabel'), placeholder: t('addressPlaceholder'), icon: MapPin },
+              { key: 'website', label: t('websiteLabel'), placeholder: t('websitePlaceholder'), icon: Globe },
             ].map(({ key, label, placeholder, icon: Icon }) => (
               <div key={key} className="space-y-1.5">
                 <p className={labelCls}>{label}</p>
@@ -190,7 +189,7 @@ export default function OwnerSettings() {
             ))}
 
             <div className="space-y-1.5">
-              <p className={labelCls}>Subdomain</p>
+              <p className={labelCls}>{t('subdomain')}</p>
               <div className="flex group">
                 <div className="flex-1 bg-surface border border-hairline rounded-s-xl px-4 py-3 text-sm font-medium text-text-muted truncate">
                   {agency?.name.toLowerCase().replace(/\s+/g, '-') || 'my-agency'}
@@ -203,13 +202,13 @@ export default function OwnerSettings() {
                 onClick={() => setIsSubdomainModal(true)}
                 className="eyebrow text-primary mt-2 hover:underline"
               >
-                Request subdomain change
+                {t('requestSubdomainChange')}
               </button>
             </div>
           </div>
           <Button onClick={handleSaveAgency} className="w-full mt-6" disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Save className="w-4 h-4 me-2" />}
-            {isSaving ? 'Saving...' : 'Save identity'}
+            {isSaving ? t('savingEllipsis') : t('saveIdentity')}
           </Button>
         </Card>
 
@@ -220,7 +219,7 @@ export default function OwnerSettings() {
               <div className="w-10 h-10 rounded-xl bg-surface-raised border border-hairline flex items-center justify-center">
                 <Bell className="w-5 h-5 text-text-muted" />
               </div>
-              <CardTitle>Automated nudges</CardTitle>
+              <CardTitle>{t('automatedNudges')}</CardTitle>
             </div>
           </CardHeader>
           <div className="space-y-6">
@@ -252,9 +251,9 @@ export default function OwnerSettings() {
 
           {/* Plan info */}
           <div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
-            <p className="eyebrow text-primary mb-2">Current plan</p>
+            <p className="eyebrow text-primary mb-2">{t('currentPlanLabel')}</p>
             <p className="text-xl font-semibold metal-text">{agency?.subscriptionTier ?? '—'}</p>
-            <p className="text-xs text-text-muted mt-1">Contact support to upgrade your plan.</p>
+            <p className="text-xs text-text-muted mt-1">{t('contactSupportUpgrade')}</p>
           </div>
         </Card>
 
@@ -266,8 +265,8 @@ export default function OwnerSettings() {
                 <Users className="w-5 h-5 text-text-muted" />
               </div>
               <div>
-                <CardTitle>Workforce access</CardTitle>
-                <CardDescription>Manage staff roles and platform permissions</CardDescription>
+                <CardTitle>{t('workforceAccess')}</CardTitle>
+                <CardDescription>{t('manageStaffRoles')}</CardDescription>
               </div>
             </div>
             <Button onClick={() => router.push('/dashboard/staff')} size="sm">
@@ -294,8 +293,8 @@ export default function OwnerSettings() {
               <div className="col-span-full flex flex-col items-center gap-4 py-10 text-center">
                 <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-16" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">No staff members yet</p>
-                  <p className="text-xs text-text-muted mt-1">Add team members to grant them platform access</p>
+                  <p className="text-sm font-medium text-foreground">{t('noStaffMembers')}</p>
+                  <p className="text-xs text-text-muted mt-1">{t('addTeamMembersAccess')}</p>
                 </div>
               </div>
             )}
@@ -303,7 +302,7 @@ export default function OwnerSettings() {
           <p className="mt-4 text-xs text-text-faint">
             This is a read-only overview — add, remove, and edit capabilities from{' '}
             <button onClick={() => router.push('/dashboard/staff')} className="text-primary underline underline-offset-2">
-              Staff &amp; Access
+              {t('staffAccessLink')}
             </button>.
           </p>
         </Card>
@@ -313,18 +312,18 @@ export default function OwnerSettings() {
       <Modal
         isOpen={isSubdomainModal}
         onClose={() => setIsSubdomainModal(false)}
-        title="Request subdomain change"
-        description="Critical system path update"
+        title={t('requestSubdomainChange')}
+        description={t('criticalSystemPath')}
       >
         <div className="space-y-4">
           <div className="p-4 bg-warning/10 border border-warning/20 rounded-2xl flex items-start gap-4">
             <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <p className="text-xs text-text-muted leading-relaxed">
-              Changing your subdomain will break all existing shared booking links and requires Root Admin manual approval.
+              {t('subdomainBreaksLinks')}
             </p>
           </div>
           <div className="space-y-1.5 pt-4">
-            <p className={labelCls}>Desired subdomain</p>
+            <p className={labelCls}>{t('desiredSubdomainLabel')}</p>
             <input className={cn(inputCls, 'focus:border-warning')} placeholder="e.g. premium-casablanca" />
           </div>
           <Button className="w-full" variant="outline" onClick={() => {

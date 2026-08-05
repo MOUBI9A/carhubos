@@ -46,17 +46,15 @@ export interface CustomerDetail extends Omit<Customer, '_count'> {
 
 export const CUSTOMER_STATUS_STYLES: Record<
   CustomerStatus,
-  { chip: string; dot: string; label: string }
+  { chip: string; dot: string }
 > = {
   ACTIVE: {
     chip: 'text-success bg-success/10 border-success/20',
     dot: 'bg-success',
-    label: 'Active',
   },
   BLACKLISTED: {
     chip: 'text-danger bg-danger/10 border-danger/20',
     dot: 'bg-danger',
-    label: 'Blacklisted',
   },
 };
 

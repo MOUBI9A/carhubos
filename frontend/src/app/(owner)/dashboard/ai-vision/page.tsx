@@ -105,7 +105,7 @@ export default function AiVision() {
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('aiVision')}</h1>
           <p className="mt-1.5 flex items-center gap-2 eyebrow">
             <span className="w-1.5 h-1.5 rounded-full bg-success" />
-            Vision model v4.2 · Online
+{t('visionModelOnline')}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -114,8 +114,8 @@ export default function AiVision() {
               options={carOptions}
               value={selectedCarId}
               onChange={setSelectedCarId}
-              placeholder={isFleetLoading ? 'Loading vehicles…' : 'Select vehicle...'}
-              emptyText={isFleetLoading ? 'Loading vehicles…' : 'No vehicles in your fleet'}
+              placeholder={isFleetLoading ? t('loadingVehicles') : t('selectVehicle')}
+              emptyText={isFleetLoading ? t('loadingVehicles') : t('noVehiclesFleet')}
               icon={<Car className="w-4 h-4" />}
             />
           </div>
@@ -128,11 +128,11 @@ export default function AiVision() {
           />
           <Button variant="outline" onClick={() => document.getElementById('ai-upload')?.click()}>
             <Camera className="w-4 h-4 me-2" />
-            Capture image
+            {t('captureImage')}
           </Button>
           <Button onClick={startAnalysis} disabled={isScanning || !selectedFile || !selectedCarId}>
             <Scan className="w-4 h-4 me-2" />
-            Start scan
+            {t('startScan')}
           </Button>
         </div>
       </header>
@@ -155,7 +155,7 @@ export default function AiVision() {
                      rounded="rounded-none"
                      overlay={
                        <p className="absolute inset-x-0 bottom-8 text-center text-xs font-medium text-text-faint">
-                         Waiting for an image
+                         {t('waitingForImage')}
                        </p>
                      }
                    />
@@ -175,7 +175,7 @@ export default function AiVision() {
                       <div className="absolute inset-0 bg-primary/5 backdrop-grayscale-[0.5]" />
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                          <p className="text-4xl font-semibold tracking-tight text-foreground font-mono tabular">{scanProgress}%</p>
-                         <p className="eyebrow text-primary mt-2">Analyzing geometry</p>
+                         <p className="eyebrow text-primary mt-2">{t('analyzingGeometry')}</p>
                       </div>
                    </motion.div>
                 )}
@@ -210,7 +210,7 @@ export default function AiVision() {
                          <ShieldCheck className="w-4 h-4 text-text-muted" />
                       </div>
                       <div>
-                         <p className="eyebrow">Asset identification</p>
+                         <p className="eyebrow">{t('assetIdentification')}</p>
                          <p className="mt-0.5 text-sm font-medium text-foreground">
                            {selectedCar.brand} {selectedCar.model} <span className="text-text-faint">·</span> <span className="font-mono tabular text-text-muted">{selectedCar.licensePlate}</span>
                          </p>
@@ -240,7 +240,7 @@ export default function AiVision() {
         <div className="lg:col-span-4 space-y-8">
            <Card>
               <CardHeader>
-                 <CardTitle>Analysis results</CardTitle>
+                 <CardTitle>{t('analysisResults')}</CardTitle>
               </CardHeader>
               <div className="space-y-6">
                  {activeAnalysis ? (
@@ -255,12 +255,12 @@ export default function AiVision() {
                                <span className="eyebrow rounded-md border border-hairline bg-surface px-2 py-0.5">{Math.round(dmg.confidence * 100)}% conf</span>
                             </div>
                             <p className="eyebrow">{dmg.location}</p>
-                            <Button variant="ghost" size="sm" className="w-full">Mark for repair</Button>
+                            <Button variant="ghost" size="sm" className="w-full">{t('markForRepair')}</Button>
                          </div>
                       ))}
                       <div className="pt-4 border-t border-hairline">
                          <div className="flex justify-between items-center mb-1.5">
-                            <span className="eyebrow">Overall integrity</span>
+                            <span className="eyebrow">{t('overallIntegrity')}</span>
                             <span className={cn("flex items-center gap-1 text-sm font-semibold font-mono tabular", activeAnalysis.integrityScore < 80 ? "text-danger" : "text-success")}>
                                {activeAnalysis.integrityScore < 80 ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                                {activeAnalysis.integrityScore}%
@@ -276,8 +276,8 @@ export default function AiVision() {
                        <div className="w-14 h-14 rounded-2xl bg-surface-raised border border-hairline flex items-center justify-center mx-auto mb-4">
                           <BrainCircuit className="w-6 h-6 text-text-faint" strokeWidth={1.25} />
                        </div>
-                       <p className="eyebrow">No active scan</p>
-                       <p className="mt-1.5 text-xs text-text-muted max-w-[220px] mx-auto">Capture a photo and start a scan to see detected damage here.</p>
+                       <p className="eyebrow">{t('noActiveScan')}</p>
+                       <p className="mt-1.5 text-xs text-text-muted max-w-[220px] mx-auto">{t('capturePhotoToSee')}</p>
                     </div>
                  )}
               </div>
@@ -285,7 +285,7 @@ export default function AiVision() {
 
            <Card>
               <CardHeader>
-                 <CardTitle>Neural log</CardTitle>
+                 <CardTitle>{t('neuralLog')}</CardTitle>
               </CardHeader>
               <div className="space-y-4">
                  {[

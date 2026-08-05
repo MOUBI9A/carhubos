@@ -87,7 +87,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
     e.preventDefault();
     if (!customer) return;
     if (!editForm.firstName.trim() || !editForm.lastName.trim() || !editForm.phone.trim()) {
-      showToast('danger', 'Missing Fields', 'Name and phone are required.');
+      showToast('danger', t('missingFieldsTitle'), t('nameAndPhoneRequired'));
       return;
     }
     setIsMutating(true);
@@ -99,11 +99,11 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
         ...(editForm.email.trim() ? { email: editForm.email.trim() } : {}),
       });
       setIsEditModalOpen(false);
-      showToast('success', 'Profile Updated', 'Client identity record synchronized.');
+      showToast('success', t('profileUpdatedTitle'), t('clientRecordSynced'));
       refetch();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to update client';
-      showToast('danger', 'Update Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      const msg = err?.response?.data?.message || t('failedToUpdateClient');
+      showToast('danger', t('updateFailedTitle'), Array.isArray(msg) ? msg.join(' ') : String(msg));
     } finally {
       setIsMutating(false);
     }
@@ -118,15 +118,15 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       setIsBlacklistModalOpen(false);
       showToast(
         next === 'BLACKLISTED' ? 'warning' : 'success',
-        next === 'BLACKLISTED' ? 'Client Blacklisted' : 'Client Reinstated',
+        next === 'BLACKLISTED' ? t('clientBlacklistedTitle') : t('clientReinstatedTitle'),
         next === 'BLACKLISTED'
-          ? `${fullName(customer)} is now blocked from new bookings.`
-          : `${fullName(customer)} can book rentals again.`,
+          ? `${fullName(customer)} ${t('blockedFromNewBookings')}`
+          : `${fullName(customer)} ${t('canBookAgain')}`,
       );
       refetch();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to change status';
-      showToast('danger', 'Action Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      const msg = err?.response?.data?.message || t('failedToChangeStatus');
+      showToast('danger', t('actionFailedTitle'), Array.isArray(msg) ? msg.join(' ') : String(msg));
     } finally {
       setIsMutating(false);
     }
@@ -137,11 +137,11 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
     setIsMutating(true);
     try {
       await api.delete(`/customers/${customer.id}`);
-      showToast('success', 'Client Removed', `${fullName(customer)} deleted from the directory.`);
+      showToast('success', t('clientRemovedTitle'), `${fullName(customer)} ${t('deletedFromDirectory')}`);
       router.push('/dashboard/customers');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to delete client';
-      showToast('danger', 'Deletion Blocked', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      const msg = err?.response?.data?.message || t('failedToDeleteClient');
+      showToast('danger', t('deletionBlockedTitle'), Array.isArray(msg) ? msg.join(' ') : String(msg));
       setIsDeleteModalOpen(false);
       setIsMutating(false);
     }
@@ -184,17 +184,17 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-medium text-foreground">Client unreachable</p>
-          <p className="text-xs text-text-muted mt-2 max-w-sm">{error || 'Customer not found'}</p>
+          <p className="text-sm font-medium text-foreground">{t('clientUnreachable')}</p>
+          <p className="text-xs text-text-muted mt-2 max-w-sm">{error || t('customerNotFound')}</p>
         </div>
         <div className="flex gap-3">
           <Link href="/dashboard/customers">
             <Button variant="outline">
-              <ChevronLeft className="w-4 h-4 me-2" /> Back to directory
+              <ChevronLeft className="w-4 h-4 me-2" /> {t('backToDirectory')}
             </Button>
           </Link>
           <Button onClick={refetch}>
-            <RefreshCw className="w-4 h-4 me-2" /> Retry
+            <RefreshCw className="w-4 h-4 me-2" /> {t('retry')}
           </Button>
         </div>
       </div>
@@ -211,12 +211,12 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Link href="/dashboard/customers" className="flex items-center gap-2 text-text-faint hover:text-foreground transition-colors group w-fit">
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="eyebrow">Client directory</span>
+          <span className="eyebrow">{t('clientDirectory')}</span>
         </Link>
         <div className="flex gap-3 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => setIsDeleteModalOpen(true)}>
             <Trash2 className="w-4 h-4 me-2 text-danger" />
-            <span className="text-danger">Delete</span>
+            <span className="text-danger">{t('delete')}</span>
           </Button>
           <Button
             variant={isBlacklisted ? 'primary' : 'outline'}
@@ -226,17 +226,17 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
           >
             {isBlacklisted ? (
               <>
-                <ShieldCheck className="w-4 h-4 me-2" /> Reinstate client
+                <ShieldCheck className="w-4 h-4 me-2" /> {t('reinstateClient')}
               </>
             ) : (
               <>
-                <ShieldOff className="w-4 h-4 me-2" /> Blacklist
+                <ShieldOff className="w-4 h-4 me-2" /> {t('blacklistClient')}
               </>
             )}
           </Button>
           <Button size="sm" onClick={openEditModal}>
             <Pencil className="w-4 h-4 me-2" />
-            Edit profile
+            {t('editProfile')}
           </Button>
         </div>
       </div>
@@ -260,9 +260,9 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
                 statusStyle.chip,
               )}>
                 <span className={cn('w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
-                {statusStyle.label}
+                {t(isBlacklisted ? 'blacklisted' : 'active')}
               </span>
-              {isVerified && <Badge variant="trust">Verified</Badge>}
+              {isVerified && <Badge variant="trust">{t('verified')}</Badge>}
             </div>
             <div className="flex items-center gap-5 flex-wrap">
               <span className="text-xs text-text-muted flex items-center gap-1.5">
@@ -283,13 +283,13 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
           </div>
           <div className="flex gap-12 md:border-s border-hairline md:ps-12 shrink-0">
             <div>
-              <p className="eyebrow mb-1 md:text-end">Verified spend</p>
+              <p className="eyebrow mb-1 md:text-end">{t('verifiedSpend')}</p>
               <p className="text-2xl font-semibold tracking-tight text-foreground md:text-end">
                 <span className="font-mono tabular">{customer.lifetimeSpend.toLocaleString()}</span> <span className="text-xs text-text-faint">MAD</span>
               </p>
             </div>
             <div>
-              <p className="eyebrow mb-1 md:text-end">Rentals</p>
+              <p className="eyebrow mb-1 md:text-end">{t('rentalCount')}</p>
               <p className="text-2xl font-semibold tracking-tight text-foreground md:text-end font-mono tabular">{customer.bookings.length}</p>
             </div>
           </div>
@@ -302,9 +302,9 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
         <div className="lg:col-span-2 space-y-6">
           <CardHeader className="px-0">
             <div>
-              <CardTitle>Rental history</CardTitle>
+              <CardTitle>{t('rentalHistory')}</CardTitle>
               <CardDescription className="mt-1">
-                {customer.bookings.length} session{customer.bookings.length !== 1 ? 's' : ''} on record
+                {customer.bookings.length} {t(customer.bookings.length !== 1 ? 'sessionsOnRecord' : 'sessionOnRecord')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -312,9 +312,9 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
             <Card className="flex flex-col items-center gap-5 py-14 text-center">
               <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
               <div>
-                <p className="font-medium text-foreground">No rentals yet</p>
+                <p className="font-medium text-foreground">{t('noRentalsYet')}</p>
                 <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
-                  This client has no booking history. Their sessions will appear here once they rent a vehicle.
+                  {t('noBookingHistoryDesc')}
                 </p>
               </div>
             </Card>
@@ -365,18 +365,18 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
           <Card>
             <CardHeader className="p-0 mb-5">
               <div>
-                <CardTitle>Identity vault</CardTitle>
+                <CardTitle>{t('identityVault')}</CardTitle>
                 <CardDescription className="mt-1">
-                  {customer.documents.length} document{customer.documents.length !== 1 ? 's' : ''} on file
+                  {customer.documents.length} {t(customer.documents.length !== 1 ? 'documentsOnFile' : 'documentOnFile')}
                 </CardDescription>
               </div>
             </CardHeader>
             {customer.documents.length === 0 ? (
               <div className="text-center py-8">
                 <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-xl" className="w-14 mx-auto mb-3" />
-                <p className="text-sm font-medium text-foreground">No documents scanned</p>
+                <p className="text-sm font-medium text-foreground">{t('noDocumentsScanned')}</p>
                 <p className="text-xs text-text-muted mt-1 max-w-[220px] mx-auto">
-                  Driving license and ID scans will be listed here once uploaded.
+                  {t('documentsWillBeListed')}
                 </p>
               </div>
             ) : (
@@ -391,7 +391,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
                         </p>
                         {doc.expiryDate && (
                           <p className="text-[11px] text-text-faint">
-                            Expires {formatDate(doc.expiryDate)}
+                            {t('expiresLabel')} {formatDate(doc.expiryDate)}
                           </p>
                         )}
                       </div>
@@ -402,7 +402,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
                       rel="noopener noreferrer"
                       className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors shrink-0"
                     >
-                      View
+                      {t('view')}
                     </a>
                   </div>
                 ))}
@@ -418,13 +418,13 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
 
           <Card>
             <CardHeader className="p-0 mb-5">
-              <CardTitle>Account meta</CardTitle>
+              <CardTitle>{t('accountMeta')}</CardTitle>
             </CardHeader>
             <div className="space-y-4">
               {[
-                { icon: History, label: 'Registered', value: formatDate(customer.createdAt) },
-                { icon: Wallet, label: 'Verified spend', value: `${customer.lifetimeSpend.toLocaleString()} MAD` },
-                { icon: CalendarDays, label: 'Total rentals', value: String(customer.bookings.length) },
+                { icon: History, label: t('registered'), value: formatDate(customer.createdAt) },
+                { icon: Wallet, label: t('verifiedSpend'), value: `${customer.lifetimeSpend.toLocaleString()} MAD` },
+                { icon: CalendarDays, label: t('totalRentals'), value: String(customer.bookings.length) },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -443,13 +443,13 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit profile"
-        description="Update client identity record"
+        title={t('editProfile')}
+        description={t('updateClientRecord')}
       >
         <form onSubmit={handleEdit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">First name *</p>
+              <p className="eyebrow px-1">{t('firstName')} *</p>
               <input
                 value={editForm.firstName}
                 onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
@@ -457,7 +457,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Last name *</p>
+              <p className="eyebrow px-1">{t('lastName')} *</p>
               <input
                 value={editForm.lastName}
                 onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
@@ -465,7 +465,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Phone *</p>
+              <p className="eyebrow px-1">{t('phone')} *</p>
               <input
                 value={editForm.phone}
                 onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
@@ -473,22 +473,22 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
               />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Email</p>
+              <p className="eyebrow px-1">{t('email')}</p>
               <input
                 value={editForm.email}
                 onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                 type="email"
-                placeholder="Optional"
+                placeholder={t('optional')}
                 className={inputCls}
               />
             </div>
           </div>
           <div className="flex gap-4">
             <Button type="button" variant="outline" className="flex-1 py-4" onClick={() => setIsEditModalOpen(false)} disabled={isMutating}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" className="flex-1 py-4" isLoading={isMutating}>
-              {isMutating ? 'Saving...' : 'Save changes'}
+              {isMutating ? t('savingEllipsis') : t('saveChanges')}
             </Button>
           </div>
         </form>
@@ -498,25 +498,23 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       <Modal
         isOpen={isBlacklistModalOpen}
         onClose={() => setIsBlacklistModalOpen(false)}
-        title="Blacklist client"
-        description="Block this client from future bookings"
+        title={t('blacklistClientModal')}
+        description={t('blockFromBookings')}
         size="sm"
       >
         <div className="space-y-6">
           <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl">
             <p className="text-xs text-text-muted leading-relaxed">
-              <strong className="text-foreground">{fullName(customer)}</strong> will be excluded from the booking
-              selector across your agency. Their rental and payment history stays intact, and you can
-              reinstate them at any time.
+              <strong className="text-foreground">{fullName(customer)}</strong> {t('blacklistWarningText')}
             </p>
           </div>
           <div className="flex gap-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsBlacklistModalOpen(false)} disabled={isMutating}>
-              Keep active
+              {t('keepActive')}
             </Button>
             <Button type="button" variant="danger" className="flex-1" onClick={handleStatusToggle} isLoading={isMutating}>
               <ShieldOff className="w-4 h-4 me-2" />
-              {isMutating ? 'Blocking...' : 'Confirm blacklist'}
+              {isMutating ? t('blockingEllipsis') : t('confirmBlacklist')}
             </Button>
           </div>
         </div>
@@ -526,25 +524,25 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete client"
-        description="This action is permanent"
+        title={t('deleteClientModal')}
+        description={t('actionIsPermanent')}
         size="sm"
       >
         <div className="space-y-6">
           <div className="p-4 bg-danger/10 border border-danger/20 rounded-2xl">
             <p className="text-xs text-text-muted leading-relaxed">
-              You are about to permanently remove <strong className="text-foreground">{fullName(customer)}</strong> from
-              the directory. Clients with rental history cannot be deleted — use{' '}
-              <strong className="text-foreground">Blacklist</strong> instead to preserve financial records.
+              {t('deleteWarningPre')} <strong className="text-foreground">{fullName(customer)}</strong>{' '}
+              {t('deleteWarningMid')}{' '}
+              <strong className="text-foreground">{t('blacklistClient')}</strong> {t('deleteWarningPost')}
             </p>
           </div>
           <div className="flex gap-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDeleteModalOpen(false)} disabled={isMutating}>
-              Keep client
+              {t('keepClient')}
             </Button>
             <Button type="button" variant="danger" className="flex-1" onClick={handleDelete} isLoading={isMutating}>
               <Trash2 className="w-4 h-4 me-2" />
-              {isMutating ? 'Removing...' : 'Delete forever'}
+              {isMutating ? t('removingEllipsis') : t('deleteForever')}
             </Button>
           </div>
         </div>

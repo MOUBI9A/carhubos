@@ -169,7 +169,7 @@ export default function VaultFilesPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header>
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('vaultFiles')}</h1>
-        <p className="mt-1.5 text-sm text-text-muted">Agency-wide file storage, private to your team</p>
+        <p className="mt-1.5 text-sm text-text-muted">{t('agencyWideStorage')}</p>
       </header>
 
       {storageUnavailable && (
@@ -208,12 +208,12 @@ export default function VaultFilesPage() {
           {isUploading ? (
             <>
               <Loader2 className="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
-              <p className="text-sm font-medium text-foreground">Uploading…</p>
+              <p className="text-sm font-medium text-foreground">{t('addingEllipsis')}</p>
             </>
           ) : (
             <>
               <UploadCloud className="w-8 h-8 text-text-faint mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">Drag & drop a file, or click to browse</p>
+              <p className="text-sm font-medium text-foreground">{t('dragDropFile')}</p>
               <p className="mt-1 text-xs text-text-faint">
                 PDF, JPEG, PNG or WebP — up to {VAULT_MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB
               </p>
@@ -229,7 +229,7 @@ export default function VaultFilesPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search files by name..."
+            placeholder={t('searchFilesByName')}
             className="bg-transparent border-none outline-none text-sm text-foreground w-full placeholder:text-text-faint"
           />
         </div>
@@ -241,12 +241,12 @@ export default function VaultFilesPage() {
         ) : error ? (
           <div className="p-10 text-center">
             <p className="text-sm text-danger">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={refetch}>Retry</Button>
+            <Button variant="outline" size="sm" className="mt-4" onClick={refetch}>{t('retry')}</Button>
           </div>
         ) : filteredFiles.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title={files && files.length === 0 ? 'No files yet' : 'No matches'}
+            title={files && files.length === 0 ? t('noFilesYet') : 'No matches'}
             description={
               files && files.length === 0
                 ? 'Upload your first file to start building your vault.'
@@ -258,11 +258,11 @@ export default function VaultFilesPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b border-hairline">
-                  <th className="eyebrow px-6 py-3 text-start">Filename</th>
-                  <th className="eyebrow px-6 py-3 text-start">Type</th>
-                  <th className="eyebrow px-6 py-3 text-start">Size</th>
-                  <th className="eyebrow px-6 py-3 text-start">Uploaded</th>
-                  <th className="eyebrow px-6 py-3 text-end">Actions</th>
+                  <th className="eyebrow px-6 py-3 text-start">{t('filenameHeader')}</th>
+                  <th className="eyebrow px-6 py-3 text-start">{t('typeHeader')}</th>
+                  <th className="eyebrow px-6 py-3 text-start">{t('sizeHeader')}</th>
+                  <th className="eyebrow px-6 py-3 text-start">{t('uploadedHeader')}</th>
+                  <th className="eyebrow px-6 py-3 text-end">{t('actionsHeader')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,7 +324,7 @@ export default function VaultFilesPage() {
         isOpen={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
         title="Delete file"
-        description="This cannot be undone"
+        description={t('cannotBeUndone')}
       >
         {pendingDelete && (
           <div className="space-y-6">
@@ -333,10 +333,10 @@ export default function VaultFilesPage() {
               removed from the vault.
             </p>
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setPendingDelete(null)}>Cancel</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setPendingDelete(null)}>{t('cancel')}</Button>
               <Button variant="danger" className="flex-1" isLoading={isDeleting} onClick={handleDelete}>
                 <Trash2 className="w-4 h-4 me-2" />
-                Delete
+                {t('deleteFileModal')}
               </Button>
             </div>
           </div>

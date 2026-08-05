@@ -159,11 +159,11 @@ export default function CustomersPage() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold text-foreground">Directory offline</p>
+          <p className="text-base font-semibold text-foreground">{t('directoryOffline')}</p>
           <p className="text-sm text-text-muted mt-2 max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> {t('reconnect')}
         </Button>
       </div>
     );
@@ -178,17 +178,17 @@ export default function CustomersPage() {
             {t('customerDirectory')}
           </h1>
           <p className="mt-1.5 text-sm text-text-muted">
-            Directory, rental history and trust signals
+            {t('customersSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={exportCsv}>
             <Download className="w-4 h-4 me-2" />
-            Export CSV
+            {t('exportCsv')}
           </Button>
           <Button onClick={() => setIsAddModalOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            Add customer
+            {t('addCustomer')}
           </Button>
         </div>
       </header>
@@ -204,7 +204,7 @@ export default function CustomersPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-2xl bg-surface border border-hairline p-4">
             <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.total}</p>
-            <p className="eyebrow mt-1">Directory size</p>
+            <p className="eyebrow mt-1">{t('directorySize')}</p>
           </div>
           <button
             className={cn(
@@ -216,7 +216,7 @@ export default function CustomersPage() {
             <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.active}</p>
             <p className="eyebrow mt-1 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              Active clients
+              {t('activeClients')}
             </p>
           </button>
           <button
@@ -229,12 +229,12 @@ export default function CustomersPage() {
             <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.blacklisted}</p>
             <p className="eyebrow mt-1 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-danger" />
-              Blacklisted
+              {t('blacklistedClients')}
             </p>
           </button>
           <div className="rounded-2xl bg-surface border border-hairline p-4">
             <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.totalBookings}</p>
-            <p className="eyebrow mt-1">Total rentals</p>
+            <p className="eyebrow mt-1">{t('totalRentals')}</p>
           </div>
         </div>
       )}
@@ -245,7 +245,7 @@ export default function CustomersPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name, phone, email or identity number..."
+          placeholder={t('searchCustomers')}
           className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
         />
       </div>
@@ -268,23 +268,23 @@ export default function CustomersPage() {
         <Card className="flex flex-col items-center gap-5 py-14 text-center">
           <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
           <div>
-            <p className="font-medium text-foreground">No customers yet</p>
+            <p className="font-medium text-foreground">{t('noCustomersYet')}</p>
             <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
-              Register your first client to start booking rentals and building trust history.
+              {t('registerFirstClient')}
             </p>
           </div>
           <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="w-4 h-4 me-2" /> Add customer
+            <Plus className="w-4 h-4 me-2" /> {t('addCustomer')}
           </Button>
         </Card>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
-          title="No matching clients"
-          description="No clients match your current search or filter."
+          title={t('noMatchingClients')}
+          description={t('noClientsMatch')}
           action={
             <Button variant="outline" size="sm" onClick={() => { setQuery(''); setStatusFilter('ALL'); }}>
-              Clear filters
+              {t('clearFilters')}
             </Button>
           }
         />
@@ -292,9 +292,9 @@ export default function CustomersPage() {
         <Card padding="none" className="overflow-hidden">
           {/* Column headers */}
           <div className="hidden sm:flex items-center gap-5 px-5 py-3 border-b border-hairline">
-            <p className="eyebrow flex-1">Client</p>
-            <p className="eyebrow w-16 text-end">Rentals</p>
-            <p className="eyebrow w-24 text-end">Status</p>
+            <p className="eyebrow flex-1">{t('clientTableHeader')}</p>
+            <p className="eyebrow w-16 text-end">{t('rentalsTableHeader')}</p>
+            <p className="eyebrow w-24 text-end">{t('statusTableHeader')}</p>
             <span className="w-4 shrink-0" aria-hidden />
           </div>
           <div className="divide-y divide-hairline">
@@ -330,7 +330,7 @@ export default function CustomersPage() {
                     <span className="flex sm:w-24 justify-end shrink-0">
                       <Badge variant={customer.status === 'BLACKLISTED' ? 'destructive' : 'outline'}>
                         <span className={cn('me-1 w-1.5 h-1.5 rounded-full', style.dot)} />
-                        {style.label}
+                        {t(customer.status === 'BLACKLISTED' ? 'blacklisted' : 'active')}
                       </Badge>
                     </span>
                     <ChevronRight className="w-4 h-4 text-text-faint group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
@@ -346,51 +346,51 @@ export default function CustomersPage() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        title="Register client"
-        description="Add a customer to the identity registry"
+        title={t('registerClientModal')}
+        description={t('addCustomerToRegistry')}
       >
         <form onSubmit={handleAddCustomer} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">First name *</p>
+              <p className="eyebrow px-1">{t('firstName')} *</p>
               <input value={form.firstName} onChange={setField('firstName')} placeholder="Ahmed" className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Last name *</p>
+              <p className="eyebrow px-1">{t('lastName')} *</p>
               <input value={form.lastName} onChange={setField('lastName')} placeholder="Benali" className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Phone *</p>
+              <p className="eyebrow px-1">{t('phone')} *</p>
               <input value={form.phone} onChange={setField('phone')} placeholder="+212 6..." className={inputCls} />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Email</p>
-              <input value={form.email} onChange={setField('email')} type="email" placeholder="Optional" className={inputCls} />
+              <p className="eyebrow px-1">{t('email')}</p>
+              <input value={form.email} onChange={setField('email')} type="email" placeholder={t('optional')} className={inputCls} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">ID type</p>
+              <p className="eyebrow px-1">{t('idType')}</p>
               <select value={form.identityType} onChange={setField('identityType')} className={cn(inputCls, 'appearance-none')}>
                 <option value="CIN">CIN</option>
-                <option value="PASSPORT">Passport</option>
+                <option value="PASSPORT">{t('passport')}</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">ID number *</p>
+              <p className="eyebrow px-1">{t('idNumber')} *</p>
               <input value={form.identityNumber} onChange={setField('identityNumber')} placeholder="AB123456" className={cn(inputCls, 'font-mono tabular')} />
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Nationality</p>
+              <p className="eyebrow px-1">{t('nationality')}</p>
               <input value={form.nationality} onChange={setField('nationality')} placeholder="MA" className={inputCls} />
             </div>
           </div>
           <div className="flex gap-4">
             <Button type="button" variant="outline" className="flex-1 py-4" onClick={closeAddModal} disabled={isSubmitting}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" className="flex-1 py-4" isLoading={isSubmitting}>
-              {isSubmitting ? 'Registering...' : 'Register client'}
+              {isSubmitting ? t('registering') : t('registerClientModal')}
             </Button>
           </div>
         </form>
