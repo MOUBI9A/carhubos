@@ -103,3 +103,67 @@ describe('CarsService.findAll — list cap (P2 backlog)', () => {
     expect(findMany.mock.calls[0][0].where).toEqual({ agencyId: 'agency-a' });
   });
 });
+
+/**
+ * QA sweep 2026-08-05: adopted the same page/limit envelope pattern already
+ * used by CustomersService.findAll — landing the pagination gap the P2
+ * backlog note above flagged. Bare-array behavior above must stay untouched
+ * (frontend list consumers rely on it); this covers the opt-in envelope.
+ */
+describe('CarsService.findAll — pagination envelope', () => {
+  it('returns a bare array (no total/page/limit) when neither page nor limit is given', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'car-1' }]);
+    const services = makeServices();
+    const svc = new CarsService(
+      { car: { findMany } } as any,
+      services.auditLogs as any,
+      services.entitlements as any,
+    );
+
+    const result = await svc.findAll('agency-a');
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns { items, total, page, limit } and applies skip/take once page/limit are given', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'car-1' }]);
+    const count = jest.fn().mockResolvedValue(37);
+    const $transaction = jest.fn((ops: any[]) => Promise.all(ops));
+    const services = makeServices();
+    const svc = new CarsService(
+      { car: { findMany, count }, $transaction } as any,
+      services.auditLogs as any,
+      services.entitlements as any,
+    );
+
+    const result = await svc.findAll('agency-a', { page: 2, limit: 10 });
+
+    expect(result).toEqual({ items: [{ id: 'car-1' }], total: 37, page: 2, limit: 10 });
+    expect(findMany.mock.calls[0][0].skip).toBe(10);
+    expect(findMany.mock.calls[0][0].take).toBe(10);
+    expect(count.mock.calls[0][0]).toEqual({ where: { agencyId: 'agency-a' } });
+  });
+
+  it('scopes search to brand/model/licensePlate, case-insensitively, within the agency', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const $transaction = jest.fn((ops: any[]) => Promise.all(ops));
+    const services = makeServices();
+    const svc = new CarsService(
+      { car: { findMany, count }, $transaction } as any,
+      services.auditLogs as any,
+      services.entitlements as any,
+    );
+
+    await svc.findAll('agency-a', { page: 1, limit: 20, search: 'duster' });
+
+    const where = findMany.mock.calls[0][0].where;
+    expect(where.agencyId).toBe('agency-a');
+    expect(where.OR).toEqual([
+      { brand: { contains: 'duster', mode: 'insensitive' } },
+      { model: { contains: 'duster', mode: 'insensitive' } },
+      { licensePlate: { contains: 'duster', mode: 'insensitive' } },
+    ]);
+  });
+});
