@@ -112,4 +112,68 @@ describe('AnalyticsService — ROI tenant boundary (F1)', () => {
       expect(car.update).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * getUtilizationMetrics previously filtered bookings by `startDate >=
+   * thirtyDaysAgo`, which silently dropped any still-ACTIVE booking that
+   * started before the 30-day window (undercounting utilization for
+   * longer-running rentals) and never clamped `endDate` to "now", so a
+   * booking with a future planned return counted not-yet-elapsed days as
+   * already rented (overcounting). Fixed to proper interval-overlap
+   * semantics against [thirtyDaysAgo, now] on both ends. QA sweep 2026-07-28.
+   */
+  describe('getUtilizationMetrics', () => {
+    const AGENCY = 'agency-util';
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    function makeUtilPrisma(carCount: number, bookings: Array<{ startDate: Date; endDate: Date }>) {
+      const car = { count: jest.fn().mockResolvedValue(carCount) };
+      const booking = { findMany: jest.fn().mockResolvedValue(bookings) };
+      return { prisma: { car, booking }, car, booking };
+    }
+
+    it('counts a booking that started more than 30 days ago but is still ACTIVE', async () => {
+      const now = Date.now();
+      const startedFarBack = new Date(now - 45 * DAY_MS);
+      const endsSoon = new Date(now + 2 * DAY_MS);
+      const { prisma, booking } = makeUtilPrisma(1, [
+        { startDate: startedFarBack, endDate: endsSoon },
+      ]);
+      const svc = new AnalyticsService(prisma as any);
+
+      const result = await svc.getUtilizationMetrics(AGENCY);
+
+      // The query itself must not exclude this booking via startDate >= thirtyDaysAgo.
+      const where = booking.findMany.mock.calls[0][0].where;
+      expect(where.startDate).toEqual({ lte: expect.any(Date) });
+      expect(where.endDate).toEqual({ gte: expect.any(Date) });
+      // Rented days are clamped to the 30-day window: exactly 30 days counted,
+      // not 0 (old bug) and not the full 47-day span of the booking.
+      expect(result.totalRentedDays).toBe(30);
+      expect(result.utilizationRate).toBeCloseTo(100, 5);
+    });
+
+    it('does not count an ACTIVE booking future days beyond "now"', async () => {
+      // Pinned clock: the service reads `new Date()` internally, so without
+      // faking the timer, any real elapsed ms between capturing `now` here
+      // and the service's own `new Date()` call could push the boundary
+      // case (exactly 1 elapsed day) to 2 via Math.ceil — flaky by design
+      // otherwise. Fake timers make test and service see the same instant.
+      jest.useFakeTimers({ now: new Date('2026-07-28T12:00:00.000Z') });
+      const now = Date.now();
+      const startedRecently = new Date(now - 1 * DAY_MS);
+      const endsInFuture = new Date(now + 10 * DAY_MS);
+      const { prisma } = makeUtilPrisma(1, [
+        { startDate: startedRecently, endDate: endsInFuture },
+      ]);
+      const svc = new AnalyticsService(prisma as any);
+
+      const result = await svc.getUtilizationMetrics(AGENCY);
+      jest.useRealTimers();
+
+      // Only the 1 elapsed day should count, not the 11-day full span.
+      expect(result.totalRentedDays).toBe(1);
+      expect(result.totalFleetDays).toBe(30);
+    });
+  });
 });
