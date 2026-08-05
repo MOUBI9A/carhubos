@@ -105,49 +105,77 @@ export interface PortalBooking {
 
 export const CONSENT_STATUS_STYLES: Record<
   ConsentStatus,
-  { chip: string; dot: string; label: string }
+  { chip: string; dot: string }
 > = {
   PENDING: {
     chip: 'text-warning bg-warning/10 border-warning/20',
     dot: 'bg-warning animate-pulse',
-    label: 'Awaiting Your Review',
   },
   APPROVED: {
     chip: 'text-success bg-success/10 border-success/20',
     dot: 'bg-success',
-    label: 'Active',
   },
   REVOKED: {
     chip: 'text-danger bg-danger/10 border-danger/20',
     dot: 'bg-danger',
-    label: 'Revoked',
   },
   EXPIRED: {
     chip: 'text-text-faint bg-surface border-hairline',
     dot: 'bg-text-faint/70',
-    label: 'Expired',
   },
 };
 
-export const RISK_LEVEL_STYLES: Record<
-  RiskLevel,
-  { chip: string; label: string }
+/** renterPortal message keys for each ConsentStatus — pass to t(). */
+export const CONSENT_STATUS_KEYS: Record<
+  ConsentStatus,
+  'consentStatusPending' | 'consentStatusApproved' | 'consentStatusRevoked' | 'consentStatusExpired'
 > = {
-  UNKNOWN: { chip: 'text-text-faint bg-surface border-hairline', label: 'Not Yet Reviewed' },
-  TRUSTED: { chip: 'text-success bg-success/10 border-success/20', label: 'Trusted' },
-  LOW: { chip: 'text-success/80 bg-success/5 border-success/10', label: 'Low Risk' },
-  MEDIUM: { chip: 'text-warning bg-warning/10 border-warning/20', label: 'Medium Risk' },
-  HIGH: { chip: 'text-danger/80 bg-danger/5 border-danger/10', label: 'High Risk' },
-  CRITICAL: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Critical' },
+  PENDING: 'consentStatusPending',
+  APPROVED: 'consentStatusApproved',
+  REVOKED: 'consentStatusRevoked',
+  EXPIRED: 'consentStatusExpired',
 };
 
-export const BOOKING_STATUS_STYLES: Record<BookingStatus, { chip: string; label: string }> = {
-  REQUESTED: { chip: 'text-text-muted bg-surface border-hairline', label: 'Requested' },
-  APPROVED: { chip: 'text-info bg-info/10 border-info/20', label: 'Approved' },
-  ACTIVE: { chip: 'text-primary bg-primary/10 border-primary/20', label: 'Active' },
-  OVERDUE: { chip: 'text-warning bg-warning/10 border-warning/20', label: 'Overdue' },
-  COMPLETED: { chip: 'text-success bg-success/10 border-success/20', label: 'Completed' },
-  CANCELLED: { chip: 'text-danger bg-danger/10 border-danger/20', label: 'Cancelled' },
+export const RISK_LEVEL_STYLES: Record<RiskLevel, { chip: string }> = {
+  UNKNOWN: { chip: 'text-text-faint bg-surface border-hairline' },
+  TRUSTED: { chip: 'text-success bg-success/10 border-success/20' },
+  LOW: { chip: 'text-success/80 bg-success/5 border-success/10' },
+  MEDIUM: { chip: 'text-warning bg-warning/10 border-warning/20' },
+  HIGH: { chip: 'text-danger/80 bg-danger/5 border-danger/10' },
+  CRITICAL: { chip: 'text-danger bg-danger/10 border-danger/20' },
+};
+
+export const RISK_LEVEL_KEYS: Record<
+  RiskLevel,
+  'riskNotReviewed' | 'riskTrusted' | 'riskLow' | 'riskMedium' | 'riskHigh' | 'riskCritical'
+> = {
+  UNKNOWN: 'riskNotReviewed',
+  TRUSTED: 'riskTrusted',
+  LOW: 'riskLow',
+  MEDIUM: 'riskMedium',
+  HIGH: 'riskHigh',
+  CRITICAL: 'riskCritical',
+};
+
+export const BOOKING_STATUS_STYLES: Record<BookingStatus, { chip: string }> = {
+  REQUESTED: { chip: 'text-text-muted bg-surface border-hairline' },
+  APPROVED: { chip: 'text-info bg-info/10 border-info/20' },
+  ACTIVE: { chip: 'text-primary bg-primary/10 border-primary/20' },
+  OVERDUE: { chip: 'text-warning bg-warning/10 border-warning/20' },
+  COMPLETED: { chip: 'text-success bg-success/10 border-success/20' },
+  CANCELLED: { chip: 'text-danger bg-danger/10 border-danger/20' },
+};
+
+export const BOOKING_STATUS_KEYS: Record<
+  BookingStatus,
+  'statusRequested' | 'statusApproved' | 'statusActive' | 'statusOverdue' | 'statusCompleted' | 'statusCancelled'
+> = {
+  REQUESTED: 'statusRequested',
+  APPROVED: 'statusApproved',
+  ACTIVE: 'statusActive',
+  OVERDUE: 'statusOverdue',
+  COMPLETED: 'statusCompleted',
+  CANCELLED: 'statusCancelled',
 };
 
 /** Matches backend CONSENT_DOC_TYPES (consent/dto/consent.dto.ts). */

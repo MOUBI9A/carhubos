@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { useTranslations } from 'next-intl';
+import { useFormat } from '@/lib/useFormat';
 import api from '@/lib/api';
 import {
   usePortalMe,
@@ -39,10 +40,10 @@ import {
 import { UploadDocumentModal } from './UploadDocumentModal';
 import {
   CONSENT_STATUS_STYLES,
+  CONSENT_STATUS_KEYS,
   RISK_LEVEL_STYLES,
+  RISK_LEVEL_KEYS,
   scopeLabel,
-  formatDate,
-  formatDateTime,
   formatRelativeToNow,
   type ConsentGrant,
   type PortalNotification,
@@ -51,6 +52,7 @@ import {
 
 export default function RenterPortal() {
   const t = useTranslations('renterPortal');
+  const { date } = useFormat();
   const { showToast } = useToast();
   const { me, isLoading: meLoading, error: meError, refetch: refetchMe } = usePortalMe();
   const {
@@ -102,12 +104,12 @@ export default function RenterPortal() {
       await api.post(`/portal/consent/${grant.id}/approve`);
       showToast(
         'success',
-        'Access Approved',
-        `${grant.agencyName ?? 'The agency'} can now view your ${grant.scope.map(scopeLabel).join(', ')} for 7 days.`,
+        t('accessApprovedTitle'),
+        `${grant.agencyName ?? t('unknownAgency')} ${t('canNowView')} ${grant.scope.map(scopeLabel).join(', ')} ${t('for7Days')}`,
       );
       await refetchConsent();
     } catch (err: any) {
-      showToast('danger', 'Approve Failed', err?.response?.data?.message || 'Could not approve this request.');
+      showToast('danger', t('approveFailedTitle'), err?.response?.data?.message || t('couldNotApprove'));
     } finally {
       setActingId(null);
     }
@@ -120,12 +122,12 @@ export default function RenterPortal() {
       await api.post(`/portal/consent/${grant.id}/revoke`);
       showToast(
         'success',
-        wasPending ? 'Request Denied' : 'Access Revoked',
-        `${grant.agencyName ?? 'The agency'} no longer has access to your documents.`,
+        wasPending ? t('requestDeniedTitle') : t('accessRevokedTitle'),
+        `${grant.agencyName ?? t('unknownAgency')} ${t('noLongerHasAccess')}`,
       );
       await refetchConsent();
     } catch (err: any) {
-      showToast('danger', 'Action Failed', err?.response?.data?.message || 'Could not update this grant.');
+      showToast('danger', t('actionFailedTitle'), err?.response?.data?.message || t('couldNotUpdateGrant'));
     } finally {
       setActingId(null);
     }
@@ -139,7 +141,7 @@ export default function RenterPortal() {
       await api.patch(`/portal/notifications/${notif.id}/read`);
     } catch (err: any) {
       setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, read: false } : n)));
-      showToast('danger', 'Failed', err?.response?.data?.message || 'Could not mark notification read.');
+      showToast('danger', t('failedTitle'), err?.response?.data?.message || t('couldNotMarkRead'));
     } finally {
       setMarkingId(null);
     }
@@ -152,13 +154,13 @@ export default function RenterPortal() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast('info', 'Copy Unavailable', 'Select and copy the code manually.');
+      showToast('info', t('copyUnavailable'), t('copyManually'));
     }
   };
 
   const handleDocumentUploaded = () => {
     setIsUploadDocOpen(false);
-    showToast('success', 'Document Uploaded', 'Your file was added to your private vault.');
+    showToast('success', t('documentUploadedTitle'), t('fileAddedToVault'));
     refetchDocs();
   };
 
@@ -171,9 +173,9 @@ export default function RenterPortal() {
     } catch (err: any) {
       const msg =
         err?.response?.status === 503
-          ? 'Vault storage isn’t configured yet.'
-          : err?.response?.data?.message || 'Could not generate a download link.';
-      showToast('danger', 'View Failed', msg);
+          ? t('vaultNotConfigured')
+          : err?.response?.data?.message || t('couldNotGenerateLink');
+      showToast('danger', t('viewFailedTitle'), msg);
     } finally {
       setViewingDocId(null);
     }
@@ -184,9 +186,9 @@ export default function RenterPortal() {
     try {
       await api.post('/portal/trust-qr');
       await refetchMe();
-      showToast('success', 'QR Ready', 'Your Trust Vault code has been generated.');
+      showToast('success', t('qrReadyTitle'), t('qrGenerated'));
     } catch (err: any) {
-      showToast('danger', 'Failed', err?.response?.data?.message || 'Could not generate your QR code.');
+      showToast('danger', t('failedTitle'), err?.response?.data?.message || t('couldNotGenerateQr'));
     } finally {
       setIsGeneratingQr(false);
     }
@@ -335,17 +337,17 @@ export default function RenterPortal() {
                     {me?.isVerified ? (
                       <>
                         <ShieldCheck className="w-4 h-4 text-success shrink-0" />
-                        <span className="eyebrow text-success truncate">Identity verified</span>
+                        <span className="eyebrow text-success truncate">{t('identityVerified')}</span>
                       </>
                     ) : (
                       <>
                         <ShieldAlert className="w-4 h-4 text-text-faint shrink-0" />
-                        <span className="eyebrow truncate">Not verified yet</span>
+                        <span className="eyebrow truncate">{t('notVerifiedYet')}</span>
                       </>
                     )}
                   </div>
                   <span className="text-[10px] font-medium text-text-faint shrink-0">
-                    Since {formatDate(me?.createdAt)}
+                    {t('since')} {date(me?.createdAt)}
                   </span>
                 </div>
               </Card>
@@ -353,7 +355,7 @@ export default function RenterPortal() {
               {/* Trust summary card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Trust network</CardTitle>
+                  <CardTitle>{t('trustNetwork')}</CardTitle>
                 </CardHeader>
                 {me?.trustSummary.linked ? (
                   <>
@@ -364,8 +366,7 @@ export default function RenterPortal() {
                           <span className="text-sm text-text-faint font-normal">/5</span>
                         </p>
                         <p className="eyebrow mt-1">
-                          {me.trustSummary.reviewCount} review{me.trustSummary.reviewCount !== 1 ? 's' : ''} across
-                          agencies
+                          {me.trustSummary.reviewCount} {t(me.trustSummary.reviewCount !== 1 ? 'reviewsAcrossAgencies' : 'reviewAcrossAgencies')}
                         </p>
                       </div>
                       <span
@@ -374,7 +375,7 @@ export default function RenterPortal() {
                           RISK_LEVEL_STYLES[me.trustSummary.riskLevel].chip,
                         )}
                       >
-                        {RISK_LEVEL_STYLES[me.trustSummary.riskLevel].label}
+                        {t(RISK_LEVEL_KEYS[me.trustSummary.riskLevel])}
                       </span>
                     </div>
                     <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
@@ -390,9 +391,9 @@ export default function RenterPortal() {
                       <Info className="w-4 h-4 text-text-faint" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">No network history yet</p>
+                      <p className="text-sm font-semibold text-foreground">{t('noNetworkHistory')}</p>
                       <p className="text-xs text-text-faint mt-1 leading-relaxed">
-                        Once agencies review your rentals, your cross-agency trust score builds here.
+                        {t('noNetworkHistoryDesc')}
                       </p>
                     </div>
                   </div>
@@ -402,20 +403,20 @@ export default function RenterPortal() {
               {/* My QR card — the physical-badge preview; opens the full ceremonial view */}
               <Card>
                 <CardHeader>
-                  <CardTitle>My QR</CardTitle>
+                  <CardTitle>{t('myQr')}</CardTitle>
                 </CardHeader>
                 {me?.qrHash ? (
                   <button onClick={() => setIsQrModalOpen(true)} className="w-full text-start group">
                     <div className="document w-full p-5 rounded-2xl transition-transform duration-300 group-hover:-translate-y-0.5">
                       <div className="flex items-center gap-2.5 opacity-60">
                         <QrCode className="w-4 h-4" strokeWidth={1.75} />
-                        <span className="text-[10px] font-semibold uppercase tracking-wide">Trust vault code</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide">{t('trustVaultCode')}</span>
                       </div>
                       <p className="mt-4 font-mono tabular text-sm tracking-[0.08em] truncate">
                         {me.qrHash.slice(0, 8)}…{me.qrHash.slice(-6)}
                       </p>
                       <p className="mt-3 text-[11px] font-medium opacity-50">
-                        Show this at the agency counter
+                        {t('showAtCounter')}
                       </p>
                     </div>
                   </button>
@@ -423,7 +424,7 @@ export default function RenterPortal() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 text-text-faint">
                       <QrCode className="w-5 h-5 shrink-0" />
-                      <p className="text-xs font-medium">QR not yet provisioned</p>
+                      <p className="text-xs font-medium">{t('qrNotProvisioned')}</p>
                     </div>
                     <Button
                       variant="outline"
@@ -432,7 +433,7 @@ export default function RenterPortal() {
                       isLoading={isGeneratingQr}
                       onClick={handleGenerateQr}
                     >
-                      Generate my QR
+                      {t('generateMyQr')}
                     </Button>
                   </div>
                 )}
@@ -447,7 +448,7 @@ export default function RenterPortal() {
               <CardTitle>{t('documents')}</CardTitle>
               <Button size="sm" variant="outline" onClick={() => setIsUploadDocOpen(true)}>
                 <Upload className="w-3.5 h-3.5 me-1.5" />
-                Upload
+                {t('uploadAction')}
               </Button>
             </CardHeader>
             {docsLoading ? (
@@ -493,11 +494,11 @@ export default function RenterPortal() {
                     )}
                     {doc.verified ? (
                       <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-success">
-                        <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                        <ShieldCheck className="w-3.5 h-3.5" /> {t('docVerified')}
                       </span>
                     ) : (
                       <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-text-faint">
-                        Pending
+                        {t('docPending')}
                       </span>
                     )}
                   </div>
@@ -505,7 +506,7 @@ export default function RenterPortal() {
                 <div className="flex items-center gap-2 pt-2 text-text-faint">
                   <Lock className="w-3 h-3 shrink-0" />
                   <p className="text-[11px] font-medium leading-relaxed">
-                    Private to you. Agencies only see these after you approve a request in the Consent Center.
+                    {t('privateDocsNote')}
                   </p>
                 </div>
               </div>
@@ -523,7 +524,7 @@ export default function RenterPortal() {
                   {t('consentRequests')}
                 </CardTitle>
                 <CardDescription className="mt-2 normal-case tracking-normal font-medium text-xs">
-                  You control who sees your documents. Nothing is shared with an agency until you approve it here.
+                  {t('consentControlNote')}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -560,7 +561,7 @@ export default function RenterPortal() {
                 {otherGrants.length > 0 && (
                   <div className="space-y-3">
                     {pendingGrants.length > 0 && (
-                      <p className="eyebrow pt-2 border-t border-hairline">Grant history</p>
+                      <p className="eyebrow pt-2 border-t border-hairline">{t('grantHistory')}</p>
                     )}
                     {otherGrants.map((g) => (
                       <ConsentGrantCard
@@ -582,27 +583,26 @@ export default function RenterPortal() {
       <Modal
         isOpen={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}
-        title="My Trust Vault Code"
-        description={me?.qrHash ? 'Show this at the agency counter' : undefined}
+        title={t('myTrustVaultCode')}
+        description={me?.qrHash ? t('showAtCounter') : undefined}
       >
         {me?.qrHash ? (
           <div className="space-y-6 flex flex-col items-center">
             <div className="document w-full p-8 rounded-[2rem] flex flex-col items-center gap-4 text-center">
               <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-50">Fider trust vault</span>
-                <TrustSeal size={32} label="Identity verified" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-50">{t('fiderTrustVault')}</span>
+                <TrustSeal size={32} label={t('identityVerified')} />
               </div>
               <QrCode className="w-16 h-16" strokeWidth={1.5} />
               <p className="font-mono tabular text-sm tracking-[0.15em] break-all">{me.qrHash}</p>
             </div>
             <Button variant="outline" className="w-full" onClick={handleCopyQr}>
-              <Copy className="w-4 h-4 me-2" /> {copied ? 'Copied' : 'Copy Code'}
+              <Copy className="w-4 h-4 me-2" /> {copied ? t('copied') : t('copyCode')}
             </Button>
             <div className="w-full p-4 bg-surface border border-hairline rounded-2xl flex items-center gap-4">
               <Info className="w-5 h-5 text-text-faint shrink-0" />
               <p className="text-[11px] font-medium text-text-muted leading-relaxed">
-                Agency staff scan or enter this code to request access to your documents — nothing is shared until
-                you approve it in the Consent Center.
+                {t('qrModalNote')}
               </p>
             </div>
           </div>
@@ -611,12 +611,12 @@ export default function RenterPortal() {
             <div className="w-14 h-14 rounded-2xl bg-surface border border-hairline flex items-center justify-center">
               <QrCode className="w-6 h-6 text-text-faint" />
             </div>
-            <p className="text-sm font-semibold text-foreground">QR not yet provisioned</p>
+            <p className="text-sm font-semibold text-foreground">{t('qrNotProvisioned')}</p>
             <p className="text-xs text-text-faint max-w-xs">
-              Generate your Trust Vault code so agency staff can request access to your documents at the counter.
+              {t('generateQrDesc')}
             </p>
             <Button isLoading={isGeneratingQr} onClick={handleGenerateQr}>
-              Generate my QR
+              {t('generateMyQr')}
             </Button>
           </div>
         )}
@@ -660,6 +660,7 @@ function ConsentGrantCard({
   onRevoke: () => void;
 }) {
   const t = useTranslations('renterPortal');
+  const { date } = useFormat();
   const style = CONSENT_STATUS_STYLES[grant.status];
   const isPending = grant.status === 'PENDING';
   const isApproved = grant.status === 'APPROVED';
@@ -671,9 +672,9 @@ function ConsentGrantCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
-          <Avatar name={grant.agencyName ?? 'Unknown agency'} size={36} className="mt-0.5 shrink-0" />
+          <Avatar name={grant.agencyName ?? t('unknownAgency')} size={36} className="mt-0.5 shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{grant.agencyName ?? 'Unknown Agency'}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{grant.agencyName ?? t('unknownAgency')}</p>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {grant.scope.map((s) => (
                 <span
@@ -693,17 +694,21 @@ function ConsentGrantCard({
           )}
         >
           <span className={cn('w-1.5 h-1.5 rounded-full', style.dot)} />
-          {style.label}
+          {t(CONSENT_STATUS_KEYS[grant.status])}
         </span>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-hairline">
         <p className="eyebrow">
-          {grant.status === 'PENDING' && `Requested ${formatDate(grant.requestedAt)}`}
+          {grant.status === 'PENDING' && `${t('grantRequestedOn')} ${date(grant.requestedAt)}`}
           {grant.status === 'APPROVED' &&
-            `Active until ${formatDate(grant.expiresAt)} · ${formatRelativeToNow(grant.expiresAt)}`}
-          {grant.status === 'REVOKED' && `Revoked ${formatDate(grant.revokedAt)}`}
-          {grant.status === 'EXPIRED' && `Expired ${formatDate(grant.expiresAt)}`}
+            `${t('grantActiveUntil')} ${date(grant.expiresAt)} · ${formatRelativeToNow(grant.expiresAt, {
+              expired: t('relExpired'),
+              expiresToday: t('relExpiresToday'),
+              daysLeft: (days) => t('relDaysLeft', { days }),
+            })}`}
+          {grant.status === 'REVOKED' && `${t('grantRevokedOn')} ${date(grant.revokedAt)}`}
+          {grant.status === 'EXPIRED' && `${t('grantExpiredOn')} ${date(grant.expiresAt)}`}
         </p>
 
         {isPending && (
@@ -747,6 +752,8 @@ function NotificationRow({
   busy: boolean;
   onRead: () => void;
 }) {
+  const t = useTranslations('renterPortal');
+  const { dateTime } = useFormat();
   return (
     <button
       onClick={onRead}
@@ -767,12 +774,12 @@ function NotificationRow({
           <p className="text-[11px] text-text-faint mt-0.5 line-clamp-2">{notification.body}</p>
         )}
         <p className="eyebrow mt-1">
-          {formatDateTime(notification.createdAt)}
+          {dateTime(notification.createdAt)}
         </p>
       </div>
       {!notification.read && !busy && (
         <span className="text-[9px] font-semibold text-primary uppercase tracking-wide shrink-0 mt-1">
-          Mark read
+          {t('markRead')}
         </span>
       )}
       {busy && (
