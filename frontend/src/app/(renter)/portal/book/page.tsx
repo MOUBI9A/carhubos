@@ -99,10 +99,10 @@ export default function BookCar() {
               <label htmlFor="vehicle-type" className="eyebrow">{t('vehicleType')}</label>
               <select id="vehicle-type" value={type} onChange={(event) => setType(event.target.value)} className="block w-full bg-transparent text-sm font-medium text-foreground outline-none">
                 <option value="ALL">{t('allTypes')}</option>
-                <option value="PETROL">Petrol</option>
-                <option value="DIESEL">Diesel</option>
-                <option value="HYBRID">Hybrid</option>
-                <option value="ELECTRIC">Electric</option>
+                <option value="PETROL">{t('petrol')}</option>
+                <option value="DIESEL">{t('diesel')}</option>
+                <option value="HYBRID">{t('hybrid')}</option>
+                <option value="ELECTRIC">{t('electric')}</option>
               </select>
             </div>
           </div>

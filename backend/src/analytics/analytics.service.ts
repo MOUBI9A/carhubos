@@ -172,6 +172,7 @@ export class AnalyticsService {
    * Calculates the utilization rate of the fleet over the last 30 days.
    */
   async getUtilizationMetrics(agencyId: string) {
+    const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -179,11 +180,16 @@ export class AnalyticsService {
     // Day-diff math needs per-row start/end dates and can't be expressed as
     // a single SQL aggregate — keep the findMany, but tightly scoped
     // (30-day window) and column-limited instead of loading full rows.
+    // Overlap semantics (startDate <= now AND endDate >= thirtyDaysAgo), not a
+    // plain startDate >= thirtyDaysAgo filter — a booking that started earlier
+    // than the window but is still ACTIVE today must still count, otherwise
+    // long-running rentals silently drop out of the utilization figure.
     const activeBookings = await this.prisma.booking.findMany({
       where: {
         agencyId,
         status: { in: ['ACTIVE', 'COMPLETED'] },
-        startDate: { gte: thirtyDaysAgo },
+        startDate: { lte: now },
+        endDate: { gte: thirtyDaysAgo },
       },
       select: { startDate: true, endDate: true },
     });
@@ -193,8 +199,11 @@ export class AnalyticsService {
 
     activeBookings.forEach((booking) => {
       const start = new Date(Math.max(booking.startDate.getTime(), thirtyDaysAgo.getTime()));
-      const end = new Date(booking.endDate);
-      const diffTime = Math.abs(end.getTime() - start.getTime());
+      // Clamp the end to "now" too — an ACTIVE booking's endDate is its planned
+      // return, which can be in the future, and those not-yet-elapsed days
+      // aren't rented days yet.
+      const end = new Date(Math.min(booking.endDate.getTime(), now.getTime()));
+      const diffTime = Math.max(end.getTime() - start.getTime(), 0);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       totalRentedDays += diffDays;
     });

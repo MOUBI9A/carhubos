@@ -11,13 +11,13 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/lib/useFormat';
-import { BOOKING_STATUS_STYLES, type PortalBooking } from '../types';
+import { BOOKING_STATUS_STYLES, BOOKING_STATUS_KEYS, type PortalBooking } from '../types';
 
 function errMessage(err: any, fallback: string): string {
   return err?.response?.data?.message || err?.message || fallback;
 }
 
-function useRenterBookings() {
+function useRenterBookings(loadFailedMessage: string) {
   const [bookings, setBookings] = useState<PortalBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +29,11 @@ function useRenterBookings() {
       const { data } = await api.get<PortalBooking[]>('/portal/bookings');
       setBookings(data);
     } catch (err: any) {
-      setError(errMessage(err, 'Could not load your rental history.'));
+      setError(errMessage(err, loadFailedMessage));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadFailedMessage]);
 
   useEffect(() => {
     fetchBookings();
@@ -45,7 +45,7 @@ function useRenterBookings() {
 export default function RentalHistory() {
   const t = useTranslations('renterHistory');
   const { date, money } = useFormat();
-  const { bookings, isLoading, error, refetch } = useRenterBookings();
+  const { bookings, isLoading, error, refetch } = useRenterBookings(t('loadFailed'));
   const completedCount = bookings.filter((b) => b.status === 'COMPLETED').length;
 
   return (
@@ -149,7 +149,7 @@ export default function RentalHistory() {
                           style.chip,
                         )}
                       >
-                        {style.label}
+                        {t(BOOKING_STATUS_KEYS[item.status])}
                       </span>
                     </div>
                   </div>

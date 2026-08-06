@@ -129,7 +129,7 @@ export default function SearchPage() {
           {t('searchEngine')}
         </h1>
         <p className="text-sm text-text-muted">
-          Search across fleet, clients, and bookings in real time
+          {t('searchAcrossFleet')}
         </p>
       </div>
 
@@ -143,7 +143,7 @@ export default function SearchPage() {
         </div>
         <input
           className="w-full h-14 ps-12 pe-12 bg-surface border border-hairline rounded-2xl text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-          placeholder="Search by name, plate, ID, or booking status..."
+          placeholder={t('searchByNamePlateId')}
           value={query}
           onChange={handleQueryChange}
           autoFocus
@@ -181,8 +181,8 @@ export default function SearchPage() {
         <Card className="flex flex-col items-center gap-4 py-16 text-center">
           <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
           <div>
-            <p className="text-sm font-medium text-text-muted">Type at least 2 characters to search</p>
-            <p className="mt-1 text-xs text-text-faint">Searches cars, customers, and bookings simultaneously</p>
+            <p className="text-sm font-medium text-text-muted">{t('typeAtLeastTwoChars')}</p>
+            <p className="mt-1 text-xs text-text-faint">{t('searchesCarsCustomers')}</p>
           </div>
         </Card>
       ) : isSearching ? (
@@ -192,11 +192,11 @@ export default function SearchPage() {
       ) : totalShown === 0 ? (
         <EmptyState
           icon={SearchX}
-          title="No matching results"
+          title={t('noMatchesFound')}
           description={`No matches found for "${query}" in ${activeCategory === 'all' ? 'any category' : activeCategory}.`}
           action={
             <Button variant="outline" size="sm" onClick={() => { setQuery(''); setResults(null); }}>
-              Clear search
+              {t('clearSearch')}
             </Button>
           }
         />
@@ -205,7 +205,7 @@ export default function SearchPage() {
           {/* Summary */}
           <div className="flex items-center justify-between px-1">
             <span className="eyebrow">
-              {totalShown} result{totalShown !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+              {totalShown} {totalShown !== 1 ? t('results') : t('result')} for &ldquo;{query}&rdquo;
             </span>
           </div>
 
@@ -214,7 +214,7 @@ export default function SearchPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Car className="w-4 h-4 text-text-muted" />
-                <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('fleetSection')}</h2>
                 <div className="flex-1 h-px bg-hairline" />
                 <span className="text-xs font-mono tabular text-text-faint">{displayedCars.length}</span>
               </div>
@@ -251,7 +251,7 @@ export default function SearchPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Users className="w-4 h-4 text-text-muted" />
-                <h2 className="text-sm font-semibold text-foreground">Clients</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('clientsSection')}</h2>
                 <div className="flex-1 h-px bg-hairline" />
                 <span className="text-xs font-mono tabular text-text-faint">{displayedCustomers.length}</span>
               </div>
@@ -269,7 +269,7 @@ export default function SearchPage() {
                           {customer.firstName} {customer.lastName}
                         </h3>
                         {customer.status === 'BLACKLISTED' && (
-                          <Badge variant="destructive">Blacklisted</Badge>
+                          <Badge variant="destructive">{t('blacklisted')}</Badge>
                         )}
                       </div>
                       <p className="text-xs text-text-muted mt-0.5">
@@ -288,7 +288,7 @@ export default function SearchPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-text-muted" />
-                <h2 className="text-sm font-semibold text-foreground">Bookings</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('bookingsSection')}</h2>
                 <div className="flex-1 h-px bg-hairline" />
                 <span className="text-xs font-mono tabular text-text-faint">{displayedBookings.length}</span>
               </div>
@@ -313,9 +313,9 @@ export default function SearchPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-text-muted mt-0.5 truncate">
-                        {booking.customer ? `${booking.customer.firstName} ${booking.customer.lastName}` : 'Unknown'} •&nbsp;
-                        {booking.car ? `${booking.car.brand} ${booking.car.model}` : 'N/A'} •&nbsp;
-                        <span className="font-mono tabular">{booking.totalPrice.toLocaleString()}</span> MAD
+                        {booking.customer ? `${booking.customer.firstName} ${booking.customer.lastName}` : t('unknown')} •&nbsp;
+                        {booking.car ? `${booking.car.brand} ${booking.car.model}` : t('notApplicable')} •&nbsp;
+                        <span className="font-mono tabular">{booking.totalPrice.toLocaleString()}</span> {t('madCurrency')}
                       </p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />

@@ -144,7 +144,7 @@ export default function GuardianVault() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('guardianVault')}</h1>
-          <p className="mt-1.5 text-sm text-text-muted">Fleet compliance and legal documents, in one place</p>
+          <p className="mt-1.5 text-sm text-text-muted">{t('fleetComplianceDocuments')}</p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -152,11 +152,11 @@ export default function GuardianVault() {
             onClick={() => showToast('info', 'Not available yet', 'A document change history isn’t built yet.')}
           >
             <History className="w-4 h-4 me-2" />
-            Archive
+            {t('archive')}
           </Button>
           <Button onClick={() => setIsUploadModalOpen(true)}>
             <Upload className="w-4 h-4 me-2" />
-            New upload
+            {t('newUpload')}
           </Button>
         </div>
       </header>
@@ -164,15 +164,15 @@ export default function GuardianVault() {
       {/* Summary HUD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <button onClick={() => setFilter('all')} className={cn("rounded-2xl bg-surface border border-hairline p-6 text-start transition-all hover:bg-surface-raised", filter === 'all' && "ring-1 ring-primary/40")}>
-           <p className="eyebrow mb-2">All documents</p>
+           <p className="eyebrow mb-2">{t('allDocuments')}</p>
            <p className="text-3xl font-semibold tracking-tight text-foreground font-mono tabular">{counts.all}</p>
         </button>
         <button onClick={() => setFilter('expiring')} className={cn("rounded-2xl bg-surface border border-hairline p-6 text-start transition-all hover:bg-surface-raised", filter === 'expiring' && "ring-1 ring-primary/40")}>
-           <p className="eyebrow text-warning mb-2">Expiring soon</p>
+           <p className="eyebrow text-warning mb-2">{t('expiringDocuments')}</p>
            <p className="text-3xl font-semibold tracking-tight text-foreground font-mono tabular">{counts.expiring}</p>
         </button>
         <button onClick={() => setFilter('expired')} className={cn("rounded-2xl bg-surface border border-hairline p-6 text-start transition-all hover:bg-surface-raised", filter === 'expired' && "ring-1 ring-primary/40")}>
-           <p className="eyebrow text-danger mb-2">Expired</p>
+           <p className="eyebrow text-danger mb-2">{t('expiredDocuments')}</p>
            <p className="text-3xl font-semibold tracking-tight text-foreground font-mono tabular">{counts.expired}</p>
         </button>
       </div>
@@ -185,7 +185,7 @@ export default function GuardianVault() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search asset or document type..."
+                placeholder={t('searchAssetDocumentType')}
                 className="bg-transparent border-none outline-none text-sm text-foreground w-full placeholder:text-text-faint"
               />
            </div>
@@ -198,12 +198,12 @@ export default function GuardianVault() {
         ) : error ? (
           <div className="p-10 text-center">
             <p className="text-sm text-danger">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={load}>Retry</Button>
+            <Button variant="outline" size="sm" className="mt-4" onClick={load}>{t('retry')}</Button>
           </div>
         ) : filteredDocs.length === 0 ? (
           <EmptyState
             icon={ShieldCheck}
-            title={documents.length === 0 ? 'No documents yet' : 'No matches'}
+            title={documents.length === 0 ? t('allDocuments') : 'No matches'}
             description={
               documents.length === 0
                 ? 'Upload your first compliance document to start tracking expiries.'
@@ -215,10 +215,10 @@ export default function GuardianVault() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-hairline">
-              <th className="eyebrow px-6 py-3 text-start">Document</th>
-              <th className="eyebrow px-6 py-3 text-start">Vehicle</th>
-              <th className="eyebrow px-6 py-3 text-start">Validity</th>
-              <th className="eyebrow px-6 py-3 text-end">Actions</th>
+              <th className="eyebrow px-6 py-3 text-start">{t('documentHeader')}</th>
+              <th className="eyebrow px-6 py-3 text-start">{t('vehicleHeader')}</th>
+              <th className="eyebrow px-6 py-3 text-start">{t('validityHeader')}</th>
+              <th className="eyebrow px-6 py-3 text-end">{t('actionsHeader')}</th>
             </tr>
           </thead>
           <tbody>
@@ -286,18 +286,18 @@ export default function GuardianVault() {
         <form onSubmit={handleUpload} className="space-y-6">
            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">Vehicle</p>
+                 <p className="eyebrow px-1">{t('selectVehicleLabel')}</p>
                  <select name="carId" required defaultValue="" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors">
-                    <option value="" disabled>Select vehicle...</option>
+                    <option value="" disabled>{t('selectVehicleEllipsis')}</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>{v.brand} {v.model} ({v.licensePlate})</option>
                     ))}
                  </select>
               </div>
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">Document type</p>
+                 <p className="eyebrow px-1">{t('selectTypeLabel')}</p>
                  <select name="type" required defaultValue="" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors">
-                    <option value="" disabled>Select type...</option>
+                    <option value="" disabled>{t('selectTypeEllipsis')}</option>
                     {DOC_TYPES.map((dt) => (
                       <option key={dt.value} value={dt.value}>{dt.label}</option>
                     ))}
@@ -305,15 +305,15 @@ export default function GuardianVault() {
               </div>
            </div>
            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Expiry date</p>
+              <p className="eyebrow px-1">{t('expiryDateLabel')}</p>
               <input name="expiryDate" type="date" required className="w-full bg-surface border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors" />
            </div>
            <div className="border-2 border-dashed border-hairline rounded-2xl p-8 text-center">
               <Upload className="w-8 h-8 text-text-faint mx-auto mb-3" />
               <p className="text-sm font-medium text-foreground">File upload isn&apos;t wired yet</p>
-              <p className="mt-1 text-xs text-text-faint">The record is saved without an attached file for now.</p>
+              <p className="mt-1 text-xs text-text-faint">{t('recordSavedNoFile')}</p>
            </div>
-           <Button type="submit" className="w-full" isLoading={isSubmitting}>Save record</Button>
+           <Button type="submit" className="w-full" isLoading={isSubmitting}>{t('saveRecord')}</Button>
         </form>
       </Modal>
 
@@ -321,7 +321,7 @@ export default function GuardianVault() {
       <Modal
         isOpen={!!selectedDoc}
         onClose={() => setSelectedDoc(null)}
-        title="Document preview"
+        title={t('documentPreview')}
         description={selectedDoc ? `${TYPE_LABELS[selectedDoc.type] ?? selectedDoc.type} • ${selectedDoc.car.licensePlate}` : undefined}
       >
         <div className="space-y-6">
@@ -332,14 +332,14 @@ export default function GuardianVault() {
               </p>
            </div>
            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setSelectedDoc(null)}>Close</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setSelectedDoc(null)}>{t('close')}</Button>
               <Button
                 className="flex-1"
                 disabled={!selectedDoc?.fileUrl}
                 onClick={() => selectedDoc?.fileUrl && window.open(selectedDoc.fileUrl, '_blank', 'noopener,noreferrer')}
               >
                  <Download className="w-4 h-4 me-2" />
-                 Download
+                 {t('documentDownloadAction')}
               </Button>
            </div>
         </div>

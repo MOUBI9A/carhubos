@@ -178,17 +178,17 @@ export default function AutomationHub() {
             {t('automationHub')}
           </h1>
           <p className="mt-1.5 text-sm text-text-muted">
-            No-code rules that trigger automatically across your fleet
+            {t('noCodeRules')}
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={fetchAutomations}>
             <RefreshCw className="w-4 h-4 me-2" />
-            Refresh
+            {t('refresh')}
           </Button>
           <Button onClick={() => setIsAddRuleModalOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            New rule
+            {t('newAutomationRule')}
           </Button>
         </div>
       </header>
@@ -199,10 +199,10 @@ export default function AutomationHub() {
           {/* System rules header */}
           <CardHeader className="px-0">
             <div className="flex items-center gap-3">
-              <CardTitle>Core system rules</CardTitle>
-              <Badge variant="outline">Protected</Badge>
+              <CardTitle>{t('coreSystemRules')}</CardTitle>
+              <Badge variant="outline">{t('protected')}</Badge>
             </div>
-            <CardDescription>Always-on — cannot be disabled</CardDescription>
+            <CardDescription>{t('alwaysOnCannotDisable')}</CardDescription>
           </CardHeader>
 
           <div className="space-y-4">
@@ -220,7 +220,7 @@ export default function AutomationHub() {
                           <h4 className="text-sm font-semibold text-foreground">{rule.name}</h4>
                           <Badge variant="outline" className="gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-success" aria-hidden />
-                            Always on
+                            {t('alwaysOn')}
                           </Badge>
                         </div>
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-text-muted flex-wrap">
@@ -231,7 +231,7 @@ export default function AutomationHub() {
                       </div>
                     </div>
                     <div className="text-end shrink-0 border-t border-hairline pt-4 md:border-t-0 md:border-s md:pt-0 md:ps-6">
-                      <p className="eyebrow">Executions</p>
+                      <p className="eyebrow">{t('executions')}</p>
                       <p className="text-sm font-semibold font-mono tabular text-foreground">{rule.executionCount?.toLocaleString() ?? '—'}</p>
                     </div>
                   </div>
@@ -242,7 +242,7 @@ export default function AutomationHub() {
 
           {/* Custom rules */}
           <CardHeader className="px-0 pt-4">
-            <CardTitle>Custom rules</CardTitle>
+            <CardTitle>{t('customRules')}</CardTitle>
           </CardHeader>
 
           {isLoading ? (
@@ -253,14 +253,14 @@ export default function AutomationHub() {
             <Card className="flex flex-col items-center gap-5 py-14 text-center">
               <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
               <div>
-                <p className="font-medium text-foreground">No custom rules yet</p>
+                <p className="font-medium text-foreground">{t('noCustomRulesYet')}</p>
                 <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
-                  Build a rule to automate nudges, tasks and invoices without writing code.
+                  {t('buildRuleToAutomate')}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={() => setIsAddRuleModalOpen(true)}>
                 <Plus className="w-3.5 h-3.5 me-2" />
-                Create your first rule
+                {t('createYourFirstRule')}
               </Button>
             </Card>
           ) : (
@@ -281,7 +281,7 @@ export default function AutomationHub() {
                             </h4>
                             <Badge variant={rule.isActive ? 'outline' : 'secondary'} className="gap-1.5">
                               <span className={cn('w-1.5 h-1.5 rounded-full', rule.isActive ? 'bg-success' : 'bg-text-faint')} aria-hidden />
-                              {rule.isActive ? 'Active' : 'Paused'}
+                              {rule.isActive ? t('active') : t('paused')}
                             </Badge>
                           </div>
                           <div className="mt-1 flex items-center gap-1.5 text-xs text-text-muted flex-wrap">
@@ -293,7 +293,7 @@ export default function AutomationHub() {
                       </div>
                       <div className="flex items-center gap-5 shrink-0 border-t border-hairline pt-4 md:border-t-0 md:border-s md:pt-0 md:ps-6">
                         <div className="text-end">
-                          <p className="eyebrow">Type</p>
+                          <p className="eyebrow">{t('type')}</p>
                           <p className="text-xs font-medium text-text-muted">{rule.type}</p>
                         </div>
                         <button
@@ -322,13 +322,13 @@ export default function AutomationHub() {
         <div className="lg:col-span-1 space-y-8 pt-10">
           <Card>
             <CardHeader>
-              <CardTitle>Execution metrics</CardTitle>
+              <CardTitle>{t('executionMetrics')}</CardTitle>
             </CardHeader>
             <div className="space-y-6">
               {[
-                { label: 'Active rules', value: String(activeCount), icon: Activity },
-                { label: 'Total executions', value: totalExecutions.toLocaleString(), icon: Clock },
-                { label: 'System health', value: '99.9%', icon: ShieldCheck },
+                { label: t('activeRules'), value: String(activeCount), icon: Activity },
+                { label: t('totalExecutions'), value: totalExecutions.toLocaleString(), icon: Clock },
+                { label: t('systemHealth'), value: '99.9%', icon: ShieldCheck },
               ].map((stat, i) => (
                 <div key={i} className="flex items-center gap-4">
                   <div className="w-9 h-9 rounded-lg bg-surface-raised flex items-center justify-center border border-hairline">
@@ -344,7 +344,7 @@ export default function AutomationHub() {
           </Card>
 
           <Card>
-            <p className="eyebrow mb-3">Why automate</p>
+            <p className="eyebrow mb-3">{t('whyAutomate')}</p>
             <p className="text-xs text-text-muted leading-relaxed">
               Automated workflows prevent an estimated 85% of compliance errors and lift agent throughput by 24%.
             </p>
@@ -356,28 +356,28 @@ export default function AutomationHub() {
       <Modal
         isOpen={isAddRuleModalOpen}
         onClose={() => setIsAddRuleModalOpen(false)}
-        title="New automation rule"
-        description="Automate a trigger and an action — no code required"
+        title={t('newAutomationRule')}
+        description={t('automateNoCodeRequired')}
       >
         <form className="space-y-6" onSubmit={handleCreateRule}>
           <div className="space-y-1.5">
-            <p className="eyebrow px-1">Rule name</p>
+            <p className="eyebrow px-1">{t('ruleName')}</p>
             <input
               name="name"
               required
               className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-              placeholder="e.g. Fuel level penalty"
+              placeholder={t('exampleFuelPenalty')}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 p-5 rounded-2xl border border-hairline bg-surface">
-              <p className="eyebrow">If trigger</p>
+              <p className="eyebrow">{t('ifTrigger')}</p>
               <select name="trigger" className="w-full bg-background border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
                 {TRIGGERS.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ').toLowerCase()}</option>)}
               </select>
             </div>
             <div className="space-y-1.5 p-5 rounded-2xl border border-hairline bg-surface">
-              <p className="eyebrow">Then action</p>
+              <p className="eyebrow">{t('thenAction')}</p>
               <select name="action" className="w-full bg-background border border-hairline rounded-xl px-4 py-3 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
                 {ACTIONS.map(a => <option key={a} value={a}>{a.replace(/_/g, ' ').toLowerCase()}</option>)}
               </select>
@@ -385,10 +385,10 @@ export default function AutomationHub() {
           </div>
           <div className="p-4 rounded-2xl border border-hairline bg-surface flex items-center gap-3">
             <History className="w-4 h-4 text-text-faint shrink-0" />
-            <p className="text-xs text-text-muted">Rule will be validated before it goes live.</p>
+            <p className="text-xs text-text-muted">{t('ruleValidatedBeforeLive')}</p>
           </div>
           <Button type="submit" className="w-full py-4">
-            Create rule
+            {t('createRule')}
           </Button>
         </form>
       </Modal>

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCarDto, UpdateCarDto } from './dto/cars.dto';
+import { CreateCarDto, ListCarsQueryDto, UpdateCarDto } from './dto/cars.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 
@@ -57,13 +57,25 @@ export class CarsService {
   /**
    * Fleet list — cars with their compliance documents so the UI can
    * derive real compliance scores, plus booking counts for context.
-   * Capped, not paginated (P2 backlog) — had orderBy but no take, and each
-   * row joins documents + a booking count, so the query cost per row is
-   * higher than a plain list.
+   *
+   * Backward compatible: with no page/limit it returns the bare array
+   * exactly as before. When page or limit is provided it returns a
+   * paginated envelope { items, total, page, limit }.
    */
-  async findAll(agencyId: string) {
-    return this.prisma.car.findMany({
-      where: { agencyId },
+  async findAll(agencyId: string, query: ListCarsQueryDto = {}) {
+    const { page, limit, search } = query;
+
+    const where: Prisma.CarWhereInput = { agencyId };
+    if (search) {
+      where.OR = [
+        { brand: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } },
+        { licensePlate: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const listArgs = {
+      where,
       include: {
         documents: {
           select: {
@@ -78,8 +90,29 @@ export class CarsService {
         _count: { select: { bookings: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 500,
-    });
+    } satisfies Prisma.CarFindManyArgs;
+
+    // Legacy shape — bare array — when pagination isn't requested. Capped
+    // (P2 backlog: this was the one unbounded default path), not paginated,
+    // so existing flat-array consumers are unchanged; callers who need the
+    // whole fleet can still opt into the paginated envelope below.
+    if (page === undefined && limit === undefined) {
+      return this.prisma.car.findMany({ ...listArgs, take: 500 });
+    }
+
+    const currentPage = page ?? 1;
+    const pageSize = limit ?? 20;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.car.findMany({
+        ...listArgs,
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.car.count({ where }),
+    ]);
+
+    return { items, total, page: currentPage, limit: pageSize };
   }
 
   /** Lean lookup used internally (audit before/after states, ownership checks). */

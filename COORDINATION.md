@@ -111,7 +111,7 @@ repeal of the protocol.
 | Role | Working on | Files it owns right now | Last update |
 |---|---|---|---|
 | **Architect** | **OFFLINE — hit usage limits, 2026-07-24. Not holding any claim.** Last verified state: PAYMENTS feature done (mock + real Stripe adapter) + hardening + N5 audit endpoint + pdf-engine security fixes, full history R9–R33. Their own "best next" list (Stripe live test, SaaS-subscription checkout, webhooks DNS-rebinding guard) is now this session's backlog — see the sole Frontend Developer row below, now covering all three roles. | None — role vacant. | 2026-07-24 |
-| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. | None claimed. | 2026-07-27 |
+| **Frontend Developer** | **Sole developer (Architect + Frontend Developer + QA Tester) per founder directive — 3-agent protocol suspended, see "Solo mode" above.** Full session history: accidents wiring (`a275fc7`); e2e-suite rebrand sweep + added to CI (`39ef838`, R27); AI Vision fake-`carId` (`c4797c9`, #11); renter self-service Trust Vault QR (`dfa3323`, #12); automations create/toggle fake-success (R28); settings' broken duplicate staff UI → real `/dashboard/staff` (R30); founder-provisioning live smoke test; `admin/logs` wired to the real audit endpoint (R32); mock-page sweep (R34–R36); webhooks DNS-rebinding SSRF guard (R37); Vault backend/frontend/tests/live-verify (R38–R41); Vault entity-linking backend (R42); Guardian Vault car-document upload UI (R43, Phase 1). **Vault frontend DONE (R44, Phase 2 of 2)** — renter portal document upload (`UploadDocumentModal`) + agency-side consent-gated document viewer (`VaultAccessPanel` on the customer detail page). Caught and fixed a High-severity finding from a concurrent independent audit same-day (`docs/AUDIT_2026-07-26.md` #1: no identity cross-check on the QR-resolved renter — added a mandatory warning banner). New Playwright specs (`portal-document-upload.e2e.ts`, `customer-vault-access.e2e.ts`), tsc/eslint/vitest all green. **The full Vault feature (backend R38/R42 + frontend R39/R43/R44) is now complete end-to-end.** **R45: `docs/AUDIT_2026-07-26.md` triaged with the founder, four CRITICAL findings closed same-day** — refund-verification race + deposit CLAIM race (both fixed with `prisma.$transaction`: a `SELECT...FOR UPDATE` invoice lock for the refund race, a compound-`where` `updateMany` guard for the CLAIM race), the mock payment gateway now refuses to boot as MOCK under `NODE_ENV=production`, `GET /agency/billing` gated on `finance.view`. Backend **48 suites / 377 tests**, tsc/eslint clean. Everything else in the audit (font-black in shared Modal/EmptyState, dependency vulns, i18n/a11y gaps, etc.) stays scheduled, non-blocking, unclaimed. **R46: SaaS-subscription checkout V1 built** — the founder unblocked Lane 5 same-day with locked product rules (one-shot full price, no proration, upgrade-only self-serve, silent no-op on failed payment, immediate-on-settlement, coexists with the manual founder console). `CheckoutSession` gained `targetPlanId`+`platformInvoiceId` (migration `20260727131401_add_saas_subscription_checkout`); new `billing.manage` agency capability (OWNER-only — excluded from MANAGER/AGENT); `POST /payments/checkout/subscription` (registered before `checkout/:invoiceId` to avoid an Express route-param collision) validates upgrade-only via `Plan.sortOrder` and refuses a BETA agency (unlimited→capped would hit the same entitlement cliff the no-downgrade rule exists to avoid); `PaymentsService.settleCheckout` gained a `SAAS_SUBSCRIPTION` branch that creates the `PlatformInvoice` already-PAID at settlement (never earlier, so a failed checkout leaves no phantom ISSUED invoice) and mirrors `updateSubscription`'s exact field writes + audit shape. Backend **49 suites / 387 tests**, tsc/eslint/jest all green. Stripe live test alone stays **Blocked by Founder** (still needs real `.env` keys) — see Open lanes. **R47: full platform page-by-page QA sweep DONE** — live-browser walkthrough of all ~30 routes in FR/AR/EN; found and repaired real JSX corruption + finished half-wired i18n left by 3 interrupted `ui-polisher` agents from a prior session (owner dashboard, 9 files) and independently found the same gap on the renter portal (3 files); fixed a locale-fallback bug (`formatDate`/`formatDateTime` defaulting to French regardless of active locale); landed `cars` pagination parity with `customers` (backend only — frontend pagination UI escalated, it's a UX call); fixed a real fleet-utilization metrics bug (`getUtilizationMetrics` interval-overlap + future-day-clamping). Backend **49 suites / 392 tests**, tsc clean backend+frontend. Full write-up above (R47). | None claimed. | 2026-08-05 |
 | **QA Tester** | **`schema.prisma` claim released — fixed a live 500 (`23f644c`, R23).** `Agency` had no `website` column at all, but `UpdateAgencyDto` + the settings-page frontend (which unconditionally includes it in every save) both treated it as real — **every agency-settings save that touched website 500'd**, confirmed live before *and* after the fix (isolated: without `website` → 200, with it → 500 → 200 post-migration). Additive `website String?` (no data loss, T3-shaped). **Also landed a controller-guard sweep**: `maintenance.controller.ts` (`5f4edc5`) and `agencies.controller.ts` (`d179990`) had the same missing-`CapabilitiesGuard` shape as `documents` (R22) — fixed both (`fleet.*`/`settings.manage`, live-verified). `refusal-logs`/`audit-logs` have the same gap but no obvious capability to reuse — filed as **#13**, not guessed at. Backend **39 suites / 306 tests**, tsc+eslint clean throughout. **Claim released, available for next.** | None claimed. | 2026-07-23 |
 
 > Neither claim overlaps the pre-restructure cohort's files (Session C's
@@ -278,6 +278,7 @@ Pick a lane that doesn't touch the other agent's files. Current backlog (details
 - ~~Lane 1 — Accidents domain~~ **DONE** (T3 backend + migration, R9; frontend wiring, `a275fc7`).
 - ~~Lane 2 — Public routing / input validation~~ **DONE** (R1, R6).
 - **Lane 3 — Rate tiers / seasonality** on bookings (Phase 4). Product decision on the pricing model first; touches money math + `schema.prisma`. Still open, still needs a founder call — not blocking anything else.
+- **Lane 3b — Frontend pagination UI for customers/cars/payments (found during R47).** Backend now supports opt-in `{ items, total, page, limit }` pagination on both `/customers` and `/cars` (payments has partial `take`-capping); nothing on the frontend calls it yet — all three list pages still fetch the bare capped array. Low urgency at current seed/demo scale (hard-capped at 500 rows, no observed real-world overflow), but needs a product/design call (page numbers vs. infinite scroll vs. load-more) before building the UI — not a mechanical wire-up.
 - ~~Lane 4 — Infra/CI~~ **DONE** (live-DB e2e job + Playwright e2e job both in `.github/workflows/ci.yml`, R27).
 - ~~Lane 4b — Vault file storage~~ **DONE end-to-end** (R38 backend, R39 frontend). Awaiting the founder's real Supabase project keys for a live smoke test — dormant/503 until then, same as Stripe. See "Vault file storage — architecture" below for the full spec.
 - ~~Lane 5a — SaaS-subscription checkout~~ **DONE** (R46, 2026-07-27) — founder provided the product-call, V1 built (upgrade-only, one-shot, no proration).
@@ -2806,3 +2807,112 @@ here.
 
 **Not built:** everything in the HIGH/TECH-DEBT tier from the triage above —
 unclaimed, scheduled separately, no founder go-ahead requested yet.
+
+### R47 — Full platform page-by-page QA sweep: fixed a broken interrupted-agent i18n pass, closed the owner-dashboard/renter-portal i18n regression, landed `cars` pagination parity, fixed a fleet-utilization metrics bug (sole developer, 2026-08-05)
+
+Live-browser walkthrough of all ~30 routes across Owner/Agent/Renter/Root
+Admin/public, in FR/AR/EN, per the founder's request to "go page by page,
+button by button" before final review. Ran from an isolated worktree
+(backend `:5407`, frontend `:3002`, shared `carhub-db`), using a
+Playwright-based harness (`frontend/.qa-scratch/*.mjs`, gitignored) in
+place of the unavailable `claude-in-chrome` browser tool.
+
+**Found and repaired real corruption from a prior interrupted session:**
+three background `ui-polisher` agents were dispatched (separately, before
+this session picked up the work) to wire missing owner-dashboard
+translation keys, and all three were killed mid-task by a platform session
+limit. One agent's `sed`-based JSX edit had corrupted
+`customers/[id]/page.tsx` — 15 sites where `>{t('key')}</Tag>` had been
+mangled into `"t('key')/Tag>` (a missing `>` and `<` around each
+insertion), plus module-scope `t()` calls in `settings/page.tsx`
+(`NUDGE_PRESETS` was calling the hook's `t()` outside any
+component/render). Both broke Turbopack compilation and cascaded 500s
+across unrelated routes (`/admin/*`, `/signup`) until fixed. Verified via
+`tsc --noEmit` (was failing with real JSX parse errors, now clean) and a
+whole-tree grep for the corruption signature (none left).
+
+**Then finished the i18n work those agents left half-done** (keys added to
+`messages/{fr,en,ar}.json` but never actually wired into JSX, so the UI was
+still showing raw English regardless of locale) across 9 owner-dashboard
+files (`customers`, `customers/[id]`, `settings`, `automations`, `vault`,
+`search`, `staff`, `vault-files`, `ai-vision`) — including two
+`CUSTOMER_STATUS_STYLES`-shaped static label maps (`customers/types.ts`)
+that can't call `t()` at module scope, resolved by removing the hardcoded
+`label` field and translating at the call site instead.
+
+**Extended the same fix to the renter portal**, which turned out to have
+the same "backend infra half-wired, but not yet used to solve the actual
+existing hardcoded strings" root pattern independently, not from the
+interrupted agents: `portal/page.tsx`, `portal/history/page.tsx`,
+`portal/book/page.tsx`. Same treatment for
+`RISK_LEVEL_STYLES`/`CONSENT_STATUS_STYLES`/`BOOKING_STATUS_STYLES` in
+`portal/types.ts` (moved to a `*_KEYS` companion map so the label stays a
+typed message key, translated by the caller's own `t()`). Also fixed a
+narrower bug in the same files: `formatDate`/`formatDateTime` were called
+without a `locale` argument, so they silently fell back to French
+regardless of the active UI language (e.g. "Since 27 juil. 2026" showing on
+an English-locale page) — switched both call sites to the locale-bound
+`useFormat()` hook already used correctly elsewhere in the codebase
+(`portal/history/page.tsx`). `formatRelativeToNow`'s optional
+English-fallback labels (`"Expired"`/`"Expires today"`/`"{n} days left"`)
+are now supplied from `t()` too. Also fixed one narrow pre-existing bug on
+`renterBook`: the `perDay` message text duplicated the currency-code suffix
+`formatMoney()` already appends, showing "350.00 MAD MAD"-shaped output
+before being trimmed to "MAD 350.00 / day".
+
+**Backend: `cars` pagination parity with `customers`.** `GET /cars`
+was capped at 500 rows with no page/limit support at all (contradicted this
+session's initial assumption, going in, that Phase 6 had already covered
+it — it hadn't). Added `ListCarsQueryDto` (`page`/`limit`/`search` on
+brand/model/licensePlate, same shape as `ListCustomersQueryDto`), made
+`CarsService.findAll` backward-compatible (bare capped array when neither
+param is given, `{ items, total, page, limit }` envelope otherwise, via the
+same `$transaction([findMany, count])` pattern), and wired
+`CarsController`'s `@Query()`. 3 new tests in `cars.service.spec.ts`
+(bare-array passthrough, paginated envelope + skip/take, case-insensitive
+search scoping). Frontend adoption of the paginated envelope (actual
+pagination UI/UX on the fleet list) is **not done** — left as a follow-up;
+building real pagination controls is a UX call, not a mechanical wire-up,
+and out of scope for a page-by-page correctness sweep.
+
+**Backend: fixed a real fleet-utilization metrics bug**, found while
+verifying the owner dashboard's Command Centre numbers against seed data.
+`AnalyticsService.getUtilizationMetrics()` computed occupied-days by
+querying bookings with `startDate >= thirtyDaysAgo` (missing bookings that
+started earlier but are still ongoing — an interval-overlap query needs
+`startDate <= now AND endDate >= windowStart`) and then day-counting each
+booking's full `endDate - startDate` span uncapped, so a booking extending
+past "now" inflated the utilization rate with days that haven't happened
+yet. Fixed both: the query now uses proper overlap semantics, and the
+per-booking day-count clamps `end` to `min(endDate, now)`. This number
+feeds the fleet Health Score (weighted 0.4) and the >85%/<40% advisor
+thresholds shown on the owner dashboard. 2 new tests in
+`analytics.service.spec.ts`.
+
+**Escalated, not auto-fixed** (per this session's own fix policy —
+anything needing a product/schema call, or already human-gated in
+`CLAUDE.md` §9, stays out of scope regardless of "fix everything"):
+frontend pagination UI/UX for customers/cars/payments (a design decision:
+page numbers vs. infinite scroll vs. load-more); `Customer`↔renter-`User`
+schema link (already flagged in `CLAUDE.md`'s Vault section as the real
+fix for the `VaultAccessPanel` QR-bridge workaround); Phase 9 deploy,
+Phase 4 rate-tier pricing, live Stripe keys, DB host — all pre-existing
+human gates, untouched.
+
+**Verified:** full backend suite **49 suites / 392 tests**, `tsc --noEmit`
+clean (backend + frontend). Live-browser re-check in FR/EN/AR (0 console
+errors, 0 bad `/api/` responses each) on: all 21 owner-dashboard pages, all
+3 agent-portal pages, all 3 renter-portal pages, all 6 admin-console pages,
+`/landing`, `/login`. `/signup` and `/agency/[subdomain]` were visited
+earlier in the sweep before the interrupted-agent corruption was found;
+worth a final re-check post-fix but not expected to differ (neither file
+was touched by the corruption).
+
+**Environment note, not a product bug:** roughly 70 minutes of this session
+were lost to a macOS TCC (Files and Folders / Desktop-folder) permission
+revocation on the founder's machine that blocked all filesystem access to
+this repo path (`lstat` failing with `EPERM` even on directory traversal);
+resolved by the founder re-granting iTerm2's Desktop-folder access and
+fully restarting iTerm2 (TCC grants don't apply to an already-running
+process). Flagging here only because it cost real wall-clock time on this
+pass, not because it's a codebase issue.
