@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Lock, RefreshCw, ShieldCheck, Link2Off, Download, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  FileText,
+  Lock,
+  RefreshCw,
+  ShieldCheck,
+  Link2Off,
+  Download,
+  Loader2,
+  AlertTriangle,
+  Send,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -54,54 +66,63 @@ function storageKey(customerId: string): string {
   return `fider:vault-consent-renter:${customerId}`;
 }
 
+function inviteUrl(token: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/signup?invite=${token}`;
+}
+
 /**
- * Consent-gated Vault viewer, embedded in the customer detail page. There is
- * no schema link between the agency's own `Customer` record and a portal
- * `User` (RenterDocument/ConsentGrant are keyed on `User.id`, resolved via
- * `qrHash` or `renterUserId` — see backend/src/consent/dto/consent.dto.ts) —
- * this is a real gap the founder's "Customer" framing didn't anticipate
- * (same shape as R42's cars/customers correction). Bridging it with a real
- * `Customer.linkedRenterUserId` column is a schema/product decision, not
- * mine to make unasked, so this panel bridges it client-side instead: staff
- * enter the renter's Trust Vault code once, the resolved renterUserId is
- * cached in localStorage per customerId, and every read/write below still
- * goes through the real consent-gated endpoints (never bypasses the grant).
+ * Consent-gated Vault viewer, embedded in the customer detail page.
  *
- * That bridge has no identity cross-check: nothing stops staff from pasting
- * the wrong renter's code onto this customer's page (easy at a busy desk),
- * which would silently show a DIFFERENT person's private documents here —
- * not a server-side authz bypass (the grant itself is real), but a real
- * PII-misattribution risk (flagged by audit 2026-07-26, finding #1). There
- * is no safe way to auto-verify this without a schema link or a new
- * cross-agency "look up any user" endpoint (itself a PII-leak risk this
- * codebase's 404-not-403 convention exists to avoid) — both are product/
- * schema calls, not mine to make unasked. The mitigation available at this
- * layer: always show the Customer's own identity next to the panel so staff
- * manually confirm the match before trusting anything below it.
+ * `linkedUserId` (Customer.userId, R48) is the real, server-verified link
+ * between this agency's Customer row and the renter's own portal account —
+ * set either when the renter accepts a staff-issued claim invite, or via
+ * their own identity-verification auto-match (POST /portal/verify-identity).
+ * When it's set, every request below targets it directly: no manual code
+ * entry, no misattribution risk (the identity check already happened
+ * server-side, either from the invite token or the HMAC identity hash).
+ *
+ * When it's NOT set, this offers two paths: (a) generate a claim invite for
+ * this specific customer (the safe, recommended default — the token itself
+ * proves which Customer row it's for), or (b) the older manual "Trust Vault
+ * code" bridge, kept as a fallback for renters who already have an account
+ * but haven't claimed this row yet and don't want to wait on an invite.
+ * Path (b) still carries the identity-mismatch risk flagged by audit
+ * 2026-07-26 #1 (nothing proves staff pasted the right renter's code), so it
+ * keeps its own warning; path (a) doesn't need one.
  */
 export function VaultAccessPanel({
   customerId,
   customerName,
   customerIdentity,
+  linkedUserId,
 }: {
   customerId: string;
   customerName: string;
   customerIdentity: string;
+  linkedUserId?: string | null;
 }) {
   const { showToast } = useToast();
-  const [renterUserId, setRenterUserId] = useState<string | null>(null);
+  const [bridgedUserId, setBridgedUserId] = useState<string | null>(null);
   const [qrInput, setQrInput] = useState('');
   const [scope, setScope] = useState<string[]>([]);
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [showQrFallback, setShowQrFallback] = useState(false);
   const [access, setAccess] = useState<AccessState>({ kind: 'idle' });
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const renterUserId = linkedUserId ?? bridgedUserId;
 
   useEffect(() => {
+    if (linkedUserId) return; // real link takes priority — no need to read the bridge
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey(customerId)) : null;
-    setRenterUserId(stored);
-  }, [customerId]);
+    setBridgedUserId(stored);
+  }, [customerId, linkedUserId]);
 
   const checkAccess = useCallback(async (uid: string) => {
     setAccess({ kind: 'loading' });
@@ -128,7 +149,57 @@ export function VaultAccessPanel({
     setScope((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   };
 
-  const handleRequestAccess = async (e: React.FormEvent) => {
+  const handleSendInvite = async () => {
+    setIsInviting(true);
+    try {
+      const res = await api.post<{ token: string }>(`/customers/${customerId}/invite`);
+      setInviteToken(res.data.token);
+    } catch (err: any) {
+      showToast(
+        'danger',
+        'Could Not Create Invite',
+        err?.response?.data?.message || 'Please try again.',
+      );
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!inviteToken) return;
+    await navigator.clipboard.writeText(inviteUrl(inviteToken));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRequestAccessLinked = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkedUserId) return;
+    if (scope.length === 0) {
+      setRequestError('Select at least one document type.');
+      return;
+    }
+    setIsRequesting(true);
+    setRequestError(null);
+    try {
+      await api.post('/agency/consent/request', { renterUserId: linkedUserId, scope });
+      setShowRequestForm(false);
+      setScope([]);
+      showToast('success', 'Request Sent', "Waiting for the renter's approval in their portal.");
+      await checkAccess(linkedUserId);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const msg =
+        status === 409
+          ? 'A matching request is already pending or active.'
+          : err?.response?.data?.message || 'Could not send the request.';
+      setRequestError(Array.isArray(msg) ? msg.join(' ') : String(msg));
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const handleRequestAccessBridged = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qrInput.trim()) {
       setRequestError("Enter the renter's Trust Vault code.");
@@ -147,7 +218,7 @@ export function VaultAccessPanel({
       });
       const uid = res.data.grantorUserId;
       window.localStorage.setItem(storageKey(customerId), uid);
-      setRenterUserId(uid);
+      setBridgedUserId(uid);
       setShowRequestForm(false);
       setQrInput('');
       setScope([]);
@@ -167,9 +238,9 @@ export function VaultAccessPanel({
     }
   };
 
-  const handleUnlink = () => {
+  const handleUnlinkBridge = () => {
     window.localStorage.removeItem(storageKey(customerId));
-    setRenterUserId(null);
+    setBridgedUserId(null);
     setAccess({ kind: 'idle' });
     setShowRequestForm(false);
   };
@@ -193,53 +264,120 @@ export function VaultAccessPanel({
     }
   };
 
-  const requestForm = (
-    <form onSubmit={handleRequestAccess} className="space-y-4">
-      <div className="space-y-1.5">
-        <p className="eyebrow px-1">Renter&apos;s Trust Vault code</p>
-        <input
-          value={qrInput}
-          onChange={(e) => setQrInput(e.target.value)}
-          disabled={isRequesting}
-          placeholder="Scan or paste the code"
-          className="w-full bg-surface border border-hairline rounded-xl px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-        />
+  const scopePicker = (
+    <div className="space-y-1.5">
+      <p className="eyebrow px-1">Documents to request</p>
+      <div className="grid grid-cols-2 gap-2">
+        {CONSENT_SCOPE_OPTIONS.map((opt) => (
+          <label
+            key={opt.value}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium cursor-pointer transition-colors',
+              scope.includes(opt.value)
+                ? 'border-primary bg-primary/5 text-foreground'
+                : 'border-hairline text-text-muted hover:bg-surface-raised',
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={scope.includes(opt.value)}
+              onChange={() => toggleScope(opt.value)}
+              disabled={isRequesting}
+              className="accent-primary"
+            />
+            {opt.label}
+          </label>
+        ))}
       </div>
-      <div className="space-y-1.5">
-        <p className="eyebrow px-1">Documents to request</p>
-        <div className="grid grid-cols-2 gap-2">
-          {CONSENT_SCOPE_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={cn(
-                'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium cursor-pointer transition-colors',
-                scope.includes(opt.value)
-                  ? 'border-primary bg-primary/5 text-foreground'
-                  : 'border-hairline text-text-muted hover:bg-surface-raised',
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={scope.includes(opt.value)}
-                onChange={() => toggleScope(opt.value)}
-                disabled={isRequesting}
-                className="accent-primary"
-              />
-              {opt.label}
-            </label>
-          ))}
-        </div>
-      </div>
-      {requestError && (
-        <div className="flex items-start gap-2 px-1">
-          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-danger" />
-          <p className="text-xs text-danger">{requestError}</p>
-        </div>
-      )}
+    </div>
+  );
+
+  const requestErrorBlock = requestError && (
+    <div className="flex items-start gap-2 px-1">
+      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-danger" />
+      <p className="text-xs text-danger">{requestError}</p>
+    </div>
+  );
+
+  // ── Linked (real Customer.userId) — no manual entry needed ─────────────
+  const linkedRequestForm = (
+    <form onSubmit={handleRequestAccessLinked} className="space-y-4">
+      {scopePicker}
+      {requestErrorBlock}
       <Button type="submit" size="sm" className="w-full" isLoading={isRequesting}>
         {isRequesting ? 'Sending...' : 'Request access'}
       </Button>
     </form>
+  );
+
+  // ── Not linked — invite (primary) + QR bridge (fallback) ───────────────
+  const inviteAndBridge = (
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/20">
+          <Send className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-[11px] text-foreground leading-relaxed">
+            Send <strong className="font-semibold">{customerName}</strong> a link to claim this
+            record from their own portal — safer than a manually-entered code, no risk of
+            attaching the wrong renter&apos;s documents.
+          </p>
+        </div>
+        {inviteToken ? (
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-surface border border-hairline">
+            <input
+              readOnly
+              value={inviteUrl(inviteToken)}
+              className="flex-1 min-w-0 bg-transparent text-xs font-mono tabular text-text-muted outline-none"
+            />
+            <Button variant="ghost" size="sm" className="w-8 h-8 p-0 shrink-0" onClick={handleCopyInvite} aria-label="Copy invite link">
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="outline" size="sm" className="w-full" onClick={handleSendInvite} isLoading={isInviting}>
+            <Send className="w-3.5 h-3.5 me-1.5" /> Generate claim link
+          </Button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowQrFallback((v) => !v)}
+        className="text-[11px] font-medium text-text-faint hover:text-text-muted transition-colors"
+      >
+        {showQrFallback ? 'Hide' : 'Already have a Trust Vault code?'}
+      </button>
+
+      {showQrFallback && (
+        <div className="space-y-4 pt-1">
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-warning/10 border border-warning/20">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <p className="text-[11px] text-warning leading-relaxed">
+              Fider cannot verify a Trust Vault code belongs to this client — confirm the
+              renter&apos;s identity matches <strong className="font-semibold">{customerName}</strong> (
+              {customerIdentity}) in person before relying on any documents shown below.
+            </p>
+          </div>
+          <form onSubmit={handleRequestAccessBridged} className="space-y-4">
+            <div className="space-y-1.5">
+              <p className="eyebrow px-1">Renter&apos;s Trust Vault code</p>
+              <input
+                value={qrInput}
+                onChange={(e) => setQrInput(e.target.value)}
+                disabled={isRequesting}
+                placeholder="Scan or paste the code"
+                className="w-full bg-surface border border-hairline rounded-xl px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+              />
+            </div>
+            {scopePicker}
+            {requestErrorBlock}
+            <Button type="submit" size="sm" className="w-full" isLoading={isRequesting}>
+              {isRequesting ? 'Sending...' : 'Request access'}
+            </Button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 
   return (
@@ -247,26 +385,21 @@ export function VaultAccessPanel({
       <CardHeader className="p-0 mb-5 items-start">
         <div>
           <CardTitle>Digital vault access</CardTitle>
-          <CardDescription className="mt-1">Consent-gated documents from the renter&apos;s own portal</CardDescription>
+          <CardDescription className="mt-1">
+            {linkedUserId
+              ? 'Consent-gated documents from the renter’s own portal — verified account link'
+              : 'Consent-gated documents from the renter’s own portal'}
+          </CardDescription>
         </div>
-        {renterUserId && (
-          <Button variant="ghost" size="sm" onClick={handleUnlink} aria-label="Unlink renter">
+        {!linkedUserId && bridgedUserId && (
+          <Button variant="ghost" size="sm" onClick={handleUnlinkBridge} aria-label="Unlink renter">
             <Link2Off className="w-3.5 h-3.5" />
           </Button>
         )}
       </CardHeader>
 
-      <div className="flex items-start gap-2.5 p-3 mb-4 rounded-xl bg-warning/10 border border-warning/20">
-        <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-        <p className="text-[11px] text-warning leading-relaxed">
-          Fider cannot verify a Trust Vault code belongs to this client — confirm the renter's identity matches{' '}
-          <strong className="font-semibold">{customerName}</strong> ({customerIdentity}) in person before relying on
-          any documents shown below.
-        </p>
-      </div>
-
       {!renterUserId ? (
-        requestForm
+        inviteAndBridge
       ) : access.kind === 'loading' ? (
         <SkeletonRows rows={2} />
       ) : access.kind === 'no-access' ? (
@@ -282,7 +415,7 @@ export function VaultAccessPanel({
             }
           />
           {showRequestForm ? (
-            requestForm
+            linkedUserId ? linkedRequestForm : inviteAndBridge
           ) : (
             <Button variant="ghost" size="sm" className="w-full" onClick={() => setShowRequestForm(true)}>
               Request a different scope

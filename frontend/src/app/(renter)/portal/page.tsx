@@ -25,6 +25,7 @@ import {
   Upload,
   Download,
   Loader2,
+  Fingerprint,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
@@ -83,6 +84,67 @@ export default function RenterPortal() {
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [showVerifyForm, setShowVerifyForm] = useState(false);
+  const [verifyForm, setVerifyForm] = useState({ identityType: 'CIN', identityNumber: '', phone: '' });
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // A staff-issued claim link lands here as ?invite=TOKEN — consume it once
+  // on mount, then strip it from the URL so a refresh can't re-attempt an
+  // already-consumed token.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('invite');
+    if (!token) return;
+    (async () => {
+      try {
+        const res = await api.post<{ agencyId: string; agencyName: string }>(
+          '/portal/claim-invite',
+          { token },
+        );
+        showToast('success', t('inviteClaimedTitle'), t('inviteClaimedBody', { agency: res.data.agencyName }));
+      } catch (err: any) {
+        showToast(
+          'danger',
+          t('inviteClaimFailedTitle'),
+          err?.response?.data?.message || t('inviteClaimFailedBody'),
+        );
+      } finally {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    })();
+  }, []);
+
+  const handleVerifyIdentity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyForm.identityNumber.trim()) return;
+    setIsVerifying(true);
+    try {
+      const res = await api.post<{ linkedAgencies: { agencyName: string }[] }>(
+        '/portal/verify-identity',
+        {
+          identityType: verifyForm.identityType,
+          identityNumber: verifyForm.identityNumber.trim(),
+          ...(verifyForm.phone.trim() ? { phone: verifyForm.phone.trim() } : {}),
+        },
+      );
+      const n = res.data.linkedAgencies.length;
+      showToast(
+        'success',
+        t('identityLinkedTitle'),
+        n > 0
+          ? t('identityLinkedBodyWithCount', {
+              count: n,
+              agencyWord: t(n === 1 ? 'agencyWordSingular' : 'agencyWordPlural'),
+            })
+          : t('identityLinkedBodyNone'),
+      );
+      setShowVerifyForm(false);
+      await refetchMe();
+    } catch (err: any) {
+      showToast('danger', t('identityLinkFailedTitle'), err?.response?.data?.message || t('identityLinkFailedBody'));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const pendingGrants = useMemo(() => grants.filter((g) => g.status === 'PENDING'), [grants]);
@@ -386,16 +448,59 @@ export default function RenterPortal() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-surface border border-hairline flex items-center justify-center shrink-0">
-                      <Info className="w-4 h-4 text-text-faint" />
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-surface border border-hairline flex items-center justify-center shrink-0">
+                        <Info className="w-4 h-4 text-text-faint" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t('noNetworkHistory')}</p>
+                        <p className="text-xs text-text-faint mt-1 leading-relaxed">
+                          {t('noNetworkHistoryDesc')}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{t('noNetworkHistory')}</p>
-                      <p className="text-xs text-text-faint mt-1 leading-relaxed">
-                        {t('noNetworkHistoryDesc')}
-                      </p>
-                    </div>
+                    {showVerifyForm ? (
+                      <form onSubmit={handleVerifyIdentity} className="space-y-3 pt-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <select
+                            value={verifyForm.identityType}
+                            onChange={(e) => setVerifyForm((f) => ({ ...f, identityType: e.target.value }))}
+                            disabled={isVerifying}
+                            className="bg-surface border border-hairline rounded-xl px-3 py-2.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
+                          >
+                            <option value="CIN">CIN</option>
+                            <option value="PASSPORT">{t('passport')}</option>
+                          </select>
+                          <input
+                            value={verifyForm.identityNumber}
+                            onChange={(e) => setVerifyForm((f) => ({ ...f, identityNumber: e.target.value }))}
+                            disabled={isVerifying}
+                            placeholder={t('idNumberPlaceholder')}
+                            className="bg-surface border border-hairline rounded-xl px-3 py-2.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                          />
+                        </div>
+                        <input
+                          value={verifyForm.phone}
+                          onChange={(e) => setVerifyForm((f) => ({ ...f, phone: e.target.value }))}
+                          disabled={isVerifying}
+                          placeholder={t('phoneOptionalPlaceholder')}
+                          className="w-full bg-surface border border-hairline rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                        />
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setShowVerifyForm(false)} disabled={isVerifying}>
+                            {t('cancel')}
+                          </Button>
+                          <Button type="submit" size="sm" className="flex-1" isLoading={isVerifying}>
+                            {t('linkIdentity')}
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setShowVerifyForm(true)}>
+                        <Fingerprint className="w-3.5 h-3.5 me-1.5" /> {t('verifyIdentityCta')}
+                      </Button>
+                    )}
                   </div>
                 )}
               </Card>

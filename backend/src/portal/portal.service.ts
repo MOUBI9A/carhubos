@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -7,11 +8,13 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { VaultStorageService } from '../vault/vault-storage.service';
+import { TrustService } from '../trust/trust.service';
 import {
   VAULT_ALLOWED_MIME_TYPES,
   VAULT_MAX_FILE_SIZE_BYTES,
 } from '../vault/dto/vault-file.dto';
 import { CreateRenterDocumentDto } from './dto/create-renter-document.dto';
+import { VerifyIdentityDto } from './dto/verify-identity.dto';
 
 /** Strips anything unsafe in a storage-object key/path segment. */
 function sanitizeFilename(name: string): string {
@@ -32,6 +35,7 @@ export class PortalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly vaultStorage: VaultStorageService,
+    private readonly trust: TrustService,
   ) {}
 
   /** The renter's profile + their global trust summary (if identity-linked). */
@@ -216,5 +220,74 @@ export class PortalService {
       throw new NotFoundException('Notification not found.');
     }
     return { id: notificationId, read: true };
+  }
+
+  /**
+   * Renter submits their identity (and optionally phone) to link their
+   * portal account to the global RenterIdentity, then claims any Customer
+   * rows — across any agency — that resolve to the same person and aren't
+   * linked to a portal account yet. Self-scoped: only ever touches the
+   * caller's own userId.
+   */
+  async verifyIdentity(userId: string, dto: VerifyIdentityDto) {
+    const identity = await this.trust.resolveIdentityForRenterUser(
+      userId,
+      dto.identityType,
+      dto.identityNumber,
+    );
+    const linkedAgencies = await this.trust.linkCustomersToRenter(
+      userId,
+      identity.id,
+      dto.phone,
+    );
+    return { renterIdentityId: identity.id, linkedAgencies };
+  }
+
+  /**
+   * Consume a staff-issued invite, linking the target Customer row to the
+   * caller's own account. The token IS the authorization — it's random,
+   * single-use and expiring (see CustomersService.createInvite, which is
+   * the only place one is minted, tenant-scoped there) — this endpoint
+   * never accepts a customerId directly, only the opaque token, so it can't
+   * be used to link an arbitrary Customer row.
+   */
+  async claimInvite(userId: string, token: string) {
+    const invite = await this.prisma.customerInvite.findUnique({
+      where: { token },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            userId: true,
+            agencyId: true,
+            agency: { select: { name: true } },
+          },
+        },
+      },
+    });
+    if (!invite || invite.consumedAt || invite.expiresAt < new Date()) {
+      throw new NotFoundException('Invite not found or expired.');
+    }
+    if (invite.customer.userId && invite.customer.userId !== userId) {
+      throw new ConflictException(
+        'This client record is already linked to a different account.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.customer.update({
+        where: { id: invite.customerId },
+        data: { userId },
+      }),
+      this.prisma.customerInvite.update({
+        where: { id: invite.id },
+        data: { consumedAt: new Date(), consumedByUserId: userId },
+      }),
+    ]);
+
+    return {
+      agencyId: invite.customer.agencyId,
+      agencyName: invite.customer.agency.name,
+    };
   }
 }

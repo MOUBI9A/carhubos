@@ -414,6 +414,7 @@ export default function CustomerProfile({ params }: { params: Promise<{ id: stri
             customerId={customer.id}
             customerName={fullName(customer)}
             customerIdentity={`${customer.identityType} · ${customer.identityNumber}`}
+            linkedUserId={customer.userId}
           />
 
           <Card>

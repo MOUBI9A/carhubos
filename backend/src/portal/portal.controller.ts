@@ -18,6 +18,8 @@ import { PortalService } from './portal.service';
 import { ConsentService } from '../consent/consent.service';
 import { UsersService } from '../users/users.service';
 import { CreateRenterDocumentDto } from './dto/create-renter-document.dto';
+import { VerifyIdentityDto } from './dto/verify-identity.dto';
+import { ClaimInviteDto } from './dto/claim-invite.dto';
 import {
   VAULT_ALLOWED_MIME_TYPES,
   VAULT_MAX_FILE_SIZE_BYTES,
@@ -121,5 +123,15 @@ export class PortalController {
   @Post('consent/:id/revoke')
   revokeConsent(@CurrentUser() user: any, @Param('id') id: string) {
     return this.consentService.revoke(user.id, id);
+  }
+
+  @Post('verify-identity')
+  verifyIdentity(@CurrentUser() user: any, @Body() dto: VerifyIdentityDto) {
+    return this.portalService.verifyIdentity(user.id, dto);
+  }
+
+  @Post('claim-invite')
+  claimInvite(@CurrentUser() user: any, @Body() dto: ClaimInviteDto) {
+    return this.portalService.claimInvite(user.id, dto.token);
   }
 }
