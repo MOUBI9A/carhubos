@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -49,39 +49,54 @@ const inputCls =
 export default function CustomersPage() {
   const t = useTranslations('ownerPages');
   const { showToast } = useToast();
-  const { data: customers, isLoading, error, refetch } = useCustomers();
 
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | 'ALL'>('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Debounce search input before it hits the server-side `search` param.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const {
+    data: customers,
+    total,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    error,
+    refetch,
+    loadMore,
+  } = useCustomers(debouncedQuery);
+
   const setField = (key: keyof typeof INITIAL_FORM) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  // Search already happened server-side; status filter is client-side over
+  // whatever page(s) are currently loaded.
   const filtered = useMemo(() => {
     if (!customers) return [];
-    const q = query.trim().toLowerCase();
-    return customers.filter((c) => {
-      if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
-      if (!q) return true;
-      return `${c.firstName} ${c.lastName} ${c.phone} ${c.email ?? ''} ${c.identityNumber}`
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [customers, query, statusFilter]);
+    if (statusFilter === 'ALL') return customers;
+    return customers.filter((c) => c.status === statusFilter);
+  }, [customers, statusFilter]);
 
+  // `total` is the server-side count across the whole directory; the other
+  // stats can only reflect whatever page(s) are currently loaded (Load More).
   const stats = useMemo(() => {
     const list = customers ?? [];
     return {
-      total: list.length,
+      total,
       active: list.filter((c) => c.status === 'ACTIVE').length,
       blacklisted: list.filter((c) => c.status === 'BLACKLISTED').length,
       totalBookings: list.reduce((sum, c) => sum + (c._count?.bookings ?? 0), 0),
     };
-  }, [customers]);
+  }, [customers, total]);
 
   const closeAddModal = () => {
     setIsAddModalOpen(false);
@@ -340,6 +355,15 @@ export default function CustomersPage() {
             })}
           </div>
         </Card>
+      )}
+
+      {/* ═══════ Load more ═══════ */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={loadMore} isLoading={isLoadingMore}>
+            {isLoadingMore ? t('loadingMore') : t('loadMore')}
+          </Button>
+        </div>
       )}
 
       {/* ═══════ Add Client Modal ═══════ */}

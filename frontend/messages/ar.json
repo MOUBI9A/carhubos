@@ -724,6 +724,8 @@
     "blacklistedClients": "محظورون",
     "totalRentals": "إجمالي الإيجارات",
     "searchCustomers": "ابحث عن اسم أو هاتف أو بريد إلكتروني أو رقم هوية…",
+    "loadMore": "تحميل المزيد",
+    "loadingMore": "جارٍ التحميل…",
     "noCustomersYet": "لا توجد عملاء حتى الآن",
     "registerFirstClient": "سجل عميلك الأول لبدء الحجوزات وبناء سجل ثقة.",
     "noMatchingClients": "لا توجد عملاء مطابقون",

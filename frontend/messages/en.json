@@ -724,6 +724,8 @@
     "blacklistedClients": "Blacklisted",
     "totalRentals": "Total rentals",
     "searchCustomers": "Search name, phone, email or identity number…",
+    "loadMore": "Load more",
+    "loadingMore": "Loading…",
     "noCustomersYet": "No customers yet",
     "registerFirstClient": "Register your first client to start booking rentals and building trust history.",
     "noMatchingClients": "No matching clients",
