@@ -24,13 +24,20 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // CI runners are slower and share CPU, and `next dev` JIT-compiles each
-  // route on its first request in-run (no production build here) — the
-  // first-ever hit on a given route/interaction can blow past timeouts
-  // tuned for a warm local machine even though the app itself is fine.
-  // Confirmed on a real run: every role but ROOT_ADMIN (whose only landing
-  // route, /admin, had never been visited yet) passed its redirect check in
-  // under 5s; ROOT_ADMIN alone timed out at 30s hitting that cold route.
+  // A first pass at this (raising these timeouts alone, theorizing `next
+  // dev`'s on-demand route compilation was just slow under CI's CPU) was
+  // tested on a real CI run and disproven: the same class of failure still
+  // hit the new, higher ceiling exactly, and a *different* role/spec failed
+  // on the next run — not the same "cold route" every time. A raw Playwright
+  // script run locally against a genuine `next start` production build (no
+  // JIT compilation at all) still occasionally failed to render the login
+  // form within 30s, pointing at general resource-contention-sensitive
+  // flakiness rather than one deterministic bug. `next dev`'s heavier
+  // per-request runtime (unminified bundles, on-demand compilation, HMR)
+  // was a real contributor regardless of the exact mechanism, so CI now
+  // runs a production build (see .github/workflows/ci.yml's "Build frontend
+  // (production)" step) instead of `next dev`. This timeout bump is kept as
+  // a secondary safety margin, not the primary fix.
   timeout: process.env.CI ? 60_000 : 30_000,
   expect: { timeout: process.env.CI ? 20_000 : 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -54,9 +61,11 @@ export default defineConfig({
 
   // Reuse the dev servers if they're already up; otherwise start them.
   // The backend must be reachable for the setup project to seed data.
+  // In CI the frontend is already built (see workflow) — just start the
+  // production server; locally, run the normal dev server.
   webServer: [
     {
-      command: 'npm run dev -- -p 3002',
+      command: process.env.CI ? 'npm run start -- -p 3002' : 'npm run dev -- -p 3002',
       url: FRONTEND_URL,
       reuseExistingServer: true,
       timeout: 120_000,

@@ -168,6 +168,15 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # `next dev` JIT-compiles routes on first request, which under CI's
+      # shared/slower CPU was a real source of flakiness (see
+      # playwright.config.ts). Playwright's webServer runs `next start`
+      # against this build instead, matching how the app actually behaves
+      # in production and removing that variance entirely.
+      - name: Build frontend (production)
+        working-directory: frontend
+        run: npm run build
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps chromium
