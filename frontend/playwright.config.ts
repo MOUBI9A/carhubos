@@ -24,8 +24,15 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
+  // CI runners are slower and share CPU, and `next dev` JIT-compiles each
+  // route on its first request in-run (no production build here) — the
+  // first-ever hit on a given route/interaction can blow past timeouts
+  // tuned for a warm local machine even though the app itself is fine.
+  // Confirmed on a real run: every role but ROOT_ADMIN (whose only landing
+  // route, /admin, had never been visited yet) passed its redirect check in
+  // under 5s; ROOT_ADMIN alone timed out at 30s hitting that cold route.
+  timeout: process.env.CI ? 60_000 : 30_000,
+  expect: { timeout: process.env.CI ? 20_000 : 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
