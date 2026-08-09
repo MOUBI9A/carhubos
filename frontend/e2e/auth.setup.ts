@@ -85,7 +85,10 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
 
   // 4) Log in through the actual UI and capture the authenticated state.
   await page.goto('/login');
-  await page.getByPlaceholder('name@agency.com').fill(account.email);
+  // By input type, not placeholder: the placeholder is translated
+  // ("nom@agence.com" under the FR default), so a literal would break the
+  // whole suite the moment the negotiated locale isn't English.
+  await page.locator('input[type="email"]').fill(account.email);
   await page.locator('input[type="password"]').fill(account.password);
   // Locale-independent: the sign-in copy is translated (FR "Se connecter" is
   // the actual default-locale text; "Secure Login" never appears in any

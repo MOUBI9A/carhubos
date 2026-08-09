@@ -1,10 +1,29 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 /**
  * Pillar 6 — Client Risk Assessment in the booking flow.
  * The setup seeds a clean customer ("Test Renter") and a CRITICAL-flagged one
  * ("Flagged Renter") on the Trust Network.
  */
+
+/**
+ * Combobox options live in the popup's `<ul role="listbox">`. Scope to it —
+ * a bare `page.getByRole('option')` ALSO matches the sidebar
+ * LocaleSwitcher's native `<select>` (Français / العربية / English), whose
+ * `<option>` children keep the `option` role but are never visible while
+ * the select is closed. See booking-flow.e2e.ts for the same guard.
+ */
+function comboboxOptions(page: Page) {
+  return page.getByRole('listbox').getByRole('option');
+}
+
+/** Booking date inputs enforce `min` = today; never hardcode a literal. */
+function daysFromToday(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 test.describe('Client Risk Assessment (booking flow)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard');
@@ -12,10 +31,10 @@ test.describe('Client Risk Assessment (booking flow)', () => {
     await page.getByRole('button', { name: 'New Booking' }).click();
   });
 
-  async function pickCustomer(page: any, name: string) {
+  async function pickCustomer(page: Page, name: string) {
     await page.locator('button[aria-haspopup="listbox"]').first().click();
     await page.getByPlaceholder('Type to filter...').fill(name);
-    await page.getByRole('option').filter({ hasText: name }).first().click();
+    await comboboxOptions(page).filter({ hasText: name }).first().click();
   }
 
   test('shows the risk panel with a NEW state for an unknown renter', async ({ page }) => {
@@ -36,11 +55,11 @@ test.describe('Client Risk Assessment (booking flow)', () => {
     await expect(locked).toBeVisible();
 
     // Fill the remaining fields and try to submit — it must be blocked.
-    await page.locator('input[name="startDate"]').fill('2026-10-01');
-    await page.locator('input[name="endDate"]').fill('2026-10-04');
+    await page.locator('input[name="startDate"]').fill(daysFromToday(30));
+    await page.locator('input[name="endDate"]').fill(daysFromToday(33));
     // Select the first available car.
     await page.locator('button[aria-haspopup="listbox"]').nth(1).click();
-    await page.getByRole('option').first().click();
+    await comboboxOptions(page).first().click();
 
     await locked.click();
     await expect(page.getByText('Renter Blocked')).toBeVisible();

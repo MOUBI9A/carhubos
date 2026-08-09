@@ -19,7 +19,11 @@ test.describe('Role-based login routing', () => {
   for (const c of cases) {
     test(`${c.role} logs in and lands on ${c.landing}`, async ({ page }) => {
       await page.goto('/login');
-      await page.getByPlaceholder('name@agency.com').fill(c.email);
+      // Target the input by type, not its placeholder: the placeholder is
+      // translated ("nom@agence.com" under the FR default), so a literal
+      // would silently stop matching the moment the negotiated locale isn't
+      // English.
+      await page.locator('input[type="email"]').fill(c.email);
       await page.locator('input[type="password"]').fill('admin123');
       await page.locator('form button[type="submit"]').click();
 
@@ -31,7 +35,7 @@ test.describe('Role-based login routing', () => {
   test('a renter cannot reach the owner dashboard (role gate)', async ({ page }) => {
     // Log in as renter, then try to open /dashboard directly.
     await page.goto('/login');
-    await page.getByPlaceholder('name@agency.com').fill('renter@carhub.os');
+    await page.locator('input[type="email"]').fill('renter@carhub.os');
     await page.locator('input[type="password"]').fill('admin123');
     await page.locator('form button[type="submit"]').click();
     await page.waitForURL('**/portal');

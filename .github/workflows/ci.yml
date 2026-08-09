@@ -137,6 +137,12 @@ jobs:
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-real
       IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
       ALLOWED_ORIGINS: http://localhost:3002
+      # roles.e2e.ts signs in as all five seeded roles back-to-back, which
+      # legitimately trips the strict 5-per-60s brute-force guard on
+      # /auth/login (verified: the 6th login onwards returns 429). CI-only —
+      # every other environment keeps the strict default. See
+      # backend/src/auth/auth.controller.ts.
+      AUTH_THROTTLE_LIMIT: 1000
     steps:
       - uses: actions/checkout@v4
 
@@ -167,6 +173,15 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
+
+      # `next dev` JIT-compiles routes on first request, which under CI's
+      # shared/slower CPU was a real source of flakiness (see
+      # playwright.config.ts). Playwright's webServer runs `next start`
+      # against this build instead, matching how the app actually behaves
+      # in production and removing that variance entirely.
+      - name: Build frontend (production)
+        working-directory: frontend
+        run: npm run build
 
       - name: Install Playwright browsers
         working-directory: frontend

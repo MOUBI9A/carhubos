@@ -257,7 +257,9 @@ test.describe('Vault file manager', () => {
     // Confirm: real delete flow.
     setFiles([SAMPLE_FILE]); // (no-op, still there — the DELETE handler itself mutates the list)
     await page.getByRole('button', { name: /Delete insurance-policy.pdf/i }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    // The confirm button is labelled "Delete file" (matching the dialog
+    // heading), not a bare "Delete" — `exact` on the old label matched nothing.
+    await page.getByRole('button', { name: 'Delete file', exact: true }).click();
 
     await expect(page.getByText('File removed')).toBeVisible();
     await expect(page.getByText('No files yet')).toBeVisible();

@@ -24,6 +24,14 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Deliberately NOT inflated for CI. The failures that made this suite red
+  // looked like slowness (everything died on a timeout) but were all
+  // deterministic bugs — stale locators, a rate limit, and dates that had
+  // aged into the past; raising these to 60s/20s was tried on a real CI run
+  // and changed nothing except how long the run took to go red. With the
+  // real causes fixed the whole suite passes in ~1 minute with every
+  // individual test under 3s, so 30s/10s is ~10x headroom. Longer ceilings
+  // would only delay honest failures.
   timeout: 30_000,
   expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -47,9 +55,11 @@ export default defineConfig({
 
   // Reuse the dev servers if they're already up; otherwise start them.
   // The backend must be reachable for the setup project to seed data.
+  // In CI the frontend is already built (see workflow) — just start the
+  // production server; locally, run the normal dev server.
   webServer: [
     {
-      command: 'npm run dev -- -p 3002',
+      command: process.env.CI ? 'npm run start -- -p 3002' : 'npm run dev -- -p 3002',
       url: FRONTEND_URL,
       reuseExistingServer: true,
       timeout: 120_000,
