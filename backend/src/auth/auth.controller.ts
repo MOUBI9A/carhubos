@@ -6,17 +6,34 @@ import type { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
+/**
+ * Brute-force guard on the credential endpoints: 5 attempts / 60s per IP.
+ *
+ * Configurable ONLY so an automated suite can opt out of fighting it — the
+ * full E2E run signs in as every seeded role back-to-back (6+ logins from
+ * one IP inside a minute), which the strict limit correctly rejects with
+ * 429, and no amount of test retrying can get around a working rate
+ * limiter. The `.github/workflows/ci.yml` e2e job raises it; nothing else
+ * sets these, so every other environment — including production — keeps
+ * the strict 5/60s default below. Deliberately NOT wired to NODE_ENV: a
+ * missing/typo'd var must fail safe (strict), never silently open.
+ */
+const AUTH_THROTTLE = {
+  limit: Number(process.env.AUTH_THROTTLE_LIMIT) || 5,
+  ttl: Number(process.env.AUTH_THROTTLE_TTL_MS) || 60000,
+};
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: AUTH_THROTTLE })
   @Post('register')
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: AUTH_THROTTLE })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {

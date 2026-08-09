@@ -24,22 +24,16 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // A first pass at this (raising these timeouts alone, theorizing `next
-  // dev`'s on-demand route compilation was just slow under CI's CPU) was
-  // tested on a real CI run and disproven: the same class of failure still
-  // hit the new, higher ceiling exactly, and a *different* role/spec failed
-  // on the next run — not the same "cold route" every time. A raw Playwright
-  // script run locally against a genuine `next start` production build (no
-  // JIT compilation at all) still occasionally failed to render the login
-  // form within 30s, pointing at general resource-contention-sensitive
-  // flakiness rather than one deterministic bug. `next dev`'s heavier
-  // per-request runtime (unminified bundles, on-demand compilation, HMR)
-  // was a real contributor regardless of the exact mechanism, so CI now
-  // runs a production build (see .github/workflows/ci.yml's "Build frontend
-  // (production)" step) instead of `next dev`. This timeout bump is kept as
-  // a secondary safety margin, not the primary fix.
-  timeout: process.env.CI ? 60_000 : 30_000,
-  expect: { timeout: process.env.CI ? 20_000 : 10_000 },
+  // Deliberately NOT inflated for CI. The failures that made this suite red
+  // looked like slowness (everything died on a timeout) but were all
+  // deterministic bugs — stale locators, a rate limit, and dates that had
+  // aged into the past; raising these to 60s/20s was tried on a real CI run
+  // and changed nothing except how long the run took to go red. With the
+  // real causes fixed the whole suite passes in ~1 minute with every
+  // individual test under 3s, so 30s/10s is ~10x headroom. Longer ceilings
+  // would only delay honest failures.
+  timeout: 30_000,
+  expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
