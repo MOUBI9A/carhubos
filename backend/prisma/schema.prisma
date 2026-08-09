@@ -52,6 +52,9 @@ model Agency {
   checkoutSessions CheckoutSession[]
   vaultFiles       VaultFile[]
 
+  telematicsIntegration TelematicsIntegration?
+  telematicsCommands    TelematicsCommand[]
+
   @@index([deletedAt])
 }
 
@@ -154,9 +157,16 @@ model Car {
   hubListing  HubListing?
   accidents   Accident[]
 
+  // 📡 TELEMATICS: this car's tracker in the agency's OWN GPS provider account.
+  // Opaque provider-side id (Traccar numeric device id, Wialon unit id, an
+  // IMEI, …) — never parsed here, only handed back to that provider's adapter.
+  telematicsDeviceId String?
+  telematicsCommands TelematicsCommand[]
+
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
   @@index([status])
+  @@index([telematicsDeviceId])
 }
 
 model CarDocument {
@@ -812,4 +822,65 @@ model PlatformInvoice {
 
   @@index([agencyId])
   @@index([status])
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 📡 TELEMATICS / GPS
+//
+// An agency brings its OWN GPS provider account (Traccar, Wialon, whatever
+// their installer sold them) — Fider never resells tracking hardware and
+// never becomes the system of record for raw position history. We hold the
+// connection details, translate provider dialects behind one adapter
+// interface, and enforce the safety + authorization rules around the one
+// genuinely dangerous capability: immobilizing a vehicle.
+// ═══════════════════════════════════════════════════════════════════════
+
+/// One GPS/telematics account per agency. `credentials` is an AES-256-GCM
+/// ciphertext blob (see common/crypto.ts) — plaintext provider secrets are
+/// NEVER stored, and never leave the server in any API response.
+model TelematicsIntegration {
+  id            String    @id @default(uuid())
+  provider      String // MOCK, TRACCAR
+  baseUrl       String? // provider host; SSRF-screened before it is ever stored
+  credentials   String // AES-256-GCM ciphertext — write-only, never serialized
+  status        String    @default("ACTIVE") // ACTIVE, DISABLED, ERROR
+  lastCheckedAt DateTime?
+  lastError     String? // last connection failure, surfaced to the owner
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
+
+/// Forensic trail for every mobility command. Written for REJECTED attempts
+/// too — a refusal to immobilize (car moving, stale GPS fix) is exactly the
+/// kind of event that matters in a later dispute, so it must not be silent.
+model TelematicsCommand {
+  id     String @id @default(uuid())
+  type   String // IMMOBILIZE, RESTORE_MOBILITY
+  status String // SENT, FAILED, REJECTED
+  /// Mandatory operator justification — no anonymous immobilizations.
+  reason String
+
+  /// Telemetry snapshot the safety interlock actually decided on, kept so a
+  /// dispute can be reconstructed from what was known AT THE TIME.
+  speedKphAtRequest      Float?
+  ignitionOnAtRequest    Boolean?
+  fixAgeSecondsAtRequest Int?
+
+  providerRef   String? // provider-side command id, when it returns one
+  failureReason String?
+
+  requestedByUserId String
+  createdAt         DateTime @default(now())
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  carId    String
+  car      Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([carId])
+  @@index([createdAt])
 }

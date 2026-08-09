@@ -42,6 +42,7 @@ import { AccidentsModule } from './accidents/accidents.module';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { VaultModule } from './vault/vault.module';
+import { TelematicsModule } from './telematics/telematics.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { VaultModule } from './vault/vault.module';
     PaymentGatewayModule,
     CheckoutModule,
     VaultModule,
+    TelematicsModule,
   ],
   controllers: [AppController],
   providers: [
