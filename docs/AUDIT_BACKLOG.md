@@ -193,6 +193,50 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
+## PHASE 13 — Telematics / GPS ✅ DONE (`feat-telematics-gps`; see [TELEMATICS.md](TELEMATICS.md))
+
+Founder ask (2026-08-09): let owners connect their GPS provider API to
+locate a vehicle, read what the tracker knows, and stop it.
+
+- ✅ **[H] Provider-agnostic adapter layer** — `TelematicsAdapter` + MOCK
+  (deterministic, no network) + TRACCAR (real REST/Basic). Mirrors the
+  payment-gateway MOCK/STRIPE precedent. Agencies bring their own account;
+  Fider never resells hardware or stores position history.
+- ✅ **[H] Safety interlock on immobilization** — starter-interrupt semantics
+  only (blocks the NEXT start, never cuts a running engine). Refused unless
+  stationary ≤3 km/h **AND** GPS fix ≤180s old **AND** ignition off. Enforced
+  in the service, above the adapter, so no provider can skip it. Refusals are
+  persisted + audit-logged, never silent.
+- ✅ **[H] Credentials encrypted at rest** — AES-256-GCM (`common/crypto.ts`),
+  fail-fast on missing `CREDENTIALS_ENCRYPTION_KEY`, never selected into an
+  API response or an audit row.
+- ✅ **[H] SSRF screen on the agency-supplied provider URL** — reuses the
+  webhooks host guard (loopback/link-local/RFC1918/IPv6 ULA), https-only,
+  redirects not followed.
+- ✅ **[H] Capability split by consequence** — `telematics.view` (AGENT/
+  MANAGER/OWNER) vs `telematics.command` (OWNER only), **plus a data
+  migration backfilling both onto existing memberships**. Note for future
+  work: adding a capability to the catalog does NOT reach already-created
+  `AgencyMembership.capabilities`; every future addition needs the same
+  backfill.
+- ✅ **[M] UI** — live-tracking panel on the vehicle detail page (position,
+  speed, ignition, fix age, battery, command history, immobilize/restore
+  behind a confirmation + mandatory reason) and a provider-connection
+  section on owner Settings.
+- ⬜ **[M] i18n the telematics UI** — both new surfaces are English-only.
+  Matches the fleet-detail page they sit on (itself still largely English),
+  but the settings page around them *is* translated. Best done alongside
+  finishing fleet-detail's own i18n.
+- ⬜ **[L] Second real adapter (Wialon)** — the obvious next one for this
+  market; the interface is ready for it.
+- ⬜ **[L] Geofencing / trip history / provider webhooks** — out of scope for
+  V1; state is read on demand.
+- ⚠️ **Human gate:** remote immobilization must be **disclosed in the rental
+  contract** before it is used on a customer's vehicle. Product/legal call,
+  not a code change.
+
+---
+
 ## Market-Ready Checklist (definition of done)
 
 - [ ] No secrets/DB/build-output in git; history clean; secrets rotated & managed.

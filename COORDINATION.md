@@ -2916,3 +2916,72 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+---
+
+### R48 — Telematics / GPS integration (2026-08-09)
+
+**Founder ask:** let car owners plug in their GPS provider API so they can
+see where a vehicle is, read everything the tracker knows, and stop it.
+
+**Shipped** on `feat-telematics-gps` (backend + UI + docs). Full design,
+safety rationale and operating guide: **[docs/TELEMATICS.md](docs/TELEMATICS.md)** —
+read it before touching immobilization.
+
+**Shape.** Provider-agnostic adapter (`TelematicsAdapter`) mirroring the
+existing payment-gateway MOCK/STRIPE split; ships MOCK (deterministic, no
+network) and TRACCAR (real REST + Basic auth). The agency brings its own GPS
+account — we don't resell hardware and don't hold position history. Adding a
+vendor = one adapter + one `case` + one dropdown entry.
+
+**The safety decision, stated plainly because it constrains anything built
+on top of this:** immobilization is a **starter interrupt**. It blocks the
+NEXT start; it can never cut a running engine. Killing power to a moving car
+removes power steering and brake assist. The interlock lives in
+`TelematicsService`, above the adapter, so no future provider can skip it,
+and refuses unless live telemetry shows stationary (≤3 km/h) AND a fix ≤180s
+old AND ignition off. **The fix-freshness guard is the load-bearing one** —
+without it a "0 km/h" reading from 40 minutes ago would authorise
+immobilizing a car doing 120 km/h, and the speed check would be theatre.
+Refusals return 409 and are persisted + audit-logged like any other command;
+a refusal is exactly what a later dispute turns on. `restoreMobility` is
+deliberately un-gated (releasing is the safe direction; gating it would
+strand a renter when their tracker has poor signal).
+
+**Two things worth knowing for anyone else touching this area:**
+
+1. **Adding a capability to the catalog does NOT reach existing
+   memberships.** `AgencyMembership.capabilities` is a materialised
+   `String[]` snapshot, so `telematics.view`/`telematics.command` 403'd
+   immediately for the seeded OWNER after the code shipped. Fixed with a data
+   migration (`20260809043000_backfill_telematics_capabilities`) that mirrors
+   ROLE_PRESETS and leaves custom staff presets alone. **Any future
+   capability addition needs the same backfill** — the Staff & Access UI
+   can't self-serve it, since it only toggles capabilities a membership
+   already knows about.
+2. **Traccar reports speed in KNOTS**, not km/h. The adapter converts
+   (×1.852). Getting that wrong would make 50 km/h read as 27 and could let
+   the interlock pass when it should refuse.
+
+**Verified:** backend **51 suites / 421 tests**, tsc + eslint clean
+(backend + frontend). Live end-to-end against the running stack: connect
+provider → credentials absent from the read-back → link device → live state
+→ short-reason rejected 400 → immobilize 201 with telemetry snapshot
+persisted → `immobilized:true` derived → command history → restore → **both
+SSRF guards rejected** (private IP and plain http, 400 each). UI verified in
+the browser on the fleet detail page and owner settings.
+
+**Open findings for the other agent:**
+
+- **The telematics UI is English-only** (`TelematicsPanel`,
+  `TelematicsSettings`) while the app is FR-default/AR-RTL/EN. It matches the
+  fleet-detail page it sits on, which is *itself* still largely English
+  ("Rental history", "Asset specs", "Compliance score") — but the settings
+  page around `TelematicsSettings` **is** translated, so that one is a
+  genuine inconsistency. Wiring both through next-intl, ideally alongside
+  finishing the fleet-detail page, is unclaimed.
+- **The E2E suite trips the app's own auth rate limit** (5 logins/60s/IP;
+  `roles.e2e.ts` does 6 back-to-back). Fixed on `fix-e2e-ci-timeouts` (PR #5)
+  by making the limit env-configurable with the strict default preserved and
+  raising it in CI only. Mentioned here because it bit this work too during
+  local verification, and will bite anyone running the suite locally.
