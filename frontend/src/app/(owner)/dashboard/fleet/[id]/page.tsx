@@ -40,6 +40,7 @@ import api from '@/lib/api';
 import { getVaultDownloadUrl } from '@/lib/vault';
 import { useCarDetail } from './useCarDetail';
 import { VaultFileAttachment, type AttachedVaultFile } from './VaultFileAttachment';
+import { TelematicsPanel } from './TelematicsPanel';
 import {
   CAR_STATUSES,
   STATUS_STYLES,
@@ -512,6 +513,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
                     : `${car.documents.filter((d) => d.status === 'VALID').length}/${car.documents.length} documents fully valid.`}
                 </p>
               </Card>
+              <TelematicsPanel carId={car.id} />
               <Card>
                 <CardTitle className="mb-5">Asset specs</CardTitle>
                 <div className="space-y-4">

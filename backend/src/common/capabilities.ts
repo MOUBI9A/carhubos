@@ -46,6 +46,12 @@ export const AGENCY_CAPABILITIES = [
   'staff.manage',
   'settings.manage',
   'billing.manage',
+  // 📡 Telematics. Split deliberately: seeing where a car is is routine
+  // fleet work, but immobilizing one is a high-consequence physical act on
+  // a customer's vehicle, so it is a separate grant that OWNER holds alone
+  // by default (see ROLE_PRESETS — excluded from MANAGER and AGENT).
+  'telematics.view',
+  'telematics.command',
 ] as const;
 
 /**
@@ -74,18 +80,25 @@ export type PlatformCapability = (typeof PLATFORM_CAPABILITIES)[number];
  *
  *   OWNER   — the whole agency catalog.
  *   MANAGER — everything EXCEPT staff.manage + settings.manage + billing.manage
- *             (can run ops, not hire staff, change agency settings, or upgrade
- *             the SaaS plan).
+ *             + telematics.command (can run ops and see where vehicles are,
+ *             but not hire staff, change agency settings, upgrade the SaaS
+ *             plan, or immobilize a customer's car).
  *   AGENT   — front-line operational subset (no finance.view / payment.verify /
  *             expense.manage / hub.manage / staff.manage / settings.manage).
+ *             Gets telematics.view so front desk can locate a late return;
+ *             never telematics.command.
  */
 export const ROLE_PRESETS: Record<string, string[]> = {
   OWNER: [...AGENCY_CAPABILITIES],
   MANAGER: AGENCY_CAPABILITIES.filter(
     (c) =>
-      c !== 'staff.manage' && c !== 'settings.manage' && c !== 'billing.manage',
+      c !== 'staff.manage' &&
+      c !== 'settings.manage' &&
+      c !== 'billing.manage' &&
+      c !== 'telematics.command',
   ),
   AGENT: [
+    'telematics.view',
     'fleet.view',
     'booking.view',
     'booking.create',
