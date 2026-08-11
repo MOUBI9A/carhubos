@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Satellite,
   CheckCircle2,
@@ -25,17 +26,15 @@ interface Integration {
   lastError: string | null;
 }
 
+/**
+ * Provider options. "Traccar" is a product name and stays untranslated in every
+ * locale — it is what the operator sees in their own provider's dashboard, and
+ * translating it would break the connection between the two screens. The demo
+ * option is a description, not a name, so it is translated.
+ */
 const PROVIDERS = [
-  {
-    value: 'TRACCAR',
-    label: 'Traccar',
-    hint: 'Open-source, self-hosted. Works with most generic GPS trackers.',
-  },
-  {
-    value: 'MOCK',
-    label: 'Demo (simulated)',
-    hint: 'No real hardware — simulated positions for trying the feature out.',
-  },
+  { value: 'TRACCAR', labelKey: null, hintKey: 'gpsProviderTraccarHint' },
+  { value: 'MOCK', labelKey: 'gpsProviderMock', hintKey: 'gpsProviderMockHint' },
 ] as const;
 
 const inputCls =
@@ -50,6 +49,7 @@ const inputCls =
  * confirm what it holds, which is exactly what we don't want it doing.
  */
 export function TelematicsSettings() {
+  const t = useTranslations('ownerPages');
   const { showToast } = useToast();
   const [integration, setIntegration] = useState<Integration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,18 +98,14 @@ export function TelematicsSettings() {
               password: form.password,
             };
       await api.put('/telematics/integration', payload);
-      showToast(
-        'success',
-        'GPS provider connected',
-        'Credentials were verified against your provider and stored encrypted.',
-      );
+      showToast('success', t('gpsConnectedToast'), t('gpsConnectedToastDesc'));
       setForm((f) => ({ ...f, username: '', password: '' }));
       await load();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not connect.';
+      const msg = err?.response?.data?.message || t('gpsCouldNotConnect');
       showToast(
         'danger',
-        'Connection failed',
+        t('gpsConnectionFailed'),
         Array.isArray(msg) ? msg.join(' ') : String(msg),
       );
     } finally {
@@ -121,11 +117,15 @@ export function TelematicsSettings() {
     setIsTesting(true);
     try {
       await api.post('/telematics/integration/test');
-      showToast('success', 'Connection OK', 'Your GPS provider responded normally.');
+      showToast('success', t('gpsConnectionOk'), t('gpsConnectionOkDesc'));
       await load();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'The provider did not respond.';
-      showToast('danger', 'Connection failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      const msg = err?.response?.data?.message || t('gpsProviderNoResponse');
+      showToast(
+        'danger',
+        t('gpsConnectionFailed'),
+        Array.isArray(msg) ? msg.join(' ') : String(msg),
+      );
       await load();
     } finally {
       setIsTesting(false);
@@ -136,11 +136,15 @@ export function TelematicsSettings() {
     setIsSaving(true);
     try {
       await api.delete('/telematics/integration');
-      showToast('success', 'Disconnected', 'The GPS provider was removed.');
+      showToast('success', t('gpsDisconnected'), t('gpsDisconnectedDesc'));
       setIntegration(null);
       setForm({ provider: 'TRACCAR', baseUrl: '', username: '', password: '' });
     } catch (err: any) {
-      showToast('danger', 'Could not disconnect', err?.response?.data?.message || 'Please try again.');
+      showToast(
+        'danger',
+        t('gpsCouldNotDisconnect'),
+        err?.response?.data?.message || t('gpsTryAgain'),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -152,17 +156,16 @@ export function TelematicsSettings() {
     <Card>
       <CardHeader className="p-0 mb-5 items-start">
         <div>
-          <CardTitle>GPS &amp; tracking</CardTitle>
+          <CardTitle>{t('gpsSettingsTitle')}</CardTitle>
           <CardDescription className="mt-1">
-            Connect your own GPS account to locate vehicles and use the remote
-            immobilizer
+            {t('gpsSettingsSubtitle')}
           </CardDescription>
         </div>
         {integration && (
           <Badge variant={integration.status === 'ACTIVE' ? 'outline' : 'destructive'}>
             {integration.status === 'ACTIVE' ? (
               <>
-                <CheckCircle2 className="w-3 h-3 me-1" /> Connected
+                <CheckCircle2 className="w-3 h-3 me-1" /> {t('gpsConnected')}
               </>
             ) : (
               <>
@@ -185,10 +188,11 @@ export function TelematicsSettings() {
       <div className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-surface border border-hairline">
         <ShieldCheck className="w-4 h-4 text-text-faint shrink-0 mt-0.5" />
         <p className="text-[11px] text-text-muted leading-relaxed">
-          Fider connects to <strong className="text-foreground">your</strong> GPS
-          account — we never resell trackers and never hold your position history.
-          Credentials are encrypted before they are stored and are never shown
-          again after saving.
+          {t.rich('gpsPrivacyNote', {
+            b: (chunks) => (
+              <strong className="text-foreground">{chunks}</strong>
+            ),
+          })}
         </p>
       </div>
 
@@ -197,7 +201,7 @@ export function TelematicsSettings() {
       ) : (
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-1.5">
-            <p className="eyebrow px-1">Provider</p>
+            <p className="eyebrow px-1">{t('gpsProvider')}</p>
             <select
               value={form.provider}
               onChange={(e) =>
@@ -208,19 +212,21 @@ export function TelematicsSettings() {
             >
               {PROVIDERS.map((p) => (
                 <option key={p.value} value={p.value}>
-                  {p.label}
+                  {p.labelKey ? t(p.labelKey) : 'Traccar'}
                 </option>
               ))}
             </select>
             {selected && (
-              <p className="px-1 text-[11px] text-text-faint">{selected.hint}</p>
+              <p className="px-1 text-[11px] text-text-faint">
+                {t(selected.hintKey)}
+              </p>
             )}
           </div>
 
           {form.provider !== 'MOCK' && (
             <>
               <div className="space-y-1.5">
-                <p className="eyebrow px-1">Server URL *</p>
+                <p className="eyebrow px-1">{t('gpsServerUrl')}</p>
                 <input
                   value={form.baseUrl}
                   onChange={(e) => setForm((f) => ({ ...f, baseUrl: e.target.value }))}
@@ -229,12 +235,12 @@ export function TelematicsSettings() {
                   className={inputCls}
                 />
                 <p className="px-1 text-[11px] text-text-faint">
-                  Must be an https address reachable from the internet.
+                  {t('gpsServerUrlHint')}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <p className="eyebrow px-1">Username / email *</p>
+                  <p className="eyebrow px-1">{t('gpsUsername')}</p>
                   <input
                     value={form.username}
                     onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
@@ -244,14 +250,14 @@ export function TelematicsSettings() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <p className="eyebrow px-1">Password / API key *</p>
+                  <p className="eyebrow px-1">{t('gpsPassword')}</p>
                   <input
                     type="password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                     disabled={isSaving}
                     autoComplete="new-password"
-                    placeholder={integration ? 'Re-enter to update' : ''}
+                    placeholder={integration ? t('gpsReenterToUpdate') : ''}
                     className={inputCls}
                   />
                 </div>
@@ -262,7 +268,7 @@ export function TelematicsSettings() {
           <div className="flex flex-wrap gap-3 pt-1">
             <Button type="submit" isLoading={isSaving}>
               <PlugZap className="w-4 h-4 me-2" />
-              {integration ? 'Update connection' : 'Connect'}
+              {integration ? t('gpsUpdateConnection') : t('gpsConnect')}
             </Button>
             {integration && (
               <>
@@ -272,7 +278,7 @@ export function TelematicsSettings() {
                   onClick={handleTest}
                   isLoading={isTesting}
                 >
-                  <Satellite className="w-4 h-4 me-2" /> Test connection
+                  <Satellite className="w-4 h-4 me-2" /> {t('gpsTestConnection')}
                 </Button>
                 <Button
                   type="button"
@@ -281,7 +287,7 @@ export function TelematicsSettings() {
                   onClick={handleDisconnect}
                   disabled={isSaving}
                 >
-                  <Trash2 className="w-4 h-4 me-2" /> Disconnect
+                  <Trash2 className="w-4 h-4 me-2" /> {t('gpsDisconnect')}
                 </Button>
               </>
             )}
