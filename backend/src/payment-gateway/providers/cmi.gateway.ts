@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
   CreateCheckoutInput,
   CreateCheckoutOutput,
@@ -29,8 +29,11 @@ import {
 export class CmiGateway implements PaymentGatewayProvider {
   readonly name = 'CMI' as const;
 
+  // Still fails loud, but as 503 "not available" rather than 500 "app broke" —
+  // selecting an unimplemented gateway is a configuration state, not a crash,
+  // and the distinction matters once error tracking is watching 5xx.
   private notConfigured(): never {
-    throw new Error(
+    throw new ServiceUnavailableException(
       'CMI gateway selected (PAYMENT_PROVIDER=cmi) but not implemented/' +
         'configured. Requires a CMI merchant contract; set CMI_CLIENT_ID + ' +
         'CMI_STORE_KEY + CMI_GATEWAY_URL and implement CmiGateway (see the doc).',
