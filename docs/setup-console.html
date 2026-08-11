@@ -495,6 +495,7 @@
         <li><a href="#backend-env">backend/.env <b>18</b></a></li>
         <li><a href="#root-env">.env (root) <b>4</b></a></li>
         <li><a href="#frontend-env">frontend/.env.local <b>1</b></a></li>
+        <li><a href="#external">Outside this repo <b>3</b></a></li>
         <li><a href="#in-app">In the app <b>3</b></a></li>
         <li><a href="#output">What to copy <b>4</b></a></li>
       </ol>
@@ -536,8 +537,8 @@
             </tr>
             <tr>
               <td class="k">Payments</td>
-              <td class="d"><b style="color:var(--ok)">Test keys present</b></td>
-              <td class="d">A decision: stay in test mode for beta, or switch to live keys.</td>
+              <td class="d"><b style="color:var(--brass)">Key works, one setting blocks it</b></td>
+              <td class="d">A business name on your Stripe account — Stripe disables Checkout account-wide without one. Tested live: your key authenticates fine, the call fails on that rule alone. See <em>Three clicks outside this repo</em> below.</td>
             </tr>
             <tr>
               <td class="k">GPS / telematics</td>
@@ -614,6 +615,72 @@
         <h2>frontend/.env.local</h2>
       </div>
       <div class="slots" id="frontendSlots"></div>
+    </section>
+
+    <!-- ============ OUTSIDE THE REPO ============ -->
+    <section id="external">
+      <div class="sec-head">
+        <p class="eyebrow">Nothing to type — just settings I can't reach</p>
+        <h2 class="prose">Three clicks outside this repo</h2>
+        <p>
+          Each of these lives in a dashboard only you can sign into. Two of them
+          are currently blocking something real.
+        </p>
+      </div>
+      <div class="slots">
+
+        <div class="slot" data-state="need">
+          <div class="slot-top">
+            <span class="slot-key">Stripe → set a business name</span>
+            <span class="chip need">blocking checkout</span>
+          </div>
+          <p class="slot-what">
+            <b>dashboard.stripe.com/account</b> → Account details → business name.
+            Stripe refuses to create any Checkout session until an account has one,
+            so this blocks online payment entirely — for every agency, in test mode
+            and live mode alike.
+          </p>
+          <p class="slot-warn">
+            <b>Confirmed live, 11 Aug.</b> Your restricted test key authenticates
+            correctly; the request fails on this rule and nothing else. Once the
+            name is set, the whole checkout path is testable with what you already
+            have configured — no new keys.
+          </p>
+        </div>
+
+        <div class="slot" data-state="prod">
+          <div class="slot-top">
+            <span class="slot-key">Twilio → apply for a WhatsApp sender</span>
+            <span class="chip prod">silently undelivered</span>
+          </div>
+          <p class="slot-what">
+            The configured number is Twilio's shared public sandbox. It only
+            delivers to people who separately opted into that sandbox first, so
+            no customer will ever receive a notification from it — and nothing
+            errors to tell you that.
+          </p>
+          <p class="slot-warn">
+            <b>Lead time.</b> Meta's approval takes days to weeks, so it's worth
+            starting well before you need it rather than during launch week.
+          </p>
+        </div>
+
+        <div class="slot" data-state="opt">
+          <div class="slot-top">
+            <span class="slot-key">GitHub → require the CI checks</span>
+            <span class="chip opt">your call</span>
+          </div>
+          <p class="slot-what">
+            Settings → Branches → protect <code>main</code> → require the
+            <b>Backend</b>, <b>Frontend</b>, <b>Backend E2E</b> and <b>E2E</b>
+            checks. Until then a red build can still be merged, which makes the
+            whole test suite advisory. Repo-admin only — I have no way to set it.
+            Worth doing <em>after</em> the open pull requests land, or it blocks
+            each of them until it's rebased.
+          </p>
+        </div>
+
+      </div>
     </section>
 
     <!-- ============ IN APP ============ -->
@@ -863,11 +930,11 @@
     {
       id: "stripe_mode",
       q: "Stay in Stripe test mode, or go live?",
-      why: "Your restricted test key and webhook secret are already in place, so test mode works end to end right now. Live mode needs a different key and a different webhook secret.",
+      why: "I ran the test-mode smoke test on 11 August: your restricted key authenticates correctly and the only thing stopping checkout is the missing business name on the Stripe account. Once that's set, test mode works end to end with what you already have. Live mode needs a different key and a different webhook secret.",
       opts: [
-        ["Test mode through the beta", "Nobody is charged. I can run a full end-to-end payment smoke test today with what's already configured."],
+        ["Test mode through the beta", "Nobody is charged. Set the business name and I'll run the full payment path with what's already configured."],
         ["Switch to live keys now", "Real money moves. I'd want you to watch the first transaction with me."],
-        ["Run the test-mode smoke test first", "I verify the whole checkout path on test keys, report exactly what happened, and you decide after."]
+        ["Set the business name, then decide", "One click, then I verify the whole checkout path on test keys and report exactly what happened."]
       ]
     },
     {
