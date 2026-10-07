@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface CardProps {
+  as?: 'div' | 'button';
   children: React.ReactNode;
   className?: string;
   variant?: 'default' | 'outline' | 'flat';
@@ -11,6 +12,7 @@ interface CardProps {
 }
 
 export function Card({ 
+  as: Element = 'div',
   children, 
   className, 
   variant = 'default',
@@ -32,18 +34,20 @@ export function Card({
   };
 
   return (
-    <div 
+    <Element
+      type={Element === 'button' ? 'button' : undefined}
       onClick={onClick}
       style={style}
       className={cn(
         'rounded-2xl transition-all duration-300',
+        Element === 'button' && 'text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         variants[variant],
         paddings[padding],
         className
       )}
     >
       {children}
-    </div>
+    </Element>
   );
 }
 

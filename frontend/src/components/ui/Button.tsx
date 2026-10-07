@@ -23,12 +23,16 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variants = {
-    primary: 'bg-cream text-background hover:bg-white shadow-sm',
-    outline: 'border border-border text-foreground hover:bg-white/[0.05]',
-    danger: 'bg-danger text-white hover:bg-danger/90 shadow-sm',
-    ghost: 'text-text-muted hover:text-foreground hover:bg-white/[0.05]',
+    primary:
+      'bg-cream text-background hover:bg-white shadow-sm [html[data-theme="titan"]_&]:bg-primary [html[data-theme="titan"]_&]:text-white [html[data-theme="titan"]_&]:shadow-lg [html[data-theme="titan"]_&]:shadow-primary/25 [html[data-theme="titan"]_&]:hover:bg-primary/90',
+    outline:
+      'border border-border text-foreground hover:bg-white/[0.05] [html[data-theme="titan"]_&]:border-white/10 [html[data-theme="titan"]_&]:hover:bg-white/10',
+    danger:
+      'bg-danger text-white hover:bg-danger/90 shadow-sm [html[data-theme="titan"]_&]:shadow-lg [html[data-theme="titan"]_&]:shadow-danger/25',
+    ghost:
+      'text-text-muted hover:text-foreground hover:bg-white/[0.05]',
     premium:
-      'text-background border border-metal-soft shadow-md bg-gradient-to-b from-[hsl(44_58%_64%)] to-[hsl(38_48%_48%)] hover:brightness-[1.06]',
+      'text-background border border-metal-soft shadow-md bg-gradient-to-b from-[hsl(44_58%_64%)] to-[hsl(38_48%_48%)] hover:brightness-[1.06] [html[data-theme="titan"]_&]:bg-gradient-to-r [html[data-theme="titan"]_&]:from-primary [html[data-theme="titan"]_&]:to-indigo-500 [html[data-theme="titan"]_&]:text-white [html[data-theme="titan"]_&]:border-primary/40 [html[data-theme="titan"]_&]:shadow-primary/30',
   };
 
   const sizes = {
@@ -40,7 +44,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'rounded-xl font-sans font-semibold tracking-normal transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none inline-flex items-center justify-center gap-2',
+        'rounded-xl font-sans font-semibold tracking-normal transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none inline-flex items-center justify-center gap-2 [html[data-theme="titan"]_&]:uppercase [html[data-theme="titan"]_&]:tracking-wider [html[data-theme="titan"]_&]:font-bold',
         variants[variant],
         sizes[size],
         className,

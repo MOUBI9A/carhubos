@@ -12,6 +12,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { useToast } from '@/lib/contexts/ToastContext';
+import { useFormat } from '@/lib/useFormat';
 
 type Task = {
   id: string;
@@ -32,11 +33,15 @@ type Car = {
 
 export default function AgentOperations() {
   const t = useTranslations('agentOps');
+  const taskLabels = useTranslations('agentTasks');
+  const fmt = useFormat();
   const router = useRouter();
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -45,24 +50,31 @@ export default function AgentOperations() {
         if (!active) return;
         setTasks(taskResponse.data.filter((task) => task.priority === 'URGENT' || task.priority === 'HIGH').slice(0, 5));
         setCars(carResponse.data.slice(0, 6));
+        setLoadFailed(false);
       })
-      .catch(() => showToast('danger', 'Load Failed', t('loadFailed')))
+      .catch(() => {
+        if (!active) return;
+        setLoadFailed(true);
+        showToast('danger', t('loadFailedTitle'), t('loadFailed'));
+      })
       .finally(() => {
         if (active) setIsLoading(false);
       });
     return () => { active = false; };
-  }, [showToast, t]);
+  }, [showToast, t, requestVersion]);
 
   const statusLabel = (status: string) => {
-    if (status === 'MAINTENANCE' || status === 'OUT_OF_SERVICE') return t('inRepair');
-    if (status === 'RENTED') return t('cleaning');
-    return t('available');
+    if (status === 'AVAILABLE') return t('available');
+    if (status === 'MAINTENANCE') return t('maintenance');
+    if (status === 'OUT_OF_SERVICE') return t('outOfService');
+    if (status === 'RENTED') return t('rented');
+    return t('statusUnknown');
   };
 
   // Presentation-only rollup of the vehicles shown below.
-  const cleaningCount = cars.filter((car) => car.status === 'RENTED').length;
-  const repairCount = cars.filter((car) => car.status === 'MAINTENANCE' || car.status === 'OUT_OF_SERVICE').length;
-  const availableCount = cars.length - cleaningCount - repairCount;
+  const rentedCount = cars.filter((car) => car.status === 'RENTED').length;
+  const availableCount = cars.filter((car) => car.status === 'AVAILABLE').length;
+  const unavailableCount = cars.length - availableCount - rentedCount;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -71,7 +83,7 @@ export default function AgentOperations() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
           <p className="mt-1 text-sm text-text-muted">{t('subtitle')}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="outline" disabled title={t('notReady')}>
             <Scan className="w-4 h-4 me-2" />
             {t('scanQr')}
@@ -85,37 +97,47 @@ export default function AgentOperations() {
 
       {isLoading ? (
         <div className="min-h-64 flex items-center justify-center text-text-muted">{t('loading')}</div>
+      ) : loadFailed ? (
+        <Card className="space-y-4">
+          <p role="alert">{t('loadFailed')}</p>
+          <Button onClick={() => {
+            setIsLoading(true);
+            setLoadFailed(false);
+            setRequestVersion((version) => version + 1);
+          }}>{t('retry')}</Button>
+        </Card>
       ) : (
         <>
           {/* ═══════ Today at a glance ═══════ */}
+          <p className="text-sm text-text-muted">{t('summaryScope')}</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card padding="sm">
               <div className="flex items-center justify-between gap-2">
-                <p className="eyebrow truncate">{t('priorityTasks')}</p>
+                <p className="eyebrow min-w-0 break-words">{t('priorityTasks')}</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
               </div>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{tasks.length}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{fmt.number(tasks.length)}</p>
             </Card>
             <Card padding="sm">
               <div className="flex items-center justify-between gap-2">
-                <p className="eyebrow truncate">{t('available')}</p>
+                <p className="eyebrow min-w-0 break-words">{t('available')}</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
               </div>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{availableCount}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{fmt.number(availableCount)}</p>
             </Card>
             <Card padding="sm">
               <div className="flex items-center justify-between gap-2">
-                <p className="eyebrow truncate">{t('cleaning')}</p>
+                <p className="eyebrow min-w-0 break-words">{t('rented')}</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
               </div>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{cleaningCount}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{fmt.number(rentedCount)}</p>
             </Card>
             <Card padding="sm">
               <div className="flex items-center justify-between gap-2">
-                <p className="eyebrow truncate">{t('inRepair')}</p>
+                <p className="eyebrow min-w-0 break-words">{t('unavailable')}</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-danger shrink-0" />
               </div>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{repairCount}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground font-mono tabular">{fmt.number(unavailableCount)}</p>
             </Card>
           </div>
 
@@ -149,7 +171,7 @@ export default function AgentOperations() {
                         variant={task.priority === 'URGENT' ? 'destructive' : 'secondary'}
                         className="ms-4 shrink-0"
                       >
-                        {task.priority}
+                        {taskLabels(task.priority === 'URGENT' ? 'urgent' : 'high')}
                       </Badge>
                     </Card>
                   );
@@ -175,21 +197,22 @@ export default function AgentOperations() {
                   const label = statusLabel(car.status);
                   const color = car.status === 'AVAILABLE' ? 'text-success' : car.status === 'RENTED' ? 'text-warning' : 'text-danger';
                   return (
-                    <Card key={car.id} padding="sm" className="flex items-center justify-between">
+                    <Card key={car.id} padding="sm" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <CarPhoto alt={`${car.brand} ${car.model}`} className="w-16 shrink-0" rounded="rounded-lg" />
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">{car.brand} {car.model}</p>
-                          <p className="font-mono tabular text-xs text-text-muted truncate">{car.licensePlate}</p>
+                          <p className="font-mono tabular text-xs text-text-muted truncate"><bdi dir="ltr">{car.licensePlate}</bdi></p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ms-4 shrink-0">
+                      <div className="flex items-center gap-2 sm:ms-4 shrink-0">
                         <span className={cn('w-1.5 h-1.5 rounded-full', color.replace('text', 'bg'))} />
                         <span className={cn('text-xs font-medium', color)}>{label}</span>
                       </div>
                     </Card>
                   );
                 })}
+                {!cars.length && <Card><p className="text-sm text-text-muted">{t('noVehicles')}</p></Card>}
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Sidebar } from './Sidebar';
 import { ImpersonationBanner } from './ImpersonationBanner';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -72,17 +73,20 @@ export function DashboardLayout({
       )}
 
       {/* Mobile top bar with hamburger */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-16 px-4 bg-surface border-b border-hairline">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          aria-label={tc('openMenu')}
-          className="p-2 -ms-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface-raised transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-        <span className="text-base font-medium tracking-tight text-foreground">
-          {tc('brand')}<span className="text-text-faint">OS</span>
-        </span>
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-surface border-b border-hairline">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label={tc('openMenu')}
+            className="p-2 -ms-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface-raised transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <span className="text-base font-medium tracking-tight text-foreground">
+            {tc('brand')}<span className="text-text-faint">OS</span>
+          </span>
+        </div>
+        <ThemeSwitcher variant="compact" />
       </header>
 
       <main className="lg:ms-64 p-4 lg:p-8 min-h-screen">

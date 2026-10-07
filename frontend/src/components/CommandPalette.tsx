@@ -12,18 +12,21 @@ import {
   Plus, 
   FileText,
   Zap,
-  Navigation
+  Navigation,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const router = useRouter();
   const t = useTranslations('command');
+  const { setTheme } = useTheme();
 
   const toggle = useCallback(() => setIsOpen(open => !isOpen), []);
 
@@ -49,6 +52,10 @@ export function CommandPalette() {
       { name: t('provisionAgency'), icon: Plus, href: '/admin/agencies' },
       { name: t('logRefusal'), icon: Users, href: '/dashboard/waitlist' },
       { name: t('systemSettings'), icon: Settings, href: '/admin/settings' },
+    ]},
+    { group: 'Visual Theme', items: [
+      { name: 'Switch Theme: Fider Lux (Warm Obsidian & Cream)', icon: Sparkles, action: () => setTheme('fider') },
+      { name: 'Switch Theme: Titan Cyber (Neon Violet & Glass HUD)', icon: Zap, action: () => setTheme('titan') },
     ]},
   ];
 
@@ -88,11 +95,15 @@ export function CommandPalette() {
             <div key={group.group} className="mb-6 last:mb-0">
                <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-3">{group.group}</h3>
                <div className="space-y-1">
-                  {group.items.map((item) => (
+                  {group.items.map((item: any) => (
                     <button
                       key={item.name}
                       onClick={() => {
-                        router.push(item.href);
+                        if (item.action) {
+                          item.action();
+                        } else if (item.href) {
+                          router.push(item.href);
+                        }
                         setIsOpen(false);
                       }}
                       className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-primary text-white/60 hover:text-white transition-all group text-left"

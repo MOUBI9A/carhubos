@@ -1,6 +1,6 @@
 # AGENTS.md — Fider (CarHub OS)
 
-Agent onboarding for this monorepo. **Source of truth:** `CLAUDE.md` + `docs/AUDIT_BACKLOG.md` + `docs/DESIGN_VISION.md` + `PROGRESS.md`. Older docs under `docs/` may be stale.
+Agent onboarding for this monorepo. **Source of truth:** `CLAUDE.md` + `docs/operations/AUDIT_BACKLOG.md` + `docs/product/DESIGN_VISION.md` + `docs/progress/PROGRESS.md`. Older docs under `docs/archive/` may be stale.
 
 Public brand = **Fider** (*the trust layer for mobility*). Repo dir remains `carhubos`.
 
@@ -93,7 +93,7 @@ docs/                    # vision, backlog, design brief
 
 **Next hardening (after / alongside design):** Phase 3 deposits, 4 rental lifecycle, 6 perf (command-centre), 7 i18n FR/AR/EN, 8 tests/CI, 9 deploy (human gate), 10 final audit.
 
-Workflow: commit verified milestones on `main`; keep `tsc` + `jest` green. Design direction: warm graphite/cream, restrained violet, sparing brass; Fraunces / Hanken / Plex Mono — see `docs/DESIGN_VISION.md`.
+Workflow: commit verified milestones on `main`; keep `tsc` + `jest` green. Design direction: warm graphite/cream, restrained violet, sparing brass; Fraunces / Hanken / Plex Mono — see `docs/product/DESIGN_VISION.md`.
 
 ---
 
@@ -102,4 +102,4 @@ Workflow: commit verified milestones on `main`; keep `tsc` + `jest` green. Desig
 - Prefer smallest scoped change; match existing patterns in the touched module.
 - Schema changes: migrate → `prisma generate` → fix types → `tsc`.
 - Security/money/DB changes: extra scrutiny; never skip tenant scope or Decimal rules.
-- After a phase milestone: update `CLAUDE.md`, `PROGRESS.md`, and relevant backlog section.
+- After a phase milestone: update `CLAUDE.md`, `docs/progress/PROGRESS.md`, and relevant backlog section.

@@ -5,78 +5,185 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FIDER LUX — design tokens (Phase 12)
-   A warm, boutique-hospitality dark system: graphite surfaces, cream text,
-   a restrained violet interactive accent, and brass/gold reserved for a few
-   premium "trust" moments. Retires the old near-black + neon-violet + glass look.
-   Token NAMES are kept stable (primary/card/border/…) so the whole app inherits
-   the new palette without per-file edits.
+   UNIFIED DUAL-THEME ENGINE
+   Theme 1: Fider Lux (Default) — Warm boutique-hospitality luxury dark
+   Theme 2: Titan Cyber — High-tech electric neon-violet glassmorphic HUD
    ══════════════════════════════════════════════════════════════════════════ */
 @theme {
   --font-sans: var(--font-hanken), "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), "Fraunces", Georgia, "Times New Roman", serif;
   --font-mono: var(--font-plex), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  /* Arabic body/UI when <html dir="rtl" lang="ar"> (Phase 7) */
+  /* Arabic body/UI when <html dir="rtl" lang="ar"> */
   --font-arabic: var(--font-noto-arabic), "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif;
 
-  /* Base warm-graphite surfaces */
-  --color-background: hsl(30 9% 7%);
-  --color-foreground: hsl(38 28% 94%);
+  /* Default theme values: populated dynamically via CSS custom properties */
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
 
-  --color-surface: hsl(30 8% 10.5%);
-  --color-surface-raised: hsl(32 9% 14%);
-  --color-hairline: hsl(32 9% 20%);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-hairline: var(--hairline);
 
-  --color-card: hsl(30 8% 10.5%);
-  --color-card-foreground: hsl(38 28% 94%);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-fg);
 
-  --color-popover: hsl(32 9% 14%);
-  --color-popover-foreground: hsl(38 28% 94%);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-fg);
 
-  /* Restrained violet — the single interactive accent */
-  --color-primary: hsl(266 58% 66%);
-  --color-primary-foreground: hsl(40 30% 96%);
-  --color-violet-soft: hsl(266 40% 22%);
+  /* Primary interactive accent */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-fg);
+  --color-violet-soft: var(--violet-soft);
 
-  /* Warm metallic — premium moments ONLY (CTA, trust seal, plan tier, hero KPI) */
-  --color-metal: hsl(40 56% 58%);
-  --color-metal-soft: hsl(40 42% 42%);
-  --color-cream: hsl(42 44% 90%);
+  /* Warm metallic / cyber glow */
+  --color-metal: var(--metal);
+  --color-metal-soft: var(--metal-soft);
+  --color-cream: var(--cream);
 
-  --color-secondary: hsl(32 9% 14%);
-  --color-secondary-foreground: hsl(38 28% 94%);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-fg);
 
-  --color-muted: hsl(32 9% 14%);
-  --color-muted-foreground: hsl(35 14% 66%);
-  --color-text-muted: hsl(35 14% 66%);
-  --color-text-faint: hsl(33 11% 48%);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-fg);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
 
-  --color-accent: hsl(32 9% 14%);
-  --color-accent-foreground: hsl(38 28% 94%);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-fg);
 
-  /* Semantic — warm-tuned */
-  --color-success: hsl(150 46% 46%);
-  --color-danger: hsl(6 64% 56%);
-  --color-destructive: hsl(6 64% 56%);
-  --color-destructive-foreground: hsl(40 30% 96%);
-  --color-warning: hsl(38 72% 55%);
-  --color-info: hsl(202 46% 56%);
+  /* Semantic */
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--primary-fg);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
 
-  --color-border: hsl(32 9% 20%);
-  --color-input: hsl(32 9% 20%);
-  --color-ring: hsl(266 58% 66%);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   --radius-xl: 1.25rem;
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
   --radius-sm: 0.5rem;
 
-  /* Warm, low shadows (not the old cold black drops) */
-  --shadow-sm: 0 1px 2px 0 hsl(30 30% 2% / 0.4);
-  --shadow-md: 0 6px 16px -8px hsl(30 30% 2% / 0.5);
-  --shadow-lg: 0 12px 28px -10px hsl(30 30% 2% / 0.55);
-  --shadow-xl: 0 24px 48px -12px hsl(30 30% 2% / 0.6);
-  --shadow-soft: 0 10px 34px -14px hsl(30 40% 1% / 0.6);
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
+  --shadow-lg: var(--sh-lg);
+  --shadow-xl: var(--sh-xl);
+  --shadow-soft: var(--sh-soft);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THEME 1: FIDER LUX (DEFAULT)
+   ══════════════════════════════════════════════════════════════════════════ */
+:root,
+html[data-theme="fider"] {
+  --bg: hsl(30 9% 7%);
+  --fg: hsl(38 28% 94%);
+
+  --surface: hsl(30 8% 10.5%);
+  --surface-raised: hsl(32 9% 14%);
+  --hairline: hsl(32 9% 20%);
+
+  --card: hsl(30 8% 10.5%);
+  --card-fg: hsl(38 28% 94%);
+
+  --popover: hsl(32 9% 14%);
+  --popover-fg: hsl(38 28% 94%);
+
+  --primary: hsl(266 58% 66%);
+  --primary-fg: hsl(40 30% 96%);
+  --violet-soft: hsl(266 40% 22%);
+
+  --metal: hsl(40 56% 58%);
+  --metal-soft: hsl(40 42% 42%);
+  --cream: hsl(42 44% 90%);
+
+  --secondary: hsl(32 9% 14%);
+  --secondary-fg: hsl(38 28% 94%);
+
+  --muted: hsl(32 9% 14%);
+  --muted-fg: hsl(35 14% 66%);
+  --text-muted: hsl(35 14% 66%);
+  --text-faint: hsl(33 11% 48%);
+
+  --accent: hsl(32 9% 14%);
+  --accent-fg: hsl(38 28% 94%);
+
+  --success: hsl(150 46% 46%);
+  --danger: hsl(6 64% 56%);
+  --warning: hsl(38 72% 55%);
+  --info: hsl(202 46% 56%);
+
+  --border: hsl(32 9% 20%);
+  --input: hsl(32 9% 20%);
+  --ring: hsl(266 58% 66%);
+
+  --sh-sm: 0 1px 2px 0 hsl(30 30% 2% / 0.4);
+  --sh-md: 0 6px 16px -8px hsl(30 30% 2% / 0.5);
+  --sh-lg: 0 12px 28px -10px hsl(30 30% 2% / 0.55);
+  --sh-xl: 0 24px 48px -12px hsl(30 30% 2% / 0.6);
+  --sh-soft: 0 10px 34px -14px hsl(30 40% 1% / 0.6);
+
+  --app-bg-gradient: radial-gradient(120% 80% at 50% -10%, hsl(34 30% 12% / 0.5) 0, transparent 60%),
+                     radial-gradient(80% 60% at 100% 0%, hsl(40 40% 20% / 0.06) 0, transparent 55%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THEME 2: TITAN CYBER (CLASSIC TITAN CONSOLE)
+   ══════════════════════════════════════════════════════════════════════════ */
+html[data-theme="titan"] {
+  --bg: hsl(222 47% 4%);
+  --fg: hsl(210 40% 98%);
+
+  --surface: hsl(222 47% 6%);
+  --surface-raised: hsl(222 47% 10%);
+  --hairline: hsl(217.2 32.6% 17.5%);
+
+  --card: hsl(222 47% 6%);
+  --card-fg: hsl(210 40% 98%);
+
+  --popover: hsl(222 47% 8%);
+  --popover-fg: hsl(210 40% 98%);
+
+  --primary: hsl(270 100% 60%);
+  --primary-fg: hsl(210 40% 98%);
+  --violet-soft: hsl(270 50% 25%);
+
+  --metal: hsl(270 100% 65%);
+  --metal-soft: hsl(270 60% 45%);
+  --cream: hsl(210 40% 98%);
+
+  --secondary: hsl(217.2 32.6% 17.5%);
+  --secondary-fg: hsl(210 40% 98%);
+
+  --muted: hsl(217.2 32.6% 17.5%);
+  --muted-fg: hsl(215 20.2% 65.1%);
+  --text-muted: hsl(215 20.2% 65.1%);
+  --text-faint: hsl(215 16% 50%);
+
+  --accent: hsl(217.2 32.6% 17.5%);
+  --accent-fg: hsl(210 40% 98%);
+
+  --success: hsl(142 70% 45%);
+  --danger: hsl(0 72% 51%);
+  --warning: hsl(38 92% 50%);
+  --info: hsl(221 83% 53%);
+
+  --border: hsl(217.2 32.6% 17.5%);
+  --input: hsl(217.2 32.6% 17.5%);
+  --ring: hsl(270 100% 60%);
+
+  --sh-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --sh-md: 0 4px 12px -2px rgb(0 0 0 / 0.4);
+  --sh-lg: 0 10px 24px -4px rgb(0 0 0 / 0.5);
+  --sh-xl: 0 20px 32px -6px rgb(0 0 0 / 0.6);
+  --sh-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.7);
+
+  --app-bg-gradient: radial-gradient(at 0% 0%, hsla(270, 100%, 60%, 0.15) 0, transparent 50%),
+                     radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 0.25) 0, transparent 50%);
 }
 
 /* Skeleton shimmer sweep (used by components/ui/Skeleton) */
@@ -88,15 +195,12 @@
 
 @layer base {
   * {
-    @apply border-white/10;
+    @apply border-border;
   }
   html {
-    /* Reserve the scrollbar gutter so short and tall pages don't shift the
-       layout sideways when the vertical scrollbar appears/disappears. */
     scrollbar-gutter: stable;
     scroll-behavior: smooth;
   }
-  /* Anchored sections clear the fixed 80px (5rem) navbar when jumped to. */
   section[id],
   [data-anchor] {
     scroll-margin-top: 6rem;
@@ -106,39 +210,52 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/25;
-    /* Warm, barely-there vignette instead of the old neon-violet radials. */
-    background-image:
-      radial-gradient(120% 80% at 50% -10%, hsl(34 30% 12% / 0.5) 0, transparent 60%),
-      radial-gradient(80% 60% at 100% 0%, hsl(40 40% 20% / 0.06) 0, transparent 55%);
+    background-image: var(--app-bg-gradient);
     background-attachment: fixed;
   }
-  /* Calm, human headings — NO forced uppercase / font-black. Real hierarchy
-     comes from weight + size + the .display / .eyebrow utilities below. */
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.2;
   }
+
+  html[data-theme="titan"] h1,
+  html[data-theme="titan"] h2,
+  html[data-theme="titan"] h3 {
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
 }
 
 @layer utilities {
-  /* Editorial serif display — marketing hero/section headlines ONLY. */
   .display {
     font-family: var(--font-display);
     font-weight: 500;
     letter-spacing: -0.02em;
     line-height: 1.05;
   }
+  html[data-theme="titan"] .display {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+
   .font-display {
     font-family: var(--font-display);
   }
+  html[data-theme="titan"] .font-display {
+    font-family: var(--font-sans);
+    font-weight: 700;
+  }
+
   .font-mono, .tabular {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  /* The ONLY place uppercase survives: small labels / eyebrows / column heads. */
   .eyebrow {
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -148,7 +265,6 @@
     color: var(--color-text-faint);
   }
 
-  /* Warm metallic accent — use sparingly (see design vision §premiumMoment). */
   .text-metal { color: var(--color-metal); }
   .metal-text {
     background: linear-gradient(100deg, hsl(44 60% 72%), hsl(40 56% 58%) 45%, hsl(38 48% 46%));
@@ -156,29 +272,20 @@
     background-clip: text;
     color: transparent;
   }
+  html[data-theme="titan"] .metal-text {
+    background: linear-gradient(100deg, hsl(270 100% 75%), hsl(270 100% 60%) 50%, hsl(220 90% 60%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
   .metal-hairline {
     background-image: linear-gradient(90deg, transparent, var(--color-metal-soft), var(--color-metal), var(--color-metal-soft), transparent);
   }
   .border-metal { border-color: color-mix(in srgb, var(--color-metal) 55%, transparent); }
   .ring-metal { box-shadow: 0 0 0 1px var(--color-metal); }
 
-  /* Warm "paper grain" so dark surfaces read as matte card stock, not flat black. */
-  .paper-grain {
-    position: relative;
-  }
-  .paper-grain::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.028;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-
-  /* Surfaces. `.glass` / `.glass-card` are RETUNED (used in ~42 files): they are
-     now warm SOLID card stock + hairline + soft shadow (no more white-on-black
-     blur). This single change warms every dashboard/card/modal in the app. */
+  /* Surfaces & Glassmorphism */
   .glass {
     background-color: var(--color-surface);
     border: 1px solid var(--color-hairline);
@@ -198,18 +305,37 @@
     background-color: var(--color-surface-raised);
   }
 
-  /* The ONE remaining true-glass treatment: chrome floating over photography
-     (sticky marketing nav, overlays). Warm graphite tint, not white. */
+  /* Titan Cyber enhanced glassmorphism */
+  html[data-theme="titan"] .glass {
+    background-color: hsla(0, 0%, 100%, 0.04);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsla(0, 0%, 100%, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+  html[data-theme="titan"] .glass-card {
+    background-color: hsla(0, 0%, 100%, 0.04);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsla(0, 0%, 100%, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+  html[data-theme="titan"] .glass-card:hover {
+    background-color: hsla(0, 0%, 100%, 0.08);
+    border-color: hsla(270, 100%, 60%, 0.45);
+    box-shadow: 0 8px 32px 0 hsla(270, 100%, 60%, 0.2);
+  }
+
   .scrim {
     background-color: hsl(30 9% 7% / 0.72);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--color-hairline);
   }
+  html[data-theme="titan"] .scrim {
+    background-color: hsl(222 47% 4% / 0.8);
+  }
 
-  /* The trust moment: contracts, invoices, renter consent + QR render on warm
-     cream "paper" (light-on-dark inversion) so the hand-over feels physical.
-     Opt in via className; the consuming screen uses graphite text tokens. */
   .document {
     background-color: var(--color-cream);
     color: hsl(30 14% 13%);
@@ -217,8 +343,6 @@
     box-shadow: var(--shadow-xl);
   }
 
-  /* Brass "seal" divider — a hairline with a centered diamond, marking premium
-     / trust moments. The one recurring metallic thread across the product. */
   .seal-rule {
     display: flex;
     align-items: center;
@@ -236,33 +360,19 @@
     background-image: linear-gradient(90deg, color-mix(in srgb, var(--color-metal) 55%, transparent), transparent);
   }
 
-  /* Legacy pre-rebrand button utilities — kept as thin aliases so the one file
-     still using them renders in the new system. Prefer <Button/> going forward. */
-  .btn-infinity {
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: 0.8125rem;
-    padding: 0.75rem 1.5rem;
-    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--shadow-md);
-  }
-  .btn-infinity:active { transform: scale(0.98); }
-  .btn-infinity:disabled { opacity: 0.5; }
-  .btn-primary-infinity { background-color: var(--color-primary); color: var(--color-primary-foreground); }
-  .btn-primary-infinity:hover { background-color: color-mix(in srgb, var(--color-primary), transparent 10%); }
-  .btn-outline-infinity { border: 1px solid var(--color-hairline); }
-  .btn-outline-infinity:hover { background-color: hsl(0 0% 100% / 0.05); }
-
-  /* Neon glow retired — kept as a no-op so the 4 files referencing it are inert. */
+  /* Neon glow utility for Titan theme */
   .text-glow { text-shadow: none; }
+  html[data-theme="titan"] .text-glow {
+    text-shadow: 0 0 12px hsla(270, 100%, 60%, 0.6), 0 0 24px hsla(270, 100%, 60%, 0.3);
+  }
 }
 
-/* Custom scrollbar — warm */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background-color: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background-color: hsl(32 9% 24%);
@@ -270,4 +380,10 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background-color: hsl(40 30% 34%);
+}
+html[data-theme="titan"] ::-webkit-scrollbar-thumb {
+  background-color: hsl(217.2 32.6% 25%);
+}
+html[data-theme="titan"] ::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(270 100% 60% / 0.6);
 }

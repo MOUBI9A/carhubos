@@ -1,9 +1,12 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/Modal';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { AgencyImage } from '@/components/ui/AgencyImage';
 import {
@@ -15,10 +18,15 @@ import {
   RefreshCw,
   Receipt,
   Check,
+  Loader2,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFormat } from '@/lib/useFormat';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { useToast } from '@/lib/contexts/ToastContext';
 import { useBilling, type BillingSnapshot } from './useBilling';
+import { usePlans, startSubscriptionCheckout, type Plan } from './usePlans';
 
 const STATUS_STYLES: Record<string, { chip: string; label: string }> = {
   TRIAL: { chip: 'text-info bg-info/10 border-info/20', label: 'Trial' },
@@ -52,8 +60,56 @@ function daysLeft(iso: string | null): number | null {
 }
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<Card><SkeletonRows rows={4} /></Card>}>
+      <BillingPageInner />
+    </Suspense>
+  );
+}
+
+function BillingPageInner() {
   const t = useTranslations('ownerPages');
+  const { role } = useAuth();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data, isLoading, error, refetch } = useBilling();
+
+  // ── Redirect back from the gateway (?upgrade=processing|cancelled) ─────────
+  const [confirmingPlan, setConfirmingPlan] = useState<string | null>(null);
+  const [pollExhausted, setPollExhausted] = useState(false);
+
+  useEffect(() => {
+    const upgrade = searchParams.get('upgrade');
+    if (upgrade === 'cancelled') {
+      router.replace('/dashboard/billing', { scroll: false });
+    } else if (upgrade === 'processing') {
+      const plan = searchParams.get('plan');
+      if (plan) setConfirmingPlan(plan);
+      router.replace('/dashboard/billing', { scroll: false });
+    }
+    // Only ever consume the redirect params once, off the URL this page landed on.
+  }, []);
+
+  useEffect(() => {
+    if (!confirmingPlan) return;
+    if (data?.planKey === confirmingPlan) {
+      showToast('success', 'Status Updated', `You're now on the ${data.planName} plan.`);
+      setConfirmingPlan(null);
+      return;
+    }
+    setPollExhausted(false);
+    let attempts = 0;
+    const id = setInterval(() => {
+      attempts += 1;
+      void refetch();
+      if (attempts >= 10) {
+        clearInterval(id);
+        setPollExhausted(true);
+      }
+    }, 2000);
+    return () => clearInterval(id);
+  }, [confirmingPlan, data?.planKey]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-5xl">
@@ -83,30 +139,60 @@ export default function BillingPage() {
           </div>
         </Card>
       ) : data ? (
-        <BillingBody data={data} />
+        <>
+          {confirmingPlan && (
+            <Card>
+              <div className="flex items-center gap-3">
+                {pollExhausted ? (
+                  <>
+                    <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">Still confirming your upgrade</p>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        This can take a little longer than usual — check again in a moment.
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={refetch}>
+                      <RefreshCw className="w-3.5 h-3.5 me-2" /> Check again
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" />
+                    <p className="text-sm text-text-muted">Confirming your upgrade…</p>
+                  </>
+                )}
+              </div>
+            </Card>
+          )}
+          <BillingBody data={data} role={role} />
+        </>
       ) : null}
     </div>
   );
 }
 
-function BillingBody({ data }: { data: BillingSnapshot }) {
+function BillingBody({ data, role }: { data: BillingSnapshot; role: string | null }) {
   const { money: fmtMoney, date: fmtDate } = useFormat();
   const status = STATUS_STYLES[data.status] ?? STATUS_STYLES.ACTIVE;
   const trial = daysLeft(data.trialEndsAt);
 
   return (
     <div className="space-y-8">
-      {/* Beta notice */}
-      <Card>
-        <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-info shrink-0 mt-0.5" />
-          <p className="text-sm text-text-muted leading-relaxed">
-            You&apos;re on the <span className="font-semibold text-foreground">Fider beta</span> — every plan is
-            free while we build. Your plan limits and features below are already live; billing starts
-            when the beta ends. To change your plan, just reach out.
-          </p>
-        </div>
-      </Card>
+      {/* Beta notice — only accurate while the agency is actually on BETA;
+          self-serve upgrades (below) move an agency off it. */}
+      {data.planKey === 'BETA' && (
+        <Card>
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-info shrink-0 mt-0.5" />
+            <p className="text-sm text-text-muted leading-relaxed">
+              You&apos;re on the <span className="font-semibold text-foreground">Fider beta</span> — every plan is
+              free while we build. Your plan limits and features below are already live; billing starts
+              when the beta ends. To change your plan, just reach out.
+            </p>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Plan card */}
@@ -164,6 +250,11 @@ function BillingBody({ data }: { data: BillingSnapshot }) {
           </div>
         </Card>
       </div>
+
+      {/* Self-serve upgrade — BETA can't self-serve yet (backend hard-blocks
+          it), and billing.manage is OWNER-only so MANAGER keeps today's
+          read-only view with no dead-end CTA. */}
+      {data.planKey !== 'BETA' && role === 'OWNER' && <UpgradeSection current={data} />}
 
       {/* Invoices */}
       <Card>
@@ -255,5 +346,186 @@ function UsageMeter({
         <p className="eyebrow mt-1">Unlimited on your plan</p>
       )}
     </div>
+  );
+}
+
+function UpgradeSection({ current }: { current: BillingSnapshot }) {
+  const { plans, isLoading, error } = usePlans();
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <SkeletonRows rows={2} />
+      </Card>
+    );
+  }
+  if (error || !plans) {
+    return null; // Non-essential section — fail quiet, the rest of the page still works.
+  }
+
+  const currentSortOrder = plans.find((p) => p.key === current.planKey)?.sortOrder ?? -1;
+  const hasUpgrade = plans.some((p) => p.sortOrder > currentSortOrder);
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="items-start">
+          <div>
+            <CardTitle>Available plans</CardTitle>
+            <CardDescription className="normal-case tracking-normal text-text-muted font-medium text-xs mt-1">
+              {hasUpgrade
+                ? 'Move to a higher tier any time — billed immediately, no proration.'
+                : "You're on our top available plan."}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+          {plans.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              isCurrent={plan.key === current.planKey}
+              isUpgrade={plan.sortOrder > currentSortOrder}
+              onUpgrade={() => setSelectedPlan(plan)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {selectedPlan && (
+        <UpgradeConfirmModal
+          plan={selectedPlan}
+          current={current}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function PlanCard({
+  plan,
+  isCurrent,
+  isUpgrade,
+  onUpgrade,
+}: {
+  plan: Plan;
+  isCurrent: boolean;
+  isUpgrade: boolean;
+  onUpgrade: () => void;
+}) {
+  const { money: fmtMoney } = useFormat();
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border p-5 flex flex-col',
+        isCurrent ? 'border-primary bg-primary/5' : 'border-hairline bg-surface',
+      )}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-semibold text-foreground">{plan.name}</p>
+        {isCurrent && <Badge variant="trust">Current plan</Badge>}
+      </div>
+      <p className="text-2xl font-semibold font-mono tabular text-foreground mt-1">
+        {fmtMoney(plan.priceMonthly)}
+        <span className="text-xs font-sans font-medium text-text-muted"> /month</span>
+      </p>
+      {plan.description && (
+        <p className="text-xs text-text-muted mt-2 leading-relaxed">{plan.description}</p>
+      )}
+      <div className="mt-4 pt-4 border-t border-hairline space-y-1.5 flex-1">
+        {plan.features.map((f) => (
+          <div key={f} className="flex items-center gap-2 text-xs text-text-muted">
+            <Check className="w-3.5 h-3.5 text-success shrink-0" />
+            {FEATURE_LABELS[f] ?? f}
+          </div>
+        ))}
+      </div>
+      <div className="mt-5">
+        {isCurrent ? (
+          <Button variant="outline" size="sm" className="w-full" disabled>
+            Current plan
+          </Button>
+        ) : isUpgrade ? (
+          <Button variant="premium" size="sm" className="w-full" onClick={onUpgrade}>
+            <ArrowUpCircle className="w-3.5 h-3.5 me-2" /> Upgrade to {plan.name}
+          </Button>
+        ) : (
+          <p className="text-[11px] text-text-faint text-center py-2">Contact support to switch</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UpgradeConfirmModal({
+  plan,
+  current,
+  onClose,
+}: {
+  plan: Plan;
+  current: BillingSnapshot;
+  onClose: () => void;
+}) {
+  const { money: fmtMoney } = useFormat();
+  const { showToast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    try {
+      await startSubscriptionCheckout(plan.key);
+      // startSubscriptionCheckout navigates the browser away on success —
+      // nothing left to do here.
+    } catch (err: any) {
+      showToast(
+        'danger',
+        'Action Failed',
+        err?.response?.data?.message || err?.message || 'Could not start checkout.',
+      );
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={submitting ? () => {} : onClose}
+      title="Confirm your upgrade"
+      description={`${current.planName} → ${plan.name}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="premium" onClick={handleConfirm} isLoading={submitting}>
+            Continue to payment
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4 text-sm text-text-muted leading-relaxed">
+        <p>
+          You&apos;re upgrading to <span className="font-semibold text-foreground">{plan.name}</span> at{' '}
+          <span className="font-mono tabular text-foreground">{fmtMoney(plan.priceMonthly)}</span> / month.
+        </p>
+        <ul className="space-y-2">
+          <li className="flex gap-2">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <span>Billed at the full monthly price immediately — there&apos;s no proration credit for time left on your current plan.</span>
+          </li>
+          <li className="flex gap-2">
+            <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+            <span>Takes effect as soon as your payment is confirmed.</span>
+          </li>
+          <li className="flex gap-2">
+            <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+            <span>Downgrades aren&apos;t self-serve yet — contact support if you need a lower tier later.</span>
+          </li>
+        </ul>
+      </div>
+    </Modal>
   );
 }

@@ -4,13 +4,13 @@ test.describe('Command Centre dashboard', () => {
   test('renders the header and KPI cards', async ({ page }) => {
     await page.goto('/dashboard');
 
-    await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Command center|Centre de commande/i })).toBeVisible();
 
     // The four KPI cards driven by the react-query command-centre hook.
     await expect(page.getByText('Net revenue · MTD')).toBeVisible();
-    await expect(page.getByText('Fleet Utilization')).toBeVisible();
-    await expect(page.getByText('Guardian Blocks')).toBeVisible();
-    await expect(page.getByText('Refusal Recoverable')).toBeVisible();
+    await expect(page.getByText(/Fleet utilization/i)).toBeVisible();
+    await expect(page.getByText(/Guardian blocks/i)).toBeVisible();
+    await expect(page.getByText(/Refusal recoverable/i)).toBeVisible();
   });
 
   test('shows the seeded fleet total', async ({ page }) => {

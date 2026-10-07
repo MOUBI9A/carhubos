@@ -4,6 +4,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 interface ModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function Modal({
   footer,
   size = 'md',
 }: ModalProps) {
+  const t = useTranslations('common');
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const prevFocusRef = useRef<HTMLElement | null>(null);
@@ -131,7 +133,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('close')}
             className="p-2 hover:bg-white/5 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="w-5 h-5 text-white/40" />

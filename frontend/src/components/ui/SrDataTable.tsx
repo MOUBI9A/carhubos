@@ -26,12 +26,13 @@ export function SrDataTable({
   className?: string;
 }) {
   return (
-    <table className={`sr-only ${className ?? ''}`}>
+    <div className="sr-only">
+    <table className={className}>
       <caption>{caption}</caption>
       <thead>
         <tr>
           {columns.map((c, i) => (
-            <th key={c} scope="col" style={i === 0 ? undefined : { textAlign: 'right' }}>
+            <th key={c} scope="col" style={i === 0 ? undefined : { textAlign: 'end' }}>
               {c}
             </th>
           ))}
@@ -53,5 +54,6 @@ export function SrDataTable({
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

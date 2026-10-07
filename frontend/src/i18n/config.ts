@@ -39,15 +39,17 @@ export function negotiateLocale(acceptLanguage: string | null): Locale {
   const preferred = acceptLanguage
     .split(',')
     .map((part) => {
-      const [tag, q] = part.trim().split(';q=');
-      return { tag: (tag || '').toLowerCase(), q: q ? parseFloat(q) : 1 };
+      const [tag, ...parameters] = part.trim().split(';');
+      const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+      const weight = quality ? Number(quality.slice(2)) : 1;
+      return { tag: tag.trim().toLowerCase(), weight };
     })
-    .sort((a, b) => b.q - a.q);
+    .filter(({ weight }) => Number.isFinite(weight) && weight > 0 && weight <= 1)
+    .sort((first, second) => second.weight - first.weight);
 
   for (const { tag } of preferred) {
-    if (tag.startsWith('ar')) return 'ar';
-    if (tag.startsWith('fr')) return 'fr';
-    if (tag.startsWith('en')) return 'en';
+    const language = tag.split('-')[0];
+    if (isLocale(language)) return language;
   }
   return defaultLocale;
 }

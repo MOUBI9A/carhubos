@@ -20,6 +20,7 @@ export class BookingsController {
       user.agencyId,
       createBookingDto,
       user.id,
+      user.role,
     );
   }
 

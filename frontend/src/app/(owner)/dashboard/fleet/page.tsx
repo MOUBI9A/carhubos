@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
+import { isAxiosError } from 'axios';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
@@ -17,10 +18,12 @@ import {
   RefreshCw,
   TrendingUp,
   SearchX,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
+import { useFormat } from '@/lib/useFormat';
 import { useFleet } from './useFleet';
 import {
   CAR_STATUSES,
@@ -41,16 +44,12 @@ const INITIAL_FORM = {
   gearbox: 'MANUAL',
 };
 
-const FILTERS: Array<{ value: CarStatus | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'All assets' },
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'RENTED', label: 'Rented' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'OUT_OF_SERVICE', label: 'Out of service' },
-];
+const FILTERS = ['ALL', ...CAR_STATUSES] as const;
 
 export default function FleetGuardian() {
   const t = useTranslations('ownerPages');
+  const copy = useTranslations('fleetList');
+  const fmt = useFormat();
   const { showToast } = useToast();
   const { data: cars, isLoading, error, refetch } = useFleet();
 
@@ -86,25 +85,27 @@ export default function FleetGuardian() {
   }, [cars]);
 
   const closeAddModal = () => {
+    if (isSubmitting) return;
     setIsAddModalOpen(false);
     setForm(INITIAL_FORM);
   };
 
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    const year = parseInt(form.year, 10);
-    const pricePerDay = parseFloat(form.pricePerDay);
+    if (isSubmitting) return;
+    const year = Number(form.year);
+    const pricePerDay = Number(form.pricePerDay);
 
     if (!form.brand.trim() || !form.model.trim() || !form.licensePlate.trim()) {
-      showToast('danger', 'Missing Fields', 'Brand, model and license plate are required.');
+      showToast('danger', copy('validationTitle'), copy('missingFields'));
       return;
     }
     if (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear() + 1) {
-      showToast('danger', 'Invalid Year', 'Enter a valid manufacturing year.');
+      showToast('danger', copy('validationTitle'), copy('invalidYear'));
       return;
     }
-    if (!Number.isFinite(pricePerDay) || pricePerDay <= 0) {
-      showToast('danger', 'Invalid Rate', 'Enter a daily rate greater than 0.');
+    if (!/^\d+(\.\d{1,2})?$/.test(form.pricePerDay) || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || pricePerDay > 9999999999.99) {
+      showToast('danger', copy('validationTitle'), copy('invalidRate'));
       return;
     }
 
@@ -120,11 +121,13 @@ export default function FleetGuardian() {
         gearbox: form.gearbox,
       });
       closeAddModal();
-      showToast('success', 'Asset Registered', `${form.brand} ${form.model} added to your fleet.`);
+      showToast('success', copy('registeredTitle'), copy('registered', { vehicle: `${form.brand.trim()} ${form.model.trim()}` }));
       refetch();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to register vehicle';
-      showToast('danger', 'Registration Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+    } catch (err: unknown) {
+      const status = isAxiosError(err) ? err.response?.status : undefined;
+      const code = isAxiosError(err) ? err.response?.data?.code : undefined;
+      const message = code === 'PLAN_LIMIT_REACHED' ? 'planLimit' : status === 409 ? 'duplicatePlate' : status === 403 ? 'forbidden' : status === 429 ? 'rateLimited' : 'registerFailed';
+      showToast('danger', copy('registerFailedTitle'), copy(message));
     } finally {
       setIsSubmitting(false);
     }
@@ -138,11 +141,11 @@ export default function FleetGuardian() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold text-foreground">Fleet offline</p>
-          <p className="text-sm text-text-muted mt-2 max-w-sm">{error}</p>
+          <p className="text-base font-semibold text-foreground">{copy('offline')}</p>
+          <p role="alert" className="text-sm text-text-muted mt-2 max-w-sm">{copy('loadFailed')}</p>
         </div>
         <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 me-2" /> Reconnect
+          <RefreshCw className="w-4 h-4 me-2" /> {copy('retry')}
         </Button>
       </div>
     );
@@ -155,12 +158,12 @@ export default function FleetGuardian() {
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('fleet')}</h1>
           <p className="mt-1.5 text-sm text-text-muted">
-            Asset monitoring and compliance across your fleet
+            {copy('subtitle')}
           </p>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           <Plus className="w-4 h-4 me-2" />
-          Add vehicle
+          {copy('addVehicle')}
         </Button>
       </header>
 
@@ -174,22 +177,23 @@ export default function FleetGuardian() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-2xl bg-surface border border-hairline p-4">
-            <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats.total}</p>
-            <p className="eyebrow mt-1">Total assets</p>
+            <p className="text-2xl font-semibold text-foreground font-mono tabular">{fmt.number(stats.total)}</p>
+            <p className="eyebrow mt-1">{copy('loadedVehicles')}</p>
           </div>
           {CAR_STATUSES.map((s) => (
             <button
               key={s}
+              aria-pressed={statusFilter === s}
               onClick={() => setStatusFilter(statusFilter === s ? 'ALL' : s)}
               className={cn(
                 'rounded-2xl bg-surface border border-hairline p-4 text-start transition-all hover:bg-surface-raised',
                 statusFilter === s && 'ring-1 ring-primary/40',
               )}
             >
-              <p className="text-2xl font-semibold text-foreground font-mono tabular">{stats[s]}</p>
+              <p className="text-2xl font-semibold text-foreground font-mono tabular">{fmt.number(stats[s])}</p>
               <p className="eyebrow mt-1 flex items-center gap-1.5">
-                <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_STYLES[s].dot)} />
-                {s.replace(/_/g, ' ')}
+                <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_STYLES[s].dot)} />
+                {copy(`statuses.${s}`)}
               </p>
             </button>
           ))}
@@ -197,29 +201,31 @@ export default function FleetGuardian() {
       )}
 
       {/* ═══════ Search + filters ═══════ */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint pointer-events-none" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search brand, model or plate..."
+            placeholder={copy('search')}
+            aria-label={copy('search')}
             className="w-full bg-surface border border-hairline rounded-2xl ps-11 pe-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex flex-wrap gap-2 pb-1" role="group" aria-label={copy('filterStatus')}>
           {FILTERS.map((f) => (
             <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
+              key={f}
+              aria-pressed={statusFilter === f}
+              onClick={() => setStatusFilter(f)}
               className={cn(
                 'px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border',
-                statusFilter === f.value
+                statusFilter === f
                   ? 'bg-primary text-primary-foreground border-transparent'
                   : 'bg-surface text-text-muted border-hairline hover:text-foreground',
               )}
             >
-              {f.label}
+              {copy(`statuses.${f}`)}
             </button>
           ))}
         </div>
@@ -227,7 +233,7 @@ export default function FleetGuardian() {
 
       {/* ═══════ Fleet grid ═══════ */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
@@ -236,51 +242,52 @@ export default function FleetGuardian() {
         <Card className="flex flex-col items-center gap-5 py-14 text-center">
           <AgencyImage slot="empty" alt="" ratio="1 / 1" rounded="rounded-2xl" className="w-20" />
           <div>
-            <p className="font-medium text-foreground">No vehicles yet</p>
+            <p className="font-medium text-foreground">{copy('emptyTitle')}</p>
             <p className="mx-auto mt-1 max-w-xs text-sm text-text-muted">
-              Register your first car to start compliance tracking, ROI and bookings.
+              {copy('emptyDescription')}
             </p>
           </div>
           <Button onClick={() => setIsAddModalOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            Add your first car
+            {copy('addFirst')}
           </Button>
         </Card>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
-          title="No matching results"
-          description="No vehicles match your current search or filter. Try adjusting the criteria."
+          title={copy('noResults')}
+          description={copy('noResultsDescription')}
           action={
             <Button variant="outline" size="sm" onClick={() => { setQuery(''); setStatusFilter('ALL'); }}>
-              Clear filters
+              {copy('clearFilters')}
             </Button>
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {filtered.map((car) => {
             const score = complianceScore(car.documents);
             const health = complianceHealth(score);
-            const statusStyle = STATUS_STYLES[car.status];
+            const knownStatus = CAR_STATUSES.includes(car.status);
+            const statusStyle = knownStatus ? STATUS_STYLES[car.status] : STATUS_STYLES.OUT_OF_SERVICE;
             return (
-              <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
+              <Link key={car.id} href={`/dashboard/fleet/${car.id}`} className="min-w-0 group focus-visible:outline-2 focus-visible:outline-primary rounded-2xl">
                 <Card padding="none" className="group h-full cursor-pointer overflow-hidden">
                   <CarPhoto
                     alt={`${car.brand} ${car.model}`}
                     plate={car.licensePlate}
-                    price={`${car.pricePerDay.toLocaleString()} MAD/day`}
+                    price={copy('perDay', { amount: fmt.money(car.pricePerDay) })}
                     rounded="rounded-none"
                   />
                   <div className="space-y-4 p-5">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold tracking-tight text-foreground">
                           {car.brand} {car.model}
                         </h3>
                         <p className="mt-0.5 text-xs text-text-muted">
-                          <span className="font-mono tabular">{car.year}</span> ·{' '}
-                          <span className="font-mono tabular">{car.mileage.toLocaleString()}</span> km
+                          <span className="font-mono tabular">{fmt.number(car.year, { useGrouping: false })}</span> ·{' '}
+                          <span className="font-mono tabular">{copy('distance', { value: fmt.number(car.mileage) })}</span>
                         </p>
                       </div>
                       <Badge
@@ -288,16 +295,16 @@ export default function FleetGuardian() {
                         className="shrink-0"
                       >
                         <span className={cn('me-1 w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
-                        {car.status.replace(/_/g, ' ').toLowerCase()}
+                        {knownStatus ? copy(`statuses.${car.status}`) : copy('unknownStatus')}
                       </Badge>
                     </div>
 
                     {/* compliance meter */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
-                        <span className="text-text-muted">Compliance</span>
+                        <span className="text-text-muted">{copy('compliance')}</span>
                         <span className={cn('font-mono tabular', HEALTH_STYLES[health].text)}>
-                          {car.documents.length === 0 ? 'No docs' : `${score}%`}
+                          {car.documents.length === 0 ? copy('noDocuments') : fmt.number(score / 100, { style: 'percent' })}
                         </span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
@@ -311,10 +318,10 @@ export default function FleetGuardian() {
                     <div className="flex items-center justify-between border-t border-hairline pt-3">
                       <span className={cn('flex items-center gap-1 text-xs font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
                         <TrendingUp className="w-3.5 h-3.5" />
-                        {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(0)}% ROI
+                        {copy('roi', { value: fmt.number(car.currentRoi / 100, { style: 'percent', maximumFractionDigits: 0, signDisplay: 'exceptZero' }) })}
                       </span>
-                      <span className="text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                        Manage →
+                      <span className="flex items-center gap-1 text-xs text-primary">
+                        {copy('manage')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
                       </span>
                     </div>
                   </div>
@@ -329,98 +336,113 @@ export default function FleetGuardian() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        title="Register vehicle"
-        description="Add a vehicle to your fleet ledger"
+        title={copy('registerVehicle')}
+        description={copy('registerDescription')}
       >
-        <form onSubmit={handleAddVehicle} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Brand *</p>
-              <input
-                value={form.brand}
-                onChange={setField('brand')}
-                placeholder="Dacia"
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-              />
+        <form onSubmit={handleAddVehicle} noValidate>
+          <fieldset disabled={isSubmitting} className="space-y-6 min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-brand" className="eyebrow px-1">{copy('brand')}</label>
+                <input
+                  id="fleet-brand"
+                  required
+                  value={form.brand}
+                  onChange={setField('brand')}
+                  placeholder="Dacia"
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-model" className="eyebrow px-1">{copy('model')}</label>
+                <input
+                  id="fleet-model"
+                  required
+                  value={form.model}
+                  onChange={setField('model')}
+                  placeholder="Logan"
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-year" className="eyebrow px-1">{copy('year')}</label>
+                <input
+                  id="fleet-year"
+                  required
+                  value={form.year}
+                  onChange={setField('year')}
+                  type="number"
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-plate" className="eyebrow px-1">{copy('plate')}</label>
+                <input
+                  id="fleet-plate"
+                  required
+                  dir="ltr"
+                  value={form.licensePlate}
+                  onChange={setField('licensePlate')}
+                  placeholder="12345-A-1"
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Model *</p>
-              <input
-                value={form.model}
-                onChange={setField('model')}
-                placeholder="Logan"
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Year *</p>
-              <input
-                value={form.year}
-                onChange={setField('year')}
-                type="number"
-                min={1900}
-                max={new Date().getFullYear() + 1}
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">License plate *</p>
-              <input
-                value={form.licensePlate}
-                onChange={setField('licensePlate')}
-                placeholder="12345-A-1"
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Rate (MAD/day) *</p>
-              <input
-                value={form.pricePerDay}
-                onChange={setField('pricePerDay')}
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="350"
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-rate" className="eyebrow px-1">{copy('rate')}</label>
+                <input
+                  id="fleet-rate"
+                  required
+                  value={form.pricePerDay}
+                  onChange={setField('pricePerDay')}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="350"
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-fuel" className="eyebrow px-1">{copy('fuel')}</label>
+                <select
+                  id="fleet-fuel"
+                  value={form.fuelType}
+                  onChange={setField('fuelType')}
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
+                >
+                  <option value="DIESEL">{copy('fuels.DIESEL')}</option>
+                  <option value="PETROL">{copy('fuels.PETROL')}</option>
+                  <option value="HYBRID">{copy('fuels.HYBRID')}</option>
+                  <option value="ELECTRIC">{copy('fuels.ELECTRIC')}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="fleet-gearbox" className="eyebrow px-1">{copy('gearbox')}</label>
+                <select
+                  id="fleet-gearbox"
+                  value={form.gearbox}
+                  onChange={setField('gearbox')}
+                  className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
+                >
+                  <option value="MANUAL">{copy('gearboxes.MANUAL')}</option>
+                  <option value="AUTOMATIC">{copy('gearboxes.AUTOMATIC')}</option>
+                </select>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Fuel</p>
-              <select
-                value={form.fuelType}
-                onChange={setField('fuelType')}
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
-              >
-                <option value="DIESEL">Diesel</option>
-                <option value="PETROL">Petrol</option>
-                <option value="HYBRID">Hybrid</option>
-                <option value="ELECTRIC">Electric</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Gearbox</p>
-              <select
-                value={form.gearbox}
-                onChange={setField('gearbox')}
-                className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
-              >
-                <option value="MANUAL">Manual</option>
-                <option value="AUTOMATIC">Automatic</option>
-              </select>
-            </div>
-          </div>
 
-          <div className="flex gap-4">
-            <Button type="button" variant="outline" className="flex-1 py-4" onClick={closeAddModal} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1 py-4" isLoading={isSubmitting}>
-              {isSubmitting ? 'Registering...' : 'Register vehicle'}
-            </Button>
-          </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button type="button" variant="outline" className="flex-1 py-4" onClick={closeAddModal} disabled={isSubmitting}>
+                {copy('cancel')}
+              </Button>
+              <Button type="submit" className="flex-1 py-4" isLoading={isSubmitting}>
+                {isSubmitting ? copy('registering') : copy('registerVehicle')}
+              </Button>
+            </div>
+          </fieldset>
         </form>
       </Modal>
     </div>

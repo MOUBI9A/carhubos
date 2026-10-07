@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "NEXT_LOCALE",
+      "value": "en",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "infinity_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzOThhMzJiOC00YWYwLTRlYjctYWIwNy0zMDkzNjk5YzdhNzkiLCJlbWFpbCI6ImUyZSsxNzkxMjc3MTMyMTk0QGNhcmh1Yi50ZXN0Iiwicm9sZSI6Ik9XTkVSIiwiYWdlbmN5SWQiOiJmYmVkMTI0MS01NWU4LTQ4ODYtODQxOC1mNDE5N2QwY2ZmNjUiLCJpYXQiOjE3OTEyNzcxMzMsImV4cCI6MTc5MTg4MTkzM30.ZBqiwbFuJCzCNn5I-H79EzRtF4qy56lFQFFSrJjgy7w",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1791881933.787549,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

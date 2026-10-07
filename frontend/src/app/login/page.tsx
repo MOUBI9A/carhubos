@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { AgencyImage } from '@/components/ui/AgencyImage';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Mail, Lock, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -21,15 +23,18 @@ export default function LoginPage() {
 
   const handleRealLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     try {
       await login(email, password);
       showToast('success', t('loginSuccessTitle'), t('loginSuccessBody'));
-    } catch (error: any) {
+    } catch (error) {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      const message = status === 401 ? 'loginFailBody' : status === 429 ? 'loginRateLimited' : 'loginUnavailable';
       showToast(
         'danger',
         t('loginFailTitle'),
-        error.response?.data?.message || t('loginFailBody'),
+        t(message),
       );
     } finally {
       setIsLoading(false);
@@ -60,7 +65,8 @@ export default function LoginPage() {
 
       {/* Form */}
       <div className="relative flex items-center justify-center p-6">
-        <div className="absolute top-6 end-6">
+        <div className="absolute top-6 end-6 flex items-center gap-2">
+          <ThemeSwitcher variant="pills" />
           <LocaleSwitcher variant="pills" />
         </div>
         <motion.div
@@ -80,12 +86,14 @@ export default function LoginPage() {
         <form onSubmit={handleRealLogin} className="bg-surface border border-hairline rounded-2xl shadow-soft p-8 space-y-6">
            <div className="space-y-4">
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">{t('email')}</p>
+                 <label htmlFor="login-email" className="eyebrow px-1">{t('email')}</label>
                  <div className="relative group">
                     <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
                     <input
                       required
                       type="email"
+                      id="login-email"
+                      autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-surface-raised border border-hairline rounded-xl ps-11 pe-4 py-4 text-sm font-medium text-foreground outline-none focus:border-primary transition-all"
@@ -95,12 +103,14 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">{t('password')}</p>
+                 <label htmlFor="login-password" className="eyebrow px-1">{t('password')}</label>
                  <div className="relative group">
                     <Lock className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
                     <input
                       required
                       type="password"
+                      id="login-password"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full bg-surface-raised border border-hairline rounded-xl ps-11 pe-4 py-4 text-sm font-medium text-foreground outline-none focus:border-primary transition-all"

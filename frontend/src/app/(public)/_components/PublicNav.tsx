@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Car, Menu, X } from 'lucide-react';
 
 export default function PublicNav() {
@@ -12,6 +13,7 @@ export default function PublicNav() {
   const close = () => setOpen(false);
   const t = useTranslations('nav');
   const tc = useTranslations('common');
+  const tt = useTranslations('theme');
 
   const LINKS = [
     { href: '#features', label: t('features') },
@@ -39,6 +41,7 @@ export default function PublicNav() {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
+          <ThemeSwitcher variant="compact" />
           <LocaleSwitcher variant="pills" />
           <Link href="/login">
             <Button variant="ghost" size="sm">{t('login')}</Button>
@@ -73,6 +76,10 @@ export default function PublicNav() {
                 {l.label}
               </Link>
             ))}
+            <div className="flex items-center justify-between py-4 border-b border-hairline">
+              <span className="text-sm text-text-muted">{tt('label')}</span>
+              <ThemeSwitcher variant="pills" />
+            </div>
             <div className="flex items-center justify-between py-4 border-b border-hairline">
               <span className="text-sm text-text-muted">{tc('language')}</span>
               <LocaleSwitcher variant="pills" />

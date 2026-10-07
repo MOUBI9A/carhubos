@@ -35,6 +35,7 @@ export class BookingsService {
     agencyId: string,
     createBookingDto: CreateBookingDto,
     actorId: string,
+    actorRole?: string,
   ) {
     // SaaS gates: block suspended tenants, then enforce the plan's monthly
     // booking quota (no-op on unlimited/BETA plans).
@@ -98,7 +99,8 @@ export class BookingsService {
       customerId,
     );
     if (blockingFlag) {
-      if (!createBookingDto.overrideReason) {
+      const overrideReason = createBookingDto.overrideReason?.trim();
+      if (!overrideReason) {
         await this.prisma.refusalLog.create({
           data: {
             agencyId,
@@ -117,6 +119,18 @@ export class BookingsService {
             `Manager override required.`,
         );
       }
+      if (actorRole !== 'ROOT_ADMIN') {
+        const membership = await this.prisma.agencyMembership.findUnique({
+          where: { userId_agencyId: { userId: actorId, agencyId } },
+          select: { rolePreset: true },
+        });
+        if (!membership || !['OWNER', 'MANAGER'].includes(membership.rolePreset)) {
+          throw new ForbiddenException({
+            code: 'TRUST_OVERRIDE_FORBIDDEN',
+            message: 'Only an agency owner or manager can override a renter trust block.',
+          });
+        }
+      }
       // Override path — record who bypassed the network flag and why.
       await this.auditLogs.log(
         agencyId,
@@ -128,7 +142,7 @@ export class BookingsService {
         {
           flagId: blockingFlag.id,
           reason: blockingFlag.reason,
-          overrideReason: createBookingDto.overrideReason,
+          overrideReason,
         },
       );
     }

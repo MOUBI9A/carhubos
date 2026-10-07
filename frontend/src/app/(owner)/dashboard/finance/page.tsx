@@ -20,11 +20,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
+import { useFormat } from '@/lib/useFormat';
 
-// Canonical expense taxonomy — must match the backend's EXPENSE_CATEGORIES
-// (expenses.dto.ts, finding #10). The <select> submits the CODE via
-// `<option value>`; the label is display-only. Summaries key on the code, so
-// CATEGORY_LABEL maps it back to a friendly label for rendering.
 const EXPENSE_CATEGORIES = [
   { code: 'MAINTENANCE', label: 'Maintenance & Spare Parts' },
   { code: 'SALARY', label: 'Staff Salary Payout' },
@@ -35,9 +32,7 @@ const EXPENSE_CATEGORIES = [
   { code: 'OTHER', label: 'Other' },
 ] as const;
 
-const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  EXPENSE_CATEGORIES.map((c) => [c.code, c.label]),
-);
+
 
 type Expense = {
   id: string;
@@ -86,6 +81,20 @@ type OpenInvoice = {
 
 export default function FinancialBrain() {
   const t = useTranslations('ownerPages');
+  const tf = useTranslations('finance');
+  const { money, number } = useFormat();
+  const categoryLabel = useCallback((code: string) => {
+    const category = EXPENSE_CATEGORIES.find((entry) => entry.code === code);
+    return category ? tf(`categories.${category.code}`) : code;
+  }, [tf]);
+  const methodLabel = (code: string) => {
+    const method = (['CASH', 'CARD', 'TRANSFER', 'CHEQUE'] as const).find((entry) => entry === code);
+    return method ? tf(`methods.${method}`) : code;
+  };
+  const invoiceStatusLabel = (code: string) => {
+    const status = (['DUE', 'PARTIAL', 'PAID'] as const).find((entry) => entry === code);
+    return status ? tf(`invoiceStatuses.${status}`) : code;
+  };
   const { showToast } = useToast();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -97,9 +106,16 @@ export default function FinancialBrain() {
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [openInvoices, setOpenInvoices] = useState<OpenInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [invoiceLoadError, setInvoiceLoadError] = useState(false);
+  const [savingExpense, setSavingExpense] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const loadFinance = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(false);
     try {
       const [expenseResponse, paymentResponse, recentResponse, summaryResponse] =
         await Promise.all([
@@ -112,23 +128,24 @@ export default function FinancialBrain() {
       setPendingPayments(paymentResponse.data);
       setRecentPayments(recentResponse.data);
       setSummary(summaryResponse.data);
-    } catch (err: any) {
-      showToast('danger', 'Load Failed', err?.response?.data?.message || 'Could not load financial records.');
+    } catch {
+      setLoadError(true);
+      showToast('danger', tf('loadFailedTitle'), tf('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, tf]);
 
   useEffect(() => { loadFinance(); }, [loadFinance]);
 
   const loadOpenInvoices = useCallback(async () => {
+    setInvoiceLoadError(false);
     try {
-      // Bookings include invoices; filter to DUE/PARTIAL for payment recording.
       const { data: bookings } = await api.get<any[]>('/bookings');
       const invoices: OpenInvoice[] = [];
       for (const b of bookings ?? []) {
         for (const inv of b.invoices ?? []) {
-          if (inv.status === 'DUE' || inv.status === 'PARTIAL') {
+          if (inv.status === 'DUE' || inv.status === 'PARTIAL' || inv.status === 'PAID') {
             invoices.push({
               id: inv.id,
               amount: Number(inv.amount),
@@ -152,6 +169,7 @@ export default function FinancialBrain() {
       }
       setOpenInvoices(invoices);
     } catch {
+      setInvoiceLoadError(true);
       setOpenInvoices([]);
     }
   }, []);
@@ -161,12 +179,16 @@ export default function FinancialBrain() {
   }, [isPaymentModalOpen, loadOpenInvoices]);
 
   const handleVerify = async (id: string) => {
+    if (verifyingId) return;
+    setVerifyingId(id);
     try {
       await api.patch(`/payments/${id}/verify`);
-      showToast('success', 'Liquidity Verified', 'The payment was verified and reconciled.');
+      showToast('success', tf('verifiedTitle'), tf('verifiedBody'));
       await loadFinance();
-    } catch (err: any) {
-      showToast('danger', 'Verification Failed', err?.response?.data?.message || 'Could not verify the payment.');
+    } catch {
+      showToast('danger', tf('verifyFailedTitle'), tf('verifyFailed'));
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -175,6 +197,12 @@ export default function FinancialBrain() {
     const formData = new FormData(e.target as HTMLFormElement);
     const amount = Number(formData.get('amount'));
     const category = formData.get('category') as string;
+    if (savingExpense) return;
+    if (!Number.isFinite(amount) || amount <= 0 || !/^\d+(?:\.\d{1,2})?$/.test(String(formData.get('amount')))) {
+      showToast('danger', tf('invalidAmountTitle'), tf('invalidAmount'));
+      return;
+    }
+    setSavingExpense(true);
 
     try {
       await api.post('/expenses', {
@@ -183,10 +211,12 @@ export default function FinancialBrain() {
         amount,
       });
       setIsExpenseModalOpen(false);
-      showToast('success', 'Expense Recorded', `${amount} MAD was added to the agency ledger.`);
+      showToast('success', tf('expenseSavedTitle'), tf('expenseSaved', { amount: money(amount) }));
       await loadFinance();
-    } catch (err: any) {
-      showToast('danger', 'Save Failed', err?.response?.data?.message || 'Could not record the expense.');
+    } catch {
+      showToast('danger', tf('saveFailedTitle'), tf('saveFailed'));
+    } finally {
+      setSavingExpense(false);
     }
   };
 
@@ -200,10 +230,16 @@ export default function FinancialBrain() {
     const reference = String(formData.get('reference') || '') || undefined;
 
     if (!invoiceId) {
-      showToast('danger', 'Invoice required', 'Select an open invoice or paste an invoice id.');
+      showToast('danger', tf('invoiceRequiredTitle'), tf('invoiceRequired'));
       return;
     }
 
+    if (savingPayment) return;
+    if (!Number.isFinite(amount) || amount <= 0 || !/^\d+(?:\.\d{1,2})?$/.test(String(formData.get('amount')))) {
+      showToast('danger', tf('invalidAmountTitle'), tf('invalidAmount'));
+      return;
+    }
+    setSavingPayment(true);
     try {
       await api.post('/payments', {
         invoiceId,
@@ -216,30 +252,35 @@ export default function FinancialBrain() {
       setIsPaymentModalOpen(false);
       showToast(
         'success',
-        type === 'REFUND' ? 'Refund Recorded' : 'Payment Recorded',
-        `${amount.toLocaleString()} MAD ${type === 'REFUND' ? 'refunded' : 'applied'} and reconciled.`,
+        type === 'REFUND' ? tf('refundSavedTitle') : tf('paymentSavedTitle'),
+        tf(type === 'REFUND' ? 'refundSaved' : 'paymentSaved', { amount: money(amount) }),
       );
       await loadFinance();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not record the payment.';
-      showToast('danger', 'Payment Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+    } catch {
+      showToast('danger', tf('paymentFailedTitle'), tf('paymentFailed'));
+    } finally {
+      setSavingPayment(false);
     }
   };
 
   const removeEntry = async (id: string) => {
+    if (removingId) return;
+    setRemovingId(id);
     try {
       await api.delete(`/expenses/${id}`);
-      showToast('info', 'Ledger Corrected', 'The expense was removed from the ledger.');
+      showToast('info', tf('removedTitle'), tf('removedBody'));
       await loadFinance();
-    } catch (err: any) {
-      showToast('danger', 'Delete Failed', err?.response?.data?.message || 'Could not remove the expense.');
+    } catch {
+      showToast('danger', tf('deleteFailedTitle'), tf('deleteFailed'));
+    } finally {
+      setRemovingId(null);
     }
   };
 
   const ledger = useMemo(() => {
     const expenseRows = expenses.map((expense) => ({
       id: expense.id,
-      name: expense.description || CATEGORY_LABEL[expense.category] || expense.category,
+      name: expense.description && expense.description !== expense.category ? expense.description : categoryLabel(expense.category),
       type: 'EXPENSE' as const,
       method: '—',
       amount: Number(expense.amount),
@@ -249,7 +290,7 @@ export default function FinancialBrain() {
     const paymentRows = recentPayments.map((p) => {
       const car = p.invoice?.booking?.car;
       const customer = p.invoice?.booking?.customer;
-      const carLabel = car ? `${car.brand || ''} ${car.model || ''}`.trim() : 'Payment';
+      const carLabel = car ? `${car.brand || ''} ${car.model || ''}`.trim() : tf('payment');
       const who = customer ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : '';
       return {
         id: p.id,
@@ -262,7 +303,7 @@ export default function FinancialBrain() {
       };
     });
     return [...paymentRows, ...expenseRows];
-  }, [expenses, recentPayments]);
+  }, [expenses, recentPayments, categoryLabel, tf]);
 
   const pendingTotal = pendingPayments.reduce((total, payment) => total + Number(payment.amount), 0);
 
@@ -276,27 +317,27 @@ export default function FinancialBrain() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([code, amount], i) => ({
-        label: CATEGORY_LABEL[code] ?? code,
+        label: categoryLabel(code),
         value: Math.round((amount / total) * 100),
         color: colors[i % colors.length],
       }));
-  }, [summary]);
+  }, [summary, categoryLabel]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('financialBrain')}</h1>
-          <p className="mt-1.5 text-sm text-text-muted">Profitability, expenses and the cash ledger</p>
+          <p className="mt-1.5 text-sm text-text-muted">{tf('subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => setIsPaymentModalOpen(true)}>
             <CreditCard className="w-4 h-4 me-2" />
-            Record payment
+            {tf('recordPayment')}
           </Button>
           <Button onClick={() => setIsExpenseModalOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            Add expense
+            {tf('addExpense')}
           </Button>
         </div>
       </header>
@@ -304,15 +345,15 @@ export default function FinancialBrain() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="group">
           <p className="eyebrow">{t('trackedExpenses')}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="metal-text font-mono tabular">{(summary?.total ?? expenses.reduce((total, expense) => total + Number(expense.amount), 0)).toLocaleString()}</span> <span className="text-sm font-normal text-text-faint">MAD</span></p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="metal-text font-mono tabular"><bdi>{isLoading || loadError ? '—' : money(summary?.total ?? expenses.reduce((total, expense) => total + Number(expense.amount), 0))}</bdi></span></p>
         </Card>
         <Card className="group">
           <p className="eyebrow">{t('pendingLiquidity')}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="font-mono tabular">{pendingTotal.toLocaleString()}</span> <span className="text-sm font-normal text-text-faint">MAD</span></p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="font-mono tabular"><bdi>{isLoading || loadError ? '—' : money(pendingTotal)}</bdi></span></p>
         </Card>
         <Card className="group">
           <p className="eyebrow">{t('records')}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="font-mono tabular">{ledger.length + pendingPayments.length}</span></p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight"><span className="font-mono tabular">{isLoading || loadError ? '—' : number(ledger.length + pendingPayments.length)}</span></p>
         </Card>
       </div>
 
@@ -321,40 +362,47 @@ export default function FinancialBrain() {
            <CardHeader className="px-0 flex-row items-center justify-between">
               <div>
                 <CardTitle>{t('financialRecords')}</CardTitle>
-                <p className="mt-0.5 text-xs text-text-muted">{isLoading ? t('loadingRecords') : `${ledger.length + pendingPayments.length} ${t('records').toLowerCase()}`}</p>
+                <p className="mt-0.5 text-xs text-text-muted">{isLoading ? t('loadingRecords') : tf('recordsCount', { count: ledger.length + pendingPayments.length })}</p>
               </div>
               <div className="flex gap-1 p-1 bg-surface rounded-xl border border-hairline">
                  <button
                   onClick={() => setActiveTab('ledger')}
                   className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all", activeTab === 'ledger' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground")}
-                 >History</button>
+                 >{tf('history')}</button>
                  <button
                   onClick={() => setActiveTab('pending')}
                   className={cn("px-4 py-1.5 rounded-lg text-xs font-medium transition-all relative", activeTab === 'pending' ? "bg-primary text-primary-foreground" : "text-text-muted hover:text-foreground")}
                  >
-                   Pending
+                   {tf('pending')}
                    {pendingPayments.length > 0 && <span className="absolute -top-1 -end-1 w-2 h-2 bg-danger rounded-full" />}
                  </button>
               </div>
            </CardHeader>
 
            <Card padding="none" className="overflow-hidden">
-              {activeTab === 'ledger' ? (
+              {loadError ? (
+                <div role="alert" className="p-6 text-center space-y-3">
+                  <p className="text-danger">{tf('loadFailed')}</p>
+                  <Button variant="outline" onClick={loadFinance}>{tf('retry')}</Button>
+                </div>
+              ) : isLoading ? (
+                <p role="status" className="p-6 text-text-muted">{t('loadingRecords')}</p>
+              ) : activeTab === 'ledger' ? (
                 <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-hairline">
-                        <th className="eyebrow px-5 py-3 text-start">Transaction</th>
-                        <th className="eyebrow px-5 py-3 text-start">Type</th>
-                        <th className="eyebrow px-5 py-3 text-start">Method</th>
-                        <th className="eyebrow px-5 py-3 text-end">Amount</th>
+                        <th className="eyebrow px-5 py-3 text-start">{tf('transaction')}</th>
+                        <th className="eyebrow px-5 py-3 text-start">{tf('type')}</th>
+                        <th className="eyebrow px-5 py-3 text-start">{tf('method')}</th>
+                        <th className="eyebrow px-5 py-3 text-end">{tf('amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ledger.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-5 py-12 text-center text-sm text-text-muted">
-                          No verified payments or expenses yet.
+                          {tf('emptyLedger')}
                         </td>
                       </tr>
                     )}
@@ -367,7 +415,7 @@ export default function FinancialBrain() {
                                   <p className="mt-0.5 font-mono tabular text-xs text-text-faint">#TX-{item.id.toString().slice(-4)}</p>
                                 </div>
                                 {item.kind === 'expense' && (
-                                  <button onClick={() => removeEntry(item.id)} className="p-2 text-text-faint hover:text-danger hover:bg-danger/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                  <button disabled={removingId !== null} aria-label={tf('deleteExpense', { name: item.name })} onClick={() => removeEntry(item.id)} className="p-2 text-text-faint hover:text-danger hover:bg-danger/10 rounded-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100">
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -375,12 +423,12 @@ export default function FinancialBrain() {
                           </td>
                           <td className="px-5 py-3.5">
                             <Badge variant={item.type === 'EXPENSE' || item.type === 'REFUND' ? 'destructive' : 'default'}>
-                                {item.type === 'EXPENSE' ? 'Expense' : item.type === 'REFUND' ? 'Refund' : 'Income'}
+                                {tf(item.type === 'EXPENSE' ? 'expense' : item.type === 'REFUND' ? 'refund' : 'income')}
                             </Badge>
                           </td>
-                          <td className="px-5 py-3.5 text-xs text-text-muted">{item.method.replace('_', ' ').toLowerCase()}</td>
+                          <td className="px-5 py-3.5 text-xs text-text-muted">{methodLabel(item.method)}</td>
                           <td className={cn("px-5 py-3.5 text-end font-mono tabular", item.color)}>
-                            {item.type === 'INCOME' ? '+' : '-'}{item.amount.toLocaleString()} <span className="text-text-faint text-xs">MAD</span>
+                            <bdi>{money(item.type === 'INCOME' ? item.amount : -item.amount)}</bdi>
                           </td>
                       </tr>
                     ))}
@@ -393,22 +441,22 @@ export default function FinancialBrain() {
                      const customer = p.invoice?.booking?.customer;
                      const car = p.invoice?.booking?.car;
                      const customerName = customer ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : '—';
-                     const paymentName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : 'Payment';
+                     const paymentName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : tf('payment');
                      return (
-                     <div key={p.id} className="flex items-center gap-4 px-5 py-4 border-b border-hairline last:border-0 hover:bg-surface-raised transition-colors">
+                     <div key={p.id} className="flex flex-wrap sm:flex-nowrap items-center gap-4 px-5 py-4 border-b border-hairline last:border-0 hover:bg-surface-raised transition-colors">
                         <Avatar name={customerName} size={40} />
                         <div className="min-w-0 flex-1">
                            <p className="truncate text-sm font-medium text-foreground">{paymentName}</p>
                            <p className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
                               <span>{customerName}</span>
                               <span className="text-text-faint">·</span>
-                              <span>{p.method.replace('_', ' ').toLowerCase()}</span>
-                              {p.type === 'REFUND' && <span className="text-danger">refund</span>}
+                              <span>{methodLabel(p.method)}</span>
+                              {p.type === 'REFUND' && <span className="text-danger">{tf('refund')}</span>}
                            </p>
                         </div>
-                        <div className="flex items-center gap-5 shrink-0">
-                           <p className="font-mono tabular text-foreground">{p.amount.toLocaleString()} <span className="text-text-faint text-xs">MAD</span></p>
-                           <Button size="sm" onClick={() => handleVerify(p.id)}>
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-5 shrink-0">
+                           <p className="font-mono tabular text-foreground"><bdi>{money(p.amount)}</bdi></p>
+                           <Button size="sm" disabled={verifyingId !== null} isLoading={verifyingId === p.id} onClick={() => handleVerify(p.id)}>
                               {t('verifyPayment')}
                            </Button>
                         </div>
@@ -430,18 +478,18 @@ export default function FinancialBrain() {
         <div className="lg:col-span-4 space-y-8">
            <Card>
               <CardHeader className="p-0 mb-6">
-                 <CardTitle>Expense breakdown</CardTitle>
+                 <CardTitle>{tf('breakdown')}</CardTitle>
                  <TrendingUp className="w-4 h-4 text-text-faint" />
               </CardHeader>
               <div className="space-y-5">
                  {categoryBars.length === 0 && (
-                   <p className="text-xs text-text-muted">No expenses yet — breakdown appears once the ledger has categories.</p>
+                   <p className="text-xs text-text-muted">{tf('emptyBreakdown')}</p>
                  )}
                  {categoryBars.map((cat, i) => (
                    <div key={i} className="space-y-2">
                       <div className="flex justify-between text-xs">
                          <span className="text-text-muted truncate pe-2">{cat.label}</span>
-                         <span className="font-mono tabular font-medium text-foreground">{cat.value}%</span>
+                         <span className="font-mono tabular font-medium text-foreground">{number(cat.value / 100, { style: 'percent' })}</span>
                       </div>
                       <div className="h-1.5 w-full bg-surface-raised rounded-full overflow-hidden">
                          <div className={cn("h-full rounded-full transition-all duration-1000", cat.color)} style={{ width: `${cat.value}%` }} />
@@ -455,11 +503,9 @@ export default function FinancialBrain() {
               <div className="flex items-start gap-4">
                  <AlertCircle className="w-5 h-5 text-info shrink-0 mt-0.5" />
                  <div>
-                    <p className="eyebrow">How money moves</p>
+                    <p className="eyebrow">{tf('moneyFlow')}</p>
                     <p className="text-sm text-text-muted leading-relaxed mt-2">
-                      Bookings create a PENDING payment. Verify it here to mark the invoice PARTIAL/PAID.
-                      Use <span className="text-foreground">Record payment</span> for partials or refunds.
-                      Deposits are managed on each booking (hold / return / claim).
+                      {tf('moneyFlowBody')}
                     </p>
                  </div>
               </div>
@@ -470,108 +516,109 @@ export default function FinancialBrain() {
       <Modal
         isOpen={isExpenseModalOpen}
         onClose={() => setIsExpenseModalOpen(false)}
-        title="Record an expense"
-        description="Add an operating expense to the ledger"
+        title={tf('expenseTitle')}
+        description={tf('expenseDescription')}
       >
         <form onSubmit={handleAddExpense} className="space-y-6">
            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Category</p>
-              <select name="category" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
+              <label htmlFor="expense-category" className="eyebrow px-1">{tf('category')}</label>
+              <select id="expense-category" name="category" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
                  {EXPENSE_CATEGORIES.map((c) => (
-                   <option key={c.code} value={c.code}>{c.label}</option>
+                   <option key={c.code} value={c.code}>{categoryLabel(c.code)}</option>
                  ))}
               </select>
            </div>
            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Amount (MAD)</p>
+              <label htmlFor="expense-amount" className="eyebrow px-1">{tf('amountMad')}</label>
               <div className="relative">
                  <DollarSign className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint" />
-                 <input name="amount" type="number" required className="w-full bg-surface border border-hairline rounded-xl ps-11 pe-4 py-3.5 text-sm font-mono tabular text-foreground placeholder:text-text-faint outline-none focus:border-primary transition-all" placeholder="0.00" />
+                 <input id="expense-amount" name="amount" type="number" step="0.01" min="0.01" required className="w-full bg-surface border border-hairline rounded-xl ps-11 pe-4 py-3.5 text-sm font-mono tabular text-foreground placeholder:text-text-faint outline-none focus:border-primary transition-all" placeholder="0.00" />
               </div>
            </div>
            <div className="space-y-1.5">
-              <p className="eyebrow px-1">Memo</p>
-              <textarea name="desc" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground placeholder:text-text-faint outline-none focus:border-primary transition-all min-h-[100px]" placeholder="Briefly describe the transaction..." />
+              <label htmlFor="expense-memo" className="eyebrow px-1">{tf('memo')}</label>
+              <textarea id="expense-memo" name="desc" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground placeholder:text-text-faint outline-none focus:border-primary transition-all min-h-[100px]" placeholder={tf('memoPlaceholder')} />
            </div>
            <div className="p-4 rounded-2xl flex items-center justify-between bg-surface border border-hairline">
               <div className="flex items-center gap-3">
                  <History className="w-4 h-4 text-danger" />
-                 <span className="text-xs font-medium text-text-muted">Auto-deduct from net profit</span>
+                 <span className="text-xs font-medium text-text-muted">{tf('expenseNote')}</span>
               </div>
-              <div className="w-10 h-5 bg-danger/20 rounded-full relative cursor-pointer border border-danger/20">
-                 <div className="absolute end-0.5 top-0.5 w-4 h-4 bg-danger rounded-full" />
-              </div>
+
            </div>
-           <Button type="submit" variant="danger" className="w-full">Confirm expense</Button>
+           <Button type="submit" variant="danger" className="w-full" isLoading={savingExpense}>{tf('confirmExpense')}</Button>
         </form>
       </Modal>
 
       <Modal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        title="Record payment or refund"
-        description="Partial income or refund against an invoice — reconciles immediately"
+        title={tf('paymentTitle')}
+        description={tf('paymentDescription')}
       >
         <form onSubmit={handleRecordPayment} className="space-y-5">
           <div className="space-y-1.5">
-            <p className="eyebrow px-1">Invoice</p>
+            <label htmlFor="payment-invoice" className="eyebrow px-1">{tf('invoice')}</label>
+            {invoiceLoadError && <p role="alert" className="text-sm text-danger">{tf('invoiceLoadFailed')}</p>}
             {openInvoices.length > 0 ? (
               <select
+                id="payment-invoice"
                 name="invoiceId"
                 required
                 className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all"
               >
-                <option value="">Select open invoice…</option>
+                <option value="">{tf('selectInvoice')}</option>
                 {openInvoices.map((inv) => {
                   const who = inv.booking?.customer
                     ? `${inv.booking.customer.firstName || ''} ${inv.booking.customer.lastName || ''}`.trim()
-                    : 'Customer';
+                    : tf('customer');
                   const car = inv.booking?.car
                     ? `${inv.booking.car.brand || ''} ${inv.booking.car.model || ''}`.trim()
                     : '';
                   return (
                     <option key={inv.id} value={inv.id}>
-                      {who}{car ? ` · ${car}` : ''} — {inv.amount.toLocaleString()} MAD ({inv.status})
+                      {who}{car ? ` · ${car}` : ''} — {money(inv.amount)} ({invoiceStatusLabel(inv.status)})
                     </option>
                   );
                 })}
               </select>
             ) : (
               <input
+                id="payment-invoice"
                 name="invoiceId"
                 required
-                placeholder="Invoice UUID"
+                placeholder={tf('invoiceId')}
                 className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-mono text-foreground outline-none focus:border-primary transition-all"
               />
             )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Type</p>
-              <select name="type" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
-                <option value="INCOME">Income (partial/full)</option>
-                <option value="REFUND">Refund</option>
+              <label htmlFor="payment-type" className="eyebrow px-1">{tf('type')}</label>
+              <select id="payment-type" name="type" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
+                <option value="INCOME">{tf('incomeOption')}</option>
+                <option value="REFUND">{tf('refund')}</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <p className="eyebrow px-1">Method</p>
-              <select name="method" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
-                <option value="CASH">Cash</option>
-                <option value="CARD">Card</option>
-                <option value="TRANSFER">Transfer</option>
-                <option value="CHEQUE">Cheque</option>
+              <label htmlFor="payment-method" className="eyebrow px-1">{tf('method')}</label>
+              <select id="payment-method" name="method" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none appearance-none focus:border-primary transition-all">
+                <option value="CASH">{tf('methods.CASH')}</option>
+                <option value="CARD">{tf('methods.CARD')}</option>
+                <option value="TRANSFER">{tf('methods.TRANSFER')}</option>
+                <option value="CHEQUE">{tf('methods.CHEQUE')}</option>
               </select>
             </div>
           </div>
           <div className="space-y-1.5">
-            <p className="eyebrow px-1">Amount (MAD)</p>
-            <input name="amount" type="number" step="0.01" min="0.01" required className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" placeholder="0.00" />
+            <label htmlFor="payment-amount" className="eyebrow px-1">{tf('amountMad')}</label>
+            <input id="payment-amount" name="amount" type="number" step="0.01" min="0.01" required className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" placeholder="0.00" />
           </div>
           <div className="space-y-1.5">
-            <p className="eyebrow px-1">Reference (optional)</p>
-            <input name="reference" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all" placeholder="Bank ref / receipt #" />
+            <label htmlFor="payment-reference" className="eyebrow px-1">{tf('reference')}</label>
+            <input id="payment-reference" name="reference" className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all" placeholder={tf('referencePlaceholder')} />
           </div>
-          <Button type="submit" className="w-full">Confirm payment</Button>
+          <Button type="submit" className="w-full" isLoading={savingPayment}>{tf('confirmPayment')}</Button>
         </form>
       </Modal>
     </div>

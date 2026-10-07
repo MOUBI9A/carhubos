@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { LogOut, User, Car, History, Shield } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -64,6 +65,7 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
             <button onClick={logout} className="p-2 text-text-faint hover:text-danger transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
+            <ThemeSwitcher variant="compact" />
             <LocaleSwitcher variant="pills" />
           </div>
         </div>

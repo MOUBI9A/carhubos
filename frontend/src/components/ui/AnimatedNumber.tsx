@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFormat } from '@/lib/useFormat';
 import {
   animate,
   useMotionValue,
@@ -22,10 +23,12 @@ interface AnimatedNumberProps {
  */
 export function AnimatedNumber({
   value,
-  format = (n) => Math.round(n).toLocaleString(),
+  format: customFormat,
   className,
   duration = 0.9,
 }: AnimatedNumberProps) {
+  const { number } = useFormat();
+  const format = useCallback((value: number) => customFormat ? customFormat(value) : number(Math.round(value)), [customFormat, number]);
   const reduce = useReducedMotion();
   const mv = useMotionValue(0);
   const [display, setDisplay] = useState(() => format(value));
@@ -41,10 +44,10 @@ export function AnimatedNumber({
       onUpdate: (v) => setDisplay(format(v)),
     });
     return controls.stop;
-  }, [value, reduce, duration]);
+  }, [value, reduce, duration, format, mv]);
 
   return (
-    <span className={className} suppressHydrationWarning>
+    <span className={className}>
       {display}
     </span>
   );

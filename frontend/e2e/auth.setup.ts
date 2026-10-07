@@ -84,6 +84,14 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   expect(bl.ok(), `seed blacklist failed (${bl.status()})`).toBeTruthy();
 
   // 4) Log in through the actual UI and capture the authenticated state.
+  await page.context().addCookies([
+    {
+      name: 'NEXT_LOCALE',
+      value: 'en',
+      domain: 'localhost',
+      path: '/',
+    },
+  ]);
   await page.goto('/login');
   await page.getByPlaceholder('name@agency.com').fill(account.email);
   await page.locator('input[type="password"]').fill(account.password);
@@ -93,7 +101,7 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   await page.locator('form button[type="submit"]').click();
 
   await page.waitForURL('**/dashboard**');
-  await expect(page.getByRole('button', { name: 'New Booking' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /New booking/i })).toBeVisible();
 
   fs.mkdirSync(path.dirname(STORAGE_STATE), { recursive: true });
   await page.context().storageState({ path: STORAGE_STATE });

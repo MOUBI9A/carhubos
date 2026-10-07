@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export interface ComboboxOption {
   id: string;
@@ -36,13 +37,14 @@ export function Combobox({
   options,
   value,
   onChange,
-  placeholder = 'Select...',
-  emptyText = 'No matches',
+  placeholder,
+  emptyText,
   footer,
   icon,
   disabled,
   className,
 }: ComboboxProps) {
+  const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -131,7 +133,7 @@ export function Combobox({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          'w-full flex items-center gap-3 bg-white/5 border rounded-2xl px-4 py-4 text-left outline-none transition-all shadow-inner',
+          'w-full flex items-center gap-3 bg-white/5 border rounded-2xl px-4 py-4 text-start outline-none transition-all shadow-inner',
           open ? 'border-primary' : 'border-white/10 hover:border-white/20',
           disabled && 'opacity-50 pointer-events-none',
         )}
@@ -146,7 +148,7 @@ export function Combobox({
               )}
             </span>
           ) : (
-            <span className="text-white/30">{placeholder}</span>
+            <span className="text-white/30">{placeholder ?? t('selectOption')}</span>
           )}
         </span>
         <ChevronDown
@@ -180,7 +182,8 @@ export function Combobox({
                   setHighlight(0);
                 }}
                 onKeyDown={onKeyDown}
-                placeholder="Type to filter..."
+                placeholder={t('filterOptions')}
+                aria-label={t('filterOptions')}
                 className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
               />
             </div>
@@ -192,7 +195,7 @@ export function Combobox({
             >
               {filtered.length === 0 ? (
                 <li className="px-4 py-6 text-center text-[10px] font-black text-white/20 uppercase tracking-widest">
-                  {emptyText}
+                  {emptyText ?? t('noMatches')}
                 </li>
               ) : (
                 filtered.map((o, i) => {

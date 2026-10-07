@@ -30,6 +30,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -43,6 +44,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
   const pathname = usePathname();
   const t = useTranslations('nav');
   const tc = useTranslations('common');
+  const tr = useTranslations('roles');
 
   if (!role) return null;
 
@@ -102,7 +104,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       className={cn(
         // Logical start edge + RTL-aware off-canvas slide (Phase 7)
         "w-64 h-screen glass border-e border-hairline flex flex-col fixed start-0 top-0 z-50 transform transition-transform duration-300 lg:translate-x-0",
-        open ? "translate-x-0" : "-translate-x-full rtl:translate-x-full",
+        open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full",
       )}
     >
       <div className="p-8 flex items-start justify-between">
@@ -149,14 +151,15 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       </nav>
 
       <div className="p-4 border-t border-hairline">
-        <div className="mb-3 px-1">
-          <LocaleSwitcher className="w-full justify-start text-xs" />
+        <div className="mb-3 px-1 flex items-center justify-between gap-2">
+          <LocaleSwitcher className="justify-start text-xs" />
+          <ThemeSwitcher className="justify-center text-xs" />
         </div>
         <div className="glass-card p-4 mb-4 flex items-center gap-3">
           <Avatar name={user?.name} />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
-            <p className="eyebrow truncate">{role.replace('_', ' ')}</p>
+            <p className="eyebrow truncate">{tr(role)}</p>
           </div>
         </div>
         <button

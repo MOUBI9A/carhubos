@@ -107,7 +107,7 @@ export function CarPhoto({
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 bg-gradient-to-t from-[hsl(30_12%_4%)]/85 to-transparent">
             {plate && (
               <span className="font-mono text-[11px] font-medium text-cream/90 tracking-wider">
-                {plate}
+                <bdi dir="ltr">{plate}</bdi>
               </span>
             )}
             {price && (

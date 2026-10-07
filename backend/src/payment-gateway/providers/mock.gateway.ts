@@ -29,8 +29,17 @@ export class MockGateway implements PaymentGatewayProvider {
     // Points at a simple dev "hosted checkout" surface; the actual settlement
     // happens when that surface (or a test) POSTs the webhook back. Uses
     // successUrl's origin as the app base so it works wherever the app runs.
+    // successUrl/cancelUrl are carried through as params so that surface knows
+    // where to send the browser after it "pays" or cancels.
     const base = safeOrigin(input.successUrl) ?? 'http://localhost:3002';
-    const redirectUrl = `${base}/pay/mock?ref=${encodeURIComponent(providerRef)}&amount=${input.amount}&currency=${input.currency}`;
+    const params = new URLSearchParams({
+      ref: providerRef,
+      amount: String(input.amount),
+      currency: input.currency,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+    });
+    const redirectUrl = `${base}/pay/mock?${params.toString()}`;
     this.logger.log(
       `MOCK checkout created for session ${input.sessionId} (${input.amount} ${input.currency})`,
     );

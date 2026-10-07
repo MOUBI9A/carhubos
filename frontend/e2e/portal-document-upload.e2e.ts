@@ -20,6 +20,7 @@ interface MockDoc {
 }
 
 async function loginAsRenter(page: Page) {
+  await page.context().clearCookies();
   await page.goto('/login');
   await page.getByPlaceholder('name@agency.com').fill('renter@carhub.os');
   await page.locator('input[type="password"]').fill('admin123');

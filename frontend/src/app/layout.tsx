@@ -3,6 +3,7 @@ import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono, Noto_Sans_Arabic } from "next/
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
+import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ToastProvider } from "@/lib/contexts/ToastContext";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -58,8 +59,17 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={dir}
+      data-theme="fider"
+      suppressHydrationWarning
       className={`h-full antialiased dark ${fraunces.variable} ${hanken.variable} ${plexMono.variable} ${notoArabic.variable}`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var theme=localStorage.getItem('carhub_theme');document.documentElement.setAttribute('data-theme',theme==='titan'?'titan':'fider');}catch(error){}})()`,
+          }}
+        />
+      </head>
       <body
         className={`min-h-full flex flex-col bg-background text-foreground font-sans ${
           locale === "ar" ? "font-arabic" : ""
@@ -67,12 +77,14 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
-            <AuthProvider>
-              <ToastProvider>
-                {children}
-                <CommandPalette />
-              </ToastProvider>
-            </AuthProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  {children}
+                  <CommandPalette />
+                </ToastProvider>
+              </AuthProvider>
+            </ThemeProvider>
           </QueryProvider>
         </NextIntlClientProvider>
       </body>

@@ -7,6 +7,8 @@ afterEach(() => {
   cleanup();
 });
 
+
+
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {

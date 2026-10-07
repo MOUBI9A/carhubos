@@ -41,11 +41,19 @@ import { CarPhoto } from '@/components/ui/AgencyImage';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/badge';
 import { SrDataTable } from '@/components/ui/SrDataTable';
+import { useFormat } from '@/lib/useFormat';
 import { useCustomerRisk } from './useCustomerRisk';
 import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
 
+function localToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 export default function OwnerDashboard() {
   const t = useTranslations('ownerPages');
+  const td = useTranslations('commandCentre');
+  const { money, number } = useFormat();
   // Locale-aware number formatting (next-intl) — not the browser's locale. Matters
   // most in the SR data table, which a screen reader reads verbatim.
   const format = useFormatter();
@@ -53,6 +61,7 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useCommandCentre();
+  const [creatingTask, setCreatingTask] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isGuardianModalOpen, setIsGuardianModalOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
@@ -85,6 +94,11 @@ export default function OwnerDashboard() {
     setBookingPrice(car?.pricePerDay || 0);
   };
 
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setOverrideReason('');
+  };
+
   const closeBookingModal = () => {
     setIsBookingModalOpen(false);
     setIsRegisterOpen(false);
@@ -98,9 +112,10 @@ export default function OwnerDashboard() {
   const handleQuickRegister = async () => {
     const { firstName, lastName, phone, identityNumber } = walkIn;
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !identityNumber.trim()) {
-      showToast('danger','Missing Fields', 'Name, phone and CIN/ID number are required to register a walk-in.');
+      showToast('danger', td('missingFields'), td('registrationRequired'));
       return;
     }
+    if (isRegistering) return;
     setIsRegistering(true);
     try {
       const res = await api.post('/customers', {
@@ -116,13 +131,12 @@ export default function OwnerDashboard() {
         phone: res.data.phone,
       };
       setLocalCustomers((prev) => [created, ...prev]);
-      setSelectedCustomerId(created.id);
+      handleCustomerSelect(created.id);
       setIsRegisterOpen(false);
       setWalkIn({ firstName: '', lastName: '', phone: '', identityNumber: '' });
-      showToast('success', 'Customer Registered', `${created.label} added to your directory and selected.`);
+      showToast('success', td('customerRegistered'), td('registeredBody', { name: created.label }));
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to register customer';
-      showToast('danger','Registration Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      showToast('danger', td('registrationFailed'), td('registrationFailedBody'));
     } finally {
       setIsRegistering(false);
     }
@@ -137,14 +151,13 @@ export default function OwnerDashboard() {
     }) => api.post('/bookings', payload),
     onSuccess: () => {
       closeBookingModal();
-      showToast('success', 'Booking Confirmed', 'A new rental session has been instantiated.');
+      showToast('success', td('bookingConfirmed'), td('bookingConfirmedBody'));
       queryClient.invalidateQueries({ queryKey: commandCentreKeys.all });
     },
     onError: (err: any) => {
       // Leave the modal open with the form data intact so the user can correct
       // and retry without re-entering everything.
-      const msg = err?.response?.data?.message || 'Failed to create booking';
-      showToast('danger', 'Booking Failed', Array.isArray(msg) ? msg.join(' ') : String(msg));
+      showToast('danger', td('bookingFailed'), td(err.response?.data?.code === 'TRUST_OVERRIDE_FORBIDDEN' ? 'overrideForbidden' : 'bookingFailedBody'));
       // Resync in case the server partially applied or state drifted.
       queryClient.invalidateQueries({ queryKey: commandCentreKeys.all });
     },
@@ -152,6 +165,7 @@ export default function OwnerDashboard() {
 
   const handleNewBooking = (e: React.FormEvent) => {
     e.preventDefault();
+    if (bookingMutation.isPending) return;
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
 
@@ -159,20 +173,20 @@ export default function OwnerDashboard() {
     const endDate = formData.get('endDate') as string;
 
     if (!selectedCarId || !startDate || !endDate) {
-      showToast('danger','Missing Fields', 'Please fill in all required fields.');
+      showToast('danger', td('missingFields'), td('requiredBody'));
       return;
     }
     if (!selectedCustomerId) {
-      showToast('danger','Customer Required', 'Select a customer, or register the walk-in with the + Walk-in option.');
+      showToast('danger', td('customerRequired'), td('customerRequiredBody'));
       return;
     }
-    if (new Date(startDate) >= new Date(endDate)) {
-      showToast('danger','Invalid Dates', 'The return date must be after the start date.');
+    if (!Number.isFinite(Date.parse(startDate)) || !Number.isFinite(Date.parse(endDate)) || startDate < localToday() || new Date(startDate) >= new Date(endDate)) {
+      showToast('danger', td('invalidDates'), td('invalidDatesBody'));
       return;
     }
     // Pillar 6: a Trust Network hard-lock needs a manager override reason.
     if (risk.data?.blocked && !overrideReason.trim()) {
-      showToast('danger', 'Renter Blocked', 'This renter is flagged on the Trust Network. Enter a manager override reason to proceed.');
+      showToast('danger', td('renterBlocked'), td('renterBlockedBody'));
       return;
     }
 
@@ -189,6 +203,45 @@ export default function OwnerDashboard() {
   const openGuardianModal = (block: any) => {
     setSelectedBlock(block);
     setIsGuardianModalOpen(true);
+  };
+
+  const documentLabel = (value: string) => {
+    const code = value.replace(/ /g, '_');
+    const known = (['INSURANCE', 'CARTE_GRISE', 'TECHNICAL_INSPECTION', 'VIGNETTE'] as const).find((entry) => entry === code);
+    return known ? td(known) : value;
+  };
+  const riskLabel = (value: string) => {
+    if (value === 'EXPIRED') return td('expired');
+    const days = /^(\d+) DAYS LEFT$/.exec(value);
+    return days ? td('daysLeft', { days: number(Number(days[1])) }) : value;
+  };
+  const actionLabel = (value: string) => {
+    const keys = { 'New Booking': 'activityNewBooking', 'Car Added': 'activityCarAdded', 'Car Updated': 'activityCarUpdated', 'Price Updated': 'activityPriceUpdated', 'Booking Status Changed': 'activityBookingStatus', 'Car Removed': 'activityCarRemoved' } as const;
+    return td(keys[value as keyof typeof keys] ?? 'activityOther');
+  };
+  const activityTime = (value: string) => {
+    if (value === 'Just now') return td('justNow');
+    const match = /^(\d+)(m|h|d)$/.exec(value);
+    if (!match) return value;
+    const key = match[2] === 'm' ? 'minutesAgo' : match[2] === 'h' ? 'hoursAgo' : 'daysAgo';
+    return td(key, { count: number(Number(match[1])) });
+  };
+  const createRenewalTask = async () => {
+    if (!selectedBlock || creatingTask) return;
+    setCreatingTask(true);
+    try {
+      await api.post('/tasks', {
+        title: td('renewalTitle', { type: documentLabel(selectedBlock.type), car: selectedBlock.car, plate: selectedBlock.plate }),
+        description: td('blockSummary', { type: documentLabel(selectedBlock.type), car: selectedBlock.car, plate: selectedBlock.plate, risk: riskLabel(selectedBlock.risk) }),
+        priority: selectedBlock.severity === 'danger' ? 'URGENT' : 'HIGH',
+      });
+      setIsGuardianModalOpen(false);
+      showToast('success', td('taskCreated'), td('taskCreatedBody'));
+    } catch {
+      showToast('danger', td('actionFailed'), td('taskFailed'));
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
   // ── Loading State ──────────────────────────────────────────────
@@ -230,10 +283,10 @@ export default function OwnerDashboard() {
           <AlertTriangle className="w-8 h-8 text-danger" />
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold tracking-tight text-foreground">System offline</p>
-          <p className="text-xs text-text-muted mt-2 max-w-sm">{error}</p>
+          <p className="text-base font-semibold tracking-tight text-foreground">{td('offline')}</p>
+          <p className="text-xs text-text-muted mt-2 max-w-sm">{td('loadFailed')}</p>
         </div>
-        <Button variant="outline" onClick={refetch}><RefreshCw className="w-4 h-4 me-2" /> Reconnect</Button>
+        <Button variant="outline" onClick={refetch}><RefreshCw className="w-4 h-4 me-2" /> {td('reconnect')}</Button>
       </div>
     );
   }
@@ -253,17 +306,17 @@ export default function OwnerDashboard() {
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('commandCenter')}</h1>
           <p className="mt-1.5 flex items-center gap-2 eyebrow">
             <span className={cn("w-1.5 h-1.5 rounded-full", healthColor)} />
-            System health · {healthStatus}
+            {td('health', { status: td(healthStatus) })}
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" className="hidden sm:flex" onClick={() => router.push('/dashboard/finance')}>
             <Wallet className="w-4 h-4 me-2" />
-            Financial ledger
+            {td('financialLedger')}
           </Button>
           <Button onClick={() => setIsBookingModalOpen(true)}>
             <Plus className="w-4 h-4 me-2" />
-            New booking
+            {td('newBooking')}
           </Button>
         </div>
       </header>
@@ -272,130 +325,134 @@ export default function OwnerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Net revenue MTD — the page's single brass hero figure */}
         <Card
+          as="button"
           className="group cursor-pointer"
           onClick={() => router.push('/dashboard/finance')}
         >
           <div className="flex items-start justify-between">
-            <p className="eyebrow">Net revenue · MTD</p>
+            <p className="eyebrow">{td('netRevenue')}</p>
             <span className={cn("inline-flex items-center gap-1 text-xs font-medium", data.revenue.growth >= 0 ? "text-success" : "text-danger")}>
               {data.revenue.growth >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-              {Math.abs(data.revenue.growth)}%
+              {number(Math.abs(data.revenue.growth) / 100, { style: 'percent', maximumFractionDigits: 1 })}
             </span>
           </div>
           <p className="mt-3 text-3xl font-semibold tracking-tight">
-            <span className="font-mono tabular metal-text"><AnimatedNumber value={data.revenue.mtd} /></span>
-            <span className="ms-1.5 text-sm font-normal text-text-faint">MAD</span>
+            <span className="font-mono tabular metal-text"><bdi><AnimatedNumber value={data.revenue.mtd} format={money} /></bdi></span>
+
           </p>
-          <p className="mt-1 text-xs text-text-muted">Net revenue this month</p>
+          <p className="mt-1 text-xs text-text-muted">{td('netRevenueBody')}</p>
         </Card>
 
         {/* Fleet utilization */}
         <Card
+          as="button"
           className="group cursor-pointer"
           onClick={() => router.push('/dashboard/fleet')}
         >
           <div className="flex items-start justify-between">
-            <p className="eyebrow">Fleet utilization</p>
+            <p className="eyebrow">{td('fleetUtilization')}</p>
             <span className="text-xs font-medium text-text-muted">
-              <span className="font-mono tabular">{data.fleet.rented}/{data.fleet.total}</span> rented
+              <span className="font-mono tabular">{td('rentedCount', { rented: number(data.fleet.rented), total: number(data.fleet.total) })}</span>
             </span>
           </div>
           <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
             <span className="font-mono tabular"><AnimatedNumber value={data.utilization.percent} /></span>
             <span className="ms-1.5 text-sm font-normal text-text-faint">%</span>
           </p>
-          <p className="mt-1 text-xs text-text-muted">Vehicles currently on rent</p>
+          <p className="mt-1 text-xs text-text-muted">{td('vehiclesOnRent')}</p>
         </Card>
 
         {/* Guardian blocks */}
         <Card
+          as="button"
           className="group cursor-pointer"
           onClick={() => {
             if (data.guardianBlocks.length > 0) {
               openGuardianModal(data.guardianBlocks[0]);
             } else {
-              showToast('success', 'All Clear', 'No guardian blocks detected. Fleet is fully compliant.');
+              showToast('success', td('allClear'), td('allClearBody'));
             }
           }}
         >
           <div className="flex items-start justify-between">
-            <p className="eyebrow">Guardian blocks</p>
+            <p className="eyebrow">{td('guardianBlocks')}</p>
             {data.guardianBlocks.length > 0 ? (
-              <Badge variant="destructive">Critical</Badge>
+              <Badge variant={healthStatus === 'Critical' ? 'destructive' : 'outline'} className={healthStatus === 'Warning' ? 'text-warning border-warning/30' : undefined}>{td(healthStatus)}</Badge>
             ) : (
-              <Badge variant="outline">Clear</Badge>
+              <Badge variant="outline">{td('clear')}</Badge>
             )}
           </div>
           <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
             <span className="font-mono tabular"><AnimatedNumber value={data.guardianBlocks.length} /></span>
           </p>
-          <p className="mt-1 text-xs text-text-muted">Compliance issues to resolve</p>
+          <p className="mt-1 text-xs text-text-muted">{td('complianceIssues')}</p>
         </Card>
 
         {/* Refusal recoverable */}
         <Card
+          as="button"
           className="group cursor-pointer"
           onClick={() => router.push('/dashboard/waitlist')}
         >
           <div className="flex items-start justify-between">
-            <p className="eyebrow">Refusal recoverable</p>
+            <p className="eyebrow">{td('refusalRecoverable')}</p>
             <span className="text-xs font-medium text-text-muted">
-              <span className="font-mono tabular">{data.refusal.count}</span> waiting
+              <span className="font-mono tabular">{td('waitingCount', { count: number(data.refusal.count) })}</span>
             </span>
           </div>
           <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            <span className="font-mono tabular"><AnimatedNumber value={data.refusal.recoverable} /></span>
-            <span className="ms-1.5 text-sm font-normal text-text-faint">MAD</span>
+            <span className="font-mono tabular"><bdi><AnimatedNumber value={data.refusal.recoverable} format={money} /></bdi></span>
+
           </p>
-          <p className="mt-1 text-xs text-text-muted">Value in the waitlist queue</p>
+          <p className="mt-1 text-xs text-text-muted">{td('waitlistValue')}</p>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 min-w-0 space-y-8">
           {/* ═══════ Daily intensity chart ═══════ */}
           <figure className="m-0">
           <Card className="h-96 flex flex-col justify-between">
-            <CardHeader className="p-0">
+            <CardHeader className="p-0 flex-col items-start gap-3 sm:flex-row sm:items-center">
                <div>
-                  <CardTitle className="text-lg">Daily intensity</CardTitle>
-                  <CardDescription>14-day booking & revenue flow</CardDescription>
+                  <CardTitle className="text-lg">{td('dailyIntensity')}</CardTitle>
+                  <CardDescription>{td('chartBody')}</CardDescription>
                </div>
                <div className="flex items-center gap-4 bg-surface p-2 rounded-lg border border-hairline" aria-hidden="true">
                   <div className="flex items-center gap-2">
                      <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                     <span className="text-[11px] text-text-muted">Revenue</span>
+                     <span className="text-[11px] text-text-muted">{td('revenue')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                      <div className="w-2.5 h-2.5 rounded-full bg-text-faint" />
-                     <span className="text-[11px] text-text-muted">Bookings</span>
+                     <span className="text-[11px] text-text-muted">{td('bookings')}</span>
                   </div>
                </div>
             </CardHeader>
             {/* Screen-reader equivalent of the bar chart (the visual bars below are
                 aria-hidden decorative; this table carries the actual figures). */}
             <SrDataTable
-              caption="Daily revenue and bookings over the last 14 days"
-              columns={['Day', 'Revenue (MAD)', 'Bookings']}
+              caption={td('chartCaption')}
+              columns={[td('day'), td('revenueMad'), td('bookings')]}
               rows={data.dailyIntensity.map((d) => [
-                d.label,
+                format.dateTime(new Date(d.date), { weekday: 'short', day: 'numeric', timeZone: 'UTC' }),
                 format.number(d.revenue),
-                String(d.bookings),
+                number(d.bookings),
               ])}
             />
             <div className="flex-1 flex items-end gap-2 pb-4 pt-10" aria-hidden="true">
                {data.dailyIntensity.map((day, i) => (
-                 <div key={i} className="group/bar relative flex-1 flex flex-col items-center justify-end">
+                 <div key={i} className="group/bar relative h-full flex-1 flex flex-col items-center justify-end">
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-surface-raised text-foreground border border-hairline text-[10px] px-3 py-2 rounded-lg opacity-0 group-hover/bar:opacity-100 group-active/bar:opacity-100 transition-all pointer-events-none z-10 scale-95 group-hover/bar:scale-100 group-active/bar:scale-100 whitespace-nowrap shadow-lg">
-                       <p className="font-mono tabular text-primary">{format.number(day.revenue)} MAD</p>
-                       <p className="text-text-muted">{day.bookings} booking{day.bookings !== 1 ? 's' : ''}</p>
+                       <p className="font-mono tabular text-primary"><bdi>{money(day.revenue)}</bdi></p>
+                       <p className="text-text-muted">{td('bookingCount', { count: day.bookings })}</p>
                     </div>
                     {/* Booking count dot */}
                     {day.bookings > 0 && (
                       <div className="absolute top-0 z-20">
                         <div className="w-4 h-4 rounded-full bg-surface-raised border border-hairline flex items-center justify-center text-[7px] font-mono tabular text-text-muted">
-                          {day.bookings}
+                          {number(day.bookings)}
                         </div>
                       </div>
                     )}
@@ -409,7 +466,7 @@ export default function OwnerDashboard() {
             </div>
             <div className="flex items-center justify-between pt-4 border-t border-hairline" aria-hidden="true">
                {data.dailyIntensity.map((day, i) => (
-                 <span key={i} className="text-[8px] text-text-faint">{day.label}</span>
+                 <span key={i} className="text-[8px] text-text-faint">{format.dateTime(new Date(day.date), { day: 'numeric', timeZone: 'UTC' })}</span>
                ))}
             </div>
           </Card>
@@ -418,8 +475,8 @@ export default function OwnerDashboard() {
           {/* ═══════ Active compliance queue ═══════ */}
           <div className="space-y-6">
             <CardHeader className="px-0">
-               <CardTitle className="text-lg">Active compliance queue</CardTitle>
-               <CardDescription>{data.guardianBlocks.length} issue{data.guardianBlocks.length !== 1 ? 's' : ''} requiring attention</CardDescription>
+               <CardTitle className="text-lg">{td('complianceQueue')}</CardTitle>
+               <CardDescription>{td('issueCount', { count: data.guardianBlocks.length })}</CardDescription>
             </CardHeader>
 
             {data.guardianBlocks.length === 0 ? (
@@ -427,17 +484,18 @@ export default function OwnerDashboard() {
                 <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mb-4">
                   <ShieldCheck className="w-6 h-6 text-success" />
                 </div>
-                <p className="text-sm font-medium text-foreground">Fleet fully compliant</p>
-                <p className="text-xs text-text-muted mt-1">All documents are valid and up to date</p>
+                <p className="text-sm font-medium text-foreground">{td('fleetCompliant')}</p>
+                <p className="text-xs text-text-muted mt-1">{td('documentsValid')}</p>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {data.guardianBlocks.slice(0, 6).map((block, i) => (
-                  <div
+                  <button
+                    type="button"
                     key={block.id || i}
                     onClick={() => openGuardianModal(block)}
                     className={cn(
-                      "p-5 glass rounded-2xl flex items-center justify-between transition-all hover:translate-x-1 group cursor-pointer",
+                      "p-5 glass rounded-2xl flex items-center justify-between gap-3 text-start transition-all hover:translate-x-1 rtl:hover:-translate-x-1 group cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                       block.severity === 'danger' ? 'border-s-4 border-s-danger' : 'border-s-4 border-s-warning'
                     )}
                   >
@@ -447,16 +505,16 @@ export default function OwnerDashboard() {
                         </div>
                         <div>
                            <h4 className="font-semibold text-sm text-foreground">{block.car}</h4>
-                           <p className="text-[11px] text-text-muted">{block.type} · <span className="font-mono tabular">{block.plate}</span></p>
+                           <p className="text-[11px] text-text-muted">{documentLabel(block.type)} · <bdi dir="ltr" className="font-mono tabular">{block.plate}</bdi></p>
                         </div>
                      </div>
                      <div className="text-end">
                         <p className={cn("text-[11px] font-medium", block.severity === 'danger' ? 'text-danger' : 'text-warning')}>
-                          {block.risk}
+                          {riskLabel(block.risk)}
                         </p>
-                        <span className="text-[11px] text-text-faint group-hover:text-primary transition-colors">Resolve →</span>
+                        <span className="text-[11px] text-text-faint group-hover:text-primary transition-colors">{td('resolve')}</span>
                      </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -476,17 +534,17 @@ export default function OwnerDashboard() {
                   />
                   <div className="p-6 space-y-5">
                      <div className="min-w-0">
-                        <p className="eyebrow">Star asset · highest ROI</p>
+                        <p className="eyebrow">{td('starAsset')}</p>
                         <h3 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
                           {data.starAsset.brand} {data.starAsset.model}
                         </h3>
                      </div>
                      <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                           <span className="text-text-muted">ROI score</span>
+                           <span className="text-text-muted">{td('roi')}</span>
                            <span className={cn("flex items-center gap-1 font-mono tabular font-medium", data.starAsset.roi >= 0 ? "text-success" : "text-danger")}>
                              <TrendingUp className="w-3.5 h-3.5" />
-                             {data.starAsset.roi >= 0 ? '+' : ''}{data.starAsset.roi.toFixed(1)}%
+                             {number(data.starAsset.roi / 100, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' })}
                            </span>
                         </div>
                         <div className="h-1.5 w-full bg-surface-raised rounded-full overflow-hidden">
@@ -497,7 +555,7 @@ export default function OwnerDashboard() {
                         </div>
                         {data.starAsset.totalRevenue > 0 && (
                           <p className="text-xs text-text-muted">
-                            Lifetime revenue · <span className="font-mono tabular">{data.starAsset.totalRevenue.toLocaleString()} MAD</span>
+                            {td('lifetimeRevenue')} · <bdi className="font-mono tabular">{money(data.starAsset.totalRevenue)}</bdi>
                           </p>
                         )}
                      </div>
@@ -506,7 +564,7 @@ export default function OwnerDashboard() {
                        onClick={() => router.push('/dashboard/fleet')}
                      >
                        <Eye className="w-3.5 h-3.5 me-2" />
-                       View details
+                       {td('viewDetails')}
                      </Button>
                   </div>
                 </>
@@ -515,9 +573,9 @@ export default function OwnerDashboard() {
                   <div className="w-12 h-12 rounded-2xl bg-surface-raised border border-hairline flex items-center justify-center mx-auto mb-3">
                     <Car className="w-6 h-6 text-text-faint" />
                   </div>
-                  <p className="text-sm font-medium text-foreground">No fleet data yet</p>
+                  <p className="text-sm font-medium text-foreground">{td('noFleet')}</p>
                   <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push('/dashboard/fleet')}>
-                    Add your first car
+                    {td('addCar')}
                   </Button>
                 </div>
               )}
@@ -526,14 +584,14 @@ export default function OwnerDashboard() {
            {/* Live activity */}
            <Card>
               <CardHeader className="p-0 mb-8">
-                 <CardTitle>Live activity</CardTitle>
+                 <CardTitle>{td('liveActivity')}</CardTitle>
                  <Activity className="w-4 h-4 text-text-faint" />
               </CardHeader>
               <div className="space-y-6">
                  {data.liveActivity.length === 0 ? (
                    <div className="text-center py-8">
                      <Clock className="w-8 h-8 text-text-faint mx-auto mb-3" />
-                     <p className="text-sm text-text-muted">No recent activity</p>
+                     <p className="text-sm text-text-muted">{td('noActivity')}</p>
                    </div>
                  ) : (
                    data.liveActivity.map((activity, i) => {
@@ -555,17 +613,17 @@ export default function OwnerDashboard() {
                          if (entity === 'BOOKING') router.push('/dashboard/bookings');
                          else if (entity === 'CAR') router.push('/dashboard/fleet');
                          else if (entity === 'CUSTOMER') router.push('/dashboard/customers');
-                         else showToast('info', activity.action, `By ${activity.user} • ${activity.time} ago`);
+                         else showToast('info', actionLabel(activity.action), td('activityBy', { name: activity.role === 'SYSTEM' ? td('system') : activity.user, time: activityTime(activity.time) }));
                        }}>
                           <div className="relative shrink-0">
-                             <Avatar name={activity.user} size={36} />
+                             <Avatar name={activity.role === 'SYSTEM' ? td('system') : activity.user} size={36} />
                              <div className={cn("absolute -bottom-0.5 -end-0.5 w-3 h-3 rounded-full border-2 border-background", dotColor)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                             <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{activity.user}</p>
-                             <p className="text-xs text-text-muted">{activity.action}</p>
+                             <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{activity.role === 'SYSTEM' ? td('system') : activity.user}</p>
+                             <p className="text-xs text-text-muted">{actionLabel(activity.action)}</p>
                           </div>
-                          <span className="text-[11px] font-mono tabular text-text-faint shrink-0">{activity.time}</span>
+                          <span className="text-[11px] font-mono tabular text-text-faint shrink-0">{activityTime(activity.time)}</span>
                        </div>
                      );
                    })
@@ -576,24 +634,24 @@ export default function OwnerDashboard() {
            {/* Operations overview */}
            <Card>
               <CardHeader className="p-0 mb-6">
-                <CardTitle>Operations overview</CardTitle>
+                <CardTitle>{td('operations')}</CardTitle>
               </CardHeader>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-surface border border-hairline rounded-xl text-center cursor-pointer hover:bg-surface-raised transition-colors" onClick={() => router.push('/dashboard/fleet')}>
-                  <p className="text-lg font-semibold font-mono tabular text-success">{data.fleet.available}</p>
-                  <p className="eyebrow">Available</p>
+                  <p className="text-lg font-semibold font-mono tabular text-success">{number(data.fleet.available)}</p>
+                  <p className="eyebrow">{td('available')}</p>
                 </div>
                 <div className="p-3 bg-surface border border-hairline rounded-xl text-center cursor-pointer hover:bg-surface-raised transition-colors" onClick={() => router.push('/dashboard/bookings')}>
-                  <p className="text-lg font-semibold font-mono tabular text-foreground">{data.fleet.rented}</p>
-                  <p className="eyebrow">Rented</p>
+                  <p className="text-lg font-semibold font-mono tabular text-foreground">{number(data.fleet.rented)}</p>
+                  <p className="eyebrow">{td('rented')}</p>
                 </div>
                 <div className="p-3 bg-surface border border-hairline rounded-xl text-center cursor-pointer hover:bg-surface-raised transition-colors" onClick={() => router.push('/dashboard/fleet')}>
-                  <p className="text-lg font-semibold font-mono tabular text-warning">{data.fleet.maintenance}</p>
-                  <p className="eyebrow">Maintenance</p>
+                  <p className="text-lg font-semibold font-mono tabular text-warning">{number(data.fleet.maintenance)}</p>
+                  <p className="eyebrow">{td('maintenance')}</p>
                 </div>
                 <div className="p-3 bg-surface border border-hairline rounded-xl text-center cursor-pointer hover:bg-surface-raised transition-colors" onClick={() => router.push('/dashboard/fleet')}>
-                  <p className="text-lg font-semibold font-mono tabular text-danger">{data.fleet.outOfService}</p>
-                  <p className="eyebrow">Out of service</p>
+                  <p className="text-lg font-semibold font-mono tabular text-danger">{number(data.fleet.outOfService)}</p>
+                  <p className="eyebrow">{td('outOfService')}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-hairline">
@@ -605,8 +663,8 @@ export default function OwnerDashboard() {
                     <Activity className="w-4 h-4 text-text-muted" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold font-mono tabular text-foreground leading-none">{data.activeRentals}</p>
-                    <p className="eyebrow mt-1">Active rentals</p>
+                    <p className="text-lg font-semibold font-mono tabular text-foreground leading-none">{number(data.activeRentals)}</p>
+                    <p className="eyebrow mt-1">{td('activeRentals')}</p>
                   </div>
                 </div>
                 <div
@@ -617,8 +675,8 @@ export default function OwnerDashboard() {
                     <Users className="w-4 h-4 text-text-muted" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold font-mono tabular text-foreground leading-none">{data.totalCustomers}</p>
-                    <p className="eyebrow mt-1">Customers</p>
+                    <p className="text-lg font-semibold font-mono tabular text-foreground leading-none">{number(data.totalCustomers)}</p>
+                    <p className="eyebrow mt-1">{td('customers')}</p>
                   </div>
                 </div>
               </div>
@@ -630,44 +688,44 @@ export default function OwnerDashboard() {
       <Modal
         isOpen={isBookingModalOpen}
         onClose={closeBookingModal}
-        title="New booking"
-        description="Reserve a vehicle and generate the contract"
+        title={td('newBooking')}
+        description={td('bookingDescription')}
         size="lg"
       >
         <form onSubmit={handleNewBooking} className="space-y-8">
-           <div className="grid grid-cols-2 gap-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                  <div className="flex items-center justify-between px-1">
-                    <p className="eyebrow">Customer <span className="text-danger">*</span></p>
+                    <p className="eyebrow">{td('customer')} <span className="text-danger">*</span></p>
                     <button
                       type="button"
                       onClick={() => setIsRegisterOpen((v) => !v)}
                       className="text-xs font-medium text-primary hover:text-primary/70 transition-colors"
                     >
-                      {isRegisterOpen ? '− Cancel' : '+ Walk-in'}
+                      {isRegisterOpen ? td('cancel') : td('walkIn')}
                     </button>
                  </div>
                  <Combobox
                    options={customerOptions.map((c) => ({ id: c.id, label: c.label, sublabel: c.phone }))}
                    value={selectedCustomerId}
-                   onChange={setSelectedCustomerId}
-                   placeholder={customerOptions.length === 0 ? 'No customers — register a walk-in' : 'Select Customer...'}
-                   emptyText="No matching customers"
+                   onChange={handleCustomerSelect}
+                   placeholder={customerOptions.length === 0 ? td('noCustomers') : td('selectCustomer')}
+                   emptyText={td('noMatchingCustomers')}
                    icon={<QrCode className="w-4 h-4" />}
                  />
               </div>
               <div className="space-y-2">
-                 <p className="eyebrow px-1">Vehicle</p>
+                 <p className="eyebrow px-1">{td('vehicle')}</p>
                  <Combobox
                    options={data.availableCars.map((car) => ({
                      id: car.id,
                      label: car.label,
-                     sublabel: `${car.pricePerDay.toLocaleString()} MAD/day`,
+                     sublabel: td('ratePerDay', { amount: money(car.pricePerDay) }),
                    }))}
                    value={selectedCarId}
                    onChange={handleCarSelect}
-                   placeholder="Select Vehicle..."
-                   emptyText="No available vehicles"
+                   placeholder={td('selectVehicle')}
+                   emptyText={td('noVehicles')}
                  />
               </div>
            </div>
@@ -685,30 +743,30 @@ export default function OwnerDashboard() {
 
            {isRegisterOpen && (
              <div className="p-5 glass rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <p className="eyebrow">Walk-in registration</p>
-                <div className="grid grid-cols-2 gap-4">
+                <p className="eyebrow">{td('walkInRegistration')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <input
                      value={walkIn.firstName}
                      onChange={(e) => setWalkIn((w) => ({ ...w, firstName: e.target.value }))}
-                     placeholder="First name *"
+                     aria-label={td('firstName')} placeholder={td('firstName')}
                      className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
                    />
                    <input
                      value={walkIn.lastName}
                      onChange={(e) => setWalkIn((w) => ({ ...w, lastName: e.target.value }))}
-                     placeholder="Last name *"
+                     aria-label={td('lastName')} placeholder={td('lastName')}
                      className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
                    />
                    <input
                      value={walkIn.phone}
                      onChange={(e) => setWalkIn((w) => ({ ...w, phone: e.target.value }))}
-                     placeholder="Phone *"
+                     aria-label={td('phone')} placeholder={td('phone')}
                      className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
                    />
                    <input
                      value={walkIn.identityNumber}
                      onChange={(e) => setWalkIn((w) => ({ ...w, identityNumber: e.target.value }))}
-                     placeholder="CIN / ID number *"
+                     aria-label={td('identity')} placeholder={td('identity')}
                      className="w-full bg-surface border border-hairline rounded-xl px-4 py-3.5 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
                    />
                 </div>
@@ -716,43 +774,43 @@ export default function OwnerDashboard() {
                    {isRegistering
                      ? <Loader2 className="w-3.5 h-3.5 me-2 animate-spin" />
                      : <Plus className="w-3.5 h-3.5 me-2" />}
-                   Register & select
+                   {td('registerSelect')}
                 </Button>
              </div>
            )}
 
-           <div className="grid grid-cols-2 gap-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                 <p className="eyebrow px-1">Start date</p>
-                 <input name="startDate" type="date" required min={new Date().toISOString().slice(0, 10)} className="w-full bg-surface border border-hairline rounded-xl px-4 py-4 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" />
+                 <p className="eyebrow px-1">{td('startDate')}</p>
+                 <input aria-label={td('startDate')} name="startDate" type="date" required min={localToday()} className="w-full bg-surface border border-hairline rounded-xl px-4 py-4 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" />
               </div>
               <div className="space-y-2">
-                 <p className="eyebrow px-1">Return date</p>
-                 <input name="endDate" type="date" required min={new Date().toISOString().slice(0, 10)} className="w-full bg-surface border border-hairline rounded-xl px-4 py-4 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" />
+                 <p className="eyebrow px-1">{td('endDate')}</p>
+                 <input aria-label={td('endDate')} name="endDate" type="date" required min={localToday()} className="w-full bg-surface border border-hairline rounded-xl px-4 py-4 text-sm font-mono tabular text-foreground outline-none focus:border-primary transition-all" />
               </div>
            </div>
 
-           <div className="p-6 glass rounded-2xl flex items-center justify-between">
+           <div className="p-6 glass rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                 <p className="eyebrow mb-1">Daily rate</p>
+                 <p className="eyebrow mb-1">{td('dailyRate')}</p>
                  <p className="text-3xl font-semibold tracking-tight text-foreground">
-                   <span className="font-mono tabular">{bookingPrice > 0 ? `${bookingPrice.toLocaleString()}` : '—'}</span> <span className="text-sm font-normal text-text-faint">MAD/day</span>
+                   <bdi className="font-mono tabular">{bookingPrice > 0 ? td('ratePerDay', { amount: money(bookingPrice) }) : '—'}</bdi>
                  </p>
               </div>
-              <div className="text-end">
-                 <p className="eyebrow">Tax & escrow included</p>
+              <div className="text-start sm:text-end">
+                 <p className="eyebrow">{td('taxIncluded')}</p>
                  {risk.data && risk.data.depositMultiplier && risk.data.depositMultiplier > 1 ? (
                    <p className="text-[11px] font-medium text-warning mt-1 border border-warning/25 px-2 py-0.5 rounded-full inline-block">
-                     Deposit <span className="font-mono tabular">×{risk.data.depositMultiplier}</span> · risk uplift
+                     {td('depositUplift', { multiplier: number(risk.data.depositMultiplier) })}
                    </p>
                  ) : bookingPrice > 0 && (
-                   <p className="text-[11px] font-medium text-success mt-1 border border-success/20 px-2 py-0.5 rounded-full inline-block">Live rate</p>
+                   <p className="text-[11px] font-medium text-success mt-1 border border-success/20 px-2 py-0.5 rounded-full inline-block">{td('liveRate')}</p>
                  )}
               </div>
            </div>
 
-           <div className="flex gap-4">
-              <Button type="button" variant="outline" className="flex-1 py-4" onClick={closeBookingModal}>Cancel</Button>
+           <div className="flex flex-col sm:flex-row gap-4">
+              <Button type="button" variant="outline" className="flex-1 py-4" onClick={closeBookingModal}>{td('cancel')}</Button>
               {risk.data?.blocked ? (
                 <Button
                   type="submit"
@@ -760,11 +818,11 @@ export default function OwnerDashboard() {
                   className="flex-1 py-4"
                   isLoading={bookingMutation.isPending}
                 >
-                  {overrideReason.trim() ? 'Override & confirm' : 'Booking locked — override required'}
+                  {overrideReason.trim() ? td('overrideConfirm') : td('bookingLocked')}
                 </Button>
               ) : (
                 <Button type="submit" className="flex-1 py-4" isLoading={bookingMutation.isPending}>
-                  Confirm booking
+                  {td('confirmBooking')}
                 </Button>
               )}
            </div>
@@ -775,8 +833,8 @@ export default function OwnerDashboard() {
       <Modal
         isOpen={isGuardianModalOpen}
         onClose={() => setIsGuardianModalOpen(false)}
-        title="Guardian intervention"
-        description="Resolve critical asset compliance issue"
+        title={td('guardianTitle')}
+        description={td('guardianDescription')}
       >
          {selectedBlock && (
            <div className="space-y-6">
@@ -788,38 +846,39 @@ export default function OwnerDashboard() {
                    "text-xs font-semibold mb-1",
                    selectedBlock.severity === 'danger' ? 'text-danger' : 'text-warning'
                  )}>
-                   {selectedBlock.severity === 'danger' ? 'Critical block detected' : 'Warning · action required'}
+                   {selectedBlock.severity === 'danger' ? td('criticalBlock') : td('warningAction')}
                  </p>
                  <p className="text-xs text-text-muted leading-relaxed">
-                   <strong>{selectedBlock.type}</strong> for <strong>{selectedBlock.car}</strong> (<span className="font-mono tabular">{selectedBlock.plate}</span>) has status: <strong>{selectedBlock.risk}</strong>.
+                   {td('blockSummary', { type: documentLabel(selectedBlock.type), car: selectedBlock.car, plate: selectedBlock.plate, risk: riskLabel(selectedBlock.risk) })}
                    {selectedBlock.severity === 'danger'
-                     ? ' The system has hard-locked this asset from bookings.'
-                     : ' The document will expire soon — renew to avoid a booking lock.'}
+                     ? ` ${td('assetLocked')}`
+                     : ` ${td('renewSoon')}`}
                  </p>
               </div>
               <div className="space-y-3">
-                 <p className="eyebrow px-1">Quick actions</p>
+                 <p className="eyebrow px-1">{td('quickActions')}</p>
                  <Button
                    className="w-full justify-between"
                    onClick={() => {
                      setIsGuardianModalOpen(false);
-                     router.push('/dashboard/fleet');
+                     router.push(`/dashboard/fleet/${encodeURIComponent(selectedBlock.carId)}`);
                    }}
                  >
-                   View vehicle details
+                   {td('vehicleDetails')}
                    <ArrowRight className="w-4 h-4" />
                  </Button>
                  <Button
                    variant="outline"
+                   isLoading={creatingTask}
+                   disabled={creatingTask}
                    className="w-full justify-between"
                    onClick={() => {
-                     setIsGuardianModalOpen(false);
-                     showToast('success', 'Task Created', `Priority renewal task for ${selectedBlock.car} assigned.`);
+                     void createRenewalTask();
                    }}
                  >
                    <span className="flex items-center gap-2">
                      <Wrench className="w-3.5 h-3.5" />
-                     Assign renewal task
+                     {td('createRenewal')}
                    </span>
                    <ArrowRight className="w-4 h-4" />
                  </Button>

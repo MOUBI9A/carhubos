@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Local dev credentials/access notes — never commit
+/access/
+
 # Databases (SQLite dev DBs contain bcrypt hashes + renter PII)
 *.db
 *.db-journal
@@ -29,6 +32,9 @@ yarn-error.log*
 .DS_Store
 *.pem
 *.tsbuildinfo
+
+/frontend/test-results/
+/frontend/playwright-report/
 
 # Vercel
 .vercel

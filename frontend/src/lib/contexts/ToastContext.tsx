@@ -12,10 +12,11 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLocale, useTranslations } from 'next-intl';
 import arMessages from '../../../messages/ar.json';
 import enMessages from '../../../messages/en.json';
 import frMessages from '../../../messages/fr.json';
-import { defaultLocale, isLocale, LOCALE_COOKIE, type Locale } from '@/i18n/config';
+import { defaultLocale, isLocale, type Locale } from '@/i18n/config';
 
 type ToastType = 'success' | 'danger' | 'warning' | 'info' | 'pulse';
 
@@ -61,30 +62,19 @@ const TOAST_KEYS: Record<string, string> = {
 
 const catalogs = { fr: frMessages, ar: arMessages, en: enMessages } as const;
 
-function currentLocale(): Locale {
-  if (typeof document === 'undefined') return defaultLocale;
-  const value = document.cookie
-    .split('; ')
-    .find((part) => part.startsWith(`${LOCALE_COOKIE}=`))
-    ?.split('=')[1];
-  return isLocale(value) ? value : defaultLocale;
-}
-
 function translateToast(locale: Locale, text: string): string {
   const key = TOAST_KEYS[text];
   return key ? catalogs[locale].toast[key as keyof typeof frMessages.toast] : text;
 }
 
-function translateCommon(locale: Locale, key: 'close'): string {
-  return catalogs[locale].common[key];
-}
-
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const activeLocale = useLocale();
+  const locale = isLocale(activeLocale) ? activeLocale : defaultLocale;
+  const t = useTranslations('common');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((type: ToastType, title: string, message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const locale = currentLocale();
     setToasts((prev) => [...prev, {
       id,
       type,
@@ -94,7 +84,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 5000);
-  }, []);
+  }, [locale]);
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -103,12 +93,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-8 end-8 z-[200] flex flex-col gap-4 w-full max-w-sm pointer-events-none">
+      <div aria-live="polite" aria-atomic="false" className="fixed bottom-4 end-4 sm:bottom-8 sm:end-8 z-[200] flex flex-col gap-4 w-[calc(100%-2rem)] max-w-sm pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              initial={{ opacity: 0, x: locale === 'ar' ? -50 : 50, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               className="pointer-events-auto"
@@ -138,7 +128,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 </div>
                 <button 
                   onClick={() => removeToast(toast.id)}
-                  aria-label={translateCommon(currentLocale(), 'close')}
+                  aria-label={t('close')}
                   className="p-1 hover:bg-white/5 rounded-lg transition-colors h-fit"
                 >
                   <X className="w-4 h-4 text-white/20" />

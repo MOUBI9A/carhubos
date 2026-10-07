@@ -8,6 +8,7 @@ import { useToast } from '@/lib/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { AgencyImage } from '@/components/ui/AgencyImage';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import api from '@/lib/api';
 import { Building2, User, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -76,7 +77,8 @@ export default function SignupPage() {
       </div>
 
       <div className="relative flex items-center justify-center p-6">
-        <div className="absolute top-6 end-6">
+        <div className="absolute top-6 end-6 flex items-center gap-2">
+          <ThemeSwitcher variant="pills" />
           <LocaleSwitcher variant="pills" />
         </div>
         <motion.div

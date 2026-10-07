@@ -9,16 +9,14 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
 
 async function bootstrap() {
-  // rawBody: true captures the raw request body (req.rawBody) alongside the
-  // normal parsed body — required to verify payment-gateway webhook signatures
-  // (e.g. Stripe). Additive: existing @Body() parsing is unaffected.
+  console.log('[Bootstrap] 1. Initializing Nest application...');
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  console.log('[Bootstrap] 2. Nest application created.');
 
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
   app.useGlobalFilters(new AllExceptionsFilter());
-  // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
   app.useGlobalInterceptors(new DecimalToNumberInterceptor());
 
   app.useGlobalPipes(
@@ -28,17 +26,22 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  console.log('[Bootstrap] 3. Global middleware & pipes configured.');
 
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || [
       'http://localhost:3000',
+      'http://localhost:3001',
       'http://localhost:3002',
     ],
     credentials: true,
   });
   app.setGlobalPrefix('api');
 
-  await app.listen(process.env.PORT ?? 5406);
+  const port = process.env.PORT ?? 5406;
+  console.log(`[Bootstrap] 4. Starting HTTP server on port ${port}...`);
+  await app.listen(port);
+  console.log(`🚀 CarHub OS Backend listening on http://localhost:${port}/api`);
 }
 bootstrap().catch((err) => {
   console.error('Fatal error during bootstrap:', err);

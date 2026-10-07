@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -254,7 +255,12 @@ export default function OwnerSettings() {
           <div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
             <p className="eyebrow text-primary mb-2">Current plan</p>
             <p className="text-xl font-semibold metal-text">{agency?.subscriptionTier ?? '—'}</p>
-            <p className="text-xs text-text-muted mt-1">Contact support to upgrade your plan.</p>
+            <Link
+              href="/dashboard/billing"
+              className="text-xs text-primary font-medium mt-1 inline-block hover:underline"
+            >
+              Manage plan &amp; billing →
+            </Link>
           </div>
         </Card>
 
