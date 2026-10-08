@@ -2916,3 +2916,24 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+### Codex cloud implementation team — production diagnostics
+
+The founder's uploaded automotive intelligence brief and approved implementation
+plan authorize an additive diagnostic product area and production hardening on
+`feat/production-diagnostics`. Existing rental, tenancy, money and consent
+contracts remain intact. Work is performed in the existing cloud checkout.
+
+| Owner | Exclusive files/work | Status |
+|---|---|---|
+| Root | Dependency manifests/lockfiles, project brain/improvements, integration, commits and PR | Active |
+| Diagnostics backend | New diagnostics module/tests, Prisma schema/additive migration, app.module.ts, capability catalogs | Active |
+| Frontend | New diagnostics routes/components/messages and navigation | Active |
+| Security/release | Payment provider disabled mode, honest AI Vision, health/env/shutdown, Docker/Compose configuration | Active |
+| QA | Existing Playwright tests/config, generated-auth cleanup/ignore rules, test reliability | Active |
+| Infrastructure | Azure deployment/recovery/smoke scripts and GitHub workflows | Active |
+
+Only the root commits/pushes this team's work. Agents coordinate shared contracts
+before edits, do not overwrite another owner's files, and report validated and
+unvalidated results separately. Paid resources and unavailable credentials remain
+external prerequisites; no production deployment is claimed without verification.
