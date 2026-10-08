@@ -31,6 +31,24 @@ export class BookingsService {
     private automationEngine?: AutomationEngine,
   ) {}
 
+  /** Prisma wraps PostgreSQL 23P01 differently across engine versions. */
+  private rethrowBookingConflict(error: unknown): never {
+    const detail =
+      error instanceof Error
+        ? `${error.message} ${JSON.stringify((error as { meta?: unknown }).meta ?? {})}`
+        : '';
+    if (
+      detail.includes('booking_active_car_dates_excl') &&
+      (detail.includes('23P01') || /exclusion constraint/i.test(detail))
+    ) {
+      throw new ConflictException(
+        'Car is already booked for overlapping dates by another booking.',
+      );
+    }
+    // Never disguise connectivity, authorization, foreign-key or other errors.
+    throw error;
+  }
+
   async create(
     agencyId: string,
     createBookingDto: CreateBookingDto,
@@ -134,6 +152,9 @@ export class BookingsService {
     }
 
     // 4. Validate dates
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      throw new BadRequestException('Booking dates must be valid timestamps');
+    }
     if (start >= end) {
       throw new BadRequestException('End date must be after start date');
     }
@@ -142,7 +163,7 @@ export class BookingsService {
     // A REQUESTED booking still reserves the car for these dates — it must
     // block conflicting requests, not just APPROVED/ACTIVE ones, otherwise
     // two pending requests for the same dates can both later be approved.
-    // TODO(Phase 2): add DB-level overlap exclusion constraint on Postgres
+    // PostgreSQL booking_active_car_dates_excl arbitrates concurrent requests.
     const overlappingBooking = await this.prisma.booking.findFirst({
       where: {
         carId,
@@ -230,7 +251,7 @@ export class BookingsService {
       });
 
       return b;
-    });
+    }).catch((error: unknown) => this.rethrowBookingConflict(error));
 
     // 8. FORENSIC AUDIT
     await this.auditLogs.log(
@@ -339,11 +360,8 @@ export class BookingsService {
     }
 
     const { updated: updatedBooking, lateFee } = await this.prisma.$transaction(async (tx) => {
-      // Re-check for a conflicting booking INSIDE the transaction before
-      // flipping to APPROVED/ACTIVE. Closes the check-then-act race where
-      // two overlapping REQUESTED bookings for the same car both get
-      // approved concurrently.
-      // TODO(Phase 2): add DB-level overlap exclusion constraint on Postgres
+      // Keep the friendly pre-check; the PostgreSQL exclusion constraint
+      // arbitrates concurrent writes, including direct database writes.
       if (status === 'APPROVED' || status === 'ACTIVE') {
         const conflictingBooking = await tx.booking.findFirst({
           where: {
@@ -456,7 +474,7 @@ export class BookingsService {
       }
 
       return { updated, lateFee };
-    });
+    }).catch((error: unknown) => this.rethrowBookingConflict(error));
 
     // BP Pillar C: Forensic audit of status change
     await this.auditLogs.log(

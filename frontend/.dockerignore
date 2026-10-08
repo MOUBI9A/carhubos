@@ -4,3 +4,16 @@ Dockerfile
 .dockerignore
 .next
 .git
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+playwright/.auth
+playwright-report
+test-results
+coverage
+*.tsbuildinfo
+.npmrc
+*.p12
+*.pfx

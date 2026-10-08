@@ -1,0 +1,69 @@
+name: Azure deployment
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        type: choice
+        options: [staging, production]
+        required: true
+      cost_approved:
+        description: Approve Azure resource costs after reviewing the template
+        type: boolean
+        default: false
+        required: true
+      frontend_image:
+        description: Registry image with @sha256 digest
+        required: true
+      backend_image:
+        description: Registry image with @sha256 digest
+        required: true
+      migration_image:
+        description: Migration stage image with @sha256 digest
+        required: true
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: azure-${{ inputs.stage }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: inputs.cost_approved && github.ref == 'refs/heads/main'
+    environment: ${{ inputs.stage }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Write temporary secure parameters
+        env:
+          PARAMETERS: ${{ secrets.AZURE_DEPLOY_PARAMETERS }}
+          STAGE: ${{ inputs.stage }}
+          FRONTEND_IMAGE: ${{ inputs.frontend_image }}
+          BACKEND_IMAGE: ${{ inputs.backend_image }}
+          MIGRATION_IMAGE: ${{ inputs.migration_image }}
+        run: |
+          python3 - <<'PY'
+          import json,os
+          p=json.loads(os.environ['PARAMETERS'])
+          for key,env in [('stage','STAGE'),('frontendImage','FRONTEND_IMAGE'),('backendImage','BACKEND_IMAGE'),('migrationImage','MIGRATION_IMAGE')]:
+              p['parameters'][key]={'value':os.environ[env]}
+          path=os.environ['RUNNER_TEMP']+'/carhub-parameters.json'
+          fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+          with os.fdopen(fd,'w') as out: json.dump(p,out)
+          PY
+      - name: Provision, migrate, deploy
+        env:
+          COST_APPROVED: 'yes'
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: scripts/deployment/azure-deploy.sh "$RESOURCE_GROUP" "$RUNNER_TEMP/carhub-parameters.json"
+      - name: Verify deployed HTTPS endpoint
+        env:
+          BASE_URL: ${{ vars.PUBLIC_APP_URL }}
+        run: scripts/deployment/smoke.sh "$BASE_URL"
+      - name: Remove temporary parameters
+        if: always()
+        run: rm -f "$RUNNER_TEMP/carhub-parameters.json"

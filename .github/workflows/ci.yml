@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -87,7 +87,10 @@ jobs:
       # agencies/users via POST /auth/register (unique run-scoped emails) and
       # tears them down in afterAll — it doesn't depend on prisma/seed*.js.
       - name: Live-DB e2e (auth + cross-tenant 404)
-        run: npx jest --config test/jest-e2e.json
+        run: npx jest --config test/jest-e2e.json --runInBand
+
+      - name: Diagnostics live-DB integration
+        run: DIAGNOSTICS_DB_TEST=1 npx jest --runInBand --runTestsByPath src/diagnostics/diagnostics.integration.spec.ts
 
   frontend:
     name: Frontend (tsc + vitest + lint)
@@ -100,7 +103,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -142,7 +145,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: |
             backend/package-lock.json

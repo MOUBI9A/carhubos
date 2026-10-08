@@ -1,6 +1,6 @@
 # AGENTS.md — Fider (CarHub OS)
 
-Agent onboarding for this monorepo. **Source of truth:** `CLAUDE.md` + `docs/AUDIT_BACKLOG.md` + `docs/DESIGN_VISION.md` + `PROGRESS.md`. Older docs under `docs/` may be stale.
+Agent onboarding for this monorepo. **Source of truth:** `PROJECT_BRAIN.md` + `PROJECT_IMPROVEMENTS.md` + `docs/DECISIONS.md` + `CLAUDE.md` + `docs/AUDIT_BACKLOG.md` + `docs/DESIGN_VISION.md` + `PROGRESS.md`. Older docs under `docs/` may be stale.
 
 Public brand = **Fider** (*the trust layer for mobility*). Repo dir remains `carhubos`.
 
@@ -63,7 +63,7 @@ Verify: `cd backend && npx tsc --noEmit && npx jest` · `cd frontend && npx tsc 
 4. **Consent vault** — agency reads renter `RenterDocument` only with active, in-scope, same-agency `ConsentGrant`; else 403.
 5. **Secrets** — never commit `.env`; no hardcoded JWT/pepper fallbacks. Fail-fast if unset.
 6. **Register** — public signup may only self-assign `OWNER|AGENT|RENTER`; never accept `agencyId`.
-7. **Phase 12** — design rebuild is **presentation-only** (no backend/schema/API contract changes).
+7. **Phase 12** — the historical rental restyle is presentation-only. The user-authorized diagnostics/security work adds backend/schema/API changes while preserving the preceding invariants.
 
 ---
 
@@ -93,7 +93,7 @@ docs/                    # vision, backlog, design brief
 
 **Next hardening (after / alongside design):** Phase 3 deposits, 4 rental lifecycle, 6 perf (command-centre), 7 i18n FR/AR/EN, 8 tests/CI, 9 deploy (human gate), 10 final audit.
 
-Workflow: commit verified milestones on `main`; keep `tsc` + `jest` green. Design direction: warm graphite/cream, restrained violet, sparing brass; Fraunces / Hanken / Plex Mono — see `docs/DESIGN_VISION.md`.
+Workflow: commit verified milestones on a development branch and open a PR to `main`; keep `tsc` + `jest` green. Design direction: warm graphite/cream, restrained violet, sparing brass; Fraunces / Hanken / Plex Mono — see `docs/DESIGN_VISION.md`.
 
 ---
 

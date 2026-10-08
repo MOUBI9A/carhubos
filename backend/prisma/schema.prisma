@@ -51,6 +51,8 @@ model Agency {
   accidents        Accident[]
   checkoutSessions CheckoutSession[]
   vaultFiles       VaultFile[]
+  diagnosticVehicles DiagnosticVehicle[]
+  diagnosticSessions DiagnosticSession[]
 
   @@index([deletedAt])
 }
@@ -101,6 +103,7 @@ model User {
   consentGrants      ConsentGrant[] // document-access grants this renter has issued
   notifications      Notification[]
   renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
+  diagnosticSessions DiagnosticSession[]
   vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
 
   @@index([agencyId])
@@ -153,7 +156,9 @@ model Car {
   inspections Inspection[]
   hubListing  HubListing?
   accidents   Accident[]
+  diagnosticVehicles DiagnosticVehicle[]
 
+  @@unique([id, agencyId])
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
   @@index([status])
@@ -812,4 +817,45 @@ model PlatformInvoice {
 
   @@index([agencyId])
   @@index([status])
+}
+
+// Additive diagnostics: rental assets remain optional; shop vehicles do not
+// require a rental price. Composite references enforce the tenant boundary.
+model DiagnosticVehicle {
+  id String @id @default(uuid())
+  agencyId String
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  fleetCarId String?
+  fleetCar Car? @relation(fields: [fleetCarId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  vin String?
+  brand String
+  model String
+  year Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions DiagnosticSession[]
+  @@unique([id, agencyId])
+  @@unique([agencyId, fleetCarId])
+  @@index([agencyId, vin])
+}
+
+model DiagnosticSession {
+  id String @id @default(uuid())
+  agencyId String
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  vehicleId String
+  vehicle DiagnosticVehicle @relation(fields: [vehicleId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  createdById String
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  source String @default("IMPORT")
+  status String @default("OPEN")
+  revision Int @default(0)
+  symptoms String @default("")
+  // Bounded pilot evidence only: capped ingest, explicit provenance. Production
+  // high-frequency raw telemetry needs private chunk/object storage separately.
+  data Json @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([id, agencyId])
+  @@index([agencyId, createdAt])
 }

@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { API_URL, STORAGE_STATE } from '../playwright.config';
+import { createRoleFixtures, fixtureAccount, fixtureDatabase, loginAsRole } from './fixtures';
 
 /**
  * Registers a fresh, isolated agency for this run, seeds it with a couple of
@@ -11,11 +12,10 @@ import { API_URL, STORAGE_STATE } from '../playwright.config';
  */
 setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   const stamp = Date.now();
-  const account = {
-    email: `e2e+${stamp}@carhub.test`,
-    password: 'E2ePass2026!',
-    agencyName: `E2E Agency ${stamp}`,
-  };
+  const account = fixtureAccount('OWNER');
+  // Validate the test-only DB target before creating any fixture rows.
+  const { prisma } = fixtureDatabase();
+  await prisma.$disconnect();
 
   // 1) Register the agency owner. If the backend is down this throws with a
   //    clear connection error, which is exactly the signal we want.
@@ -32,6 +32,9 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
     reg.ok(),
     `register failed (${reg.status()}): ${await reg.text()}`,
   ).toBeTruthy();
+  const agencyId = (await reg.json()).user.agencyId;
+  expect(agencyId).toBeTruthy();
+  await createRoleFixtures(agencyId);
 
   // 2) Log in on the API request context so subsequent seed calls carry the
   //    auth cookie (the request context persists Set-Cookie between calls).
@@ -84,21 +87,10 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   expect(bl.ok(), `seed blacklist failed (${bl.status()})`).toBeTruthy();
 
   // 4) Log in through the actual UI and capture the authenticated state.
-  await page.goto('/login');
-  await page.getByPlaceholder('name@agency.com').fill(account.email);
-  await page.locator('input[type="password"]').fill(account.password);
-  // Locale-independent: the sign-in copy is translated (FR "Se connecter" is
-  // the actual default-locale text; "Secure Login" never appears in any
-  // locale), so target the login form's one submit button instead of text.
-  await page.locator('form button[type="submit"]').click();
-
-  await page.waitForURL('**/dashboard**');
+  await loginAsRole(page, 'OWNER', '/dashboard');
   await expect(page.getByRole('button', { name: 'New Booking' })).toBeVisible();
 
   fs.mkdirSync(path.dirname(STORAGE_STATE), { recursive: true });
   await page.context().storageState({ path: STORAGE_STATE });
-  fs.writeFileSync(
-    path.join(path.dirname(STORAGE_STATE), 'account.json'),
-    JSON.stringify(account, null, 2),
-  );
+  fs.chmodSync(STORAGE_STATE, 0o600);
 });

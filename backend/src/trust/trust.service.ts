@@ -81,18 +81,19 @@ export class TrustService {
       customer.identityType,
       customer.identityNumber,
     );
-    let identity = await this.prisma.renterIdentity.findUnique({
+    // Resolve concurrently arriving first bookings through PostgreSQL's unique
+    // identityHash upsert. A check-then-create lets one caller fail with P2002.
+    // Keep a nonempty, idempotent update so Prisma uses native ON CONFLICT;
+    // existing masks, type, reputation and firstSeenAt remain intact.
+    const identity = await this.prisma.renterIdentity.upsert({
       where: { identityHash },
+      create: {
+        identityHash,
+        identityType: (customer.identityType || 'CIN').toUpperCase(),
+        identityMasked: this.mask(customer.identityNumber),
+      },
+      update: { identityHash },
     });
-    if (!identity) {
-      identity = await this.prisma.renterIdentity.create({
-        data: {
-          identityHash,
-          identityType: (customer.identityType || 'CIN').toUpperCase(),
-          identityMasked: this.mask(customer.identityNumber),
-        },
-      });
-    }
     await this.prisma.customer.update({
       where: { id: customer.id },
       data: { renterIdentityId: identity.id },

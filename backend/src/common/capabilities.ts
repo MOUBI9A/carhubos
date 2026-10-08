@@ -22,6 +22,10 @@
  * from MANAGER's filter below and never added to AGENT's explicit list.
  */
 export const AGENCY_CAPABILITIES = [
+  'diagnostics.view',
+  'diagnostics.perform',
+  'diagnostics.confirm',
+  'diagnostics.estimate',
   'fleet.view',
   'fleet.manage',
   'booking.view',
@@ -114,6 +118,12 @@ export const ROLE_PRESETS: Record<string, string[]> = {
  *   Accountant    — the finance surface only.
  */
 export const STAFF_PRESETS: Record<string, string[]> = {
+  Technician: [
+    'diagnostics.view',
+    'diagnostics.perform',
+    'diagnostics.confirm',
+    'diagnostics.estimate',
+  ],
   'Front desk': [
     'booking.view',
     'booking.create',

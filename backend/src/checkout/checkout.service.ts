@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,11 +27,21 @@ export class CheckoutService {
     private readonly payments: PaymentsService,
   ) {}
 
+  private requireOnlinePayments() {
+    if (this.gateway.activeProvider === 'DISABLED') {
+      throw new ServiceUnavailableException({
+        code: 'ONLINE_PAYMENTS_DISABLED',
+        message: 'Online payments are disabled. Contact the agency for manual payment.',
+      });
+    }
+  }
+
   async createCheckout(
     agencyId: string,
     invoiceId: string,
     urls: CreateCheckoutDto,
   ) {
+    this.requireOnlinePayments();
     // Tenant scope: a cross-tenant invoiceId resolves to nothing → 404.
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, agencyId },
@@ -99,6 +110,7 @@ export class CheckoutService {
     agencyId: string,
     dto: CreateSubscriptionCheckoutDto,
   ) {
+    this.requireOnlinePayments();
     const sub = await this.prisma.subscription.findUnique({
       where: { agencyId },
       include: { plan: true },
@@ -168,6 +180,7 @@ export class CheckoutService {
     rawBody: string,
     headers: Record<string, string | undefined>,
   ) {
+    this.requireOnlinePayments();
     // Adapter verifies the signature (throws on invalid) and that this is the
     // active provider.
     const event = await this.gateway.parseWebhook(provider, rawBody, headers);

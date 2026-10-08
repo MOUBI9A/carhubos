@@ -1,4 +1,5 @@
 import { test, expect, Page, Route } from '@playwright/test';
+import { futureBookingDates } from './fixtures';
 
 /**
  * Guardian Vault — car document upload UI (/dashboard/fleet/[id], Guardian
@@ -224,10 +225,10 @@ test.describe('Guardian Vault — car document upload', () => {
       mimeType: 'application/pdf',
       buffer: Buffer.from('%PDF-1.4 fake pdf content'),
     });
-    expect(calls.vaultPost).toBe(1);
     await expect(page.getByText('insurance-scan.pdf', { exact: true })).toBeVisible();
+    await expect.poll(() => calls.vaultPost).toBe(1);
 
-    await page.locator('input[name="expiryDate"]').fill('2027-01-01');
+    await page.locator('input[name="expiryDate"]').fill(futureBookingDates(365).start);
     await page.getByRole('button', { name: 'Activate tracking' }).click();
 
     const req = await postDataPromise;
@@ -300,8 +301,8 @@ test.describe('Guardian Vault — car document upload', () => {
       page.waitForEvent('popup'),
       page.getByRole('button', { name: /View INSURANCE file/i }).click(),
     ]);
+    await expect(popup).toHaveURL(/mock-project\.supabase\.co/);
     await popup.waitForLoadState('domcontentloaded');
-    expect(popup.url()).toContain('mock-project.supabase.co');
     expect(calls.downloadUrl).toBe(1);
   });
 });

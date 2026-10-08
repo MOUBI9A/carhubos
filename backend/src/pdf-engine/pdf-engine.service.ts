@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as puppeteer from 'puppeteer';
+import type { Browser } from 'puppeteer';
 
 @Injectable()
 export class PdfEngineService {
@@ -94,8 +94,9 @@ export class PdfEngineService {
     `;
 
     this.logger.log(`[PUPPETEER] Spinning up headless browser to generate contract PDF...`);
-    let browser: puppeteer.Browser | undefined;
+    let browser: Browser | undefined;
     try {
+      const puppeteer = await import('puppeteer');
       browser = await puppeteer.launch({
         headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,

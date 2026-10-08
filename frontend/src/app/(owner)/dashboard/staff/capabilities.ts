@@ -3,6 +3,10 @@
 // / STAFF_PRESETS). Keep in sync if the backend catalog changes.
 
 export const AGENCY_CAPABILITIES = [
+  'diagnostics.view',
+  'diagnostics.perform',
+  'diagnostics.confirm',
+  'diagnostics.estimate',
   'fleet.view',
   'fleet.manage',
   'booking.view',
@@ -20,16 +24,23 @@ export const AGENCY_CAPABILITIES = [
   'deposit.manage',
   'trust.report',
   'inspection.perform',
+  'tasks.view',
+  'tasks.manage',
   'reports.view',
   'hub.manage',
   'staff.manage',
   'settings.manage',
+  'billing.manage',
 ] as const;
 
 export type AgencyCapability = (typeof AGENCY_CAPABILITIES)[number];
 
 /** Human labels for each capability, used by the checkbox grid. */
 export const CAPABILITY_LABELS: Record<AgencyCapability, string> = {
+  'diagnostics.view': 'View Diagnostics',
+  'diagnostics.perform': 'Perform Diagnostics',
+  'diagnostics.confirm': 'Confirm Diagnostic Findings',
+  'diagnostics.estimate': 'Prepare Diagnostic Estimates',
   'fleet.view': 'View Fleet',
   'fleet.manage': 'Manage Fleet',
   'booking.view': 'View Bookings',
@@ -47,10 +58,13 @@ export const CAPABILITY_LABELS: Record<AgencyCapability, string> = {
   'deposit.manage': 'Manage Deposits',
   'trust.report': 'File Trust Reports',
   'inspection.perform': 'Perform Inspections',
+  'tasks.view': 'View Tasks',
+  'tasks.manage': 'Manage Tasks',
   'reports.view': 'View Reports',
   'hub.manage': 'Manage B2B Hub',
   'staff.manage': 'Manage Staff',
   'settings.manage': 'Manage Settings',
+  'billing.manage': 'Manage Subscription',
 };
 
 export interface CapabilityGroup {
@@ -60,6 +74,7 @@ export interface CapabilityGroup {
 
 /** Grouped for display in the capability checkbox grid. */
 export const CAPABILITY_GROUPS: CapabilityGroup[] = [
+  { title: 'Diagnostics', capabilities: ['diagnostics.view', 'diagnostics.perform', 'diagnostics.confirm', 'diagnostics.estimate'] },
   { title: 'Fleet', capabilities: ['fleet.view', 'fleet.manage'] },
   {
     title: 'Bookings',
@@ -75,8 +90,9 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
     capabilities: ['contract.manage', 'contract.sign', 'deposit.manage'],
   },
   { title: 'Trust & Inspections', capabilities: ['trust.report', 'inspection.perform'] },
+  { title: 'Tasks', capabilities: ['tasks.view', 'tasks.manage'] },
   { title: 'Reports & Hub', capabilities: ['reports.view', 'hub.manage'] },
-  { title: 'Staff & Settings', capabilities: ['staff.manage', 'settings.manage'] },
+  { title: 'Staff & Settings', capabilities: ['staff.manage', 'settings.manage', 'billing.manage'] },
 ];
 
 // ── Presets ──────────────────────────────────────────────────────────────
@@ -84,7 +100,7 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
 /** Identity-role presets — mirrors backend ROLE_PRESETS. */
 export const ROLE_PRESETS: Record<string, AgencyCapability[]> = {
   OWNER: [...AGENCY_CAPABILITIES],
-  MANAGER: AGENCY_CAPABILITIES.filter((c) => c !== 'staff.manage' && c !== 'settings.manage'),
+  MANAGER: AGENCY_CAPABILITIES.filter((c) => c !== 'staff.manage' && c !== 'settings.manage' && c !== 'billing.manage'),
   AGENT: [
     'fleet.view',
     'booking.view',
@@ -97,6 +113,8 @@ export const ROLE_PRESETS: Record<string, AgencyCapability[]> = {
     'contract.sign',
     'deposit.manage',
     'inspection.perform',
+    'tasks.view',
+    'tasks.manage',
     'payment.record',
     'trust.report',
     'reports.view',
@@ -105,6 +123,7 @@ export const ROLE_PRESETS: Record<string, AgencyCapability[]> = {
 
 /** Named starter presets — mirrors backend STAFF_PRESETS. */
 export const STAFF_PRESETS: Record<string, AgencyCapability[]> = {
+  Technician: ['diagnostics.view', 'diagnostics.perform', 'diagnostics.confirm', 'diagnostics.estimate'],
   'Front desk': [
     'booking.view',
     'booking.create',
@@ -134,6 +153,7 @@ export const CREATE_STAFF_PRESETS = [
   'OWNER',
   'MANAGER',
   'AGENT',
+  'Technician',
   'Front desk',
   'Fleet manager',
   'Accountant',

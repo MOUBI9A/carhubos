@@ -26,6 +26,7 @@ import {
   UserCog,
   CreditCard,
   FolderOpen,
+  Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
@@ -60,6 +61,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('owner.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('owner.reports'), href: '/dashboard/reports', icon: FileText },
       { label: t('owner.fleet'), href: '/dashboard/fleet', icon: Car },
+      { label: t('owner.diagnostics'), href: '/dashboard/diagnostics', icon: Wrench },
       { label: t('owner.bookings'), href: '/dashboard/bookings', icon: Calendar },
       { label: t('owner.customers'), href: '/dashboard/customers', icon: Users },
       { label: t('owner.vault'), href: '/dashboard/vault', icon: ShieldCheck },
@@ -77,6 +79,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     MANAGER: [
       { label: t('manager.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('manager.fleet'), href: '/dashboard/fleet', icon: Car },
+      { label: t('manager.diagnostics'), href: '/dashboard/diagnostics', icon: Wrench },
       { label: t('manager.bookings'), href: '/dashboard/bookings', icon: Calendar },
       { label: t('manager.customers'), href: '/dashboard/customers', icon: Users },
       { label: t('manager.waitlist'), href: '/dashboard/waitlist', icon: History },
@@ -87,6 +90,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('agent.operations'), href: '/agent', icon: LayoutDashboard },
       { label: t('agent.tasks'), href: '/agent/tasks', icon: FileText },
       { label: t('agent.inspections'), href: '/agent/inspections', icon: ShieldCheck },
+      { label: t('agent.diagnostics'), href: '/agent/diagnostics', icon: Wrench },
     ],
     RENTER: [
       { label: t('renter.vault'), href: '/portal', icon: ShieldCheck },

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono, Noto_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
@@ -9,32 +9,38 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { QueryProvider } from "@/lib/QueryProvider";
 import { dirForLocale, type Locale } from "@/i18n/config";
 
+// Licensed fonts are self-hosted so production builds need no Google Fonts network.
 // ── Fider Lux type system (Phase 12) ──────────────────────────────────────────
 // Fraunces = warm editorial serif for marketing display only.
 // Hanken Grotesk = humanist grotesque for all UI/body (replaces cold Inter).
 // IBM Plex Mono = tabular figures for money (MAD), plates, CIN/contract IDs.
 // Noto Sans Arabic = body/UI when locale is AR (RTL).
-const fraunces = Fraunces({
-  subsets: ["latin"],
+const fraunces = localFont({
+  src: "../fonts/Fraunces.ttf",
+  weight: "100 900",
   variable: "--font-fraunces",
   display: "swap",
 });
-const hanken = Hanken_Grotesk({
-  subsets: ["latin"],
+const hanken = localFont({
+  src: "../fonts/HankenGrotesk.ttf",
+  weight: "100 900",
   variable: "--font-hanken",
   display: "swap",
 });
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const plexMono = localFont({
+  src: [
+    { path: "../fonts/IBMPlexMono-Regular.ttf", weight: "400" },
+    { path: "../fonts/IBMPlexMono-Medium.ttf", weight: "500" },
+    { path: "../fonts/IBMPlexMono-SemiBold.ttf", weight: "600" },
+  ],
   variable: "--font-plex",
   display: "swap",
 });
-const notoArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
+const notoArabic = localFont({
+  src: "../fonts/NotoSansArabic.ttf",
+  weight: "100 900",
   variable: "--font-noto-arabic",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { MockGateway } from './providers/mock.gateway';
 import { StripeGateway } from './providers/stripe.gateway';
@@ -23,9 +23,18 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
     expect(make().activeProvider).toBe('MOCK');
   });
 
-  it('falls back to MOCK on an unknown PAYMENT_PROVIDER', () => {
+  it('fails closed on an unknown PAYMENT_PROVIDER', () => {
     process.env.PAYMENT_PROVIDER = 'paypal';
-    expect(make().activeProvider).toBe('MOCK');
+    expect(() => make()).toThrow(/Unknown PAYMENT_PROVIDER/);
+  });
+
+  it('DISABLED rejects checkout and all webhook providers', async () => {
+    process.env.PAYMENT_PROVIDER = 'disabled';
+    const service = make();
+    expect(() => service.createCheckout({} as any)).toThrow(ServiceUnavailableException);
+    for (const provider of ['mock', 'stripe', 'disabled']) {
+      await expect(service.parseWebhook(provider, '{"paid":true}', {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    }
   });
 
   it('MOCK createCheckout returns a deterministic providerRef + redirect url', async () => {
@@ -95,10 +104,10 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
       else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
     });
 
-    it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is unset (would silently default to MOCK)', () => {
+    it('defaults production to DISABLED for manual billing', () => {
       delete process.env.PAYMENT_PROVIDER;
       process.env.NODE_ENV = 'production';
-      expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+      expect(make().activeProvider).toBe('DISABLED');
     });
 
     it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is explicitly "mock"', () => {
@@ -110,7 +119,7 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
     it('refuses to construct when NODE_ENV=production and PAYMENT_PROVIDER is unrecognized (falls back to MOCK)', () => {
       process.env.PAYMENT_PROVIDER = 'paypal';
       process.env.NODE_ENV = 'production';
-      expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+      expect(() => make()).toThrow(/Unknown PAYMENT_PROVIDER/i);
     });
 
     it('still allows MOCK outside production', () => {

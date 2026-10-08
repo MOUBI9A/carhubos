@@ -9,6 +9,10 @@
 
 // All 21 agency capabilities, same order as AGENCY_CAPABILITIES.
 const ALL_AGENCY_CAPABILITIES = [
+  'diagnostics.view',
+  'diagnostics.perform',
+  'diagnostics.confirm',
+  'diagnostics.estimate',
   'fleet.view',
   'fleet.manage',
   'booking.view',
@@ -32,6 +36,7 @@ const ALL_AGENCY_CAPABILITIES = [
   'hub.manage',
   'staff.manage',
   'settings.manage',
+  'billing.manage',
 ];
 
 // Mirrors ROLE_PRESETS: OWNER = all 21, MANAGER = 19 (no staff/settings
@@ -39,7 +44,8 @@ const ALL_AGENCY_CAPABILITIES = [
 const ROLE_PRESETS = {
   OWNER: [...ALL_AGENCY_CAPABILITIES],
   MANAGER: ALL_AGENCY_CAPABILITIES.filter(
-    (c) => c !== 'staff.manage' && c !== 'settings.manage',
+    (c) =>
+      c !== 'staff.manage' && c !== 'settings.manage' && c !== 'billing.manage',
   ),
   AGENT: [
     'fleet.view',

@@ -1,8 +1,9 @@
 import { test, expect, Page, Route } from '@playwright/test';
+import { loginAsRole } from './fixtures';
 
 /**
  * Renter portal — document upload UI (/portal, "My documents" card). Logs in
- * as the seeded demo renter (same real-login pattern as roles.e2e.ts) so
+ * as this run's isolated renter (same real-login pattern as roles.e2e.ts) so
  * /portal/me, /portal/consent and /portal/notifications load real seed data
  * — only /portal/documents** is intercepted and answered with canned JSON,
  * so uploads/downloads never touch the real backend or Supabase.
@@ -20,11 +21,7 @@ interface MockDoc {
 }
 
 async function loginAsRenter(page: Page) {
-  await page.goto('/login');
-  await page.getByPlaceholder('name@agency.com').fill('renter@carhub.os');
-  await page.locator('input[type="password"]').fill('admin123');
-  await page.locator('form button[type="submit"]').click();
-  await page.waitForURL('**/portal');
+  await loginAsRole(page, 'RENTER', '/portal');
 }
 
 async function mockPortalDocumentsApi(page: Page, initialDocs: MockDoc[]) {
@@ -67,6 +64,8 @@ async function mockPortalDocumentsApi(page: Page, initialDocs: MockDoc[]) {
 }
 
 test.describe('Renter portal — document upload', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('drag-and-drop of a disallowed file type is rejected client-side, no upload request fires', async ({ page }) => {
     const { calls } = await mockPortalDocumentsApi(page, []);
     await loginAsRenter(page);
@@ -112,7 +111,7 @@ test.describe('Renter portal — document upload', () => {
     await page.getByRole('button', { name: 'Upload' }).click();
     await expect(page.getByRole('heading', { name: 'Upload document' })).toBeVisible();
 
-    await page.locator('select').selectOption('DRIVING_LICENSE');
+    await page.getByRole('dialog').locator('select').selectOption('DRIVING_LICENSE');
     await page.locator('input[type="file"]').setInputFiles({
       name: 'license.jpg',
       mimeType: 'image/jpeg',
@@ -192,8 +191,8 @@ test.describe('Renter portal — document upload', () => {
       page.waitForEvent('popup'),
       page.getByRole('button', { name: /View .*file/i }).click(),
     ]);
+    await expect(popup).toHaveURL(/mock-project\.supabase\.co/);
     await popup.waitForLoadState('domcontentloaded');
-    expect(popup.url()).toContain('mock-project.supabase.co');
     expect(calls.downloadUrl).toBe(1);
   });
 });

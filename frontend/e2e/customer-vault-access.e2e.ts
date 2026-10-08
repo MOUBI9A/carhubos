@@ -166,8 +166,8 @@ test.describe('Customer detail — Digital vault access panel', () => {
       page.waitForEvent('popup'),
       page.getByRole('button', { name: /View .*file/i }).click(),
     ]);
+    await expect(popup).toHaveURL(/mock-project\.supabase\.co/);
     await popup.waitForLoadState('domcontentloaded');
-    expect(popup.url()).toContain('mock-project.supabase.co');
     expect(downloadUrlCalls).toBe(1);
   });
 

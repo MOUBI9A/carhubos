@@ -6,14 +6,17 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { validateEnvironment } from './config/environment';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
 
 async function bootstrap() {
+  validateEnvironment(process.env);
   // rawBody: true captures the raw request body (req.rawBody) alongside the
   // normal parsed body — required to verify payment-gateway webhook signatures
   // (e.g. Stripe). Additive: existing @Body() parsing is unaffected.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  app.enableShutdownHooks();
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
@@ -30,7 +33,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+    origin: process.env.ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()) || [
       'http://localhost:3000',
       'http://localhost:3002',
     ],

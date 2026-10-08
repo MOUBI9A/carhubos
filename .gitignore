@@ -35,3 +35,13 @@ yarn-error.log*
 
 # Local MCP/tooling config
 .mcp.json
+
+# Browser authentication and generated Playwright artifacts
+frontend/playwright/.auth/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+# Python helper bytecode
+__pycache__/
+*.pyc

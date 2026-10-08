@@ -1,14 +1,13 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: carhub-db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-carhub_admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required (no committed default)}
       POSTGRES_DB: ${DB_NAME:-carhub_os}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +20,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: carhub-backend
     restart: always
     depends_on:
       db:
@@ -31,25 +29,31 @@ services:
       DATABASE_URL: postgresql://${DB_USER:-carhub_admin}:${DB_PASSWORD:?DB_PASSWORD is required (no committed default)}@db:5432/${DB_NAME:-carhub_os}?schema=public
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (no committed default)}
       PORT: 5406
-      ALLOWED_ORIGINS: "http://localhost:3000,http://frontend:3000"
+      IDENTITY_PEPPER: ${IDENTITY_PEPPER:?IDENTITY_PEPPER is required}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?PUBLIC_APP_URL is required (canonical HTTPS origin)}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required (HTTPS origins)}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-disabled}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       NODE_ENV: production
     ports:
-      - "5406:5406"
+      - "127.0.0.1:${BACKEND_PORT:-5406}:5406"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: carhub-frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
     restart: always
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:5406/api
       NODE_ENV: production
+      API_INTERNAL_URL: http://backend:5406
       PORT: 3000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
 
 volumes:
   postgres_data:

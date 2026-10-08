@@ -41,6 +41,7 @@ import { EntitlementsModule } from './entitlements/entitlements.module';
 import { AccidentsModule } from './accidents/accidents.module';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { VaultModule } from './vault/vault.module';
 
 @Module({
@@ -92,6 +93,7 @@ import { VaultModule } from './vault/vault.module';
     PaymentGatewayModule,
     CheckoutModule,
     VaultModule,
+    DiagnosticsModule,
   ],
   controllers: [AppController],
   providers: [

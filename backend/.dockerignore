@@ -5,3 +5,16 @@ Dockerfile
 dist
 .git
 dev.db
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.sql
+*.dump
+coverage
+test-results
+playwright-report
+.npmrc
+*.p12
+*.pfx

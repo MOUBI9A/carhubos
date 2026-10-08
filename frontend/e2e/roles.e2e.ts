@@ -1,40 +1,33 @@
 import { test, expect } from '@playwright/test';
+import { loginAsRole, type FixtureRole } from './fixtures';
 
 /**
  * Every user type must be able to log in and land on its own area.
- * These accounts come from `node prisma/seed-roles.js` (password admin123).
+ * These scoped accounts come from the trusted test-DB setup and are removed
+ * after this run. No demo seed or public role escalation is required.
  */
 test.describe('Role-based login routing', () => {
   // Start each test unauthenticated (override the shared owner storageState).
   test.use({ storageState: { cookies: [], origins: [] } });
 
   const cases = [
-    { role: 'ROOT_ADMIN', email: 'root@carhub.os', landing: '/admin', marker: 'Global Pulse' },
-    { role: 'OWNER', email: 'owner@carhub.os', landing: '/dashboard', marker: 'Command center' },
-    { role: 'MANAGER', email: 'manager@carhub.os', landing: '/dashboard', marker: 'Command center' },
-    { role: 'AGENT', email: 'agent@carhub.os', landing: '/agent', marker: 'Operations' },
-    { role: 'RENTER', email: 'renter@carhub.os', landing: '/portal', marker: 'My Vault' },
+    { role: 'ROOT_ADMIN', landing: '/admin', marker: 'Global pulse' },
+    { role: 'OWNER', landing: '/dashboard', marker: 'Command center' },
+    { role: 'MANAGER', landing: '/dashboard', marker: 'Command center' },
+    { role: 'AGENT', landing: '/agent', marker: 'Operations' },
+    { role: 'RENTER', landing: '/portal', marker: 'My digital vault' },
   ];
 
   for (const c of cases) {
     test(`${c.role} logs in and lands on ${c.landing}`, async ({ page }) => {
-      await page.goto('/login');
-      await page.getByPlaceholder('name@agency.com').fill(c.email);
-      await page.locator('input[type="password"]').fill('admin123');
-      await page.locator('form button[type="submit"]').click();
-
-      await page.waitForURL(`**${c.landing}`);
-      await expect(page.getByText(c.marker, { exact: false }).first()).toBeVisible();
+      await loginAsRole(page, c.role as FixtureRole, c.landing);
+      await expect(page.getByRole('heading', { name: c.marker, exact: true })).toBeVisible();
     });
   }
 
   test('a renter cannot reach the owner dashboard (role gate)', async ({ page }) => {
     // Log in as renter, then try to open /dashboard directly.
-    await page.goto('/login');
-    await page.getByPlaceholder('name@agency.com').fill('renter@carhub.os');
-    await page.locator('input[type="password"]').fill('admin123');
-    await page.locator('form button[type="submit"]').click();
-    await page.waitForURL('**/portal');
+    await loginAsRole(page, 'RENTER', '/portal');
 
     await page.goto('/dashboard');
     // The gate bounces a renter back to their portal.

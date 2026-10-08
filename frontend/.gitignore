@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /.qa-scratch/
+
+# Browser state includes authenticated session cookies. Never commit it.
+/playwright/.auth/
+/playwright-report/
+/test-results/
+/blob-report/

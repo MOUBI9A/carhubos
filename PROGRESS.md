@@ -72,3 +72,8 @@ Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF 
 
 ## Open questions / mid-debugging
 None blocking — tree is clean, all four verification commands (backend tsc/jest/eslint, frontend tsc/vitest/eslint) are green. The only genuine ambiguity is whether the Codex CLI process might resume in a future session; check `git status` first per the note above.
+
+
+## 2026-10-08 cloud diagnostics development
+
+User-authorized additive diagnostics and release hardening are on `feat/production-diagnostics`. Read PROJECT_BRAIN.md, PROJECT_IMPROVEMENTS.md, docs/DECISIONS.md and DEPLOYMENT.md for current scope, evidence and blockers. Historical Phase 12 presentation-only scope remains applicable to that rental restyle, not this separately authorized implementation. Production deployment is not claimed without external verification.

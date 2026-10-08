@@ -1,0 +1,9 @@
+[
+  {
+    "project": "frontend",
+    "package": "braces",
+    "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "expires": "2026-11-08T00:00:00Z",
+    "reason": "Unpatched braces 3.0.3 is reachable only through Next ESLint's build-time glob chain. Repository-defined lint patterns are trusted, no server endpoint accepts lint patterns, and production npm audit independently excludes this dev-only chain. Review an upstream patch before expiry; do not downgrade Next 16 to 14."
+  }
+]
