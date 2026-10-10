@@ -6,7 +6,8 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RequestWithId } from '../middleware/request-id.middleware';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -15,7 +16,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithId>();
 
     const status =
       exception instanceof HttpException
@@ -28,14 +29,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : { message: 'Internal server error', statusCode: 500 };
 
     this.logger.error(
-      `Http Status: ${status} Error Message: ${JSON.stringify(message)}`,
-      (exception as Error)?.stack,
+      JSON.stringify({
+        event: 'http_exception',
+        requestId: request.requestId,
+        method: request.method,
+        path: request.url,
+        statusCode: status,
+        error:
+          exception instanceof Error
+            ? exception.name
+            : 'UnknownError',
+      }),
+      exception instanceof Error ? exception.stack : undefined,
     );
 
     response.status(status).json({
       ...(typeof message === 'object' ? message : { message }),
       timestamp: new Date().toISOString(),
       path: request.url,
+      requestId: request.requestId,
     });
   }
 }
