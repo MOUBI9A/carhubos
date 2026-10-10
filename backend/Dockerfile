@@ -24,7 +24,6 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY --from=builder /app/package*.json ./
-# Only install production dependencies
 RUN npm ci --omit=dev
 
 # Copy compiled code and prisma client
@@ -33,4 +32,11 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 5406
+
+# Liveness is intentionally cheap. Compose/Kubernetes should use /api/ready
+# when deciding whether to send traffic because that route also verifies DB
+# connectivity.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:5406/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+
 CMD ["npm", "run", "start:prod"]
