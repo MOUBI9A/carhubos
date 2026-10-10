@@ -8,7 +8,19 @@
     "backend": {
       "root": "backend/",
       "runtime": "container",
-      "entrypoint": "Dockerfile.vercel"
+      "entrypoint": "Dockerfile.vercel",
+      "routes": [
+        {
+          "src": "/_/backend/(.*)",
+          "transforms": [
+            {
+              "type": "request.path",
+              "op": "set",
+              "args": "/$1"
+            }
+          ]
+        }
+      ]
     }
   },
   "rewrites": [
