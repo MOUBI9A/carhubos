@@ -6,6 +6,8 @@
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+RUN apt-get update && apt-get install -y openssl --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 RUN npm ci
 COPY . .
@@ -18,8 +20,10 @@ ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 # System Chromium + fonts required by the PDF engine (including Arabic/CJK
-# fallback coverage). Vercel injects PORT for the container at runtime.
+# fallback coverage). OpenSSL is required by the Prisma query engine.
+# Vercel injects PORT for the container at runtime.
 RUN apt-get update && apt-get install -y \
+    openssl \
     chromium \
     fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
     --no-install-recommends \
