@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -7,16 +12,31 @@ export class AiVisionService {
 
   constructor(private prisma: PrismaService) {}
 
+  private getMode(): 'disabled' | 'simulation' {
+    const configured = (process.env.AI_VISION_MODE ?? '').trim().toLowerCase();
+    if (configured === 'simulation') return 'simulation';
+    if (configured === 'disabled') return 'disabled';
+
+    // Safe default: production never exposes a fake analysis by accident.
+    return process.env.NODE_ENV === 'production' ? 'disabled' : 'simulation';
+  }
+
   /**
    * Preview-only damage-analysis pipeline.
    *
    * IMPORTANT: this method does not run a real computer-vision model yet.
    * It returns deterministic simulated detections so the rest of the product
    * flow can be exercised without presenting the result as real inference.
-   * Replace this implementation behind a provider abstraction before enabling
-   * automated damage recognition in production.
+   * Set AI_VISION_MODE=simulation explicitly to enable the preview. Production
+   * defaults to disabled until a real provider is integrated.
    */
   async analyzeVehicle(agencyId: string, carId: string, imageBuffer: Buffer) {
+    if (this.getMode() === 'disabled') {
+      throw new ServiceUnavailableException(
+        'AI Vision is disabled. No live computer-vision provider is configured.',
+      );
+    }
+
     const car = await this.prisma.car.findFirst({
       where: { id: carId, agencyId },
       select: { id: true },
@@ -31,8 +51,6 @@ export class AiVisionService {
       `Running AI Vision simulation preview for car ${carId}; no live CV provider is configured.`,
     );
 
-    // Small delay keeps the preview interaction realistic without pretending
-    // that an external model call occurred.
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     const detections = [
