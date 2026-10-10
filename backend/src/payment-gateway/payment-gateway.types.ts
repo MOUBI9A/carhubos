@@ -1,13 +1,14 @@
 /**
  * Provider-agnostic payment gateway port. The app depends only on this shape;
  * concrete adapters (mock / stripe / cmi) implement it and are selected at
- * runtime by the PAYMENT_PROVIDER env var. Money note: `amount` here is the
- * informational major-unit figure handed to the gateway for display/charge; the
- * money OF RECORD stays the Invoice's Prisma.Decimal, and settlement reconciles
- * against that (never against a gateway-reported number) — see the settlement
- * service. The gateway-reported amount is only cross-checked, in integer cents.
+ * runtime. DISABLED is an intentional production-safe state for pilots that do
+ * not process online payments yet; checkout/webhook operations reject cleanly.
+ * Money note: `amount` here is the informational major-unit figure handed to
+ * the gateway for display/charge; the money OF RECORD stays the Invoice's
+ * Prisma.Decimal, and settlement reconciles against that (never against a
+ * gateway-reported number) — see the settlement service.
  */
-export const PAYMENT_PROVIDERS = ['MOCK', 'STRIPE', 'CMI'] as const;
+export const PAYMENT_PROVIDERS = ['DISABLED', 'MOCK', 'STRIPE', 'CMI'] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export interface CreateCheckoutInput {
@@ -43,7 +44,7 @@ export interface WebhookEvent {
 
 /** A concrete gateway adapter. */
 export interface PaymentGatewayProvider {
-  readonly name: PaymentProvider;
+  readonly name: Exclude<PaymentProvider, 'DISABLED'>;
   createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutOutput>;
   /**
    * Verify + parse an incoming webhook. MUST throw on an invalid signature —
