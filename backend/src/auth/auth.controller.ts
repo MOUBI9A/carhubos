@@ -6,29 +6,34 @@ import type { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
+const configuredAuthThrottle = Number(process.env.AUTH_THROTTLE_LIMIT ?? 5);
+const AUTH_THROTTLE_LIMIT =
+  Number.isFinite(configuredAuthThrottle) && configuredAuthThrottle > 0
+    ? configuredAuthThrottle
+    : 5;
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: AUTH_THROTTLE_LIMIT, ttl: 60000 } })
   @Post('register')
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: AUTH_THROTTLE_LIMIT, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const data = await this.authService.login(loginDto);
     
-    // Set HttpOnly cookie
     res.cookie('infinity_token', data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return data;
@@ -52,11 +57,6 @@ export class AuthController {
     return { user };
   }
 
-  /**
-   * Exit an impersonation session: if the current token was minted by the founder
-   * console (`isImpersonated`), re-issue the founder's own session from
-   * `impersonatorId` and swap the cookie back. No-op error otherwise.
-   */
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard)
   @Post('exit-impersonation')
@@ -78,4 +78,3 @@ export class AuthController {
     return data;
   }
 }
-
