@@ -7,9 +7,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // 🏛️ PILLAR 1: SAAS CORE & MULTI-TENANCY
@@ -24,486 +23,793 @@ model Agency {
   contactEmail     String    @unique
   businessPhone    String?
   website          String? // Public site shown on the settings page + landing profile
-  plan             String    @default("PILOT") // PILOT, GROWTH, ENTERPRISE
-  subscriptionStatus String  @default("ACTIVE") // TRIAL, ACTIVE, PAST_DUE, CANCELED
-  trialEndsAt      DateTime?
-  subscriptionStartedAt DateTime?
-  subscriptionEndsAt DateTime?
-  billingEmail     String?
-  monthlyPriceCents Int      @default(0)
+  status           String    @default("ACTIVE") // ACTIVE, SUSPENDED
+  subscriptionTier String    @default("STARTER") // STARTER, PRO, BUSINESS
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime? // Soft-delete tombstone; null = live. Never hard-delete an agency.
 
   users            User[]
   cars             Car[]
   customers        Customer[]
   bookings         Booking[]
   invoices         Invoice[]
-  payments         Payment[]
   expenses         Expense[]
-  documents        Document[]
+  automations      AutomationRule[]
+  contracts        Contract[]
   tasks            Task[]
-  inspections      Inspection[]
-  accidents        Accident[]
-  waitlistEntries  WaitlistEntry[]
-  blacklistEntries BlacklistEntry[]
-  vaultFiles       VaultFile[]
+  refusalLogs      RefusalLog[]
   auditLogs        AuditLog[]
-  notifications    Notification[]
-  automationRules  AutomationRule[]
-  automationExecutions AutomationExecution[]
-  b2bListings      B2BListing[]
-  b2bRequests      B2BRequest[]
-  trustReviews     TrustReview[]
-  trustLookups     TrustLookup[]
+  hubListings      HubListing[]
+  webhooks         WebhookSubscription[]
+  renterReviews    RenterReview[]
+  blacklistEntries BlacklistEntry[]
+  memberships      AgencyMembership[]
   consentGrants    ConsentGrant[]
+  subscription     Subscription?
+  platformInvoices PlatformInvoice[]
+  accidents        Accident[]
+  checkoutSessions CheckoutSession[]
+  vaultFiles       VaultFile[]
+
+  @@index([deletedAt])
 }
 
-model User {
+// 🕸️ PILLAR 5: THE HUB (B2B FLEET SHARING)
+model HubListing {
   id           String   @id @default(uuid())
-  agencyId     String?
-  agency       Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  email        String   @unique
-  passwordHash String
-  fullName     String
-  role         String   @default("AGENT") // ROOT_ADMIN, OWNER, MANAGER, AGENT, RENTER
-  isActive     Boolean  @default(true)
-  capabilities Json?
+  dailyRateB2B Decimal  @db.Decimal(12, 2) // Discounted rate for other agencies
+  status       String   @default("ACTIVE") // ACTIVE, UNAVAILABLE
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assignedTasks Task[] @relation("AssignedTasks")
-  createdTasks  Task[] @relation("CreatedTasks")
-  inspections   Inspection[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
+  carId    String @unique
+  car      Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
 }
 
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       String   @default("AGENT") // ROOT_ADMIN, OWNER, MANAGER, AGENT, RENTER
+  trustScore Int      @default(50) // Renter trust level (0-100)
+  qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  agencyId         String?
+  agency           Agency?            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  assignedTasks    Task[]
+  inspections      Inspection[]       @relation("Inspector")
+  rentals          Booking[]          @relation("Renter")
+  verifiedPayments Payment[]          @relation("PaymentVerifier")
+  memberships      AgencyMembership[]
+
+  // 🌐 PILLAR 6 link: the global, cross-tenant identity this claimed RENTER portal
+  // account resolves to. Null until the renter claims/verifies their identity.
+  renterIdentityId String?
+  renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
+
+  // 🪪 Renter portal & consent subsystem back-relations
+  customerRecords    Customer[] // agency Customer rows that link to this portal account
+  consentGrants      ConsentGrant[] // document-access grants this renter has issued
+  notifications      Notification[]
+  renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
+  vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
+
+  @@index([agencyId])
+}
+
+// 🔐 CAPABILITY ENGINE (schema foundation; guard wiring is a later task)
+// A user's membership in one agency carries a granular capability set. Roles
+// (User.role) become named presets that seed these defaults; enforcement moves
+// off role strings and onto `capabilities`. See docs/PRODUCT_VISION.md §2-3 and
+// backend/src/common/capabilities.ts (the catalog + presets).
+model AgencyMembership {
+  id           String   @id @default(cuid())
+  capabilities String[] // Postgres scalar list of capability strings
+  rolePreset   String // 'OWNER' | 'MANAGER' | 'AGENT' or a staff-preset name
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agencyId])
+  @@index([agencyId])
+}
+
+// 🚘 PILLAR 2: ASSET INTELLIGENCE & GUARDIAN
 model Car {
   id            String   @id @default(uuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   brand         String
   model         String
   year          Int
   licensePlate  String
-  vin           String?
+  pricePerDay   Decimal  @db.Decimal(12, 2)
   fuelType      String   @default("DIESEL")
-  transmission  String   @default("MANUAL")
-  dailyRateCents Int
+  gearbox       String   @default("MANUAL")
   status        String   @default("AVAILABLE") // AVAILABLE, RENTED, MAINTENANCE, OUT_OF_SERVICE
-  mileageKm     Int      @default(0)
-  color         String?
-  imageUrl      String?
-  purchasePriceCents Int?
-  purchaseDate  DateTime?
+  mileage       Int      @default(0)
+  nextServiceKm Int?     @default(10000) // Predictive maintenance (Vidange)
+  currentRoi    Float    @default(0) // Real-time profitability score
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  bookings      Booking[]
-  documents     Document[]
-  inspections   Inspection[]
-  accidents     Accident[]
-  b2bListings   B2BListing[]
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  bookings    Booking[]
+  documents   CarDocument[]
+  maintenance MaintenanceRecord[]
+  inspections Inspection[]
+  hubListing  HubListing?
+  accidents   Accident[]
 
   @@unique([agencyId, licensePlate])
-  @@index([agencyId, status])
+  @@index([agencyId])
+  @@index([status])
 }
 
-model Customer {
-  id             String   @id @default(uuid())
-  agencyId       String
-  agency         Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  firstName      String
-  lastName       String
-  phone          String
-  email          String?
-  idType         String   @default("CIN")
-  idNumberHash   String?
-  idLast4        String?
-  nationality    String?
-  isBlacklisted  Boolean  @default(false)
-  blacklistReason String?
-  trustScore     Int?
-  trustReviewCount Int    @default(0)
-  trustRiskLevel String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model CarDocument {
+  id          String    @id @default(uuid())
+  type        String // INSURANCE, CARTE_GRISE, TECHNICAL_INSPECTION, VIGNETTE
+  fileUrl     String? // legacy/external URL — kept for existing rows, not written by new uploads
+  issueDate   DateTime?
+  expiryDate  DateTime
+  status      String    @default("VALID") // VALID, EXPIRING_SOON, EXPIRED
+  isMandatory Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  bookings       Booking[]
-  waitlistEntries WaitlistEntry[]
-  blacklistEntries BlacklistEntry[]
-  trustReviews   TrustReview[]
-  consentGrants  ConsentGrant[]
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
 
-  @@unique([agencyId, phone])
-  @@index([agencyId, isBlacklisted])
+  // Real, Supabase-backed attachment (Vault entity-linking). Nullable: an
+  // existing row may have only the legacy fileUrl, or no file at all.
+  // onDelete: SetNull, not Cascade — deleting the file must not delete the
+  // compliance record itself, just leave it unattached (the existing "no
+  // file attached" empty state already handles that).
+  vaultFileId String?    @unique
+  vaultFile   VaultFile? @relation(fields: [vaultFileId], references: [id], onDelete: SetNull)
+
+  @@index([carId])
+  @@index([expiryDate])
 }
 
-model Booking {
+model MaintenanceRecord {
+  id          String   @id @default(uuid())
+  type        String // VIDANGE, REPAIR, TIRES, BRAKES, GENERAL
+  description String
+  cost        Decimal  @default(0) @db.Decimal(12, 2)
+  mileage     Int? // Mileage at time of repair
+  garageName  String? // Linked to a Garage registry logic
+  invoiceUrl  String?
+  status      String   @default("COMPLETED") // PENDING, IN_GARAGE, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+}
+
+// 🚧 Fleet incident / accident dossier. Tenant-scoped (agencyId), attached to a
+// car and optionally to the booking it occurred under. estimatedCost is money =
+// Decimal(12,2) (the global interceptor returns it as a number on the wire).
+model Accident {
+  id            String   @id @default(uuid())
+  occurredAt    DateTime
+  severity      String // MINOR, MODERATE, SEVERE, TOTAL
+  status        String   @default("REPORTED") // REPORTED, INVESTIGATING, REPAIR_QUOTE, IN_REPAIR, CLAIM_FILED, RESOLVED
+  description   String
+  location      String?
+  thirdParty    Boolean  @default(false)
+  estimatedCost Decimal? @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId])
+  @@index([carId])
+}
+
+// 📈 PILLAR 3: DEMAND & FORENSIC LOGS
+model RefusalLog {
   id                 String   @id @default(uuid())
-  agencyId           String
-  agency             Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId               String
-  car                 Car      @relation(fields: [carId], references: [id])
-  customerId          String
-  customer            Customer @relation(fields: [customerId], references: [id])
-  startDate           DateTime
-  endDate             DateTime
-  dailyRateCents      Int
-  subtotalCents       Int
-  taxCents            Int      @default(0)
-  totalCents          Int
-  depositCents        Int      @default(0)
-  depositStatus       String   @default("PENDING") // PENDING, HELD, RETURNED, CLAIMED
-  depositMethod       String?
-  damageChargeCents   Int      @default(0)
-  status              String   @default("REQUESTED") // REQUESTED, APPROVED, ACTIVE, OVERDUE, COMPLETED, CANCELLED
-  notes               String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  customerName       String
+  customerPhone      String
+  requestedCarType   String // ECONOMY, SUV, LUXURY
+  requestedStartDate DateTime
+  requestedEndDate   DateTime
+  potentialRevenue   Decimal  @db.Decimal(12, 2)
+  status             String   @default("WAITING") // WAITING, RECOVERED, LOST
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  invoice              Invoice?
-  payments             Payment[]
-  inspections          Inspection[]
-  accidents            Accident[]
-  trustReviews         TrustReview[]
+  // Author agency may leave the network; retain the forensic log (anonymized) rather than cascade-delete it.
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
-  @@index([agencyId, startDate, endDate])
-  @@index([carId, startDate, endDate])
+  @@index([agencyId])
+  @@index([status])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String
+  action      String // CREATE_BOOKING, DELETE_CAR, CHANGE_PRICE
+  entityType  String // CAR, BOOKING, USER
+  entityId    String
+  beforeState String? // JSON string
+  afterState  String? // JSON string
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+}
+
+// 💰 PILLAR 4: FINANCIAL BRAIN & ERP
+model Booking {
+  id            String   @id @default(uuid())
+  startDate     DateTime
+  endDate       DateTime
+  totalPrice    Decimal  @db.Decimal(12, 2)
+  depositAmount Decimal  @default(0) @db.Decimal(12, 2)
+  depositStatus String   @default("PENDING") // PENDING, HELD, RETURNED, CLAIMED
+  depositMethod String   @default("CASH") // CASH, TRANSFER, CHEQUE
+  status        String   @default("REQUESTED") // REQUESTED, APPROVED, ACTIVE, COMPLETED, CANCELLED
+  contractUrl   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  carId String
+  car   Car    @relation(fields: [carId], references: [id], onDelete: Restrict)
+
+  renterId String?
+  renter   User?   @relation("Renter", fields: [renterId], references: [id], onDelete: SetNull)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  invoices         Invoice[]
+  contracts        Contract[]
+  inspections      Inspection[]
+  renterReview     RenterReview?
+  blacklistEntries BlacklistEntry[]
+  accidents        Accident[]
+
+  @@index([carId])
   @@index([customerId])
+  @@index([agencyId])
+  @@index([status])
+  @@index([startDate, endDate])
 }
 
 model Invoice {
-  id            String   @id @default(uuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  bookingId     String   @unique
-  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  invoiceNumber String
-  subtotalCents Int
-  taxCents      Int
-  totalCents    Int
-  paidCents     Int      @default(0)
-  status        String   @default("DUE") // DUE, PARTIAL, PAID, VOID
-  issuedAt      DateTime @default(now())
-  dueAt         DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(12, 2)
+  taxAmount Decimal  @default(0) @db.Decimal(12, 2) // 20% VAT
+  status    String   @default("DUE") // DUE, PARTIAL, PAID, CANCELLED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  payments      Payment[]
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  agencyId  String
+  agency    Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
-  @@unique([agencyId, invoiceNumber])
-  @@index([agencyId, status])
+  payments         Payment[]
+  checkoutSessions CheckoutSession[]
+
+  @@index([bookingId])
+  @@index([agencyId])
 }
 
 model Payment {
-  id           String   @id @default(uuid())
-  agencyId     String
-  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  bookingId    String?
-  booking      Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  invoiceId    String?
-  invoice      Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  type         String   @default("INCOME") // INCOME, REFUND
-  method       String   @default("CASH") // CASH, CARD, TRANSFER, CHEQUE, ONLINE
-  amountCents  Int
-  status       String   @default("PENDING") // PENDING, VERIFIED, FAILED, REFUNDED
-  reference    String?
-  provider     String?
-  providerRef  String?
-  verifiedAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(12, 2)
+  method    String   @default("CASH") // CASH, CARD, TRANSFER, CHEQUE
+  type      String   @default("INCOME") // INCOME, REFUND
+  status    String   @default("VERIFIED") // PENDING, VERIFIED, VOID
+  reference String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([agencyId, status])
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  verifiedById String?
+  verifiedBy   User?   @relation("PaymentVerifier", fields: [verifiedById], references: [id])
+
   @@index([invoiceId])
+  @@index([status])
+  @@index([invoiceId, status])
+  @@index([date])
+}
+
+// 💳 Online payment attempt through a payment gateway (mock / stripe / cmi). One
+// row per checkout the customer starts against an Invoice. `providerRef` is the
+// gateway's own session/intent id and is UNIQUE — it's the idempotency key, so a
+// webhook the gateway delivers more than once can never settle the invoice twice.
+// `amount` is money = Decimal(12,2). `purpose` lets the same layer later serve
+// SaaS subscription checkout (agency → founder) without a second gateway stack.
+model CheckoutSession {
+  id          String    @id @default(uuid())
+  provider    String // MOCK, STRIPE, CMI
+  providerRef String    @unique // gateway session/intent id — idempotency key
+  status      String    @default("PENDING") // PENDING, PAID, FAILED, EXPIRED
+  amount      Decimal   @db.Decimal(12, 2)
+  currency    String    @default("MAD")
+  purpose     String    @default("BOOKING_INVOICE") // BOOKING_INVOICE, SAAS_SUBSCRIPTION
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paidAt      DateTime?
+
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  // SAAS_SUBSCRIPTION purpose only: the plan this checkout upgrades to (set at
+  // creation) and the platform invoice it settles into (set at settlement, once
+  // paid — never created for a session that fails, so there's no orphaned
+  // ISSUED invoice for a payment that never happened).
+  targetPlanId      String?
+  targetPlan        Plan?            @relation(fields: [targetPlanId], references: [id], onDelete: SetNull)
+  platformInvoiceId String?
+  platformInvoice   PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId])
+  @@index([invoiceId])
+  @@index([targetPlanId])
+  @@index([platformInvoiceId])
+}
+
+// 🗄️ Vault — generic tenant-scoped file storage (Supabase Storage backend).
+// The actual bytes live in a private Supabase bucket, namespaced per-agency
+// (`<agencyId>/<uuid>-<filename>`); this row is metadata only. `storagePath`
+// is the bucket object key — never served directly, always via a short-lived
+// backend-generated signed URL (vault.service.ts) so a leaked/guessed path
+// alone can't reach the file without also passing the tenant-scope check.
+model VaultFile {
+  id          String   @id @default(uuid())
+  filename    String
+  storagePath String   @unique
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  agencyId     String
+  agency       Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  // Prisma-side only (no physical column here — the FK lives on
+  // CarDocument.vaultFileId). RenterDocument deliberately does NOT link here:
+  // it's cross-tenant/consent-gated, which doesn't fit this table's
+  // single-agencyId model — see its own storagePath/mimeType/sizeBytes below.
+  carDocument CarDocument?
+
+  @@index([agencyId])
+  @@index([agencyId, filename])
 }
 
 model Expense {
   id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  category    String
-  amountCents Int
-  memo        String?
-  spentAt     DateTime @default(now())
+  category    String // SALARY, RENT, UTILITIES, MARKETING, TAX, MAINTENANCE, OTHER (DTO-constrained @IsIn — see expenses.dto.ts EXPENSE_CATEGORIES)
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  date        DateTime @default(now())
+  status      String   @default("PAID") // PENDING, PAID
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([agencyId, spentAt])
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([category])
 }
 
-model Document {
-  id           String   @id @default(uuid())
-  agencyId     String
-  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId        String
-  car          Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  type         String
-  fileUrl      String?
-  issuedAt     DateTime?
-  expiresAt    DateTime
-  status       String   @default("VALID") // VALID, EXPIRING, EXPIRED
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([agencyId, expiresAt])
-  @@index([carId, type])
-}
-
-model Task {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  title       String
-  details     String?
-  status      String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  dueAt       DateTime?
-  assignedToId String?
-  assignedTo  User?    @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdById String?
-  createdBy   User?    @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([agencyId, status])
-}
-
-model Inspection {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId       String
-  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  bookingId   String?
-  booking     Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  type        String
-  status      String   @default("PENDING") // PENDING, COMPLETED
-  fuelLevel   Int?
-  mileageKm   Int?
-  damageNotes String?
-  photos      Json?
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([agencyId, carId])
-}
-
-model Accident {
-  id                 String   @id @default(uuid())
-  agencyId           String
-  agency             Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId               String
-  car                 Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  bookingId           String?
-  booking             Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  occurredAt          DateTime
-  severity            String   @default("MINOR") // MINOR, MODERATE, MAJOR, TOTAL_LOSS
-  description         String
-  location            String?
-  thirdPartyInvolved  Boolean  @default(false)
-  estimatedCostCents  Int?
-  status              String   @default("OPEN") // OPEN, INVESTIGATING, CLAIM_FILED, RESOLVED
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([agencyId, status])
-  @@index([carId, occurredAt])
-}
-
-model WaitlistEntry {
-  id               String   @id @default(uuid())
-  agencyId         String
-  agency           Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  customerId       String?
-  customer         Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerName     String
-  phone            String?
-  desiredTier      String?
-  opportunityCents Int      @default(0)
-  status           String   @default("OPEN") // OPEN, RECOVERED, LOST
-  recoveredBookingId String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@index([agencyId, status])
-}
-
-model BlacklistEntry {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  reason      String
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([agencyId, customerId])
-  @@index([agencyId, active])
-}
-
-model VaultFile {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name        String
-  storagePath String
-  mimeType    String
-  sizeBytes   Int
-  category    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([agencyId, createdAt])
-  @@unique([agencyId, storagePath])
-}
-
-model AuditLog {
-  id         String   @id @default(uuid())
-  agencyId   String?
-  agency     Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action     String
-  entityType String?
-  entityId   String?
-  metadata   Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-
-  @@index([agencyId, createdAt])
-}
-
-model Notification {
-  id         String   @id @default(uuid())
-  agencyId   String
-  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type       String
-  title      String
-  body       String
-  readAt     DateTime?
-  createdAt  DateTime @default(now())
-
-  @@index([agencyId, createdAt])
-  @@index([userId, readAt])
-}
-
-model AutomationRule {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name        String
-  trigger     String
-  action      String
-  config      Json?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  executions AutomationExecution[]
-
-  @@index([agencyId, isActive])
-}
-
-model AutomationExecution {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  ruleId      String
-  rule        AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  status      String   @default("SUCCESS") // SUCCESS, FAILED
-  details     Json?
-  executedAt  DateTime @default(now())
-
-  @@index([agencyId, executedAt])
-}
-
-model B2BListing {
+// 🛠️ SHARED LOGISTICS
+model Customer {
   id             String   @id @default(uuid())
-  agencyId       String
-  agency         Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  carId          String
-  car            Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  dailyRateCents Int
-  isActive       Boolean  @default(true)
-  availableFrom  DateTime?
-  availableTo    DateTime?
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String
+  identityType   String   @default("CIN") // CIN, PASSPORT
+  identityNumber String
+  nationality    String   @default("MA")
+  status         String   @default("ACTIVE") // ACTIVE, BLACKLISTED
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  requests B2BRequest[]
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
 
-  @@index([agencyId, isActive])
-  @@index([carId, isActive])
+  bookings  Booking[]
+  documents CustomerDocument[]
+
+  // 🌐 PILLAR 6 link: the global, cross-tenant identity this customer resolves to.
+  renterIdentityId String?
+  renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
+
+  // 🪪 Renter portal link: the claimed RENTER portal account this Customer row maps to.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([agencyId, identityNumber])
+  @@index([agencyId])
+  @@index([renterIdentityId])
+  @@index([userId])
 }
 
-model B2BRequest {
-  id              String   @id @default(uuid())
-  listingId       String
-  listing         B2BListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  requestingAgencyId String
-  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
-  startDate       DateTime
-  endDate         DateTime
-  message         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model CustomerDocument {
+  id         String    @id @default(uuid())
+  type       String // DRIVING_LICENSE, CIN_FRONT, CIN_BACK, PASSPORT
+  fileUrl    String
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  @@index([listingId, status])
-  @@index([requestingAgencyId, status])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
 }
 
-model TrustReview {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+model Inspection {
+  id        String   @id @default(uuid())
+  type      String // PRE_RENTAL, POST_RENTAL
+  fuelLevel Int // 0-8 (eighths)
+  mileage   Int
+  damages   String? // JSON string
+  photos    String? // JSON array
+  notes     String?
+  createdAt DateTime @default(now())
+
+  carId       String
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
   bookingId   String?
   booking     Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  rating      Int
-  comment     String?
-  createdAt   DateTime @default(now())
+  inspectorId String
+  inspector   User     @relation("Inspector", fields: [inspectorId], references: [id])
 
-  @@index([customerId, createdAt])
-  @@index([agencyId, createdAt])
+  @@index([carId])
+  @@index([bookingId])
 }
 
-model TrustLookup {
-  id             String   @id @default(uuid())
-  agencyId       String
-  agency         Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  identityHash   String
-  outcome        String?
-  createdAt      DateTime @default(now())
+model AutomationRule {
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String // BOOKING_CREATED, DOC_EXPIRING_3D, OVERDUE_RETURN
+  action    String // SEND_WHATSAPP, SEND_EMAIL, CREATE_TASK
+  config    String // JSON string
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([agencyId, createdAt])
-  @@index([identityHash])
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
 }
 
+model Contract {
+  id            String    @id @default(uuid())
+  content       String
+  status        String    @default("DRAFT") // DRAFT, SENT, SIGNED, EXPIRED
+  signedAt      DateTime?
+  signatureData String? // Base64
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  agencyId  String
+  agency    Agency  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([agencyId])
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assigneeId String?
+  assignee   User?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  // Tenant scope — Task was global (IDOR); now every task belongs to one agency.
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([assigneeId])
+  @@index([agencyId])
+  @@index([status])
+}
+
+model WebhookSubscription {
+  id        String   @id @default(uuid())
+  url       String
+  event     String // BOOKING_CREATED, BOOKING_COMPLETED, CAR_MAINTENANCE
+  secret    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([event])
+}
+
+// 🌐 PILLAR 6: GLOBAL TRUST NETWORK (CROSS-TENANT)
+// Intentionally NOT agency-scoped. The global tables never store a raw identity
+// number — only a salted hash (identityHash) + a masked display string. Matching
+// across tenants happens on the hash, so Agency B learns a renter's risk without
+// ever seeing Agency A's raw PII. (Precedent for non-scoped models: Task; for
+// cross-tenant reads: hub.discoverAssets.)
+model RenterIdentity {
+  id              String    @id @default(uuid())
+  identityHash    String    @unique // sha256(PEPPER + type + ':' + normalize(number))
+  identityType    String // CIN, PASSPORT, DRIVING_LICENSE
+  identityMasked  String // display-only, e.g. "K••••42"
+  // Cached aggregates — recomputed by TrustService on every review/blacklist write.
+  globalScore     Float     @default(0) // weighted 0-5, recency-decayed
+  reviewCount     Int       @default(0)
+  activeFlagCount Int       @default(0) // ACTIVE blacklist entries
+  riskLevel       String    @default("UNKNOWN") // UNKNOWN, TRUSTED, LOW, MEDIUM, HIGH, CRITICAL
+  firstSeenAt     DateTime  @default(now())
+  lastReviewAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  customers        Customer[]
+  reviews          RenterReview[]
+  blacklistEntries BlacklistEntry[]
+  users            User[] // claimed RENTER portal accounts resolving to this identity
+
+  @@index([riskLevel])
+}
+
+model RenterReview {
+  id        String   @id @default(uuid())
+  rating    Int // 1-5
+  tags      String   @default("[]") // JSON array: LATE_RETURN, SMOKED_IN_CAR, PERFECT_RENTER, ...
+  comment   String?
+  status    String   @default("PUBLISHED") // PUBLISHED, DISPUTED, RETRACTED, REMOVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The authored review is network reputation — it must survive the deletion of
+  // its originating booking or agency (RETAINED + anonymized), never cascade away.
+  identityId String
+  identity   RenterIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  bookingId  String?        @unique // verified review: exactly one per (completed) booking; null once booking is gone
+  booking    Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  agencyId   String? // authoring agency; null once that agency leaves the network
+  agency     Agency?        @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+
+  @@index([identityId, status])
+  @@index([agencyId])
+}
+
+model BlacklistEntry {
+  id           String    @id @default(uuid())
+  reason       String // VEHICLE_THEFT_ATTEMPT, FRAUDULENT_DOCUMENTS, MAJOR_UNPAID_FINES, UNPAID_DAMAGE, ABANDONED_VEHICLE, VIOLENT_CONDUCT, OTHER
+  severity     String    @default("HIGH") // MEDIUM, HIGH, CRITICAL
+  details      String
+  evidenceUrls String    @default("[]") // JSON array of file URLs
+  status       String    @default("ACTIVE") // ACTIVE, DISPUTED, LIFTED, EXPIRED
+  expiresAt    DateTime?
+  liftedAt     DateTime?
+  liftNote     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Author-filed flag is retained (anonymized) if the reporting agency leaves — never cascade-deleted.
+  identityId String
+  identity   RenterIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  agencyId   String?
+  agency     Agency?        @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  bookingId  String?
+  booking    Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([identityId, status])
+  @@index([agencyId, status])
+}
+
+// 🪪 RENTER PORTAL & CONSENT SUBSYSTEM (PRODUCT_VISION §5)
+// A renter must explicitly, time-boxed and revocably, consent before an agency
+// can view their identity documents. ConsentGrant is that consent record; the
+// renter (grantor) approves/revokes it and the agency reads docs only while it is
+// APPROVED and unexpired. Endpoints/guards/UI are separate tasks — this is schema only.
 model ConsentGrant {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  scope       Json
-  status      String   @default("PENDING") // PENDING, APPROVED, REVOKED, EXPIRED
-  expiresAt   DateTime?
-  approvedAt  DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String    @id @default(cuid())
+  scope             String[] // doc types the grant covers, e.g. CIN, DRIVING_LICENSE, PASSPORT
+  status            String    @default("PENDING") // PENDING -> APPROVED -> (REVOKED | EXPIRED)
+  requestedByUserId String? // agency staff who scanned/requested — audit only, no relation
+  requestedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  revokedAt         DateTime?
+  expiresAt         DateTime?
+  note              String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  @@index([agencyId, customerId, status])
+  // The RENTER granting access to their identity documents.
+  grantorUserId String
+  grantor       User   @relation(fields: [grantorUserId], references: [id], onDelete: Cascade)
+  // The agency requesting access.
+  agencyId      String
+  agency        Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([grantorUserId])
+  @@index([agencyId])
+  @@index([status])
+}
+
+// Real in-app notifications (PRODUCT_VISION §5) — consent requests/approvals,
+// doc-expiry alerts, etc. `relatedType`/`relatedId` are a lightweight polymorphic
+// pointer to the originating record (e.g. "ConsentGrant" + its id).
+model Notification {
+  id          String   @id @default(cuid())
+  type        String // CONSENT_REQUESTED, CONSENT_APPROVED, DOC_EXPIRING, ...
+  title       String
+  body        String?
+  read        Boolean  @default(false)
+  relatedType String?
+  relatedId   String?
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+// 🗄️ The renter's OWN global, cross-tenant identity-document vault. This is the
+// store the consent subsystem actually governs: it is renter-owned (keyed on
+// ownerUserId), NOT an agency's own collected paperwork. An agency's own
+// Customer/CustomerDocument rows are a SEPARATE store it already owns and reads
+// ungated (capability-gated on customer.view). An agency may read a renter's
+// RenterDocuments ONLY through an ACTIVE, in-scope ConsentGrant — see
+// ConsentService.readDocuments (the single enforcement point).
+model RenterDocument {
+  id        String   @id @default(cuid())
+  type      String // CIN_FRONT, CIN_BACK, DRIVING_LICENSE, PASSPORT, ...
+  label     String?
+  fileUrl   String? // legacy/external URL — kept for existing rows, not written by new uploads
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Real, Supabase-backed attachment — same bucket/VaultStorageService as
+  // VaultFile, but deliberately NOT a VaultFile FK: VaultFile.agencyId is
+  // required (single-tenant), and this document is cross-tenant by design
+  // (owned by the renter, read by many agencies via ConsentGrant). Keeping
+  // its own columns here means it stays scoped by ownerUserId/consent only,
+  // never by agencyId.
+  storagePath String?
+  mimeType    String?
+  sizeBytes   Int?
+
+  ownerUserId String
+  owner       User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, type])
+}
+
+// ─── Phase 11 · SaaS business layer ──────────────────────────────────────────
+// The money side: what agencies pay Fider (distinct from rental payments between
+// an agency and its renters). Manual billing during beta (no Stripe): the founder
+// issues + marks invoices paid in the founder console. Money is Decimal MAD,
+// VAT-inclusive per the Moroccan model.
+
+/// A subscription plan (pricing tier). Seeded rows: BETA (internal, unlimited,
+/// free — every agency is on this during the beta) plus the public STARTER / PRO
+/// / BUSINESS tiers. Null limit = unlimited. Prices are editable config; nothing
+/// is charged during beta.
+model Plan {
+  id                  String   @id @default(cuid())
+  key                 String   @unique // BETA | STARTER | PRO | BUSINESS
+  name                String
+  description         String?
+  priceMonthly        Decimal  @default(0) @db.Decimal(12, 2) // MAD, VAT-inclusive
+  currency            String   @default("MAD")
+  maxCars             Int? // null = unlimited
+  maxStaff            Int? // null = unlimited (seats incl. owner)
+  maxBookingsPerMonth Int? // null = unlimited
+  features            String[] // feature flags this plan unlocks, e.g. trust_network, hub, ai_vision
+  isPublic            Boolean  @default(true) // BETA is private (hidden from the public pricing table)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscriptions    Subscription[]
+  checkoutSessions CheckoutSession[]
+}
+
+/// One agency's current subscription — one row per agency (unique agencyId), the
+/// authoritative source of its plan + lifecycle state. `Agency.subscriptionTier`
+/// is kept as a denormalized mirror of the plan key for back-compat.
+model Subscription {
+  id                 String    @id @default(cuid())
+  status             String    @default("TRIAL") // TRIAL -> ACTIVE -> PAST_DUE -> SUSPENDED -> CANCELED
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime?
+  canceledAt         DateTime?
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  planId   String
+  plan     Plan   @relation(fields: [planId], references: [id])
+
+  invoices PlatformInvoice[]
+
+  @@index([status])
+  @@index([planId])
+}
+
+/// A platform invoice the founder issues to an agency for a subscription period.
+/// Manual billing: issued + marked paid in the founder console.
+model PlatformInvoice {
+  id          String    @id @default(cuid())
+  number      String    @unique // human invoice number, e.g. FIDER-2026-0001
+  status      String    @default("ISSUED") // DRAFT | ISSUED | PAID | VOID
+  amount      Decimal   @db.Decimal(12, 2) // MAD, VAT-inclusive
+  currency    String    @default("MAD")
+  periodStart DateTime?
+  periodEnd   DateTime?
+  issuedAt    DateTime  @default(now())
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  agencyId       String
+  agency         Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  checkoutSessions CheckoutSession[]
+
+  @@index([agencyId])
+  @@index([status])
 }
