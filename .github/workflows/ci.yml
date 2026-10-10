@@ -42,6 +42,18 @@ jobs:
           bash -n scripts/db-backup.sh
           bash -n scripts/db-restore.sh
 
+  backend-container:
+    name: Backend production container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Vercel backend container
+        run: docker build -f backend/Dockerfile.vercel -t carhubos-backend:ci backend
+      - name: Verify image metadata
+        run: |
+          docker image inspect carhubos-backend:ci >/dev/null
+          docker run --rm carhubos-backend:ci node -e "require('@nestjs/core'); require('@prisma/client'); console.log('runtime dependencies ok')"
+
   backend-e2e:
     name: Backend e2e (live Postgres)
     runs-on: ubuntu-latest
