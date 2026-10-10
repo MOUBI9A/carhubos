@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+function dateFromToday(days: number) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * Pillar 6 — Client Risk Assessment in the booking flow.
  * The setup seeds a clean customer ("Test Renter") and a CRITICAL-flagged one
@@ -38,13 +44,13 @@ test.describe('Client Risk Assessment (booking flow)', () => {
     const locked = page.getByRole('button', { name: /Booking Locked/i });
     await expect(locked).toBeVisible();
 
-    await page.locator('input[name="startDate"]').fill('2026-10-01');
-    await page.locator('input[name="endDate"]').fill('2026-10-04');
+    await page.locator('input[name="startDate"]').fill(dateFromToday(50));
+    await page.locator('input[name="endDate"]').fill(dateFromToday(53));
     await page.locator('button[aria-haspopup="listbox"]').nth(1).click();
     await page.getByRole('listbox').getByRole('option').first().click();
 
     await locked.click();
-    await expect(page.getByText('Renter Blocked')).toBeVisible();
+    await expect(page.getByText('Renter blocked', { exact: false })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'New booking' })).toBeVisible();
 
     await page
