@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as puppeteer from 'puppeteer';
+import type { Browser } from 'puppeteer';
 
 @Injectable()
 export class PdfEngineService {
@@ -41,7 +41,7 @@ export class PdfEngineService {
           </div>
         </div>
         
-        <div style="margin-top: 30px; display: grid; grid-template-cols: 1fr 1fr; gap: 40px;">
+        <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
           <div style="border: 1px solid #f1f5f9; padding: 15px; border-radius: 8px;">
             <h4 style="text-transform: uppercase; color: #94a3b8; font-size: 10px; margin-bottom: 10px;">Locataire (Customer)</h4>
             <p style="margin: 0; font-weight: bold; font-size: 16px;">${this.esc(booking.customer.firstName)} ${this.esc(booking.customer.lastName)}</p>
@@ -93,9 +93,13 @@ export class PdfEngineService {
       </div>
     `;
 
-    this.logger.log(`[PUPPETEER] Spinning up headless browser to generate contract PDF...`);
-    let browser: puppeteer.Browser | undefined;
+    this.logger.log('[PUPPETEER] Spinning up headless browser to generate contract PDF...');
+    let browser: Browser | undefined;
     try {
+      // Puppeteer 25+ is ESM-only. Keeping this as a native dynamic import
+      // avoids loading it when Jest imports AppModule while still loading the
+      // patched package when PDF generation actually runs.
+      const puppeteer = await import('puppeteer');
       browser = await puppeteer.launch({
         headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
@@ -109,20 +113,16 @@ export class PdfEngineService {
         printBackground: true,
       });
 
-      this.logger.log(`[PUPPETEER] Successfully generated PDF buffer.`);
+      this.logger.log('[PUPPETEER] Successfully generated PDF buffer.');
       return Buffer.from(pdfBuffer);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`[PUPPETEER ERROR] Failed to generate PDF: ${message}`);
       throw new Error('PDF Generation failed');
     } finally {
-      // Always release the browser. Previously close() sat on the success path
-      // only, so a throw in newPage/setContent/pdf() leaked the Chromium process
-      // (memory + handle exhaustion under repeated failures).
       if (browser) {
         await browser.close().catch(() => undefined);
       }
     }
   }
 }
-
