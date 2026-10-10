@@ -25,7 +25,7 @@ const PILLARS = [
     name: 'The Trust Network',
     pain: 'You hand keys to strangers — and hope.',
     valueProp:
-      "A renter's CIN is HMAC-hashed on device, then reviews and blacklist flags from every agency resolve into one cross-network risk band and deposit rule — seen before the keys leave your hand. No shared list of names, and no competitor shares renter trust across agencies.",
+      "A renter's CIN is normalized and HMAC-SHA256 hashed server-side using a secret pepper; the derived identity hash is then used to resolve reviews and blacklist flags into one cross-network risk band and deposit rule — seen before the keys leave your hand. No shared list of names, and no competitor shares renter trust across agencies.",
     icon: Fingerprint,
     tag: 'Trust · Reviews · Blacklist',
     featured: true,
@@ -67,8 +67,8 @@ const PILLARS = [
 const STEPS = [
   {
     icon: Fingerprint,
-    title: 'Hash the CIN',
-    body: 'HMAC-SHA256, on device. It is POSTed, never GET — so a renter’s ID never lands in a URL or a log.',
+    title: 'Protect the CIN',
+    body: 'Submitted to the authenticated API over HTTPS, then normalized and HMAC-SHA256 hashed server-side with a secret pepper. Network matching uses the derived hash rather than the raw CIN.',
   },
   {
     icon: Network,
@@ -205,16 +205,16 @@ export default function SolutionsSection() {
           </div>
         </div>
 
-        {/* (D) Enterprise strip — resolves the #enterprise anchor */}
+        {/* (D) Security strip — resolves the #enterprise anchor */}
         <div id="enterprise" className="mt-20 scroll-mt-24">
           <div className="max-w-3xl mb-8">
-            <p className="eyebrow mb-4">Security &amp; compliance</p>
+            <p className="eyebrow mb-4">Security &amp; compliance readiness</p>
             <h3 className="display text-2xl md:text-3xl text-foreground mb-4">
-              Enterprise-grade by default.
+              Security controls built into the architecture.
             </h3>
             <p className="text-lg text-text-muted leading-relaxed">
-              Security posture, not a promise — the architecture that lets agencies share trust without
-              sharing customer lists.
+              Technical controls designed to support a secure pilot: tenant isolation, role-based access,
+              audit logging, rate limiting, protected identity matching and hardened session handling.
             </p>
           </div>
           <div className="bg-surface border border-hairline rounded-2xl px-6 py-5 flex flex-wrap items-center gap-x-8 gap-y-4">
