@@ -19,11 +19,6 @@ interface MockFile {
   createdAt: string;
 }
 
-/**
- * Registers one route handler covering every /vault/files* shape and wires
- * it to a mutable in-memory list so DELETE actually affects the next GET —
- * realistic enough to prove the UI refetches correctly, without a real DB.
- */
 async function mockVaultApi(
   page: Page,
   initialFiles: MockFile[],
@@ -65,10 +60,6 @@ async function mockVaultApi(
 
     if (method === 'POST') {
       calls.post++;
-      // The real endpoint would 503 without Supabase configured, or 201 with
-      // a persisted row — tests that reach this branch set up their own
-      // fulfillment via a one-off route override, so this default just
-      // guards against an unexpected real upload attempt slipping through.
       await route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
       return;
     }
@@ -95,7 +86,7 @@ const SAMPLE_FILE: MockFile = {
   id: 'file-1',
   filename: 'insurance-policy.pdf',
   mimeType: 'application/pdf',
-  sizeBytes: 245_760, // 240 KB
+  sizeBytes: 245_760,
   createdAt: '2026-07-20T10:00:00.000Z',
 };
 
@@ -128,10 +119,6 @@ test.describe('Vault file manager', () => {
     await expect(page.getByText('No files yet')).toBeVisible();
 
     const dropzone = page.getByText('Drag & drop a file, or click to browse');
-
-    // Synthetic HTML5 drop with a DataTransfer carrying a disallowed mime
-    // type (text/plain) — exercises the real onDrop handler, not just the
-    // file input.
     const dataTransfer = await page.evaluateHandle(() => {
       const dt = new DataTransfer();
       const file = new File(['just some text'], 'notes.txt', { type: 'text/plain' });
@@ -151,10 +138,6 @@ test.describe('Vault file manager', () => {
     await page.goto('/dashboard/vault-files');
     await expect(page.getByText('No files yet')).toBeVisible();
 
-    // setInputFiles handles a real oversized buffer efficiently (unlike
-    // serializing a 9MB byte array through page.evaluate for a synthetic
-    // drop) — same validateFile() code path either way, since drop and the
-    // hidden <input> both funnel into handleFileSelected.
     const oversized = Buffer.alloc(9 * 1024 * 1024, 1);
     await page.locator('input[type="file"]').setInputFiles({
       name: 'big-scan.pdf',
@@ -173,11 +156,6 @@ test.describe('Vault file manager', () => {
     await page.goto('/dashboard/vault-files');
     await expect(page.getByText('No files yet')).toBeVisible();
 
-    // Override the default POST fulfillment for this test only: succeed,
-    // and make the mock "database" reflect the new file for the refetch.
-    // This handler is registered AFTER mockVaultApi's, so it shadows it for
-    // POST — meaning it must count the call itself; the outer handler's own
-    // POST branch never runs for this test.
     await page.route('**/api/vault/files', async (route) => {
       if (route.request().method() === 'POST') {
         calls.post++;
@@ -230,8 +208,6 @@ test.describe('Vault file manager', () => {
     });
 
     await expect(page.getByText('Vault storage not configured')).toBeVisible();
-    // The persistent banner (not just the toast) — still there after the
-    // toast's 5s auto-dismiss window, so it can't be missed.
     await expect(
       page.getByText(/isn't configured yet.*uploads and downloads will fail/i),
     ).toBeVisible();
@@ -248,16 +224,14 @@ test.describe('Vault file manager', () => {
     await expect(page.getByRole('heading', { name: 'Delete file' })).toBeVisible();
     await expect(page.getByText('This cannot be undone')).toBeVisible();
 
-    // Cancel: modal closes, nothing deleted, no DELETE request sent.
     await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByRole('heading', { name: 'Delete file' })).not.toBeVisible();
     await expect(page.getByText('insurance-policy.pdf', { exact: true })).toBeVisible();
     expect(calls.delete).toBe(0);
 
-    // Confirm: real delete flow.
-    setFiles([SAMPLE_FILE]); // (no-op, still there — the DELETE handler itself mutates the list)
+    setFiles([SAMPLE_FILE]);
     await page.getByRole('button', { name: /Delete insurance-policy.pdf/i }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete file', exact: true }).click();
 
     await expect(page.getByText('File removed')).toBeVisible();
     await expect(page.getByText('No files yet')).toBeVisible();
