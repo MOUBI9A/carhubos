@@ -30,7 +30,10 @@ async function bootstrap() {
           event: 'http_request',
           requestId: req.requestId,
           method: req.method,
-          path: req.originalUrl,
+          // Express `path` intentionally excludes the query string. Query
+          // parameters can contain credentials/tokens (for example Vercel's
+          // `_vercel_share` bypass token) and must never be copied into logs.
+          path: req.path,
           statusCode: res.statusCode,
           durationMs: Date.now() - startedAt,
         }),
