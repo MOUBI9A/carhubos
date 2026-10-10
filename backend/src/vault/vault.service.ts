@@ -21,6 +21,41 @@ function sanitizeFilename(name: string): string {
 }
 
 /**
+ * Validate a small set of trusted document/image formats using their file
+ * signatures. Multipart MIME metadata is supplied by the client and is not a
+ * security boundary by itself.
+ */
+function matchesDeclaredMimeType(mimeType: string, buffer: Buffer): boolean {
+  if (mimeType === 'application/pdf') {
+    return buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+  }
+
+  if (mimeType === 'image/jpeg') {
+    return (
+      buffer.length >= 3 &&
+      buffer[0] === 0xff &&
+      buffer[1] === 0xd8 &&
+      buffer[2] === 0xff
+    );
+  }
+
+  if (mimeType === 'image/png') {
+    const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    return buffer.length >= pngSignature.length && buffer.subarray(0, 8).equals(pngSignature);
+  }
+
+  if (mimeType === 'image/webp') {
+    return (
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+    );
+  }
+
+  return false;
+}
+
+/**
  * Vault — generic tenant-scoped file storage. Every method takes the
  * caller's agencyId from the JWT (never the body/param) and every read/write
  * re-checks it, so a cross-tenant id resolves to 404, never a leak (CLAUDE.md
@@ -45,9 +80,6 @@ export class VaultService {
     if (!file) {
       throw new BadRequestException('No file provided.');
     }
-    // Defense in depth: the controller's FileInterceptor already enforces
-    // this via multer's fileFilter/limits, but a single validation layer is
-    // never the actual security boundary — re-check here too.
     if (!VAULT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
       throw new BadRequestException(
         `Unsupported file type "${file.mimetype}". Allowed: ${VAULT_ALLOWED_MIME_TYPES.join(', ')}.`,
@@ -58,10 +90,12 @@ export class VaultService {
         `File exceeds the ${VAULT_MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB limit.`,
       );
     }
+    if (!file.buffer?.length || !matchesDeclaredMimeType(file.mimetype, file.buffer)) {
+      throw new BadRequestException(
+        'File content does not match its declared MIME type.',
+      );
+    }
 
-    // Tenant-namespaced path: an extra isolation layer at the bucket level,
-    // on top of (not instead of) the DB-level agencyId check every read/write
-    // below performs.
     const storagePath = `${agencyId}/${randomUUID()}-${sanitizeFilename(file.originalname)}`;
 
     await this.storage.upload(storagePath, file.buffer, file.mimetype);
@@ -78,9 +112,6 @@ export class VaultService {
         },
       });
     } catch (err) {
-      // The object is already in the bucket but we couldn't record it — clean
-      // up rather than leave an orphaned, un-tracked (and unreachable, since
-      // nothing references storagePath) object behind.
       this.logger.error(
         `Metadata insert failed after a successful upload for ${storagePath}; cleaning up. ${(err as Error).message}`,
       );
@@ -97,9 +128,6 @@ export class VaultService {
         : {}),
     };
 
-    // No page/limit → bare array, capped, backward-compatible with a simple
-    // "give me everything" call. Either present → paginated envelope. Same
-    // shape as ListCustomersQueryDto — never fully unbounded either way.
     if (!query.page && !query.limit) {
       return this.prisma.vaultFile.findMany({
         where,
