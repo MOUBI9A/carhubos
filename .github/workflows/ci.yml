@@ -6,7 +6,6 @@ on:
   push:
     branches: [main]
 
-# Cancel superseded runs on the same branch/PR.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -20,30 +19,21 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-
       - run: npm ci
-
-      # Needed for Prisma's generated types to exist before tsc/jest run.
       - run: npx prisma generate
-
       - name: Typecheck
         run: npx tsc --noEmit
-
       - name: Unit tests
         run: npx jest
-
       - name: Lint
         run: npx eslint .
-
       - name: Production build
         run: npm run build
-
       - name: Validate recovery scripts
         working-directory: .
         run: |
@@ -76,22 +66,15 @@ jobs:
       IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-
       - run: npm ci
-
-      # Needed for Prisma's generated types to exist before the e2e spec
-      # (which imports AppModule/PrismaService) compiles and runs.
       - run: npx prisma generate
-
       - name: Apply migrations to a fresh DB
         run: npx prisma migrate deploy
-
       - name: Live-DB e2e (auth + cross-tenant 404)
         run: npx jest --config test/jest-e2e.json
 
@@ -105,24 +88,18 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:5406/api
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - run: npm ci
-
       - name: Typecheck
         run: npx tsc --noEmit
-
       - name: Unit tests
         run: npx vitest run
-
       - name: Lint
         run: npx eslint .
-
       - name: Production build
         run: npm run build
 
@@ -149,13 +126,13 @@ jobs:
       IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
       ALLOWED_ORIGINS: http://localhost:3002
       NEXT_PUBLIC_API_URL: http://localhost:5406/api
-      # The serial browser suite intentionally performs many authenticated API
-      # calls from one loopback IP. Keep production's default at 100/minute;
-      # only this isolated CI process raises the ceiling to avoid self-throttling.
+      # Production defaults remain strict (100 global / 5 auth per minute).
+      # This serial suite intentionally performs many requests and role logins
+      # from one loopback IP, so only the isolated CI process raises them.
       THROTTLE_LIMIT: 1000
+      AUTH_THROTTLE_LIMIT: 100
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -163,15 +140,9 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-
       - name: Install backend deps
         working-directory: backend
         run: npm ci
-
-      # The frontend's Playwright config spawns the backend itself (`npm run
-      # start:dev --prefix ../backend`) as one of its two webServers, so the
-      # DB just needs to be migrated + seeded here — the servers are started
-      # by Playwright, not this job.
       - name: Prisma generate + migrate + seed
         working-directory: backend
         run: |
@@ -179,19 +150,15 @@ jobs:
           npx prisma migrate deploy
           node prisma/seed.js
           node prisma/seed-roles.js
-
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
-
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps chromium
-
       - name: Run e2e suite
         working-directory: frontend
         run: npx playwright test
-
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
