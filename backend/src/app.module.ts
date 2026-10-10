@@ -43,6 +43,8 @@ import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { VaultModule } from './vault/vault.module';
 
+const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -51,7 +53,7 @@ import { VaultModule } from './vault/vault.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 100,
+        limit: Number.isFinite(throttleLimit) && throttleLimit > 0 ? throttleLimit : 100,
       },
     ]),
     ScheduleModule.forRoot(),
