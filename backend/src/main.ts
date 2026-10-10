@@ -1,22 +1,44 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
+import {
+  requestIdMiddleware,
+  RequestWithId,
+} from './common/middleware/request-id.middleware';
 
 async function bootstrap() {
   // rawBody: true captures the raw request body (req.rawBody) alongside the
   // normal parsed body — required to verify payment-gateway webhook signatures
   // (e.g. Stripe). Additive: existing @Body() parsing is unaffected.
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  const requestLogger = new Logger('HTTP');
 
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
+  app.use(requestIdMiddleware);
+  app.use((req: RequestWithId, res, next) => {
+    const startedAt = Date.now();
+    res.on('finish', () => {
+      requestLogger.log(
+        JSON.stringify({
+          event: 'http_request',
+          requestId: req.requestId,
+          method: req.method,
+          path: req.originalUrl,
+          statusCode: res.statusCode,
+          durationMs: Date.now() - startedAt,
+        }),
+      );
+    });
+    next();
+  });
   app.useGlobalFilters(new AllExceptionsFilter());
   // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
   app.useGlobalInterceptors(new DecimalToNumberInterceptor());
