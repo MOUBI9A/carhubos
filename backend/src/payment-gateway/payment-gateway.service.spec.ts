@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PaymentGatewayService } from './payment-gateway.service';
 import { MockGateway } from './providers/mock.gateway';
 import { StripeGateway } from './providers/stripe.gateway';
@@ -88,7 +88,7 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
     );
   });
 
-  describe('MOCK gateway production fail-safe (audit 2026-07-26 #5)', () => {
+  describe('production payment fail-safe', () => {
     const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
     afterEach(() => {
       if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
@@ -111,6 +111,17 @@ describe('PaymentGatewayService (provider selection + mock adapter)', () => {
       process.env.PAYMENT_PROVIDER = 'paypal';
       process.env.NODE_ENV = 'production';
       expect(() => make()).toThrow(/PAYMENT_PROVIDER resolved to MOCK/i);
+    });
+
+    it('allows DISABLED in production and rejects checkout/webhooks with 503', async () => {
+      process.env.PAYMENT_PROVIDER = 'disabled';
+      process.env.NODE_ENV = 'production';
+      const svc = make();
+      expect(svc.activeProvider).toBe('DISABLED');
+      expect(() => svc.createCheckout({} as any)).toThrow(ServiceUnavailableException);
+      await expect(svc.parseWebhook('stripe', '{}', {})).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
     });
 
     it('still allows MOCK outside production', () => {
