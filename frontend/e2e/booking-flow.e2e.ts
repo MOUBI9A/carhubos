@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+function dateFromToday(days: number) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * The daily-driver flow and the whole point of the UX pass: the searchable
  * Combobox selects and the optimistic booking creation.
@@ -34,8 +40,8 @@ test.describe('Booking flow', () => {
     await carOptions.first().click();
     await expect(triggers.nth(1)).toContainText('MAD/day');
 
-    await page.locator('input[name="startDate"]').fill('2026-08-01');
-    await page.locator('input[name="endDate"]').fill('2026-08-05');
+    await page.locator('input[name="startDate"]').fill(dateFromToday(30));
+    await page.locator('input[name="endDate"]').fill(dateFromToday(34));
 
     await page.getByRole('button', { name: 'Confirm booking' }).click();
 
@@ -55,8 +61,10 @@ test.describe('Booking flow', () => {
   test('blocks submission when the car/customer comboboxes are empty', async ({ page }) => {
     await page.getByRole('button', { name: 'New Booking' }).click();
 
-    await page.locator('input[name="startDate"]').fill('2026-08-01');
-    await page.locator('input[name="endDate"]').fill('2026-08-05');
+    // Dates must be valid and in the future so browser-native min validation
+    // does not prevent the form submit handler from exercising the JS guard.
+    await page.locator('input[name="startDate"]').fill(dateFromToday(40));
+    await page.locator('input[name="endDate"]').fill(dateFromToday(44));
     await page.getByRole('button', { name: 'Confirm booking' }).click();
 
     await expect(page.getByText(/Missing fields/i)).toBeVisible();
