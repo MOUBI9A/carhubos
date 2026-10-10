@@ -8,8 +8,13 @@ export class AiVisionService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Analyzes an image of a vehicle to detect damages.
-   * In a production environment, this would call an external CV API (e.g., Azure Custom Vision, AWS Rekognition).
+   * Preview-only damage-analysis pipeline.
+   *
+   * IMPORTANT: this method does not run a real computer-vision model yet.
+   * It returns deterministic simulated detections so the rest of the product
+   * flow can be exercised without presenting the result as real inference.
+   * Replace this implementation behind a provider abstraction before enabling
+   * automated damage recognition in production.
    */
   async analyzeVehicle(agencyId: string, carId: string, imageBuffer: Buffer) {
     const car = await this.prisma.car.findFirst({
@@ -18,12 +23,18 @@ export class AiVisionService {
     });
     if (!car) throw new NotFoundException('Car not found');
 
-    this.logger.log(`Starting AI Neural Scan for car ${carId}...`);
+    // Keep the parameter intentionally referenced: the preview route still
+    // validates that an image was uploaded even though no inference runs yet.
+    void imageBuffer;
 
-    // Simulate analysis delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    this.logger.warn(
+      `Running AI Vision simulation preview for car ${carId}; no live CV provider is configured.`,
+    );
 
-    // Simulated detection results
+    // Small delay keeps the preview interaction realistic without pretending
+    // that an external model call occurred.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     const detections = [
       {
         type: 'SCRATCH',
@@ -41,7 +52,6 @@ export class AiVisionService {
       },
     ];
 
-    // Calculate integrity score (mock logic)
     const integrityScore = Math.max(0, 100 - detections.length * 12);
 
     return {
@@ -49,7 +59,10 @@ export class AiVisionService {
       timestamp: new Date(),
       integrityScore,
       detections,
-      model: 'VisionTransformer-v4.2',
+      isSimulation: true,
+      model: 'Preview Simulation',
+      notice:
+        'Preview only — these detections are simulated and are not the result of live computer-vision inference.',
     };
   }
 
