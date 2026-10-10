@@ -3,18 +3,15 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Thin wrapper around Supabase Storage — the only place in the app that talks
- * to the Supabase SDK. Dormant until configured (SUPABASE_URL +
- * SUPABASE_SERVICE_ROLE_KEY), same env-gated-adapter shape as
- * `payment-gateway/providers/stripe.gateway.ts`: real code, but throws a
- * clear error rather than silently no-op'ing if the founder's keys aren't set
- * yet.
+ * to the Supabase SDK. Dormant until configured with SUPABASE_URL plus a
+ * server-only secret (`SUPABASE_SECRET_KEY` preferred; legacy
+ * `SUPABASE_SERVICE_ROLE_KEY` remains supported during migration).
  *
- * The service-role key (not the anon/public key) is required — uploads,
- * signed-URL generation, and deletes all happen server-side against a
- * PRIVATE bucket. Tenant isolation is enforced by this app (every call is
- * scoped by the caller's own `agencyId`, checked before this class is ever
- * invoked — see `vault.service.ts`), not by Supabase Row Level Security,
- * since Storage objects are addressed by path, not by a RLS-visible table.
+ * A server secret, never an anon/publishable key, is required: uploads,
+ * signed-URL generation, and deletes all happen server-side against a PRIVATE
+ * bucket. Tenant isolation is enforced by this app (every call is scoped by
+ * the caller's own `agencyId`, checked before this class is invoked — see
+ * `vault.service.ts`).
  */
 @Injectable()
 export class VaultStorageService {
@@ -29,12 +26,16 @@ export class VaultStorageService {
     if (this.client) return this.client;
 
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const key =
+      process.env.SUPABASE_SECRET_KEY ??
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+
     if (!url || !key) {
       throw new ServiceUnavailableException(
-        'Vault storage is not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.',
+        'Vault storage is not configured — set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY).',
       );
     }
+
     this.client = createClient(url, key, {
       auth: { persistSession: false },
     });
