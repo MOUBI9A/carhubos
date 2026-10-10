@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (tsc + jest + lint)
+    name: Backend (tsc + jest + lint + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,6 +40,15 @@ jobs:
 
       - name: Lint
         run: npx eslint .
+
+      - name: Production build
+        run: npm run build
+
+      - name: Validate recovery scripts
+        working-directory: .
+        run: |
+          bash -n scripts/db-backup.sh
+          bash -n scripts/db-restore.sh
 
   backend-e2e:
     name: Backend e2e (live Postgres)
@@ -83,18 +92,17 @@ jobs:
       - name: Apply migrations to a fresh DB
         run: npx prisma migrate deploy
 
-      # No seed step: tenant-isolation.e2e-spec.ts registers its own fresh
-      # agencies/users via POST /auth/register (unique run-scoped emails) and
-      # tears them down in afterAll — it doesn't depend on prisma/seed*.js.
       - name: Live-DB e2e (auth + cross-tenant 404)
         run: npx jest --config test/jest-e2e.json
 
   frontend:
-    name: Frontend (tsc + vitest + lint)
+    name: Frontend (tsc + vitest + lint + build)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:5406/api
     steps:
       - uses: actions/checkout@v4
 
@@ -114,6 +122,9 @@ jobs:
 
       - name: Lint
         run: npx eslint .
+
+      - name: Production build
+        run: npm run build
 
   e2e:
     name: E2E (Playwright, full stack)
@@ -137,6 +148,7 @@ jobs:
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-real
       IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
       ALLOWED_ORIGINS: http://localhost:3002
+      NEXT_PUBLIC_API_URL: http://localhost:5406/api
     steps:
       - uses: actions/checkout@v4
 
