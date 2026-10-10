@@ -149,6 +149,10 @@ jobs:
       IDENTITY_PEPPER: ci-only-pepper-not-used-anywhere-real
       ALLOWED_ORIGINS: http://localhost:3002
       NEXT_PUBLIC_API_URL: http://localhost:5406/api
+      # The serial browser suite intentionally performs many authenticated API
+      # calls from one loopback IP. Keep production's default at 100/minute;
+      # only this isolated CI process raises the ceiling to avoid self-throttling.
+      THROTTLE_LIMIT: 1000
     steps:
       - uses: actions/checkout@v4
 
