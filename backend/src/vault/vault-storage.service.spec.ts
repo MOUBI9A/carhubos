@@ -6,19 +6,13 @@ jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(),
 }));
 
-/**
- * VaultStorageService is the only place the app talks to the Supabase SDK.
- * These specs mock createClient entirely — no real network call — to prove
- * (a) it fails clearly when unconfigured rather than silently no-op'ing, and
- * (b) upload/createSignedUrl/remove call the SDK with the right arguments
- * and translate its error shape into the app's own exceptions/logging.
- */
 describe('VaultStorageService', () => {
   const mockCreateClient = createClient as jest.Mock;
 
   beforeEach(() => {
     mockCreateClient.mockReset();
     delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SECRET_KEY;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.SUPABASE_VAULT_BUCKET;
   });
@@ -38,7 +32,12 @@ describe('VaultStorageService', () => {
     return bucketApi;
   }
 
-  it('throws a clear, typed error when SUPABASE_URL/SERVICE_ROLE_KEY are unset — no silent no-op', async () => {
+  function configureModernSecret() {
+    process.env.SUPABASE_URL = 'https://proj.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_test';
+  }
+
+  it('throws a clear typed error when the URL/server secret are unset', async () => {
     const service = new VaultStorageService();
 
     await expect(
@@ -47,9 +46,9 @@ describe('VaultStorageService', () => {
     expect(mockCreateClient).not.toHaveBeenCalled();
   });
 
-  it('constructs the client from env once configured, and reuses it across calls', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+  it('prefers the modern Supabase secret key and reuses the client', async () => {
+    configureModernSecret();
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'legacy-service-role-key';
     mockSupabaseStorage();
     const service = new VaultStorageService();
 
@@ -59,14 +58,28 @@ describe('VaultStorageService', () => {
     expect(mockCreateClient).toHaveBeenCalledTimes(1);
     expect(mockCreateClient).toHaveBeenCalledWith(
       'https://proj.supabase.co',
-      'service-role-key',
+      'sb_secret_test',
+      expect.any(Object),
+    );
+  });
+
+  it('supports the legacy service-role key during migration', async () => {
+    process.env.SUPABASE_URL = 'https://proj.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'legacy-service-role-key';
+    mockSupabaseStorage();
+    const service = new VaultStorageService();
+
+    await service.upload('agency-a/file.pdf', Buffer.from('x'), 'application/pdf');
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      'https://proj.supabase.co',
+      'legacy-service-role-key',
       expect.any(Object),
     );
   });
 
   it('uploads to the configured bucket (default "vault-files") with the right content type', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    configureModernSecret();
     const bucketApi = mockSupabaseStorage();
     const service = new VaultStorageService();
 
@@ -80,8 +93,7 @@ describe('VaultStorageService', () => {
   });
 
   it('honors SUPABASE_VAULT_BUCKET when set', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    configureModernSecret();
     process.env.SUPABASE_VAULT_BUCKET = 'custom-bucket';
     mockCreateClient.mockReturnValue({
       storage: {
@@ -99,8 +111,7 @@ describe('VaultStorageService', () => {
   });
 
   it('translates a Supabase upload error into a ServiceUnavailableException', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    configureModernSecret();
     mockSupabaseStorage({
       upload: jest.fn().mockResolvedValue({ error: { message: 'bucket not found' } }),
     });
@@ -112,8 +123,7 @@ describe('VaultStorageService', () => {
   });
 
   it('createSignedUrl returns the SDK-provided URL on success', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    configureModernSecret();
     const bucketApi = mockSupabaseStorage();
     const service = new VaultStorageService();
 
@@ -124,8 +134,7 @@ describe('VaultStorageService', () => {
   });
 
   it('createSignedUrl throws when the SDK errors or returns no URL', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    configureModernSecret();
     mockSupabaseStorage({
       createSignedUrl: jest.fn().mockResolvedValue({ data: null, error: { message: 'not found' } }),
     });
@@ -136,9 +145,8 @@ describe('VaultStorageService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('remove() logs but does not throw when the SDK reports an error (best-effort)', async () => {
-    process.env.SUPABASE_URL = 'https://proj.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+  it('remove() logs but does not throw when the SDK reports an error', async () => {
+    configureModernSecret();
     mockSupabaseStorage({
       remove: jest.fn().mockResolvedValue({ error: { message: 'already gone' } }),
     });
