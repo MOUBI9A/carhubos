@@ -28,12 +28,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getResponse()
         : { message: 'Internal server error', statusCode: 500 };
 
+    // Express `path` excludes the query string. This prevents sensitive query
+    // parameters (for example temporary access/bypass tokens) from leaking into
+    // structured logs or being reflected back in error responses.
+    const safePath = request.path;
+
     this.logger.error(
       JSON.stringify({
         event: 'http_exception',
         requestId: request.requestId,
         method: request.method,
-        path: request.url,
+        path: safePath,
         statusCode: status,
         error:
           exception instanceof Error
@@ -46,7 +51,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json({
       ...(typeof message === 'object' ? message : { message }),
       timestamp: new Date().toISOString(),
-      path: request.url,
+      path: safePath,
       requestId: request.requestId,
     });
   }
