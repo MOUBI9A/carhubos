@@ -23,7 +23,7 @@ describe('VaultService', () => {
       originalname: 'insurance.pdf',
       mimetype: 'application/pdf',
       size: 1024,
-      buffer: Buffer.from('pdf-bytes'),
+      buffer: Buffer.from('%PDF-1.7\nmock-pdf-body'),
       ...overrides,
     };
   }
@@ -36,6 +36,22 @@ describe('VaultService', () => {
 
       await expect(
         svc.upload('agency-a', 'user-1', makeFile({ mimetype: 'text/html' })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(storage.upload).not.toHaveBeenCalled();
+      expect(prisma.vaultFile.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a file whose bytes do not match the declared MIME type', async () => {
+      const storage = makeStorage();
+      const prisma = { vaultFile: { create: jest.fn() } };
+      const svc = new VaultService(prisma as any, storage as any);
+
+      await expect(
+        svc.upload(
+          'agency-a',
+          'user-1',
+          makeFile({ buffer: Buffer.from('<html>not a pdf</html>') }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(storage.upload).not.toHaveBeenCalled();
       expect(prisma.vaultFile.create).not.toHaveBeenCalled();
