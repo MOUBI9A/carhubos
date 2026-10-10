@@ -307,7 +307,7 @@ export default function TrustConsole() {
       <div className="relative mt-4 pt-4 border-t border-hairline flex items-center justify-between gap-3">
         <p className="text-[9px] text-text-faint leading-relaxed max-w-[62%] flex items-center gap-1.5">
           <Lock className="w-3 h-3 shrink-0 text-text-faint" />
-          CIN is HMAC-hashed on device — only the hash is queried, never sent or logged as plaintext.
+          CIN is HMAC-hashed server-side with a secret pepper before the derived hash is used for trust matching.
         </p>
         <div className="flex items-center gap-2 shrink-0">
           <button
