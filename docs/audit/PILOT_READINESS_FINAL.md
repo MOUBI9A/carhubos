@@ -6,13 +6,18 @@
 
 ## Executive Summary
 
-The repository and live deployment were independently inspected against the production-hardening goal instead of relying on earlier completion narratives. The codebase has passed its application release gates and the Vercel production stack is now live on `carhub.codes` / `www.carhub.codes` with a Next.js frontend and a containerized NestJS backend.
+The repository and live deployment were independently inspected against the production-hardening goal instead of relying on earlier completion narratives. The codebase has passed its application release gates and the Vercel production stack is live on `carhub.codes` / `www.carhub.codes` with a Next.js frontend and a containerized NestJS backend.
 
-A real production liveness probe has been verified successfully:
+Current production deployment evidence:
 
+- deployment: `dpl_CbjjT31p6rWs4C7nzrRXdp8wRyjQ`
+- deployed source commit before this documentation-only refresh: `ecc257c7e4991e063c007d3bb90b2eb5e2b2bf2d`
+- deployment state: **READY**
 - `GET /api/health` → **200 OK**
 - service response identifies `fider-api`
-- production security/rate-limit headers are present
+- fresh cold start completed successfully
+- fresh one-hour Vercel error-group check reported no runtime errors
+- fresh 30-minute `error`/`fatal` log check reported no matching logs
 
 Production readiness is intentionally separate from liveness. The current readiness probe returns:
 
@@ -35,6 +40,7 @@ Therefore the current state is **LIVE APPLICATION SHELL / NOT YET DATA-READY FOR
 - Production domains include `carhub.codes` and `www.carhub.codes`
 - Backend container uses Node 22, OpenSSL, Chromium, and production dependencies
 - Production backend container build is also gated independently in GitHub Actions
+- Current production deployment is READY and attached to the production aliases
 
 ### Supabase
 
@@ -43,8 +49,9 @@ Therefore the current state is **LIVE APPLICATION SHELL / NOT YET DATA-READY FOR
 - PostgreSQL: 17.x
 - Project status: **ACTIVE_HEALTHY**
 - `public` tables: **0** at this verification point
+- private Storage bucket `vault-files` exists and is configured as non-public
 
-No production data exists in the linked database yet.
+No production application data exists in the linked database yet.
 
 ## Work Completed
 
@@ -54,6 +61,7 @@ No production data exists in the linked database yet.
 - Added `/api/ready` readiness probe that verifies PostgreSQL connectivity.
 - Decoupled Nest application liveness from database startup so a DB outage does not crash the whole API process.
 - Added request correlation IDs and structured HTTP request/error logging.
+- Structured logs use request pathnames rather than full URLs so query-string credentials/tokens are not copied into application logs.
 - Added backend and frontend container health checks.
 - Added a one-shot Prisma migration gate to Docker Compose before backend startup.
 - Corrected browser API routing to use same-origin `/api` in production.
@@ -140,6 +148,7 @@ See `docs/security/DEPENDENCY_AUDIT.md`.
 | LIVE-08 | P1 | Production mock payment provider would prevent safe pilot startup | explicit `DISABLED` payment mode | FIXED |
 | LIVE-09 | P2 | Generated Playwright session/account files were committed | removed files and ignored `/playwright/.auth/` | FIXED |
 | LIVE-10 | P2 | Public marketing overstated trust hashing/security posture | primary landing claims corrected to server-side HMAC and security-readiness language | FIXED / VERIFY REMAINING COPY |
+| LIVE-11 | P1 | Protected-deployment query parameters could appear in application request/error logs | request and exception logging now use pathname only | FIXED |
 
 ## Product Status
 
@@ -160,8 +169,9 @@ The public landing site is live. Database-backed signup/login/ERP workflows are 
 - Nest backend runs in a Vercel container.
 - `/api/health` is live and returns 200.
 - `/api/ready` correctly returns 503 while the database is unavailable.
+- A fresh production cold-start probe completed successfully on 2026-10-11.
 - Runtime includes Node 22, OpenSSL and Chromium.
-- Structured request/error logging includes correlation IDs.
+- Structured request/error logging includes correlation IDs and excludes query strings.
 - Payments can be disabled safely rather than simulated.
 
 ## Database Status
@@ -174,25 +184,30 @@ The public landing site is live. Database-backed signup/login/ERP workflows are 
 
 ### Required database activation sequence
 
-1. create/retrieve a dedicated production Postgres credential using the supported Supabase connection workflow;
+1. copy the exact supported Supabase production connection string from the project connection workflow; for the current one-URL Prisma configuration, use the appropriate Session Pooler connection rather than guessing a pooler hostname;
 2. store the resulting production `DATABASE_URL` only in the Vercel production environment;
 3. run the committed Prisma migrations using the canonical Prisma migration workflow;
-4. verify migration history and table/constraint/index state;
+4. verify Prisma migration history and table/constraint/index state;
 5. verify `/api/ready` returns 200;
 6. run authenticated production smoke tests on a controlled pilot account;
 7. only then onboard a real agency.
 
-Do **not** bypass this by manually applying raw migration SQL without reconciling Prisma migration history.
+Do **not** bypass this by manually applying raw migration SQL without reconciling Prisma migration history. Do not reintroduce a Prisma `directUrl` change as part of this activation unless it is handled separately and verified cleanly through CI.
 
 ## Vault Storage Status
 
-The code contains a real Supabase Storage adapter, but production vault storage remains dormant until these server-only values are configured:
+The code contains a real Supabase Storage adapter. Production already has:
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_VAULT_BUCKET`
+- `SUPABASE_URL` configured;
+- `SUPABASE_VAULT_BUCKET=vault-files` configured;
+- private `vault-files` bucket provisioned.
 
-A publishable/anon key is not a substitute for the server-side service role key. The bucket must remain private and signed-URL/download authorization must be reverified after configuration.
+Vault runtime activation is still blocked because the server-only secret is missing:
+
+- preferred: `SUPABASE_SECRET_KEY` (`sb_secret_...` modern server key);
+- compatibility fallback supported by the code: legacy `SUPABASE_SERVICE_ROLE_KEY`.
+
+A publishable/anon key is not a substitute for the server-only secret. The secret must never be exposed to frontend code, repository files, logs, or client-side environment variables. After configuration, signed-URL/download authorization and tenant isolation must be reverified against the live pilot environment.
 
 ## Security Status
 
@@ -207,9 +222,10 @@ Verified hardening includes:
 - HttpOnly/JWT authentication architecture;
 - HMAC-based identity derivation with a production secret pepper;
 - dependency audit gates;
-- removal/ignore of generated browser test credentials/session state.
+- removal/ignore of generated browser test credentials/session state;
+- query-string-safe request and exception logging.
 
-Targeted repository scans did not find live-looking Google, GitHub, Stripe, or Supabase service-role keys on the default branch. Placeholder environment variable names and test-only generated credentials are expected in tests/examples.
+Targeted repository scans did not find live-looking Google, GitHub, Stripe, or Supabase server secrets on the default branch. Placeholder environment variable names and test-only generated credentials are expected in tests/examples.
 
 This report does not claim the application is "100% secure" or legally certified.
 
@@ -240,7 +256,7 @@ Still required:
 - centralized alerting/uptime monitoring;
 - scheduled offsite backups;
 - timed restore drill;
-- vault storage configuration if the pilot uses file uploads.
+- Vault server secret if the pilot uses file uploads.
 
 ## Observability Status
 
@@ -249,8 +265,13 @@ Implemented:
 - correlation/request IDs;
 - structured HTTP request logs;
 - structured exception logs;
+- query strings excluded from application path logging;
 - live liveness/readiness probes;
 - Vercel runtime/build observability.
+
+Fresh verification on 2026-10-11 found no runtime error groups in the latest one-hour window and no `error`/`fatal` log entries in the latest 30-minute window after a successful cold start and liveness request.
+
+A wider 24-hour Vercel aggregate previously showed six `/container` events labeled `Application exited with code 1`. The Hobby-plan detailed-log retention window no longer contains the underlying records, so this report does not invent a root cause. The current deployment starts and serves liveness successfully. Treat recurrence of that aggregate as an operational signal to investigate once centralized retention/alerting is connected.
 
 Remaining condition:
 
@@ -262,12 +283,13 @@ Repository tooling is implemented and validated syntactically, but a repository 
 
 Remaining conditions before real agency data is admitted:
 
-1. choose the production backup mechanism/schedule;
-2. store copies off the primary host in encrypted/private storage;
-3. configure backup-failure alerting;
-4. restore into an isolated target;
-5. start the restored application and verify key counts/relationships/auth workflows;
-6. record measured RPO/RTO.
+1. connect the production database;
+2. choose the production backup mechanism/schedule;
+3. store copies off the primary host in encrypted/private storage;
+4. configure backup-failure alerting;
+5. restore into an isolated target;
+6. start the restored application and verify key counts/relationships/auth workflows;
+7. record measured RPO/RTO.
 
 ## Performance Status
 
@@ -286,14 +308,14 @@ Existing Decimal-based financial behavior remains protected by backend tests. Pa
 ### DB-01 — Production database connection
 
 **Current state:** Supabase project healthy; database not connected to Vercel; public schema empty.  
-**Need:** supported production Postgres credential / connection URL.  
+**Need:** exact supported production Postgres connection URL/credential.  
 **Next action:** configure `DATABASE_URL`, run canonical Prisma migrations, verify `/api/ready = 200`, then execute controlled authenticated smoke tests.
 
-### VAULT-01 — Private file storage (required only if pilot uses vault uploads)
+### VAULT-01 — Private file storage (required if pilot uses vault uploads)
 
-**Current state:** adapter implemented; service credentials/bucket not configured.  
-**Need:** server-only Supabase service-role configuration plus private bucket.  
-**Next action:** configure storage, test allowed uploads, spoofed MIME rejection, tenant isolation, signed URLs, expiry and unauthorized download behavior.
+**Current state:** adapter implemented; Supabase URL configured; private `vault-files` bucket configured; server secret absent.  
+**Need:** server-only `SUPABASE_SECRET_KEY` (preferred modern key; legacy service-role fallback remains supported).  
+**Next action:** configure the secret, then test allowed uploads, spoofed MIME rejection, tenant isolation, signed URLs, expiry and unauthorized download behavior.
 
 ### MON-01 — Centralized alerting
 
@@ -302,7 +324,7 @@ Existing Decimal-based financial behavior remains protected by backend tests. Pa
 
 ### REC-02/03 — Scheduled offsite backups + restore exercise
 
-**Need:** selected production backup/storage/scheduler target.  
+**Need:** connected production database plus selected production backup/storage/scheduler target.  
 **Next action:** schedule provider-native or repository backup tooling, configure encrypted offsite retention and alerts, then perform a timed isolated restore exercise.
 
 ### LEGAL-01 — Organizational/regulatory readiness
@@ -338,7 +360,8 @@ Primary repository/live evidence includes:
 - `docs/security/DEPENDENCY_AUDIT.md`
 - live Vercel `/api/health` response
 - live Vercel `/api/ready` response
-- Supabase project status/table inspection
+- fresh Vercel runtime error/log checks
+- Supabase project/table/storage inspection
 - GitHub Actions clean-runner CI results
 
 ## Final Verdict
@@ -347,4 +370,4 @@ Primary repository/live evidence includes:
 
 The application is deployed and its production liveness path is verified. Core code and release gates are materially stronger than the earlier repository-only state.
 
-The next release gate is objective: **connect the production database, apply migrations through Prisma, obtain `/api/ready = 200`, and pass controlled authenticated smoke tests.** Until then, do not onboard a real agency or store real renter/customer data.
+The next release gate is objective: **connect the production database, apply migrations through Prisma, obtain `/api/ready = 200`, and pass controlled authenticated smoke tests.** If the pilot uses Vault uploads, also configure the server-only Supabase secret and pass live Vault authorization/storage tests. Until those gates pass, do not onboard a real agency or store real renter/customer data.
