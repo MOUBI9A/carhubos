@@ -44,6 +44,7 @@ describe('AuthService.register — service-level behavior', () => {
       subscription: { create: jest.fn() },
       user: { create: jest.fn() },
       agencyMembership: { create: jest.fn() },
+      emailVerificationToken: { create: jest.fn() },
       ...overrides,
     };
   }

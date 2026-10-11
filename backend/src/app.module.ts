@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -42,6 +43,9 @@ import { AccidentsModule } from './accidents/accidents.module';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { VaultModule } from './vault/vault.module';
+import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
+import { EmailModule } from './email/email.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -92,6 +96,9 @@ import { VaultModule } from './vault/vault.module';
     PaymentGatewayModule,
     CheckoutModule,
     VaultModule,
+    FeatureFlagsModule,
+    EmailModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [
@@ -102,4 +109,8 @@ import { VaultModule } from './vault/vault.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

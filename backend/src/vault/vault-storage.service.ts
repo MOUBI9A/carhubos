@@ -29,10 +29,12 @@ export class VaultStorageService {
     if (this.client) return this.client;
 
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const key =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SECRET_KEY;
     if (!url || !key) {
       throw new ServiceUnavailableException(
-        'Vault storage is not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.',
+        'Vault storage is not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY).',
       );
     }
     this.client = createClient(url, key, {

@@ -20,8 +20,8 @@ export function Card({
 }: CardProps) {
   const variants = {
     default: 'glass shadow-soft',
-    outline: 'border border-white/10 bg-transparent',
-    flat: 'bg-white/5 border-none'
+    outline: 'border border-hairline bg-transparent',
+    flat: 'bg-surface border-none'
   };
 
   const paddings = {

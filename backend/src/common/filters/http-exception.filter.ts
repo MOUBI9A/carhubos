@@ -22,20 +22,53 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
+    const rawMessage =
       exception instanceof HttpException
         ? exception.getResponse()
         : { message: 'Internal server error', statusCode: 500 };
 
+    const requestId =
+      request.correlationId ||
+      (request.headers['x-request-id'] as string) ||
+      'unknown-req';
+
+    // Mask sensitive fields in logs
+    const sanitizedLogMessage = this.maskSensitiveData(rawMessage);
+
     this.logger.error(
-      `Http Status: ${status} Error Message: ${JSON.stringify(message)}`,
+      `[${requestId}] [${request.method} ${request.url}] Status: ${status} Payload: ${JSON.stringify(sanitizedLogMessage)}`,
       (exception as Error)?.stack,
     );
 
+    const errorPayload =
+      typeof rawMessage === 'object' && rawMessage !== null
+        ? rawMessage
+        : { message: rawMessage };
+
     response.status(status).json({
-      ...(typeof message === 'object' ? message : { message }),
+      ...errorPayload,
+      requestId,
       timestamp: new Date().toISOString(),
       path: request.url,
     });
+  }
+
+  private maskSensitiveData(data: any): any {
+    if (!data || typeof data !== 'object') return data;
+    if (Array.isArray(data)) return data.map((item) => this.maskSensitiveData(item));
+
+    const sensitiveKeys = ['password', 'token', 'authorization', 'secret', 'identityNumber', 'access_token'];
+    const masked: Record<string, any> = {};
+
+    for (const [key, val] of Object.entries(data)) {
+      if (sensitiveKeys.some((s) => key.toLowerCase().includes(s))) {
+        masked[key] = '***MASKED***';
+      } else if (typeof val === 'object' && val !== null) {
+        masked[key] = this.maskSensitiveData(val);
+      } else {
+        masked[key] = val;
+      }
+    }
+    return masked;
   }
 }

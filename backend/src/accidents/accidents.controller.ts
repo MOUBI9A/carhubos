@@ -5,8 +5,10 @@ import {
   Param,
   Patch,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AccidentsService } from './accidents.service';
 import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -41,6 +43,22 @@ export class AccidentsController {
   @RequireCapabilities('fleet.view')
   findOne(@CurrentUser() user: any, @Param('id') id: string) {
     return this.accidentsService.findOne(user.agencyId, id);
+  }
+
+  @Get(':id/pdf')
+  @RequireCapabilities('fleet.view')
+  async exportPdf(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.accidentsService.getDossierPdf(user.agencyId, id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="accident-${id.slice(0, 8)}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   @Post()

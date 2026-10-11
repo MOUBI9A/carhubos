@@ -29,6 +29,15 @@ model Agency {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // Soft-delete tombstone; null = live. Never hard-delete an agency.
 
+  // 🚀 ONBOARDING LIFECYCLE
+  onboardingStatus      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  onboardingCurrentStep Int       @default(1)
+  onboardingCompletedAt DateTime?
+  currency              String    @default("MAD")
+  country               String    @default("Morocco")
+  timezone              String    @default("Africa/Casablanca")
+  defaultDeposit        Decimal?  @default(5000) @db.Decimal(12, 2)
+
   users            User[]
   cars             Car[]
   customers        Customer[]
@@ -80,6 +89,7 @@ model User {
   trustScore Int      @default(50) // Renter trust level (0-100)
   qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
   isVerified Boolean  @default(false)
+  emailVerifiedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -97,13 +107,29 @@ model User {
   renterIdentity   RenterIdentity? @relation(fields: [renterIdentityId], references: [id], onDelete: SetNull)
 
   // 🪪 Renter portal & consent subsystem back-relations
-  customerRecords    Customer[] // agency Customer rows that link to this portal account
-  consentGrants      ConsentGrant[] // document-access grants this renter has issued
-  notifications      Notification[]
-  renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
-  vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
+  customerRecords         Customer[] // agency Customer rows that link to this portal account
+  consentGrants           ConsentGrant[] // document-access grants this renter has issued
+  notifications           Notification[]
+  renterDocuments         RenterDocument[] // the renter's OWN global identity-document vault
+  vaultFilesUploaded      VaultFile[] // agency Vault files this staff member uploaded
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([agencyId])
+}
+
+// 📧 EMAIL VERIFICATION TOKENS
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 // 🔐 CAPABILITY ENGINE (schema foundation; guard wiring is a later task)

@@ -4,8 +4,14 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
+  private readonly commandCentreCache = new Map<string, { data: any; expiresAt: number }>();
 
   constructor(private prisma: PrismaService) {}
+
+  clearCommandCentreCache(agencyId?: string) {
+    if (agencyId) this.commandCentreCache.delete(agencyId);
+    else this.commandCentreCache.clear();
+  }
 
   /**
    * Recalculates the ROI score for a specific car.
@@ -572,18 +578,38 @@ export class AnalyticsService {
    * Command Centre Dashboard — the main operational overview.
    */
   async getCommandCentre(agencyId: string) {
+    const cached = this.commandCentreCache.get(agencyId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
 
-    // ── 1. Revenue MTD ──────────────────────────────────────────────
-    // Previously two unbounded-shaped findManys just to sum in JS — this is
-    // the endpoint behind the owner dashboard's skeleton-hang, so both are
-    // now DB-side sums.
-    const [mtdPaymentsAgg, prevPaymentsAgg] = await Promise.all([
+    const CUSTOMER_OPTION_CAP = 200;
+
+    // ── STAGE 1: Parallel dispatch of all independent database queries ──
+    const [
+      mtdPaymentsAgg,
+      prevPaymentsAgg,
+      utilMetrics,
+      allCars,
+      waitingRefusalsAgg,
+      recentBookings,
+      recentPayments,
+      recentLogs,
+      activeRentals,
+      totalCustomers,
+      allCustomers,
+    ] = await Promise.all([
+      // 1. Revenue MTD
       this.prisma.payment.aggregate({
         where: {
           invoice: { agencyId },
@@ -593,6 +619,7 @@ export class AnalyticsService {
         },
         _sum: { amount: true },
       }),
+      // 2. Previous Month Revenue
       this.prisma.payment.aggregate({
         where: {
           invoice: { agencyId },
@@ -602,22 +629,93 @@ export class AnalyticsService {
         },
         _sum: { amount: true },
       }),
+      // 3. Utilization metrics
+      this.getUtilizationMetrics(agencyId),
+      // 4. Fleet and compliance details
+      this.prisma.car.findMany({
+        where: { agencyId },
+        include: { documents: true, maintenance: true, bookings: { take: 1, orderBy: { createdAt: 'desc' } } },
+      }),
+      // 5. Waiting refusals / demand
+      this.prisma.refusalLog.aggregate({
+        where: { agencyId, status: 'WAITING' },
+        _sum: { potentialRevenue: true },
+        _count: { _all: true },
+      }),
+      // 6. Recent bookings for intensity
+      this.prisma.booking.findMany({
+        where: {
+          agencyId,
+          createdAt: { gte: fourteenDaysAgo },
+        },
+        select: { createdAt: true },
+      }),
+      // 7. Recent payments for intensity
+      this.prisma.payment.findMany({
+        where: {
+          invoice: { agencyId },
+          type: 'INCOME',
+          status: 'VERIFIED',
+          date: { gte: fourteenDaysAgo },
+        },
+        select: { date: true, amount: true },
+      }),
+      // 8. Live activity audit logs
+      this.prisma.auditLog.findMany({
+        where: { agencyId },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      }),
+      // 9. Active rentals count
+      this.prisma.booking.count({
+        where: { agencyId, status: 'ACTIVE' },
+      }),
+      // 10. Total customers count
+      this.prisma.customer.count({ where: { agencyId } }),
+      // 11. Customer options
+      this.prisma.customer.findMany({
+        where: { agencyId },
+        orderBy: { createdAt: 'desc' },
+        take: CUSTOMER_OPTION_CAP,
+        select: { id: true, firstName: true, lastName: true, phone: true, status: true },
+      }),
     ]);
+
     const revenueMtd = mtdPaymentsAgg._sum.amount?.toNumber() ?? 0;
     const prevRevenue = prevPaymentsAgg._sum.amount?.toNumber() ?? 0;
     const revenueGrowth = prevRevenue > 0
       ? Math.round(((revenueMtd - prevRevenue) / prevRevenue) * 100)
       : revenueMtd > 0 ? 100 : 0;
 
-    // ── 2. Fleet Utilization ────────────────────────────────────────
-    const utilMetrics = await this.getUtilizationMetrics(agencyId);
+    // ── STAGE 2: Dependent queries (Star asset revenue & Actor names) ──
+    const bestCar = allCars.length > 0
+      ? allCars.reduce((best, car) =>
+          car.currentRoi > (best?.currentRoi ?? -Infinity) ? car : best,
+        allCars[0])
+      : null;
 
-    // ── 3. Guardian Blocks (expired/expiring docs) ──────────────────
-    const allCars = await this.prisma.car.findMany({
-      where: { agencyId },
-      include: { documents: true, maintenance: true, bookings: { take: 1, orderBy: { createdAt: 'desc' } } },
-    });
+    const actorIds = [...new Set(recentLogs.map((l) => l.actorId).filter(Boolean))];
 
+    const [carRevenueAgg, actors] = await Promise.all([
+      bestCar
+        ? this.prisma.payment.aggregate({
+            where: {
+              invoice: { booking: { carId: bestCar.id } },
+              type: 'INCOME',
+              status: 'VERIFIED',
+            },
+            _sum: { amount: true },
+          })
+        : Promise.resolve(null),
+      actorIds.length > 0
+        ? this.prisma.user.findMany({
+            where: { id: { in: actorIds } },
+            select: { id: true, name: true, role: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Process Guardian Blocks
     const guardianBlocks: Array<{
       id: string; car: string; plate: string; risk: string;
       type: string; severity: string; carId: string;
@@ -652,49 +750,16 @@ export class AnalyticsService {
       }
     }
 
-    // Sort: danger first, then warning
     guardianBlocks.sort((a, b) => {
       if (a.severity === 'danger' && b.severity !== 'danger') return -1;
       if (a.severity !== 'danger' && b.severity === 'danger') return 1;
       return 0;
     });
 
-    // ── 4. Refusal / Demand Intelligence ────────────────────────────
-    const waitingRefusalsAgg = await this.prisma.refusalLog.aggregate({
-      where: { agencyId, status: 'WAITING' },
-      _sum: { potentialRevenue: true },
-      _count: { _all: true },
-    });
     const refusalRecoverable = waitingRefusalsAgg._sum.potentialRevenue?.toNumber() ?? 0;
     const refusalCount = waitingRefusalsAgg._count._all;
 
-    // ── 5. Daily Intensity (bookings + verified cash flow, last 14 days) ─────────
-    // Revenue = actual VERIFIED income payments (cash flow), NOT quoted booking
-    // prices. Bookings are still counted by creation date for demand tracking.
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    fourteenDaysAgo.setHours(0, 0, 0, 0);
-
-    const [recentBookings, recentPayments] = await Promise.all([
-      this.prisma.booking.findMany({
-        where: {
-          agencyId,
-          createdAt: { gte: fourteenDaysAgo },
-        },
-        select: { createdAt: true },
-      }),
-      this.prisma.payment.findMany({
-        where: {
-          invoice: { agencyId },
-          type: 'INCOME',
-          status: 'VERIFIED',
-          date: { gte: fourteenDaysAgo },
-        },
-        select: { date: true, amount: true },
-      }),
-    ]);
-
-    // Group by day
+    // Daily intensity mapping
     const dailyMap: Record<string, { bookings: number; revenue: number }> = {};
     for (let d = 13; d >= 0; d--) {
       const date = new Date();
@@ -724,28 +789,10 @@ export class AnalyticsService {
       revenue: val.revenue,
     }));
 
-    // ── 6. Star Asset (highest ROI car) ─────────────────────────────
-    let starAsset: {
-      id: string; brand: string; model: string; plate: string;
-      roi: number; status: string; totalRevenue: number;
-    } | null = null;
-
-    if (allCars.length > 0) {
-      const bestCar = allCars.reduce((best, car) =>
-        car.currentRoi > (best?.currentRoi ?? -Infinity) ? car : best,
-      allCars[0]);
-
-      // Calculate total revenue for this car
-      const carRevenueAgg = await this.prisma.payment.aggregate({
-        where: {
-          invoice: { booking: { carId: bestCar.id } },
-          type: 'INCOME',
-          status: 'VERIFIED',
-        },
-        _sum: { amount: true },
-      });
-      const carRevenue = carRevenueAgg._sum.amount?.toNumber() ?? 0;
-
+    // Star Asset
+    let starAsset: any = null;
+    if (bestCar) {
+      const carRevenue = carRevenueAgg?._sum?.amount?.toNumber() ?? 0;
       starAsset = {
         id: bestCar.id,
         brand: bestCar.brand,
@@ -757,22 +804,16 @@ export class AnalyticsService {
       };
     }
 
-    // ── 7. Live Activity (recent audit logs) ────────────────────────
-    const recentLogs = await this.prisma.auditLog.findMany({
-      where: { agencyId },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-    });
-
-    // Batch-fetch actor names
-    const actorIds = [...new Set(recentLogs.map((l) => l.actorId).filter(Boolean))];
-    const actors = actorIds.length > 0
-      ? await this.prisma.user.findMany({
-          where: { id: { in: actorIds } },
-          select: { id: true, name: true, role: true },
-        })
-      : [];
-    const actorMap = new Map(actors.map((a) => [a.id, a]));
+    // Live Activity
+    const actorMap = new Map<string, any>(actors.map((a: any) => [a.id, a] as [string, any]));
+    const actionLabels: Record<string, string> = {
+      CREATE_BOOKING: 'New Booking',
+      DELETE_CAR: 'Car Removed',
+      CHANGE_PRICE: 'Price Updated',
+      UPDATE_BOOKING_STATUS: 'Booking Status Changed',
+      CREATE_CAR: 'Car Added',
+      UPDATE_CAR: 'Car Updated',
+    };
 
     const liveActivity = recentLogs.map((log) => {
       const minutesAgo = Math.round(
@@ -783,15 +824,6 @@ export class AnalyticsService {
       else if (minutesAgo < 60) timeLabel = `${minutesAgo}m`;
       else if (minutesAgo < 1440) timeLabel = `${Math.round(minutesAgo / 60)}h`;
       else timeLabel = `${Math.round(minutesAgo / 1440)}d`;
-
-      const actionLabels: Record<string, string> = {
-        CREATE_BOOKING: 'New Booking',
-        DELETE_CAR: 'Car Removed',
-        CHANGE_PRICE: 'Price Updated',
-        UPDATE_BOOKING_STATUS: 'Booking Status Changed',
-        CREATE_CAR: 'Car Added',
-        UPDATE_CAR: 'Car Updated',
-      };
 
       const actor = actorMap.get(log.actorId);
 
@@ -806,7 +838,6 @@ export class AnalyticsService {
       };
     });
 
-    // ── 8. Available Cars for Booking ────────────────────────────────
     const availableCars = allCars
       .filter((c) => c.status === 'AVAILABLE')
       .map((c) => ({
@@ -815,41 +846,19 @@ export class AnalyticsService {
         pricePerDay: c.pricePerDay,
       }));
 
-    // ── 9. Active Rentals Count ─────────────────────────────────────
-    const activeRentals = await this.prisma.booking.count({
-      where: { agencyId, status: 'ACTIVE' },
-    });
-
-    // ── 10. Customer directory (count + bookable options for modal) ──
-    // Bounded to the 200 most-recent customers so this hot dashboard endpoint
-    // never loads an unbounded directory. `totalCustomers` stays the true
-    // count; the booking modal's picker uses these for the common case and can
-    // fall back to the paginated/searchable `GET /customers?search=` typeahead
-    // for agencies with a larger book. (Perf fix — Phase 6.)
-    const CUSTOMER_OPTION_CAP = 200;
-    const [totalCustomers, allCustomers] = await Promise.all([
-      this.prisma.customer.count({ where: { agencyId } }),
-      this.prisma.customer.findMany({
-        where: { agencyId },
-        orderBy: { createdAt: 'desc' },
-        take: CUSTOMER_OPTION_CAP,
-        select: { id: true, firstName: true, lastName: true, phone: true, status: true },
-      }),
-    ]);
     const customerOptions = allCustomers.map((c) => ({
       id: c.id,
       label: `${c.firstName} ${c.lastName}`,
       phone: c.phone,
     }));
 
-    // ── 11. Fleet summary ───────────────────────────────────────────
     const totalFleet = allCars.length;
     const availableCount = allCars.filter((c) => c.status === 'AVAILABLE').length;
     const rentedCount = allCars.filter((c) => c.status === 'RENTED').length;
     const maintenanceCount = allCars.filter((c) => c.status === 'MAINTENANCE').length;
     const oosCount = allCars.filter((c) => c.status === 'OUT_OF_SERVICE').length;
 
-    return {
+    const result = {
       revenue: {
         mtd: revenueMtd,
         growth: revenueGrowth,
@@ -877,5 +886,13 @@ export class AnalyticsService {
         outOfService: oosCount,
       },
     };
+
+    // Cache result in memory for 15s to collapse rapid consecutive navigations
+    this.commandCentreCache.set(agencyId, {
+      data: result,
+      expiresAt: Date.now() + 15000,
+    });
+
+    return result;
   }
 }

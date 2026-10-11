@@ -16,9 +16,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 30_000,
             gcTime: 5 * 60_000,
-            retry: 2,
-            retryDelay: (attempt) => Math.min(1_000 * 2 ** attempt, 30_000),
-            refetchOnWindowFocus: true,
+            retry: 1,
+            retryDelay: (attempt) => Math.min(1_000 * 2 ** attempt, 10_000),
+            refetchOnWindowFocus: false,
           },
         },
       }),

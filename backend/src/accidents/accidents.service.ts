@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
 
 /**
@@ -13,7 +14,10 @@ import { CreateAccidentDto, UpdateAccidentDto } from './dto/accidents.dto';
  */
 @Injectable()
 export class AccidentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pdfEngine: PdfEngineService,
+  ) {}
 
   /** Verify a car belongs to the caller's agency before linking an accident to it. */
   private async assertCarOwnership(agencyId: string, carId: string) {
@@ -123,5 +127,22 @@ export class AccidentsService {
     }
 
     return this.prisma.accident.update({ where: { id }, data });
+  }
+
+  async getDossierPdf(agencyId: string, id: string): Promise<Buffer> {
+    const accident = await this.prisma.accident.findFirst({
+      where: { id, agencyId },
+      include: {
+        agency: true,
+        car: true,
+        booking: {
+          include: { customer: true },
+        },
+      },
+    });
+    if (!accident) {
+      throw new NotFoundException('Accident not found');
+    }
+    return this.pdfEngine.generateAccidentDossier(accident);
   }
 }

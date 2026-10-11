@@ -88,7 +88,7 @@ export default function AiVision() {
       setTimeout(() => {
         setIsScanning(false);
         setActiveAnalysis(result);
-        showToast('success', 'Neural Scan Complete', `Detected ${result.detections.length} anomalies with ${result.integrityScore}% integrity.`);
+        showToast('info', 'Simulation Scan Complete', `Simulation identified ${result.detections.length} candidate anomalies (${result.model}).`);
       }, 500);
 
     } catch (error) {
@@ -102,10 +102,15 @@ export default function AiVision() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('aiVision')}</h1>
-          <p className="mt-1.5 flex items-center gap-2 eyebrow">
-            <span className="w-1.5 h-1.5 rounded-full bg-success" />
-{t('visionModelOnline')}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">{t('aiVision')}</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-warning/30 bg-warning/10 text-warning">
+              Simulation Preview
+            </span>
+          </div>
+          <p className="mt-1.5 flex items-center gap-2 eyebrow text-text-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+            Inspection Telemetry Pipeline · Demo Mode
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">

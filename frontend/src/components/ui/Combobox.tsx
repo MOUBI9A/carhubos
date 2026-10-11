@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,10 +26,9 @@ interface ComboboxProps {
 }
 
 /**
- * Accessible, searchable single-select styled like the app's native select
- * boxes (glass field, rounded-2xl, font-black micro voice). Renders its
- * dropdown absolutely inside a relative wrapper so it works within the
- * booking Modal's scroll container. Keyboard: ↑/↓ move, Enter select,
+ * Accessible, searchable single-select styled with Fider Lux tokens.
+ * Renders its dropdown absolutely inside a relative wrapper so it works within
+ * the booking Modal's scroll container. Keyboard: ↑/↓ move, Enter select,
  * Esc close, type-to-filter (matches label + sublabel).
  */
 export function Combobox({
@@ -46,6 +45,9 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
+  const comboboxId = useId();
+  const listboxId = `${comboboxId}-listbox`;
+  const optionId = (id: string) => `${comboboxId}-opt-${id}`;
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -125,33 +127,37 @@ export function Combobox({
     <div ref={wrapRef} className={cn('relative', className)}>
       <button
         type="button"
+        role="combobox"
+        id={comboboxId}
         disabled={disabled}
         onClick={() => !disabled && setOpen((v) => !v)}
         onKeyDown={onKeyDown}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
+        aria-activedescendant={open && filtered[highlight] ? optionId(filtered[highlight].id) : undefined}
         className={cn(
-          'w-full flex items-center gap-3 bg-white/5 border rounded-2xl px-4 py-4 text-left outline-none transition-all shadow-inner',
-          open ? 'border-primary' : 'border-white/10 hover:border-white/20',
+          'w-full flex items-center gap-3 bg-surface border rounded-2xl px-4 py-4 text-left outline-none transition-all shadow-inner',
+          open ? 'border-primary ring-1 ring-primary/20' : 'border-hairline hover:border-hairline/80',
           disabled && 'opacity-50 pointer-events-none',
         )}
       >
-        {icon && <span className="text-white/20 shrink-0">{icon}</span>}
-        <span className="flex-1 min-w-0 truncate text-sm font-bold">
+        {icon && <span className="text-text-muted shrink-0">{icon}</span>}
+        <span className="flex-1 min-w-0 truncate text-sm font-medium">
           {selected ? (
-            <span className="text-white">
+            <span className="text-foreground">
               {selected.label}
               {selected.sublabel && (
-                <span className="text-white/30"> • {selected.sublabel}</span>
+                <span className="text-text-muted"> • {selected.sublabel}</span>
               )}
             </span>
           ) : (
-            <span className="text-white/30">{placeholder}</span>
+            <span className="text-text-faint">{placeholder}</span>
           )}
         </span>
         <ChevronDown
           className={cn(
-            'w-4 h-4 text-white/30 shrink-0 transition-transform',
+            'w-4 h-4 text-text-muted shrink-0 transition-transform',
             open && 'rotate-180',
           )}
         />
@@ -160,18 +166,14 @@ export function Combobox({
       <AnimatePresence>
         {open && (
           <motion.div
-            // Deliberately do NOT animate opacity: the panel must stay fully
-            // opaque so the form behind never bleeds through (and it can't get
-            // stuck translucent if rAF is throttled). Only the slide animates.
             initial={reduce ? false : { y: -6, scale: 0.98 }}
             animate={{ y: 0, scale: 1 }}
             exit={reduce ? {} : { y: -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            style={{ backgroundColor: 'rgba(9, 12, 20, 0.98)' }}
-            className="absolute z-50 mt-2 w-full rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden"
+            className="absolute z-50 mt-2 w-full rounded-2xl border border-hairline bg-surface backdrop-blur-xl shadow-2xl overflow-hidden"
           >
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5">
-              <Search className="w-3.5 h-3.5 text-white/20 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-hairline">
+              <Search className="w-3.5 h-3.5 text-text-muted shrink-0" />
               <input
                 ref={inputRef}
                 value={query}
@@ -181,17 +183,18 @@ export function Combobox({
                 }}
                 onKeyDown={onKeyDown}
                 placeholder="Type to filter..."
-                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/20"
+                className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-text-faint"
               />
             </div>
 
             <ul
+              id={listboxId}
               ref={listRef}
               role="listbox"
               className="max-h-56 overflow-y-auto py-1"
             >
               {filtered.length === 0 ? (
-                <li className="px-4 py-6 text-center text-[10px] font-black text-white/20 uppercase tracking-widest">
+                <li className="px-4 py-6 text-center text-xs font-normal text-text-muted">
                   {emptyText}
                 </li>
               ) : (
@@ -201,21 +204,22 @@ export function Combobox({
                   return (
                     <li
                       key={o.id}
+                      id={optionId(o.id)}
                       role="option"
                       aria-selected={isSel}
                       onMouseEnter={() => setHighlight(i)}
                       onClick={() => commit(o.id)}
                       className={cn(
                         'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors',
-                        isHi ? 'bg-primary/15' : 'hover:bg-white/5',
+                        isHi ? 'bg-primary/15' : 'hover:bg-surface-raised',
                       )}
                     >
                       <span className="flex-1 min-w-0 truncate">
-                        <span className="text-sm font-bold text-white">
+                        <span className="text-sm font-medium text-foreground">
                           {o.label}
                         </span>
                         {o.sublabel && (
-                          <span className="text-[11px] font-bold text-white/30">
+                          <span className="text-xs text-text-muted">
                             {' '}
                             • {o.sublabel}
                           </span>
@@ -231,7 +235,7 @@ export function Combobox({
             </ul>
 
             {footer && (
-              <div className="border-t border-white/5 p-2">{footer}</div>
+              <div className="border-t border-hairline p-2">{footer}</div>
             )}
           </motion.div>
         )}

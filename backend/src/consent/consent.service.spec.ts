@@ -305,4 +305,22 @@ describe('ConsentService', () => {
       expect(result.url).toBe('https://signed.example/x');
     });
   });
+
+  describe('expireDueGrants — ENABLE_CRON guard', () => {
+    const origEnv = process.env.ENABLE_CRON;
+    afterEach(() => {
+      process.env.ENABLE_CRON = origEnv;
+    });
+
+    it('returns 0 and skips DB update when ENABLE_CRON is false', async () => {
+      process.env.ENABLE_CRON = 'false';
+      const prisma = makePrisma();
+      const svc = new ConsentService(prisma as any, {} as any);
+
+      const count = await svc.expireDueGrants();
+
+      expect(count).toBe(0);
+      expect(prisma.consentGrant.updateMany).not.toHaveBeenCalled();
+    });
+  });
 });

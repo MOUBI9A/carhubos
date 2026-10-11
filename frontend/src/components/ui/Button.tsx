@@ -23,10 +23,10 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variants = {
-    primary: 'bg-cream text-background hover:bg-white shadow-sm',
-    outline: 'border border-border text-foreground hover:bg-white/[0.05]',
-    danger: 'bg-danger text-white hover:bg-danger/90 shadow-sm',
-    ghost: 'text-text-muted hover:text-foreground hover:bg-white/[0.05]',
+    primary: 'bg-cream text-background hover:bg-cream/90 shadow-sm',
+    outline: 'border border-border text-foreground hover:bg-surface-raised',
+    danger: 'bg-danger text-destructive-foreground hover:bg-danger/90 shadow-sm',
+    ghost: 'text-text-muted hover:text-foreground hover:bg-surface-raised',
     premium:
       'text-background border border-metal-soft shadow-md bg-gradient-to-b from-[hsl(44_58%_64%)] to-[hsl(38_48%_48%)] hover:brightness-[1.06]',
   };

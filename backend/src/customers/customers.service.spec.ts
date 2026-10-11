@@ -302,3 +302,68 @@ describe('CustomersService.findAll — legacy bare-array path (P2 backlog)', () 
     expect(result).toEqual({ items: [], total: 0, page: 2, limit: 10 });
   });
 });
+
+describe('CustomersService Privacy Operations (exportData & anonymize)', () => {
+  it('exportData compiles customer profile, documents, and rental history', async () => {
+    const mockCustomer = {
+      id: 'c-1',
+      firstName: 'Khadija',
+      lastName: 'Alami',
+      email: 'khadija@test.ma',
+      phone: '+212600112233',
+      identityType: 'CIN',
+      identityNumber: 'BE9988',
+      nationality: 'MA',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      documents: [{ id: 'doc-1', type: 'CIN_FRONT' }],
+      bookings: [{ id: 'b-1', car: { brand: 'Peugeot', model: '208', licensePlate: '123' }, invoice: { amount: 1200, status: 'PAID' } }],
+    };
+    const prisma = {
+      customer: { findFirst: jest.fn().mockResolvedValue(mockCustomer) },
+    };
+    const svc = new CustomersService(prisma as any, makeAudit() as any);
+
+    const exported = await svc.exportData(AGENCY, 'c-1');
+    expect(exported.exportMetadata.agencyId).toBe(AGENCY);
+    expect(exported.customer.firstName).toBe('Khadija');
+    expect(exported.documents.length).toBe(1);
+    expect(exported.bookingHistory.length).toBe(1);
+  });
+
+  it('anonymize replaces PII, purges documents, and writes audit record', async () => {
+    const mockCustomer = {
+      id: 'c-1',
+      firstName: 'Khadija',
+      lastName: 'Alami',
+      phone: '+212600112233',
+      identityNumber: 'BE9988',
+    };
+    const audit = makeAudit();
+    const prisma = {
+      customer: {
+        findFirst: jest.fn().mockResolvedValue(mockCustomer),
+        update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'c-1', ...data })),
+      },
+      customerDocument: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const svc = new CustomersService(prisma as any, audit as any);
+
+    const result = await svc.anonymize(AGENCY, 'c-1', ACTOR);
+    expect(result.success).toBe(true);
+    expect(result.customer.firstName).toBe('Anonymized');
+    expect(result.customer.phone).toBe('+212000000000');
+    expect(prisma.customerDocument.deleteMany).toHaveBeenCalledWith({ where: { customerId: 'c-1' } });
+    expect(audit.log).toHaveBeenCalledWith(
+      AGENCY,
+      ACTOR,
+      'ANONYMIZE_CUSTOMER',
+      'CUSTOMER',
+      'c-1',
+      expect.any(Object),
+      expect.any(Object),
+    );
+  });
+});

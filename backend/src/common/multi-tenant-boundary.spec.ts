@@ -12,6 +12,7 @@ import { PaymentsService } from '../payments/payments.service';
 import { TasksService } from '../tasks/tasks.service';
 import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
 import { SearchService } from './search/search.service';
+import { VaultService } from '../vault/vault.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -280,5 +281,24 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
     // broken mock.
     const resultForB = await svc.search(AGENCY_B, 'Dacia');
     expect(resultForB.total).toBe(3);
+  });
+
+  it('VaultService.getDownloadUrl / remove 404 across tenants', async () => {
+    const prisma = {
+      vaultFile: {
+        findFirst: agencyScopedFindFirst(),
+        delete: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const storage = {
+      createSignedUrl: jest.fn().mockResolvedValue('https://signed.example/x'),
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
+    const svc = new VaultService(prisma as any, storage as any);
+
+    await expect(svc.getDownloadUrl(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.remove(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.getDownloadUrl(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+    await expect(svc.remove(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
   });
 });

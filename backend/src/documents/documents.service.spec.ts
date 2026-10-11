@@ -208,3 +208,17 @@ describe('DocumentsService — vaultFileId linking (Vault entity-linking)', () =
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+describe('DocumentsService.findExpiringSoon — tenant-scoped and capped', () => {
+  it('scopes query to car.agencyId and bounds with take limit', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = { carDocument: { findMany } };
+    const svc = new DocumentsService(prisma as any);
+
+    await svc.findExpiringSoon('agency-a', 50);
+
+    expect(findMany.mock.calls[0][0].take).toBe(50);
+    expect(findMany.mock.calls[0][0].where.car).toEqual({ agencyId: 'agency-a' });
+    expect(findMany.mock.calls[0][0].where.status).toBe('VALID');
+  });
+});

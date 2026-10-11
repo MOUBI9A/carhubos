@@ -20,6 +20,7 @@ describe('VaultStorageService', () => {
     mockCreateClient.mockReset();
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_SECRET_KEY;
     delete process.env.SUPABASE_VAULT_BUCKET;
   });
 
@@ -60,6 +61,21 @@ describe('VaultStorageService', () => {
     expect(mockCreateClient).toHaveBeenCalledWith(
       'https://proj.supabase.co',
       'service-role-key',
+      expect.any(Object),
+    );
+  });
+
+  it('accepts SUPABASE_SECRET_KEY as an alias for SUPABASE_SERVICE_ROLE_KEY', async () => {
+    process.env.SUPABASE_URL = 'https://proj.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'secret-key-from-vercel';
+    mockSupabaseStorage();
+    const service = new VaultStorageService();
+
+    await service.upload('agency-a/file.pdf', Buffer.from('x'), 'application/pdf');
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      'https://proj.supabase.co',
+      'secret-key-from-vercel',
       expect.any(Object),
     );
   });

@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
+import { ServerTimingInterceptor } from './common/interceptors/server-timing.interceptor';
 
 async function bootstrap() {
   // rawBody: true captures the raw request body (req.rawBody) alongside the
@@ -19,7 +20,10 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalFilters(new AllExceptionsFilter());
   // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
-  app.useGlobalInterceptors(new DecimalToNumberInterceptor());
+  app.useGlobalInterceptors(
+    new DecimalToNumberInterceptor(),
+    new ServerTimingInterceptor(),
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({

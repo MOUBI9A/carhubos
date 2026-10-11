@@ -81,17 +81,25 @@ export class TrustService {
       customer.identityType,
       customer.identityNumber,
     );
-    let identity = await this.prisma.renterIdentity.findUnique({
-      where: { identityHash },
-    });
-    if (!identity) {
-      identity = await this.prisma.renterIdentity.create({
-        data: {
+    let identity: any;
+    try {
+      identity = await this.prisma.renterIdentity.upsert({
+        where: { identityHash },
+        update: {},
+        create: {
           identityHash,
           identityType: (customer.identityType || 'CIN').toUpperCase(),
           identityMasked: this.mask(customer.identityNumber),
         },
       });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        identity = await this.prisma.renterIdentity.findUnique({
+          where: { identityHash },
+        });
+      } else {
+        throw err;
+      }
     }
     await this.prisma.customer.update({
       where: { id: customer.id },

@@ -67,26 +67,26 @@ export function CommandPalette() {
         initial={{ opacity: 0, scale: 0.95, y: -20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -20 }}
-        className="relative w-full max-w-2xl glass rounded-3xl shadow-2xl overflow-hidden border-white/20"
+        className="relative w-full max-w-2xl bg-surface border border-hairline rounded-3xl shadow-2xl overflow-hidden"
       >
-        <div className="p-6 border-b border-white/10 flex items-center gap-4">
-          <Search className="w-6 h-6 text-white/20" />
+        <div className="p-6 border-b border-hairline flex items-center gap-4">
+          <Search className="w-6 h-6 text-text-muted" />
           <input 
             autoFocus
             placeholder={t('searchPlaceholder')} 
-            className="bg-transparent border-none outline-none text-xl font-bold text-white w-full placeholder:text-white/10"
+            className="bg-transparent border-none outline-none text-xl font-semibold text-foreground w-full placeholder:text-text-faint"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 flex items-center gap-1">
-             <span className="text-[10px] font-black text-white/40 uppercase">ESC</span>
+          <div className="bg-surface-raised border border-hairline rounded-lg px-2 py-1 flex items-center gap-1">
+             <span className="text-[10px] font-medium text-text-muted uppercase">ESC</span>
           </div>
         </div>
 
         <div className="p-4 max-h-[50vh] overflow-y-auto">
           {commands.map((group) => (
             <div key={group.group} className="mb-6 last:mb-0">
-               <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-3">{group.group}</h3>
+               <h3 className="text-[10px] font-semibold text-text-faint uppercase tracking-wider px-4 mb-3">{group.group}</h3>
                <div className="space-y-1">
                   {group.items.map((item) => (
                     <button
@@ -95,10 +95,10 @@ export function CommandPalette() {
                         router.push(item.href);
                         setIsOpen(false);
                       }}
-                      className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-primary text-white/60 hover:text-white transition-all group text-left"
+                      className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-primary/10 text-text-muted hover:text-foreground transition-all group text-left"
                     >
                       <item.icon className="w-5 h-5 transition-transform group-hover:scale-110" />
-                      <span className="font-bold text-sm">{item.name}</span>
+                      <span className="font-medium text-sm">{item.name}</span>
                       <Navigation className="ml-auto w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   ))}
@@ -107,18 +107,18 @@ export function CommandPalette() {
           ))}
         </div>
 
-        <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
+        <div className="p-4 bg-surface-raised/40 border-t border-hairline flex items-center justify-between">
            <div className="flex gap-4">
               <div className="flex items-center gap-2">
-                 <div className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">↑↓</div>
-                 <span className="text-[10px] font-bold text-white/20 uppercase">{t('navigate')}</span>
+                 <div className="w-4 h-4 rounded bg-surface border border-hairline flex items-center justify-center text-[8px] font-medium text-text-muted">↑↓</div>
+                 <span className="text-[10px] font-medium text-text-faint uppercase">{t('navigate')}</span>
               </div>
               <div className="flex items-center gap-2">
-                 <div className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">↵</div>
-                 <span className="text-[10px] font-bold text-white/20 uppercase">{t('select')}</span>
+                 <div className="w-4 h-4 rounded bg-surface border border-hairline flex items-center justify-center text-[8px] font-medium text-text-muted">↵</div>
+                 <span className="text-[10px] font-medium text-text-faint uppercase">{t('select')}</span>
               </div>
            </div>
-           <p className="text-[10px] font-black text-primary uppercase tracking-widest">{t('universalSearch')}</p>
+           <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">{t('universalSearch')}</p>
         </div>
       </motion.div>
     </div>,

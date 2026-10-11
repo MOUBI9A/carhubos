@@ -342,6 +342,7 @@ export class ConsentService {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async expireDueGrants(): Promise<number> {
+    if (process.env.ENABLE_CRON === 'false') return 0;
     const now = new Date();
     const res = await this.prisma.consentGrant.updateMany({
       where: { status: 'APPROVED', expiresAt: { lte: now } },

@@ -93,4 +93,80 @@ describe('SaasAdminService.provisionTenant', () => {
     expect(tx.subscription.create).not.toHaveBeenCalled(); // no plan → no subscription
     expect(tx.agencyMembership.create).toHaveBeenCalledTimes(1); // owner still usable
   });
+
+  describe('diagnostics', () => {
+    it('returns system diagnostics with node metrics and counts', async () => {
+      const prisma: any = {
+        agency: { count: jest.fn().mockResolvedValue(5) },
+        user: { count: jest.fn().mockResolvedValue(12) },
+        booking: { count: jest.fn().mockResolvedValue(40) },
+        car: { count: jest.fn().mockResolvedValue(25) },
+        subscription: { count: jest.fn().mockResolvedValue(5) },
+      };
+      const featureFlags: any = {
+        getAllFlags: jest.fn().mockReturnValue({ ai_damage_detection: true }),
+      };
+      const svc = new SaasAdminService(prisma, { log: jest.fn() } as any, featureFlags);
+
+      const diag = await svc.getSystemDiagnostics();
+      expect(diag.status).toBe('HEALTHY');
+      expect(diag.counts.totalAgencies).toBe(5);
+      expect(diag.counts.totalVehicles).toBe(25);
+      expect(diag.featureFlags.ai_damage_detection).toBe(true);
+      expect(diag.node.uptimeSeconds).toBeGreaterThanOrEqual(0);
+    });
+
+    it('returns tenant diagnostics for an existing agency', async () => {
+      const prisma: any = {
+        agency: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'ag-1',
+            name: 'Atlas Rent',
+            subdomain: 'atlas',
+            contactEmail: 'contact@atlas.ma',
+            subscriptionTier: 'PRO',
+            createdAt: new Date(),
+            subscription: { status: 'ACTIVE', plan: { name: 'Pro Fleet' } },
+          }),
+        },
+        user: { count: jest.fn().mockResolvedValue(3) },
+        customer: { count: jest.fn().mockResolvedValue(15) },
+        car: {
+          count: jest.fn().mockResolvedValue(8),
+          findMany: jest.fn().mockResolvedValue([
+            { status: 'AVAILABLE' },
+            { status: 'AVAILABLE' },
+            { status: 'RENTED' },
+          ]),
+        },
+        booking: {
+          count: jest.fn().mockResolvedValueOnce(30) // total
+            .mockResolvedValueOnce(5) // active
+            .mockResolvedValueOnce(1), // overdue
+        },
+        platformInvoice: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        auditLog: {
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      };
+      const svc = new SaasAdminService(prisma, { log: jest.fn() } as any);
+
+      const diag = await svc.getTenantDiagnostics('ag-1');
+      expect(diag.agency.name).toBe('Atlas Rent');
+      expect(diag.stats.totalCars).toBe(8);
+      expect(diag.stats.fleetStatus.AVAILABLE).toBe(2);
+      expect(diag.stats.fleetStatus.RENTED).toBe(1);
+      expect(diag.stats.activeBookings).toBe(5);
+    });
+
+    it('throws NotFoundException if agency is not found', async () => {
+      const prisma: any = {
+        agency: { findUnique: jest.fn().mockResolvedValue(null) },
+      };
+      const svc = new SaasAdminService(prisma, { log: jest.fn() } as any);
+      await expect(svc.getTenantDiagnostics('non-existent')).rejects.toThrow();
+    });
+  });
 });

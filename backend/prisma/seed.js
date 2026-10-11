@@ -6,6 +6,11 @@ const { ROLE_PRESETS } = require('./capability-presets');
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('CRITICAL: seed.js wipes all data and is strictly prohibited in production (NODE_ENV=production). Aborting.');
+    process.exit(1);
+  }
+
   console.log('🚀 Starting Infinity High-Fidelity Seed...');
 
   // 1. Clear Existing Data

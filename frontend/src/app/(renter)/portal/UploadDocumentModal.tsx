@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { UploadCloud, FileText, AlertTriangle, X } from 'lucide-react';
@@ -26,6 +27,7 @@ interface UploadDocumentModalProps {
  * table at all (see consent.service.ts / R42).
  */
 export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocumentModalProps) {
+  const t = useTranslations('renterPortal');
   const [type, setType] = useState<string>(RENTER_DOCUMENT_TYPES[0]);
   const [label, setLabel] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -71,7 +73,7 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      setError('Attach a file to upload.');
+      setError(t('attachFileError'));
       return;
     }
     setIsUploading(true);
@@ -88,9 +90,9 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
     } catch (err: any) {
       if (err?.response?.status === 503) {
         setStorageUnavailable(true);
-        setError('Vault storage isn’t configured yet — try again in a moment.');
+        setError(t('vaultNotConfiguredError'));
       } else {
-        setError(err?.response?.data?.message || 'Could not upload this document.');
+        setError(err?.response?.data?.message || t('uploadGenericError'));
       }
     } finally {
       setIsUploading(false);
@@ -98,10 +100,10 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Upload document" description="Add a file to your private vault">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('uploadModalTitle')} description={t('uploadModalDesc')}>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-1.5">
-          <p className="eyebrow px-1">Document type</p>
+          <p className="eyebrow px-1">{t('docType')}</p>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -114,18 +116,18 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
           </select>
         </div>
         <div className="space-y-1.5">
-          <p className="eyebrow px-1">Label (optional)</p>
+          <p className="eyebrow px-1">{t('labelOptional')}</p>
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             disabled={isUploading}
-            placeholder="e.g. Front side, issued 2024"
+            placeholder={t('labelPlaceholder')}
             className={inputCls}
           />
         </div>
 
         <div className="space-y-1.5">
-          <p className="eyebrow px-1">File</p>
+          <p className="eyebrow px-1">{t('fileLabel')}</p>
           {file ? (
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface-raised px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -138,7 +140,7 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
                 type="button"
                 disabled={isUploading}
                 onClick={() => setFile(null)}
-                aria-label="Remove attached file"
+                aria-label={t('removeAttachedFile')}
                 className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-text-faint hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
@@ -168,9 +170,9 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
                 onChange={(e) => handleFileSelected(e.target.files?.[0])}
               />
               <UploadCloud className="w-6 h-6 text-text-faint mx-auto mb-2" />
-              <p className="text-xs font-medium text-foreground">Drag & drop, or click to browse</p>
+              <p className="text-xs font-medium text-foreground">{t('dragAndDrop')}</p>
               <p className="mt-1 text-[11px] text-text-faint">
-                PDF, JPEG, PNG or WebP — up to {VAULT_MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB
+                {t('fileLimits', { maxMb: VAULT_MAX_FILE_SIZE_BYTES / (1024 * 1024) })}
               </p>
             </div>
           )}
@@ -184,10 +186,10 @@ export function UploadDocumentModal({ isOpen, onClose, onUploaded }: UploadDocum
 
         <div className="flex gap-4">
           <Button type="button" variant="outline" className="flex-1" onClick={handleClose} disabled={isUploading}>
-            Cancel
+            {t('close')}
           </Button>
           <Button type="submit" className="flex-1" isLoading={isUploading}>
-            {isUploading ? 'Uploading...' : 'Upload'}
+            {isUploading ? t('uploading') : t('uploadAction')}
           </Button>
         </div>
       </form>

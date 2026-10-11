@@ -82,6 +82,7 @@ export class AutomationsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDocumentExpiryChecks() {
+    if (process.env.ENABLE_CRON === 'false') return;
     this.logger.log('Running automated document expiry checks...');
 
     const nextWeek = new Date();
@@ -151,6 +152,7 @@ export class AutomationsService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleOverdueReturns() {
+    if (process.env.ENABLE_CRON === 'false') return;
     this.logger.log('Checking for overdue returns...');
 
     const now = new Date();
@@ -208,6 +210,7 @@ export class AutomationsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleBlacklistExpiry() {
+    if (process.env.ENABLE_CRON === 'false') return;
     const result = await this.trust.expireBlacklistEntries();
     if (result.expired) this.logger.log(`Expired ${result.expired} blacklist entrie(s).`);
   }

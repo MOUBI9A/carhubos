@@ -35,3 +35,7 @@ yarn-error.log*
 
 # Local MCP/tooling config
 .mcp.json
+skills-lock.json
+
+# Local credentials & access notes
+access/

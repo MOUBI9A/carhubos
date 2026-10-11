@@ -11,7 +11,22 @@ const crypto = require('crypto');
 // Mirrors src/common/capabilities.ts ROLE_PRESETS — see the sync warning there.
 const { ROLE_PRESETS } = require('./capability-presets');
 
-const prisma = new PrismaClient();
+let prisma;
+
+async function getConnectedPrisma(maxRetries = 10, delay = 500) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const client = new PrismaClient();
+    try {
+      await client.$connect();
+      return client;
+    } catch (err) {
+      await client.$disconnect().catch(() => {});
+      if (attempt === maxRetries) throw err;
+      console.warn(`Connection attempt ${attempt} failed, retrying...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
 
 // Mirror of trust.service.ts identity derivation: HMAC-SHA256(IDENTITY_PEPPER,
 // normalize(type:number)). When the pepper is present (seed runs with
@@ -29,6 +44,7 @@ function demoIdentityHash(type, number) {
 }
 
 async function main() {
+  prisma = await getConnectedPrisma();
   const password = await bcrypt.hash('admin123', 10);
 
   // A shared demo agency for the agency-scoped roles (owner/manager/agent).
@@ -204,4 +220,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => prisma?.$disconnect());

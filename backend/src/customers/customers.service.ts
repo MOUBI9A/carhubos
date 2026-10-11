@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -242,5 +243,97 @@ export class CustomersService {
       where: { agencyId, status: 'BLACKLISTED' },
       orderBy: { updatedAt: 'desc' },
     });
+  }
+
+  /**
+   * Data Privacy / Portability: Exports comprehensive personal data and rental history.
+   * Technical control designed to support compliance with Law 09-08 and data access rights.
+   */
+  async exportData(agencyId: string, customerId: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, agencyId },
+      include: {
+        documents: true,
+        bookings: {
+          include: {
+            car: { select: { brand: true, model: true, licensePlate: true } },
+            invoices: { select: { amount: true, status: true } },
+          },
+        },
+      },
+    });
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    return {
+      exportMetadata: {
+        timestamp: new Date().toISOString(),
+        regulationScope: 'Technical controls designed to support data privacy compliance',
+        agencyId,
+      },
+      customer: {
+        id: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        identityType: customer.identityType,
+        identityNumber: customer.identityNumber,
+        nationality: customer.nationality,
+        status: customer.status,
+        createdAt: customer.createdAt,
+      },
+      documents: customer.documents,
+      bookingHistory: customer.bookings,
+    };
+  }
+
+  /**
+   * Data Privacy / Right to Erasure: Anonymizes customer PII while preserving
+   * historical invoice and transaction integrity for statutory accounting compliance.
+   */
+  async anonymize(agencyId: string, customerId: string, actorId: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, agencyId },
+    });
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const anonSuffix = randomUUID().slice(0, 8);
+    const updated = await this.prisma.customer.update({
+      where: { id: customerId },
+      data: {
+        firstName: 'Anonymized',
+        lastName: `User-${anonSuffix}`,
+        email: null,
+        phone: '+212000000000',
+        identityNumber: `ANON-${anonSuffix}`,
+        status: 'ACTIVE',
+      },
+    });
+
+    // Delete customer documents to purge scanned identity copies
+    await this.prisma.customerDocument.deleteMany({
+      where: { customerId },
+    });
+
+    await this.auditLogs.log(
+      agencyId,
+      actorId,
+      'ANONYMIZE_CUSTOMER',
+      'CUSTOMER',
+      customerId,
+      { firstName: customer.firstName, identityNumber: '***' },
+      { status: 'ANONYMIZED' },
+    );
+
+    return {
+      success: true,
+      customerId,
+      message: 'Customer personal data anonymized; financial ledger integrity preserved.',
+      customer: updated,
+    };
   }
 }

@@ -81,3 +81,52 @@ describe('AutomationsService — rule CRUD tenant boundary (N4)', () => {
     });
   });
 });
+
+describe('AutomationsService — ENABLE_CRON guard', () => {
+  const origEnv = process.env.ENABLE_CRON;
+  afterEach(() => {
+    process.env.ENABLE_CRON = origEnv;
+  });
+
+  it('bypasses handleDocumentExpiryChecks when ENABLE_CRON is false', async () => {
+    process.env.ENABLE_CRON = 'false';
+    const findMany = jest.fn();
+    const svc = new AutomationsService(
+      { carDocument: { findMany } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    await svc.handleDocumentExpiryChecks();
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('bypasses handleOverdueReturns when ENABLE_CRON is false', async () => {
+    process.env.ENABLE_CRON = 'false';
+    const findMany = jest.fn();
+    const svc = new AutomationsService(
+      { booking: { findMany } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    await svc.handleOverdueReturns();
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('bypasses handleBlacklistExpiry when ENABLE_CRON is false', async () => {
+    process.env.ENABLE_CRON = 'false';
+    const expireBlacklistEntries = jest.fn();
+    const svc = new AutomationsService(
+      {} as any,
+      {} as any,
+      {} as any,
+      { expireBlacklistEntries } as any,
+      {} as any,
+    );
+    await svc.handleBlacklistExpiry();
+    expect(expireBlacklistEntries).not.toHaveBeenCalled();
+  });
+});

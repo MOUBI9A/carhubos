@@ -15,6 +15,8 @@ import {
   UpdateSubscriptionDto,
 } from './dto/founder-billing.dto';
 
+import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
+
 // Founder tenant roster is bounded (flat array preserved; P2 backlog). Platform
 // scale needs real pagination — a high cap keeps the console snappy until then.
 // (getFounderMetrics deliberately stays uncapped: it sums MRR across ALL
@@ -27,6 +29,7 @@ export class SaasAdminService {
   constructor(
     private prisma: PrismaService,
     private auditLogs: AuditLogsService,
+    private featureFlags?: FeatureFlagsService,
   ) {}
 
   /**
@@ -388,5 +391,147 @@ export class SaasAdminService {
     );
 
     return updated;
+  }
+
+  /**
+   * System-level diagnostics for platform administrators (ROOT_ADMIN only).
+   */
+  async getSystemDiagnostics() {
+    const memory = process.memoryUsage();
+    const [
+      totalAgencies,
+      totalUsers,
+      totalBookings,
+      totalVehicles,
+      totalSubscriptions,
+    ] = await Promise.all([
+      this.prisma.agency.count({ where: { deletedAt: null } }),
+      this.prisma.user.count(),
+      this.prisma.booking.count(),
+      this.prisma.car.count(),
+      this.prisma.subscription.count({ where: { status: 'ACTIVE' } }),
+    ]);
+
+    return {
+      status: 'HEALTHY',
+      timestamp: new Date().toISOString(),
+      node: {
+        version: process.version,
+        platform: process.platform,
+        uptimeSeconds: Math.floor(process.uptime()),
+        memory: {
+          heapUsedMb: Math.round(memory.heapUsed / 1024 / 1024),
+          heapTotalMb: Math.round(memory.heapTotal / 1024 / 1024),
+          rssMb: Math.round(memory.rss / 1024 / 1024),
+        },
+      },
+      counts: {
+        totalAgencies,
+        totalUsers,
+        totalBookings,
+        totalVehicles,
+        activeSubscriptions: totalSubscriptions,
+      },
+      featureFlags: this.featureFlags ? this.featureFlags.getAllFlags() : {},
+    };
+  }
+
+  /**
+   * Deep tenant diagnostics for troubleshooting customer issues.
+   */
+  async getTenantDiagnostics(agencyId: string) {
+    const agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (!agency) {
+      throw new NotFoundException(`Agency ${agencyId} not found`);
+    }
+
+    const [
+      totalUsers,
+      totalCustomers,
+      totalCars,
+      totalBookings,
+      activeBookings,
+      overdueBookings,
+      cars,
+      unpaidInvoices,
+      recentLogs,
+    ] = await Promise.all([
+      this.prisma.user.count({ where: { agencyId } }),
+      this.prisma.customer.count({ where: { agencyId } }),
+      this.prisma.car.count({ where: { agencyId } }),
+      this.prisma.booking.count({ where: { agencyId } }),
+      this.prisma.booking.count({
+        where: { agencyId, status: { in: ['CONFIRMED', 'ACTIVE'] } },
+      }),
+      this.prisma.booking.count({
+        where: {
+          agencyId,
+          status: 'ACTIVE',
+          endDate: { lt: new Date() },
+        },
+      }),
+      this.prisma.car.findMany({
+        where: { agencyId },
+        select: { status: true },
+      }),
+      this.prisma.platformInvoice.findMany({
+        where: { agencyId, status: 'ISSUED' },
+        select: {
+          id: true,
+          number: true,
+          amount: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        where: { agencyId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          action: true,
+          entityType: true,
+          entityId: true,
+          actorId: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    const fleetBreakdown: Record<string, number> = {};
+    for (const car of cars) {
+      fleetBreakdown[car.status] = (fleetBreakdown[car.status] || 0) + 1;
+    }
+
+    return {
+      agency: {
+        id: agency.id,
+        name: agency.name,
+        subdomain: agency.subdomain,
+        contactEmail: agency.contactEmail,
+        subscriptionTier: agency.subscriptionTier,
+        createdAt: agency.createdAt,
+      },
+      subscription: agency.subscription || null,
+      stats: {
+        totalUsers,
+        totalCustomers,
+        totalCars,
+        fleetStatus: fleetBreakdown,
+        totalBookings,
+        activeBookings,
+        overdueBookings,
+        unpaidInvoices,
+      },
+      recentAuditLogs: recentLogs,
+    };
   }
 }

@@ -183,6 +183,24 @@ export class BookingsService {
 
     // 7. Create booking, invoice, and initial PENDING payment in a transaction
     const booking = await this.prisma.$transaction(async (tx) => {
+      // 🔒 Concurrency guard: Serialize concurrent booking attempts for this specific vehicle
+      // using row-level locking on the Car. This prevents phantom reads and race conditions.
+      await tx.$executeRaw`SELECT id FROM "Car" WHERE id = ${carId} FOR UPDATE`;
+
+      // Re-check overlap INSIDE transaction under the lock to eliminate check-then-act race conditions
+      const concurrentCollision = await tx.booking.findFirst({
+        where: {
+          carId,
+          status: { in: ['REQUESTED', 'APPROVED', 'ACTIVE', 'OVERDUE'] },
+          OR: [{ startDate: { lte: end }, endDate: { gte: start } }],
+        },
+      });
+      if (concurrentCollision) {
+        throw new BadRequestException(
+          'Car is already booked for these dates. Added to waitlist.',
+        );
+      }
+
       const deposit = new Prisma.Decimal(depositAmount ?? 0).toDecimalPlaces(2);
       if (deposit.lt(0)) {
         throw new BadRequestException('depositAmount cannot be negative.');

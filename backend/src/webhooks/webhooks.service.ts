@@ -58,9 +58,39 @@ export class WebhooksService {
     }
 
     for (const sub of subscriptions) {
-      this.sendPayload(sub, event, payload).catch((err) => {
-        this.logger.error(`Webhook failed for ${sub.url}: ${err.message}`);
+      this.sendPayloadWithRetry(sub, event, payload).catch((err) => {
+        this.logger.error(`Webhook worker unexpected error: ${err.message}`);
       });
+    }
+  }
+
+  private async sendPayloadWithRetry(
+    subscription: any,
+    event: string,
+    payload: any,
+    maxRetries = 3,
+  ) {
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        await this.sendPayload(subscription, event, payload);
+        return;
+      } catch (err: any) {
+        this.logger.warn(
+          `Webhook attempt ${attempt}/${maxRetries} failed for ${subscription.url}: ${err.message}`,
+        );
+        if (attempt >= maxRetries) {
+          this.logger.error(
+            `[DEAD_LETTER_WEBHOOK] Permanently failed to deliver event "${event}" to "${subscription.url}" after ${maxRetries} attempts: ${err.message}`,
+          );
+          return;
+        }
+        if (process.env.NODE_ENV !== 'test') {
+          const backoffMs = Math.pow(2, attempt) * 200;
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        }
+      }
     }
   }
 

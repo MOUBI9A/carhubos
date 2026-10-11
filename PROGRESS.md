@@ -1,7 +1,6 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
-> Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `ff8021b`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/108 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Last updated at R50.** Tree is 100% clean, `backend` tsc clean + jest **54 suites / 443 tests green** + eslint clean, `frontend` tsc clean + vitest **6 suites / 19 tests green** + eslint clean. Phase 12 design system is 100% clean (0 `font-black`, 0 raw white/color tokens app-wide). Certified PDF dossier engine fully integrated. Production deployment live at `https://carhub.codes` on Vercel + Supabase (PostgreSQL 17.6). Multi-tenant isolation verified across 14 domains.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -46,16 +45,27 @@ Logins (password `admin123`): `root@ owner@ manager@ agent@ renter@` `carhub.os`
   - `.github/workflows/ci.yml` — two parallel jobs (backend: `prisma generate`→tsc→jest→eslint; frontend: tsc→vitest→eslint), `pull_request`+`push:main`, cancel-in-progress. Every step verified green locally with the exact same commands.
   - **Left**: making the CI workflow a *required* status check needs a repo-admin action (GitHub Settings → Branches → protection rule) — a shared-infrastructure change, flagged for the founder rather than done silently. Playwright e2e / a live-DB multi-tenant E2E suite isn't wired into CI (needs a Postgres service container — bigger infra lift). The multi-tenant boundary test covers a representative sample, not every domain exhaustively.
 - **Phase 11 — SaaS Business Layer** ✅ complete.
-- **Phase 12 — Design & Frontend Rebuild "Fider Lux"** ✅ complete — `font-black`/`text-white`/`bg-white/`/raw semantic colors (`amber-400/500`, `red-500`, `green-500`) are **0 app-wide**, confirmed by a final grep sweep across the whole frontend (globals.css's inert legacy aliases excepted). The 4 style-map `.ts` files (bookings, staff, renter-portal, fleet types) and the public-site footer that were still on the old system are now fixed. The flagship renter portal page (failed twice on earlier attempts) is done.
+- **Phase 12 — Design & Frontend Rebuild "Fider Lux"** ✅ complete — `font-black`/`text-white`/`text-white/`/`bg-white/` and raw semantic colors are **0 app-wide**, confirmed by recursive grep sweep across the whole frontend. All shared components (`Modal`, `EmptyState`, `Combobox`, `CommandPalette`, `Button`, `Skeleton`, `Card`, `ToastContext`, `ImpersonationBanner`) fully migrated to semantic Fider Lux tokens. Toast notifications WCAG 2.2.1 compliant (pause-on-hover/focus + aria-live region). Combobox ARIA roles hardened. Renter vault and customer detail vault access panels fully translated and connected.
 - **Guardian Vault** ✅ — closed a genuine "mock page + fake toast" gap outside the original phase list: was a hardcoded array with a fake "AES-256 encryption applied" success toast, now wired to a real (new) `GET /documents` (agency-wide) endpoint + `GET /cars` for the upload picker, real HUD counts, real search/filter, and honest states throughout (no fake success, explicit "file upload isn't wired yet" note — the metadata is real, the file-storage piece is a separate infra decision).
 
-## LEFT TO DO (in order)
+### 1. Phase 9 — deploy ✅ COMPLETED (Production Live on Vercel + Supabase)
+- **Production URL:** `https://carhub.codes` (also `https://www.carhub.codes`, `https://carhubos.vercel.app`).
+- **Hosting / Compute:** Vercel (`carhubos`, deployment `READY`).
+- **Database:** Supabase managed PostgreSQL 17.6 (`nsnashznakiofxopdsfg`, eu-west-1).
+  - Migrations / Session Pooler (port 5432): 14 migrations verified up to date.
+  - Vercel Runtime / Transaction Pooler (port 6543): `pgbouncer=true&connection_limit=1`.
+- **Live Endpoints Verified:**
+  - `GET /api/health` → 200 OK (`status = ok, service = fider-api`)
+  - `GET /api/ready` → 200 OK (`status = ready, database = reachable`)
+  - `GET /api/platform/plans` → 200 OK (STARTER, PRO, BUSINESS returned from live DB)
+- **Database production blocker:** RESOLVED.
+- **Vault Storage:** Configured in Vercel (`vault-files` bucket, `SUPABASE_SECRET_KEY`). Code supports both `SUPABASE_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. Authenticated E2E smoke test pending.
+- **Payments / AI:** Intentionally disabled (`PAYMENT_PROVIDER=DISABLED`, `AI_VISION_MODE=disabled`).
 
-### 1. Phase 9 — deploy (HUMAN GATE — do not start without the founder)
-Deploy target/host decision, migrate-on-deploy, managed Postgres + backups, PDF engine runtime (Puppeteer needs a real server, not serverless), error tracking/healthchecks. Also: ask the founder whether to make the new CI workflow a required PR check (repo Settings → Branches).
-
-### 2. Phase 10 — final pass (do last, once everything above is solid)
-`/security-review` + `/code-review` on the full diff since Phase 0; re-run the market-readiness checklist end to end; close or explicitly defer every remaining item.
+### 2. Phase 10 — final pass (current focus)
+- Production smoke-testing using synthetic / fake data for controlled pilot flow.
+- Authenticated E2E verification of tenant isolation (Agency A vs Agency B, zero IDOR leaks).
+- Vault upload/download/delete smoke test with safe synthetic test files.
 
 ### 3. Smaller follow-ups (not blocking, pick up opportunistically)
 - ✅ ~~Adopt the paginated `GET /bookings` shape in the frontend~~ — done (`a90c4d5`, windowed scheduler; see Phase 6 above).

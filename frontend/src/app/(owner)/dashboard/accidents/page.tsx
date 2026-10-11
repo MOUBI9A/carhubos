@@ -24,7 +24,10 @@ import {
   RefreshCw,
   SearchX,
   Wrench,
+  Download,
+  Loader2,
 } from 'lucide-react';
+import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { formatDate } from '@/lib/format';
@@ -290,6 +293,31 @@ export default function AccidentsPage() {
     handleStatusChange('RESOLVED');
   };
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleExportPdf = async (accidentId: string) => {
+    setIsExportingPdf(true);
+    try {
+      const res = await api.get(`/accidents/${accidentId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dossier-sinistre-${accidentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast('success', 'PDF téléchargé', 'Le dossier d’incident certifié a été exporté avec succès.');
+    } catch (err: unknown) {
+      showToast('danger', 'Erreur d’export', apiErrorMessage(err, 'Impossible de générer le dossier PDF.'));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -443,15 +471,20 @@ export default function AccidentsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    showToast(
-                      'info',
-                      'Not available yet',
-                      'Incident dossier export isn’t built yet.',
-                    )
-                  }
+                  disabled={isExportingPdf}
+                  onClick={() => handleExportPdf(selectedAccident.id)}
                 >
-                  Export PDF
+                  {isExportingPdf ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin me-1.5" />
+                      Exportation...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 me-1.5" />
+                      Export PDF
+                    </>
+                  )}
                 </Button>
               </CardHeader>
 

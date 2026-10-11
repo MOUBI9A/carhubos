@@ -6,17 +6,21 @@ import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
+import { AllowIncompleteOnboarding } from '../common/decorators/allow-incomplete-onboarding.decorator';
+
 @Controller('cars')
 @UseGuards(AuthGuard, CapabilitiesGuard)
 export class CarsController {
   constructor(private readonly carsService: CarsService) {}
 
+  @AllowIncompleteOnboarding()
   @Post()
   @RequireCapabilities('fleet.manage')
   create(@CurrentUser() user: any, @Body() createCarDto: CreateCarDto) {
     return this.carsService.create(user.agencyId, createCarDto, user.id);
   }
 
+  @AllowIncompleteOnboarding()
   @Get()
   @RequireCapabilities('fleet.view')
   findAll(@CurrentUser() user: any, @Query() query: ListCarsQueryDto) {

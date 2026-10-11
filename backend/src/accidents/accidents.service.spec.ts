@@ -23,10 +23,13 @@ describe('AccidentsService.findOne — tenant boundary', () => {
     status: 'REPORTED',
   };
 
-  function makeService(findFirstImpl: (args: any) => any) {
+  function makeService(findFirstImpl: (args: any) => any, pdfEngine?: any) {
     const findFirst = jest.fn(findFirstImpl);
     const prisma = { accident: { findFirst } };
-    return { svc: new AccidentsService(prisma as any), findFirst };
+    return {
+      svc: new AccidentsService(prisma as any, pdfEngine || {}),
+      findFirst,
+    };
   }
 
   it('returns the accident when it belongs to the caller agency, scoping on { id, agencyId }', async () => {
@@ -81,7 +84,7 @@ describe('AccidentsService.create / update — ownership guards', () => {
       car: { findFirst: carFindFirst },
       accident: { create: accidentCreate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await expect(
       svc.create(AGENCY_A, {
@@ -105,7 +108,7 @@ describe('AccidentsService.create / update — ownership guards', () => {
       car: { findFirst: carFindFirst },
       accident: { create: accidentCreate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await svc.create(AGENCY_A, {
       carId: 'car-1',
@@ -128,11 +131,57 @@ describe('AccidentsService.create / update — ownership guards', () => {
     const prisma = {
       accident: { findFirst: accidentFindFirst, update: accidentUpdate },
     };
-    const svc = new AccidentsService(prisma as any);
+    const svc = new AccidentsService(prisma as any, {} as any);
 
     await expect(
       svc.update(AGENCY_A, 'someone-elses-accident', { status: 'RESOLVED' } as any),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(accidentUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('AccidentsService.getDossierPdf — export & boundary', () => {
+  const AGENCY_A = 'agency-aaaa';
+  const AGENCY_B = 'agency-bbbb';
+
+  it('404s on cross-tenant dossier and never calls PdfEngine', async () => {
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const pdfEngine = { generateAccidentDossier: jest.fn() };
+    const svc = new AccidentsService(
+      { accident: { findFirst } } as any,
+      pdfEngine as any,
+    );
+
+    await expect(svc.getDossierPdf(AGENCY_B, 'acc-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    expect(findFirst.mock.calls[0][0].where).toEqual({
+      id: 'acc-1',
+      agencyId: AGENCY_B,
+    });
+    expect(pdfEngine.generateAccidentDossier).not.toHaveBeenCalled();
+  });
+
+  it('generates PDF buffer for legitimate agency dossier', async () => {
+    const accident = {
+      id: 'acc-1',
+      agencyId: AGENCY_A,
+      car: { brand: 'Renault', model: 'Clio' },
+    };
+    const findFirst = jest.fn().mockResolvedValue(accident);
+    const fakeBuffer = Buffer.from('FAKE-PDF');
+    const pdfEngine = {
+      generateAccidentDossier: jest.fn().mockResolvedValue(fakeBuffer),
+    };
+    const svc = new AccidentsService(
+      { accident: { findFirst } } as any,
+      pdfEngine as any,
+    );
+
+    const result = await svc.getDossierPdf(AGENCY_A, 'acc-1');
+
+    expect(result).toBe(fakeBuffer);
+    expect(pdfEngine.generateAccidentDossier).toHaveBeenCalledWith(accident);
   });
 });

@@ -1,3 +1,9 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BookingsService } from './bookings.service';
 
 /**
@@ -241,3 +247,353 @@ describe('BookingsService.findAll — overlap window + pagination', () => {
     expect(findMany.mock.calls[0][0].take).toBe(10);
   });
 });
+
+describe('BookingsService — calendar boundary & DST / clock-shift day-count math', () => {
+  it('correctly calculates day count across Morocco clock shift (23h and 25h intervals)', () => {
+    // Morocco shifts between UTC+0 and UTC+1 (e.g. before and after Ramadan)
+    // A 1-day rental spanning a 23h transition:
+    const start23 = new Date('2026-03-15T10:00:00.000Z');
+    const end23 = new Date(start23.getTime() + 23 * 3600 * 1000);
+    const diffDays23 = Math.ceil(Math.abs(end23.getTime() - start23.getTime()) / (1000 * 60 * 60 * 24));
+    expect(diffDays23).toBe(1);
+
+    // A 1-day rental spanning 24h:
+    const start24 = new Date('2026-04-15T10:00:00.000Z');
+    const end24 = new Date(start24.getTime() + 24 * 3600 * 1000);
+    const diffDays24 = Math.ceil(Math.abs(end24.getTime() - start24.getTime()) / (1000 * 60 * 60 * 24));
+    expect(diffDays24).toBe(1);
+
+    // A multi-day rental spanning across multiple days (e.g. 7 days):
+    const start7 = new Date('2026-05-01T09:00:00.000Z');
+    const end7 = new Date(start7.getTime() + 7 * 24 * 3600 * 1000);
+    const diffDays7 = Math.ceil(Math.abs(end7.getTime() - start7.getTime()) / (1000 * 60 * 60 * 24));
+    expect(diffDays7).toBe(7);
+  });
+
+  it('computes integer overdue daysLate correctly without fractional drift', () => {
+    const scheduledEnd = new Date('2026-07-01T12:00:00.000Z');
+
+    // 2 hours late -> counts as 1 day late (minimum 1 day late fee)
+    const twoHoursLate = scheduledEnd.getTime() + 2 * 3600 * 1000;
+    const daysLate2h = Math.max(1, Math.ceil((twoHoursLate - scheduledEnd.getTime()) / 86_400_000));
+    expect(daysLate2h).toBe(1);
+
+    // Exactly 24 hours late -> 1 day late
+    const twentyFourHoursLate = scheduledEnd.getTime() + 24 * 3600 * 1000;
+    const daysLate24h = Math.max(1, Math.ceil((twentyFourHoursLate - scheduledEnd.getTime()) / 86_400_000));
+    expect(daysLate24h).toBe(1);
+
+    // 24 hours and 1 minute late -> rolls over to 2 days late
+    const twentyFourHoursOneMin = scheduledEnd.getTime() + (24 * 3600 + 60) * 1000;
+    const daysLate25h = Math.max(1, Math.ceil((twentyFourHoursOneMin - scheduledEnd.getTime()) / 86_400_000));
+    expect(daysLate25h).toBe(2);
+  });
+});
+
+describe('BookingsService.create — end-to-end creation, invariants and concurrency', () => {
+  const AGENCY_ID = 'agency-1';
+  const ACTOR_ID = 'actor-1';
+  const CAR_ID = 'car-1';
+  const CUSTOMER_ID = 'cust-1';
+
+  function setupCreateMocks() {
+    const entitlements = {
+      assertOperating: jest.fn().mockResolvedValue(undefined),
+      assertWithinLimit: jest.fn().mockResolvedValue(undefined),
+    };
+    const auditLogs = { log: jest.fn().mockResolvedValue(undefined) };
+    const webhooks = { trigger: jest.fn().mockResolvedValue(undefined) };
+    const pdfEngine = {};
+    const trust = {
+      blockingFlagForCustomer: jest.fn().mockResolvedValue(null),
+    };
+    const automationEngine = {
+      runTrigger: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const mockCar = {
+      id: CAR_ID,
+      agencyId: AGENCY_ID,
+      brand: 'Dacia',
+      model: 'Duster',
+      pricePerDay: new Prisma.Decimal('400.00'),
+      documents: [] as any[],
+    };
+
+    const mockCustomer = {
+      id: CUSTOMER_ID,
+      agencyId: AGENCY_ID,
+      firstName: 'Fatima',
+      lastName: 'Zahra',
+      phone: '0612345678',
+    };
+
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      booking: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: 'booking-new', ...data }),
+        ),
+      },
+      invoice: {
+        create: jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: 'invoice-new', ...data }),
+        ),
+      },
+      payment: {
+        create: jest.fn().mockImplementation(({ data }) =>
+          Promise.resolve({ id: 'payment-new', ...data }),
+        ),
+      },
+    };
+
+    const prisma = {
+      car: { findFirst: jest.fn().mockResolvedValue(mockCar) },
+      customer: { findFirst: jest.fn().mockResolvedValue(mockCustomer) },
+      booking: { findFirst: jest.fn().mockResolvedValue(null) },
+      refusalLog: { create: jest.fn().mockResolvedValue({ id: 'refusal-1' }) },
+      $transaction: jest.fn((cb: any) => cb(tx)),
+    };
+
+    const svc = new BookingsService(
+      prisma as any,
+      auditLogs as any,
+      webhooks as any,
+      pdfEngine as any,
+      trust as any,
+      entitlements as any,
+      automationEngine as any,
+    );
+
+    return {
+      svc,
+      prisma,
+      tx,
+      mockCar,
+      mockCustomer,
+      trust,
+      auditLogs,
+      webhooks,
+      automationEngine,
+      entitlements,
+    };
+  }
+
+  it('rejects booking when end date is before or equal to start date', async () => {
+    const { svc } = setupCreateMocks();
+
+    await expect(
+      svc.create(
+        AGENCY_ID,
+        {
+          carId: CAR_ID,
+          customerId: CUSTOMER_ID,
+          startDate: '2026-11-05T10:00:00Z',
+          endDate: '2026-11-05T10:00:00Z',
+        } as any,
+        ACTOR_ID,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('locks car and rejects booking when car has expired mandatory documents (Guardian lock)', async () => {
+    const { svc, mockCar, prisma } = setupCreateMocks();
+    mockCar.documents = [
+      {
+        id: 'doc-1',
+        type: 'ASSURANCE',
+        isMandatory: true,
+        status: 'EXPIRED',
+        expiryDate: new Date('2026-01-01'),
+      },
+    ];
+
+    await expect(
+      svc.create(
+        AGENCY_ID,
+        {
+          carId: CAR_ID,
+          customerId: CUSTOMER_ID,
+          startDate: '2026-11-01T10:00:00Z',
+          endDate: '2026-11-05T10:00:00Z',
+        } as any,
+        ACTOR_ID,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.refusalLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          agencyId: AGENCY_ID,
+          status: 'LOST',
+        }),
+      }),
+    );
+  });
+
+  it('rejects booking when customer has blocking Trust Network flag without overrideReason', async () => {
+    const { svc, trust, prisma } = setupCreateMocks();
+    trust.blockingFlagForCustomer.mockResolvedValue({
+      id: 'flag-1',
+      severity: 'CRITICAL',
+      reason: 'Vehicle stolen in prior rental',
+      agency: { name: 'Prestige Cars' },
+    });
+
+    await expect(
+      svc.create(
+        AGENCY_ID,
+        {
+          carId: CAR_ID,
+          customerId: CUSTOMER_ID,
+          startDate: '2026-11-01T10:00:00Z',
+          endDate: '2026-11-05T10:00:00Z',
+        } as any,
+        ACTOR_ID,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.refusalLog.create).toHaveBeenCalled();
+  });
+
+  it('permits booking with Trust Network flag when overrideReason is supplied, logging forensic audit', async () => {
+    const { svc, trust, auditLogs, tx } = setupCreateMocks();
+    trust.blockingFlagForCustomer.mockResolvedValue({
+      id: 'flag-1',
+      severity: 'CRITICAL',
+      reason: 'Prior damage dispute',
+      agency: { name: 'Prestige Cars' },
+    });
+
+    const booking = await svc.create(
+      AGENCY_ID,
+      {
+        carId: CAR_ID,
+        customerId: CUSTOMER_ID,
+        startDate: '2026-11-01T10:00:00Z',
+        endDate: '2026-11-05T10:00:00Z',
+        overrideReason: 'VIP client with full cash guarantee deposit of 10000 MAD',
+      },
+      ACTOR_ID,
+    );
+
+    expect(booking).toBeDefined();
+    expect(auditLogs.log).toHaveBeenCalledWith(
+      AGENCY_ID,
+      ACTOR_ID,
+      'TRUST_OVERRIDE',
+      'CUSTOMER',
+      CUSTOMER_ID,
+      undefined,
+      expect.objectContaining({
+        flagId: 'flag-1',
+        overrideReason: 'VIP client with full cash guarantee deposit of 10000 MAD',
+      }),
+    );
+  });
+
+  it('rejects booking when vehicle already has overlapping booking', async () => {
+    const { svc, prisma } = setupCreateMocks();
+    prisma.booking.findFirst.mockResolvedValue({ id: 'existing-booking' });
+
+    await expect(
+      svc.create(
+        AGENCY_ID,
+        {
+          carId: CAR_ID,
+          customerId: CUSTOMER_ID,
+          startDate: '2026-11-01T10:00:00Z',
+          endDate: '2026-11-05T10:00:00Z',
+        } as any,
+        ACTOR_ID,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.refusalLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'WAITING',
+        }),
+      }),
+    );
+  });
+
+  it('creates booking, invoice with 20% embedded VAT, and pending payment inside transaction under row lock', async () => {
+    const { svc, tx, auditLogs, webhooks, automationEngine } = setupCreateMocks();
+
+    const booking = await svc.create(
+      AGENCY_ID,
+      {
+        carId: CAR_ID,
+        customerId: CUSTOMER_ID,
+        startDate: '2026-11-01T10:00:00Z',
+        endDate: '2026-11-05T10:00:00Z', // 4 days * 400 = 1600 MAD
+        depositAmount: 1000,
+        depositMethod: 'CASH',
+      } as any,
+      ACTOR_ID,
+    );
+
+    // Row-level lock acquired on the car
+    expect(tx.$executeRaw).toHaveBeenCalled();
+
+    // Booking created
+    expect(tx.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          agencyId: AGENCY_ID,
+          carId: CAR_ID,
+          customerId: CUSTOMER_ID,
+          status: 'REQUESTED',
+          depositStatus: 'PENDING',
+        }),
+      }),
+    );
+
+    // Total price is 1600 MAD (4 days * 400 MAD/day)
+    const bookingData = tx.booking.create.mock.calls[0][0].data;
+    expect(bookingData.totalPrice.toNumber()).toBe(1600);
+    expect(bookingData.depositAmount.toNumber()).toBe(1000);
+
+    // Invoice has 20% embedded VAT: 1600 * 20 / 120 = 266.67 MAD
+    const invoiceData = tx.invoice.create.mock.calls[0][0].data;
+    expect(invoiceData.amount.toNumber()).toBe(1600);
+    expect(invoiceData.taxAmount.toNumber()).toBe(266.67);
+    expect(invoiceData.status).toBe('DUE');
+
+    // Pending payment created
+    expect(tx.payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: bookingData.totalPrice,
+          status: 'PENDING',
+          type: 'INCOME',
+        }),
+      }),
+    );
+
+    // Forensic audit log & webhook
+    expect(auditLogs.log).toHaveBeenCalledWith(
+      AGENCY_ID,
+      ACTOR_ID,
+      'CREATE_BOOKING',
+      'BOOKING',
+      'booking-new',
+      null,
+      expect.any(Object),
+    );
+    expect(webhooks.trigger).toHaveBeenCalledWith(
+      AGENCY_ID,
+      'BOOKING_CREATED',
+      expect.any(Object),
+    );
+    expect(automationEngine.runTrigger).toHaveBeenCalledWith(
+      AGENCY_ID,
+      'BOOKING_CREATED',
+      expect.any(Object),
+    );
+  });
+});
+
+

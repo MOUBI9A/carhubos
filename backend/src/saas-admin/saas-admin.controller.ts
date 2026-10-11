@@ -73,6 +73,16 @@ export class SaasAdminController {
     return this.saasAdminService.getFounderMetrics();
   }
 
+  @Get('diagnostics/system')
+  getSystemDiagnostics() {
+    return this.saasAdminService.getSystemDiagnostics();
+  }
+
+  @Get('diagnostics/tenant/:id')
+  getTenantDiagnostics(@Param('id') id: string) {
+    return this.saasAdminService.getTenantDiagnostics(id);
+  }
+
   @Patch('agency/:id/tier')
   updateTier(@Param('id') id: string, @Body() dto: UpdateTierDto) {
     return this.saasAdminService.updateAgencyTier(id, dto.tier);

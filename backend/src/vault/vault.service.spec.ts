@@ -41,6 +41,28 @@ describe('VaultService', () => {
       expect(prisma.vaultFile.create).not.toHaveBeenCalled();
     });
 
+    it('rejects an executable disguised with an allowed mime type', async () => {
+      const storage = makeStorage();
+      const prisma = { vaultFile: { create: jest.fn() } };
+      const svc = new VaultService(prisma as any, storage as any);
+
+      await expect(
+        svc.upload('agency-a', 'user-1', makeFile({ originalname: 'malicious.exe', mimetype: 'application/pdf' })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(storage.upload).not.toHaveBeenCalled();
+    });
+
+    it('rejects double extensions containing executable or script extensions', async () => {
+      const storage = makeStorage();
+      const prisma = { vaultFile: { create: jest.fn() } };
+      const svc = new VaultService(prisma as any, storage as any);
+
+      await expect(
+        svc.upload('agency-a', 'user-1', makeFile({ originalname: 'exploit.php.pdf', mimetype: 'application/pdf' })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(storage.upload).not.toHaveBeenCalled();
+    });
+
     it('rejects a file over the size cap before ever touching storage', async () => {
       const storage = makeStorage();
       const prisma = { vaultFile: { create: jest.fn() } };

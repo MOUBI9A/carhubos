@@ -16,6 +16,14 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { AnalyzeVehicleDto } from './dto/analyze-vehicle.dto';
 
+export const AI_VISION_ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+export const AI_VISION_MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
+
 @Controller('ai-vision')
 @UseGuards(AuthGuard, CapabilitiesGuard)
 export class AiVisionController {
@@ -23,7 +31,23 @@ export class AiVisionController {
 
   @Post('analyze')
   @RequireCapabilities('fleet.view')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: { fileSize: AI_VISION_MAX_FILE_SIZE_BYTES },
+      fileFilter: (_req, file, cb) => {
+        if (!AI_VISION_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
+          cb(
+            new BadRequestException(
+              `Unsupported image type "${file.mimetype}". Allowed: ${AI_VISION_ALLOWED_MIME_TYPES.join(', ')}.`,
+            ),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
   async analyze(
     @CurrentUser() user: any,
     @UploadedFile() file: Express.Multer.File,

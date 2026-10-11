@@ -61,6 +61,18 @@ export class CustomersController {
     return this.customersService.findOne(user.agencyId, id);
   }
 
+  @Get(':id/export')
+  @RequireCapabilities('customer.view')
+  exportData(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.customersService.exportData(user.agencyId, id);
+  }
+
+  @Post(':id/anonymize')
+  @RequireCapabilities('customer.manage')
+  anonymize(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.customersService.anonymize(user.agencyId, id, user.id);
+  }
+
   @Patch(':id')
   @RequireCapabilities('customer.manage')
   update(

@@ -20,6 +20,46 @@ function sanitizeFilename(name: string): string {
   return cleaned || 'file';
 }
 
+const ALLOWED_EXTENSIONS_BY_MIME: Record<string, string[]> = {
+  'application/pdf': ['.pdf'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/webp': ['.webp'],
+};
+
+const DANGEROUS_EXTENSIONS = [
+  '.exe',
+  '.sh',
+  '.php',
+  '.html',
+  '.htm',
+  '.svg',
+  '.bat',
+  '.cmd',
+  '.js',
+  '.vbs',
+  '.py',
+];
+
+function validateFileExtension(filename: string, mimetype: string): boolean {
+  const lower = filename.toLowerCase();
+  // 1. Strictly reject executable, script, SVG, or HTML extensions
+  if (DANGEROUS_EXTENSIONS.some((ext) => lower.endsWith(ext) || lower.includes(`${ext}.`))) {
+    return false;
+  }
+  const allowed = ALLOWED_EXTENSIONS_BY_MIME[mimetype];
+  if (!allowed) return false;
+
+  // 2. If an extension exists on the basename, verify it matches the claimed MIME type
+  const baseName = filename.split(/[/\\]/).pop() || filename;
+  const lastDot = baseName.lastIndexOf('.');
+  if (lastDot !== -1) {
+    const ext = baseName.slice(lastDot).toLowerCase();
+    return allowed.includes(ext);
+  }
+  return true;
+}
+
 /**
  * Vault — generic tenant-scoped file storage. Every method takes the
  * caller's agencyId from the JWT (never the body/param) and every read/write
@@ -51,6 +91,11 @@ export class VaultService {
     if (!VAULT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
       throw new BadRequestException(
         `Unsupported file type "${file.mimetype}". Allowed: ${VAULT_ALLOWED_MIME_TYPES.join(', ')}.`,
+      );
+    }
+    if (!validateFileExtension(file.originalname, file.mimetype)) {
+      throw new BadRequestException(
+        `File extension does not match claimed MIME type "${file.mimetype}".`,
       );
     }
     if (file.size > VAULT_MAX_FILE_SIZE_BYTES) {

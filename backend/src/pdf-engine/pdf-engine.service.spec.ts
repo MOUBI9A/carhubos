@@ -31,3 +31,50 @@ describe('PdfEngineService.esc — contract HTML-injection guard', () => {
     expect(esc(0)).toBe('0');
   });
 });
+
+describe('PdfEngineService.buildAccidentHtml — dossier generation & escaping', () => {
+  const svc = new PdfEngineService();
+
+  it('escapes malicious markup in accident description, agency name, and car details', () => {
+    const maliciousAccident = {
+      id: 'acc-12345678-abcd',
+      occurredAt: '2026-04-10T14:30:00.000Z',
+      severity: 'SEVERE',
+      status: 'INVESTIGATING',
+      description: '<script>alert("pwned")</script> Damage to rear bumper',
+      location: 'Route de Rabat <img src=x onerror=alert(1)>',
+      thirdParty: true,
+      estimatedCost: 3500.5,
+      agency: {
+        name: 'Auto Prestige <iframe src="evil.com">',
+        address: '12 Boulevard Hassan II & Fils',
+        phone: '+212600112233',
+        taxId: 'IF-123456',
+      },
+      car: {
+        brand: 'Mercedes',
+        model: 'Classe A <b>AMG</b>',
+        licensePlate: '12345-A-26',
+        mileage: 45000,
+      },
+      booking: {
+        customer: {
+          firstName: 'Karim',
+          lastName: 'Benali <script>',
+          identityNumber: 'AB123456',
+          phone: '+212611223344',
+        },
+      },
+    };
+
+    const html = svc.buildAccidentHtml(maliciousAccident);
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;alert(&quot;pwned&quot;)&lt;/script&gt;');
+    expect(html).not.toContain('<iframe');
+    expect(html).toContain('&lt;iframe src=&quot;evil.com&quot;&gt;');
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('3500.50 MAD');
+    expect(html).toContain("Dossier d'incident certifié");
+  });
+});

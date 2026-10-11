@@ -159,17 +159,19 @@ export class DocumentsService {
     });
   }
 
-  async findExpiringSoon() {
+  async findExpiringSoon(agencyId: string, limit = 100) {
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
     return this.prisma.carDocument.findMany({
       where: {
+        car: { agencyId },
         expiryDate: {
           lte: nextMonth,
         },
         status: 'VALID',
       },
+      take: limit,
       include: {
         car: true,
       },
