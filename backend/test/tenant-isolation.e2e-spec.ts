@@ -111,6 +111,21 @@ describe('Tenant isolation (e2e)', () => {
     expect(agencyBId).not.toBe(agencyAId);
   });
 
+  it('activates and verifies both test accounts for e2e access', async () => {
+    await prisma.user.updateMany({
+      where: { email: { in: [agencyAEmail, agencyBEmail] } },
+      data: { isVerified: true, emailVerifiedAt: new Date() },
+    });
+    await prisma.agency.updateMany({
+      where: { id: { in: [agencyAId, agencyBId] } },
+      data: {
+        onboardingStatus: 'COMPLETED',
+        onboardingCurrentStep: 4,
+        onboardingCompletedAt: new Date(),
+      },
+    });
+  });
+
   it('logs in agency A and agency B, each getting their own session cookie', async () => {
     const loginA = await request(app.getHttpServer())
       .post('/api/auth/login')
