@@ -32,6 +32,15 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
     reg.ok(),
     `register failed (${reg.status()}): ${await reg.text()}`,
   ).toBeTruthy();
+  const regJson = await reg.json();
+
+  // 1b) Verify email with token
+  if (regJson.debugVerificationToken) {
+    const verifyRes = await request.post(`${API_URL}/auth/verify-email`, {
+      data: { token: regJson.debugVerificationToken },
+    });
+    expect(verifyRes.ok(), `verify email failed: ${await verifyRes.text()}`).toBeTruthy();
+  }
 
   // 2) Log in on the API request context so subsequent seed calls carry the
   //    auth cookie (the request context persists Set-Cookie between calls).
@@ -49,6 +58,10 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
     const res = await request.post(`${API_URL}/cars`, { data: car });
     expect(res.ok(), `seed car failed (${res.status()}): ${await res.text()}`).toBeTruthy();
   }
+
+  // 3b) Complete agency onboarding so dashboard access is fully granted
+  const completeRes = await request.post(`${API_URL}/onboarding/complete`, {});
+  expect(completeRes.ok(), `onboarding complete failed: ${await completeRes.text()}`).toBeTruthy();
   const customer = await request.post(`${API_URL}/customers`, {
     data: {
       firstName: 'Test',

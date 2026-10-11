@@ -16,14 +16,17 @@ export const FRONTEND_URL = 'http://localhost:3002';
 export const API_URL = 'http://localhost:5406/api';
 export const STORAGE_STATE = 'playwright/.auth/user.json';
 
+const isCI = !!process.env.CI;
+const localChannel = process.env.PW_CHANNEL || 'chrome';
+
 export default defineConfig({
   testDir: './e2e',
   // One worker: the suite creates real bookings (which flip a car to RENTED),
   // so serial execution keeps the seeded fleet predictable within a run.
   workers: 1,
   fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  forbidOnly: isCI,
+  retries: isCI ? 1 : 0,
   timeout: 30_000,
   expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
@@ -32,15 +35,23 @@ export default defineConfig({
     baseURL: FRONTEND_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: isCI ? 'retain-on-failure' : 'off',
   },
 
   projects: [
-    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+      use: isCI ? {} : { channel: localChannel },
+    },
     {
       name: 'chromium',
       testMatch: /.*\.e2e\.ts/,
-      use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: STORAGE_STATE,
+        ...(isCI ? {} : { channel: localChannel }),
+      },
       dependencies: ['setup'],
     },
   ],

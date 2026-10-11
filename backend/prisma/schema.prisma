@@ -25,6 +25,13 @@ model Agency {
   website          String? // Public site shown on the settings page + landing profile
   status           String    @default("ACTIVE") // ACTIVE, SUSPENDED
   subscriptionTier String    @default("STARTER") // STARTER, PRO, BUSINESS
+  onboardingStatus      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  onboardingCurrentStep Int       @default(1)
+  onboardingCompletedAt DateTime?
+  currency              String    @default("MAD")
+  country               String    @default("Morocco")
+  timezone              String    @default("Africa/Casablanca")
+  defaultDeposit        Decimal?  @default(5000) @db.Decimal(12, 2)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // Soft-delete tombstone; null = live. Never hard-delete an agency.
@@ -80,6 +87,7 @@ model User {
   trustScore Int      @default(50) // Renter trust level (0-100)
   qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
   isVerified Boolean  @default(false)
+  emailVerifiedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -90,6 +98,7 @@ model User {
   rentals          Booking[]          @relation("Renter")
   verifiedPayments Payment[]          @relation("PaymentVerifier")
   memberships      AgencyMembership[]
+  emailVerificationTokens EmailVerificationToken[]
 
   // 🌐 PILLAR 6 link: the global, cross-tenant identity this claimed RENTER portal
   // account resolves to. Null until the renter claims/verifies their identity.
@@ -104,6 +113,21 @@ model User {
   vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
 
   @@index([agencyId])
+}
+
+// ✉️ EMAIL VERIFICATION TOKEN (Secure hashed single-use token)
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 // 🔐 CAPABILITY ENGINE (schema foundation; guard wiring is a later task)

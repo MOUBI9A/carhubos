@@ -42,6 +42,8 @@ import { AccidentsModule } from './accidents/accidents.module';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { VaultModule } from './vault/vault.module';
+import { EmailModule } from './email/email.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
 
@@ -94,6 +96,8 @@ const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
     PaymentGatewayModule,
     CheckoutModule,
     VaultModule,
+    EmailModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [

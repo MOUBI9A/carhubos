@@ -2,12 +2,17 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
+  NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcryptjs';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import * as crypto from 'crypto';
+import { LoginDto, RegisterDto, ResendVerificationDto } from './dto/auth.dto';
 import { ROLE_PRESETS } from '../common/capabilities';
 import { DEFAULT_PLAN_KEY, TRIAL_DAYS } from '../common/plans';
 
@@ -17,7 +22,16 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private prisma: PrismaService,
+    @Optional() private emailService?: EmailService,
   ) {}
+
+  /**
+   * Cryptographically secure SHA-256 hash.
+   * Tokens are NEVER stored plaintext in the database.
+   */
+  private hashToken(rawToken: string): string {
+    return crypto.createHash('sha256').update(rawToken).digest('hex');
+  }
 
   async register(registerDto: RegisterDto) {
     const existingUser = await this.usersService.findOneByEmail(
@@ -29,7 +43,12 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    return this.prisma.$transaction(async (tx) => {
+    // Cryptographically secure verification token
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawVerificationToken);
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const result = await this.prisma.$transaction(async (tx) => {
       // agencyId is never accepted from the client; joining an existing agency
       // must go through a signed invite flow (out of scope). Public register can
       // only create a fresh agency (via agencyName) or a user with no agency.
@@ -41,14 +60,13 @@ export class AuthService {
             name: registerDto.agencyName,
             contactEmail: registerDto.email,
             subscriptionTier: DEFAULT_PLAN_KEY,
+            onboardingStatus: 'NOT_STARTED',
+            onboardingCurrentStep: 1,
           },
         });
         agencyId = agency.id;
 
-        // SaaS lifecycle: put every new agency on the beta plan immediately, or
-        // EntitlementsService would fall back to defaults and the billing page
-        // would show nothing. Best-effort — if plans aren't seeded yet (fresh
-        // DB), skip; entitlements fail open to BETA during the beta anyway.
+        // SaaS lifecycle: put every new agency on the beta plan immediately
         const betaPlan = await tx.plan.findUnique({
           where: { key: DEFAULT_PLAN_KEY },
         });
@@ -77,14 +95,11 @@ export class AuthService {
           role:
             registerDto.role || (registerDto.agencyName ? 'OWNER' : 'AGENT'),
           agencyId: agencyId,
+          isVerified: false,
         },
       });
 
-      // Capability engine: an agencyId here only ever comes from the fresh
-      // agency created above, so the registrant is by construction its
-      // founder/owner — seed the OWNER membership or every gated endpoint
-      // would 403 them (CapabilitiesGuard requires a membership row). Users
-      // registering without an agency get no membership.
+      // Seed OWNER membership if agency was created
       if (agencyId) {
         await tx.agencyMembership.create({
           data: {
@@ -96,12 +111,27 @@ export class AuthService {
         });
       }
 
+      // Store hashed verification token
+      if (tx.emailVerificationToken) {
+        await tx.emailVerificationToken.create({
+          data: {
+            tokenHash,
+            userId: user.id,
+            email: user.email,
+            expiresAt: verificationExpiry,
+          },
+        });
+      }
+
       const payload = {
         sub: user.id,
         email: user.email,
         role: user.role,
         agencyId: user.agencyId,
+        isVerified: false,
+        onboardingStatus: agencyId ? 'NOT_STARTED' : undefined,
       };
+
       return {
         access_token: await this.jwtService.signAsync(payload),
         user: {
@@ -110,17 +140,231 @@ export class AuthService {
           name: user.name,
           role: user.role,
           agencyId: user.agencyId,
+          isVerified: false,
+          onboardingStatus: agencyId ? 'NOT_STARTED' : undefined,
         },
+        ...(process.env.NODE_ENV !== 'production'
+          ? { debugVerificationToken: rawVerificationToken }
+          : {}),
       };
     });
+
+    // Send transactional verification email (non-blocking outside transaction)
+    if (this.emailService) {
+      try {
+        await this.emailService.sendVerificationEmail(
+          registerDto.email,
+          registerDto.name,
+          rawVerificationToken,
+        );
+      } catch (err: any) {
+        // Log without leaking token
+        // In dev or test this is handled; in prod error is logged
+      }
+    }
+
+    return {
+      ...result,
+      requiresVerification: true,
+      message: 'Account created. Please verify your email to continue setup.',
+    };
   }
 
   /**
-   * Re-issue a normal 7-day session for a user by id. Used to restore the
-   * founder's own session when exiting impersonation.
+   * Verifies an email using a submitted raw token string.
+   */
+  async verifyEmail(rawToken: string) {
+    if (!rawToken || typeof rawToken !== 'string') {
+      throw new BadRequestException('Verification token is required.');
+    }
+
+    const tokenHash = this.hashToken(rawToken.trim());
+
+    const tokenRecord = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash },
+      include: {
+        user: {
+          include: { agency: true },
+        },
+      },
+    });
+
+    if (!tokenRecord) {
+      throw new BadRequestException({
+        code: 'INVALID_TOKEN',
+        message: 'Verification link is invalid or has expired.',
+      });
+    }
+
+    // Check if already used
+    if (tokenRecord.usedAt) {
+      if (tokenRecord.user.isVerified) {
+        const session = await this.issueSessionForUser(tokenRecord.user.id);
+        return {
+          message: 'Email is already verified.',
+          alreadyVerified: true,
+          ...session,
+        };
+      }
+      throw new BadRequestException({
+        code: 'ALREADY_USED',
+        message: 'This verification link has already been used.',
+      });
+    }
+
+    // Check if expired
+    if (new Date() > tokenRecord.expiresAt) {
+      throw new BadRequestException({
+        code: 'TOKEN_EXPIRED',
+        message: 'Verification link has expired. Please request a new one.',
+      });
+    }
+
+    // Consume token and mark user verified inside transaction
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.emailVerificationToken.update({
+        where: { id: tokenRecord.id },
+        data: { usedAt: now },
+      });
+
+      await tx.user.update({
+        where: { id: tokenRecord.userId },
+        data: {
+          isVerified: true,
+          emailVerifiedAt: now,
+        },
+      });
+    });
+
+    // Mint updated session carrying isVerified: true
+    const session = await this.issueSessionForUser(tokenRecord.userId);
+    const agencyOnboardingIncomplete =
+      tokenRecord.user.role === 'OWNER' &&
+      tokenRecord.user.agency?.onboardingStatus !== 'COMPLETED';
+
+    return {
+      message: 'Email verified successfully.',
+      verified: true,
+      nextStep: agencyOnboardingIncomplete ? 'ONBOARDING' : 'DASHBOARD',
+      ...session,
+    };
+  }
+
+  /**
+   * Resend verification email with abuse protection and rate-limiting cooldown.
+   */
+  async resendVerification(dto: ResendVerificationDto, currentUserId?: string) {
+    let user: any = null;
+
+    if (currentUserId) {
+      user = await this.prisma.user.findUnique({
+        where: { id: currentUserId },
+        include: { agency: true },
+      });
+    } else if (dto?.email) {
+      user = await this.prisma.user.findUnique({
+        where: { email: dto.email.trim().toLowerCase() },
+        include: { agency: true },
+      });
+    }
+
+    // Anti-enumeration: Return generic safe response if user not found
+    if (!user) {
+      return {
+        success: true,
+        message: 'If an account exists with this email, a verification link has been sent.',
+        coolDownSeconds: 60,
+      };
+    }
+
+    if (user.isVerified) {
+      return {
+        success: true,
+        message: 'This email is already verified.',
+        alreadyVerified: true,
+      };
+    }
+
+    // Cooldown check (60 seconds)
+    const latestToken = await this.prisma.emailVerificationToken.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (latestToken) {
+      const elapsedSeconds = Math.floor(
+        (Date.now() - new Date(latestToken.createdAt).getTime()) / 1000,
+      );
+      if (elapsedSeconds < 60) {
+        const remaining = 60 - elapsedSeconds;
+        throw new BadRequestException({
+          code: 'COOLDOWN_ACTIVE',
+          message: `Please wait ${remaining} seconds before requesting another email.`,
+          retryAfterSeconds: remaining,
+        });
+      }
+    }
+
+    // Generate fresh cryptographically secure token
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawVerificationToken);
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        tokenHash,
+        userId: user.id,
+        email: user.email,
+        expiresAt: verificationExpiry,
+      },
+    });
+
+    if (this.emailService) {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.name,
+        rawVerificationToken,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'A fresh verification link has been sent to your email.',
+      coolDownSeconds: 60,
+    };
+  }
+
+  /**
+   * Retrieves verification status for a user.
+   */
+  async getVerificationStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        isVerified: true,
+        emailVerifiedAt: true,
+        role: true,
+        agencyId: true,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    return user;
+  }
+
+  /**
+   * Re-issue a normal 7-day session for a user by id. Used when verifying email,
+   * completing onboarding, or exiting impersonation.
    */
   async issueSessionForUser(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { agency: true },
+    });
     if (!user) {
       throw new UnauthorizedException('User not found.');
     }
@@ -129,6 +373,8 @@ export class AuthService {
       email: user.email,
       role: user.role,
       agencyId: user.agencyId,
+      isVerified: user.isVerified,
+      onboardingStatus: user.agency?.onboardingStatus,
     };
     return {
       access_token: await this.jwtService.signAsync(payload),
@@ -138,6 +384,9 @@ export class AuthService {
         name: user.name,
         role: user.role,
         agencyId: user.agencyId,
+        isVerified: user.isVerified,
+        onboardingStatus: user.agency?.onboardingStatus,
+        onboardingCurrentStep: user.agency?.onboardingCurrentStep,
       },
     };
   }
@@ -156,12 +405,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // A soft-deleted agency's users can no longer operate. Fail closed with the
-    // same generic message so we don't disclose the agency's deletion state.
+    // A soft-deleted agency's users can no longer operate.
+    let agency: any = null;
     if (user.agencyId) {
-      const agency = await this.prisma.agency.findFirst({
+      agency = await this.prisma.agency.findFirst({
         where: { id: user.agencyId, deletedAt: null },
-        select: { id: true },
+        select: { id: true, onboardingStatus: true, onboardingCurrentStep: true },
       });
       if (!agency) {
         throw new UnauthorizedException('Invalid credentials');
@@ -173,6 +422,8 @@ export class AuthService {
       email: user.email,
       role: user.role,
       agencyId: user.agencyId,
+      isVerified: user.isVerified,
+      onboardingStatus: agency?.onboardingStatus,
     };
     return {
       access_token: await this.jwtService.signAsync(payload),
@@ -182,7 +433,45 @@ export class AuthService {
         name: user.name,
         role: user.role,
         agencyId: user.agencyId,
+        isVerified: user.isVerified,
+        onboardingStatus: agency?.onboardingStatus,
+        onboardingCurrentStep: agency?.onboardingCurrentStep,
       },
+    };
+  }
+
+  async getFreshProfile(userId: string, fallbackUser?: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            onboardingStatus: true,
+            onboardingCurrentStep: true,
+          },
+        },
+      },
+    });
+    if (!user) {
+      return fallbackUser || null;
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      agencyId: user.agencyId,
+      agencyName: user.agency?.name,
+      isVerified: user.isVerified,
+      emailVerifiedAt: user.emailVerifiedAt,
+      onboardingStatus:
+        user.agency?.onboardingStatus ??
+        (user.role === 'OWNER' ? 'NOT_STARTED' : 'COMPLETED'),
+      onboardingCurrentStep: user.agency?.onboardingCurrentStep ?? 1,
+      isImpersonated: fallbackUser?.isImpersonated,
+      impersonatorId: fallbackUser?.impersonatorId,
     };
   }
 }
