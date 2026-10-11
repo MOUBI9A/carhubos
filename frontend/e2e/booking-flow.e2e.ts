@@ -22,21 +22,24 @@ test.describe('Booking flow', () => {
     await triggers.first().click();
     await expect(page.getByPlaceholder('Type to filter...')).toBeVisible();
     await page.getByPlaceholder('Type to filter...').fill('Test Renter');
-    await page.getByRole('option').filter({ hasText: 'Test Renter' }).first().click();
+    await page.locator('[role="listbox"] [role="option"]').filter({ hasText: 'Test Renter' }).first().click();
 
     // Trigger now reflects the selected customer.
     await expect(triggers.first()).toContainText('Test Renter');
 
     // --- Car combobox ---
     await triggers.nth(1).click();
-    const carOptions = page.getByRole('option');
+    const carOptions = page.locator('[role="listbox"] [role="option"]');
     await expect(carOptions.first()).toBeVisible();
     await carOptions.first().click();
     await expect(triggers.nth(1)).toContainText('MAD/day');
 
     // --- Dates ---
-    await page.locator('input[name="startDate"]').fill('2026-08-01');
-    await page.locator('input[name="endDate"]').fill('2026-08-05');
+    const now = new Date();
+    const startStr = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+    const endStr = new Date(now.getTime() + 5 * 86400000).toISOString().slice(0, 10);
+    await page.locator('input[name="startDate"]').fill(startStr);
+    await page.locator('input[name="endDate"]').fill(endStr);
 
     // --- Submit: modal closes immediately (optimistic), success toast follows ---
     await page.getByRole('button', { name: 'Confirm booking' }).click();
@@ -46,21 +49,24 @@ test.describe('Booking flow', () => {
   });
 
   test('combobox shows an empty state when the query matches nothing', async ({ page }) => {
-    await page.getByRole('button', { name: 'New Booking' }).click();
+    await page.getByRole('button', { name: 'New Booking' }).first().click();
     await page.locator('button[aria-haspopup="listbox"]').first().click();
 
     await page.getByPlaceholder('Type to filter...').fill('zzz-no-such-customer');
     await expect(page.getByText('No matching customers')).toBeVisible();
-    await expect(page.getByRole('option')).toHaveCount(0);
+    await expect(page.locator('[role="listbox"] [role="option"]')).toHaveCount(0);
   });
 
   test('blocks submission when the car/customer comboboxes are empty', async ({ page }) => {
-    await page.getByRole('button', { name: 'New Booking' }).click();
+    await page.getByRole('button', { name: 'New Booking' }).first().click();
 
     // Fill the native-required dates so browser validation passes; leave the
     // comboboxes (which aren't native form fields) empty so the JS guard runs.
-    await page.locator('input[name="startDate"]').fill('2026-08-01');
-    await page.locator('input[name="endDate"]').fill('2026-08-05');
+    const now = new Date();
+    const startStr = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+    const endStr = new Date(now.getTime() + 5 * 86400000).toISOString().slice(0, 10);
+    await page.locator('input[name="startDate"]').fill(startStr);
+    await page.locator('input[name="endDate"]').fill(endStr);
     await page.getByRole('button', { name: 'Confirm booking' }).click();
 
     // Client-side validation fires a toast and the modal stays open.

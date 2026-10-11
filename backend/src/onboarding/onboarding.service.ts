@@ -80,6 +80,8 @@ export class OnboardingService {
       onboardingCompletedAt: agency.onboardingCompletedAt,
       carsCount,
       cars,
+      minVehiclesRequired: 1,
+      isComplete: agency.onboardingStatus === 'COMPLETED',
     };
   }
 

@@ -12,6 +12,11 @@ interface User {
   email: string;
   role: UserRole;
   agencyId?: string;
+  agencyName?: string;
+  isVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  onboardingStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  onboardingCurrentStep?: number;
   isImpersonated?: boolean;
   impersonatorId?: string;
 }
@@ -23,6 +28,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   exitImpersonation: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,17 +39,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const refreshUser = async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      if (data && data.user) {
+        setUser(data.user);
+        setRole(data.user.role);
+        return data.user;
+      }
+    } catch (e) {
+      // Not authenticated or error
+    }
+    return null;
+  };
+
   useEffect(() => {
     // Hydrate user by calling the API using the HttpOnly cookie
     const fetchUser = async () => {
       try {
-        const { data } = await api.get('/auth/me');
-        if (data && data.user) {
-          setUser(data.user);
-          setRole(data.user.role);
-        }
-      } catch (e) {
-        // Not authenticated
+        await refreshUser();
       } finally {
         setIsLoading(false);
       }
@@ -57,6 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     setUser(data.user);
     setRole(data.user.role);
+
+    // Gating checks
+    if (data.user.isVerified === false) {
+      router.push('/verify-email');
+      return;
+    }
+
+    if (data.user.role === 'OWNER' && data.user.onboardingStatus !== 'COMPLETED') {
+      router.push('/onboarding');
+      return;
+    }
 
     // Route based on real role
     switch (data.user.role) {
@@ -91,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, role, isLoading, login, logout, exitImpersonation }}
+      value={{ user, role, isLoading, login, logout, exitImpersonation, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

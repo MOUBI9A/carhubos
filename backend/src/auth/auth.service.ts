@@ -143,6 +143,9 @@ export class AuthService {
           isVerified: false,
           onboardingStatus: agencyId ? 'NOT_STARTED' : undefined,
         },
+        ...(process.env.NODE_ENV !== 'production'
+          ? { debugVerificationToken: rawVerificationToken }
+          : {}),
       };
     });
 

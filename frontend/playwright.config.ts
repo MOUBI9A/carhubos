@@ -32,15 +32,15 @@ export default defineConfig({
     baseURL: FRONTEND_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'off',
   },
 
   projects: [
-    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    { name: 'setup', testMatch: /.*\.setup\.ts/, use: { channel: 'chrome' } },
     {
       name: 'chromium',
       testMatch: /.*\.e2e\.ts/,
-      use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
+      use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE, channel: 'chrome' },
       dependencies: ['setup'],
     },
   ],
