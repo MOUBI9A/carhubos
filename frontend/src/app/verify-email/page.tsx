@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -36,6 +36,7 @@ function VerifyEmailContent() {
   const [cooldown, setCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const verificationAttemptedRef = useRef(false);
 
   // Sync email from auth user if loaded later
   useEffect(() => {
@@ -55,7 +56,8 @@ function VerifyEmailContent() {
 
   // If a token was supplied in the URL query, verify it immediately
   useEffect(() => {
-    if (!token) return;
+    if (!token || verificationAttemptedRef.current) return;
+    verificationAttemptedRef.current = true;
 
     let isMounted = true;
     const verifyToken = async () => {
@@ -64,8 +66,8 @@ function VerifyEmailContent() {
         const { data } = await api.post('/auth/verify-email', { token });
         if (!isMounted) return;
 
-        if (data.verified) {
-          setStatus('SUCCESS');
+        if (data.verified || data.alreadyVerified) {
+          setStatus(data.alreadyVerified ? 'ALREADY_VERIFIED' : 'SUCCESS');
           showToast('success', 'Email Verified', 'Your account has been successfully verified.');
           await refreshUser();
           setTimeout(() => {

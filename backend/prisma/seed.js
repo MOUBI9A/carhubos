@@ -20,6 +20,9 @@ async function main() {
   await prisma.car.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.task.deleteMany();
+  if (prisma.emailVerificationToken) {
+    await prisma.emailVerificationToken.deleteMany();
+  }
   await prisma.user.deleteMany();
   await prisma.webhookSubscription.deleteMany();
   await prisma.agency.deleteMany();
@@ -36,6 +39,8 @@ async function main() {
       contactEmail: 'operations@prestige-rentals.ma',
       businessPhone: '+212522000000',
       subscriptionTier: 'BUSINESS',
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
     }
   });
 
@@ -47,6 +52,8 @@ async function main() {
       password: hashedPassword,
       role: 'OWNER',
       agencyId: agency.id,
+      isVerified: true,
+      emailVerifiedAt: new Date(),
     }
   });
 
@@ -57,6 +64,8 @@ async function main() {
       password: hashedPassword,
       role: 'AGENT',
       agencyId: agency.id,
+      isVerified: true,
+      emailVerifiedAt: new Date(),
     }
   });
 

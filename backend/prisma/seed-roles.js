@@ -34,21 +34,26 @@ async function main() {
   // A shared demo agency for the agency-scoped roles (owner/manager/agent).
   const agency = await prisma.agency.upsert({
     where: { contactEmail: 'demo@carhub.os' },
-    update: {},
+    update: {
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
+    },
     create: {
       name: 'CarHub Demo Agency',
       city: 'Casablanca',
       contactEmail: 'demo@carhub.os',
       subscriptionTier: 'BUSINESS',
       status: 'ACTIVE',
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
     },
   });
 
   const accounts = [
-    { email: 'root@carhub.os', name: 'Platform Owner', role: 'ROOT_ADMIN', agencyId: null },
-    { email: 'owner@carhub.os', name: 'Agency Owner', role: 'OWNER', agencyId: agency.id },
-    { email: 'manager@carhub.os', name: 'Agency Manager', role: 'MANAGER', agencyId: agency.id },
-    { email: 'agent@carhub.os', name: 'Rental Agent', role: 'AGENT', agencyId: agency.id },
+    { email: 'root@carhub.os', name: 'Platform Owner', role: 'ROOT_ADMIN', agencyId: null, isVerified: true },
+    { email: 'owner@carhub.os', name: 'Agency Owner', role: 'OWNER', agencyId: agency.id, isVerified: true },
+    { email: 'manager@carhub.os', name: 'Agency Manager', role: 'MANAGER', agencyId: agency.id, isVerified: true },
+    { email: 'agent@carhub.os', name: 'Rental Agent', role: 'AGENT', agencyId: agency.id, isVerified: true },
     { email: 'renter@carhub.os', name: 'Sami Renter', role: 'RENTER', agencyId: null, trustScore: 82, isVerified: true },
   ];
 
@@ -57,15 +62,23 @@ async function main() {
   for (const a of accounts) {
     const user = await prisma.user.upsert({
       where: { email: a.email },
-      update: { password, role: a.role, name: a.name, agencyId: a.agencyId ?? null },
+      update: {
+        password,
+        role: a.role,
+        name: a.name,
+        agencyId: a.agencyId ?? null,
+        isVerified: true,
+        emailVerifiedAt: new Date(),
+      },
       create: {
         email: a.email,
         password,
         name: a.name,
         role: a.role,
         agencyId: a.agencyId ?? null,
+        isVerified: true,
+        emailVerifiedAt: new Date(),
         ...(a.trustScore ? { trustScore: a.trustScore } : {}),
-        ...(a.isVerified ? { isVerified: a.isVerified } : {}),
       },
     });
     if (a.role === 'RENTER') renterUser = user;

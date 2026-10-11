@@ -30,7 +30,7 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
 
     // Must be redirected to /verify-email
     await page.waitForURL('**/verify-email**', { timeout: 10_000 });
-    await expect(page.getByText('Verify Your Email')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Verify Your Email' })).toBeVisible();
 
     // Trying to manually browse to /dashboard must redirect back to /verify-email
     await page.goto('/dashboard');
@@ -63,7 +63,9 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
 
     // 2) Visit verification URL with token
     await page.goto(`/verify-email?token=${token}`);
-    await expect(page.getByText('Email Verified Successfully!')).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole('heading', { name: /Email (Verified Successfully|Already Verified)!?/i }),
+    ).toBeVisible({ timeout: 10_000 });
 
     // 3) Lands on Onboarding Wizard
     await page.waitForURL('**/onboarding**', { timeout: 15_000 });
