@@ -59,12 +59,10 @@ function VerifyEmailContent() {
     if (!token || verificationAttemptedRef.current) return;
     verificationAttemptedRef.current = true;
 
-    let isMounted = true;
     const verifyToken = async () => {
       setStatus('VERIFYING');
       try {
         const { data } = await api.post('/auth/verify-email', { token });
-        if (!isMounted) return;
 
         if (data.verified || data.alreadyVerified) {
           setStatus(data.alreadyVerified ? 'ALREADY_VERIFIED' : 'SUCCESS');
@@ -79,7 +77,6 @@ function VerifyEmailContent() {
           }, 1800);
         }
       } catch (err: any) {
-        if (!isMounted) return;
         const errData = err?.response?.data;
         const code = errData?.code;
         const msg = errData?.message || 'Verification failed.';
@@ -98,9 +95,6 @@ function VerifyEmailContent() {
     };
 
     verifyToken();
-    return () => {
-      isMounted = false;
-    };
   }, [token]);
 
   // Handle resend verification link

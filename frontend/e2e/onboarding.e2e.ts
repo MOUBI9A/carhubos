@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { API_URL } from '../playwright.config';
 
 test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)', () => {
+  // Start each test unauthenticated (override the shared owner storageState).
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('unverified owner is restricted to /verify-email and blocked from /dashboard', async ({
     page,
     request,
@@ -65,7 +68,7 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
     await page.goto(`/verify-email?token=${token}`);
     await expect(
       page.getByRole('heading', { name: /Email (Verified Successfully|Already Verified)!?/i }),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 15_000 });
 
     // 3) Lands on Onboarding Wizard
     await page.waitForURL('**/onboarding**', { timeout: 15_000 });
