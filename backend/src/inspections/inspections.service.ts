@@ -109,6 +109,20 @@ export class InspectionsService {
     return inspection;
   }
 
+  async findAll(agencyId: string) {
+    return this.prisma.inspection.findMany({
+      where: { car: { agencyId } },
+      include: {
+        car: {
+          select: { id: true, brand: true, model: true, licensePlate: true },
+        },
+        inspector: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
   async findByCar(agencyId: string, carId: string) {
     return this.prisma.inspection.findMany({
       where: { carId, car: { agencyId } },

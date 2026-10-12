@@ -53,6 +53,12 @@ export class InspectionsController {
     });
   }
 
+  @Get()
+  @RequireCapabilities('inspection.perform')
+  findAll(@CurrentUser() user: any) {
+    return this.inspectionsService.findAll(user.agencyId);
+  }
+
   @Get('car/:carId')
   @RequireCapabilities('fleet.view')
   findByCar(@CurrentUser() user: any, @Param('carId') carId: string) {

@@ -73,13 +73,12 @@ export const InspectionDraftProvider: React.FC<{ children: React.ReactNode }> = 
       const payload = {
         carId: draft.carId,
         bookingId: draft.bookingId,
-        type: draft.type === 'PRE_RENTAL' ? 'CHECK_OUT' : 'CHECK_IN',
-        odometer: Number(draft.mileage),
-        fuelLevel: `${draft.fuelLevel}/8`,
-        damages: draft.damages,
-        photos: draft.photos,
-        notes: draft.notes,
-        signatureUrl: draft.signatureSvg,
+        type: draft.type === 'CHECK_OUT' || draft.type === 'PRE_RENTAL' ? 'PRE_RENTAL' : 'POST_RENTAL',
+        mileage: Number(draft.mileage),
+        fuelLevel: Number(draft.fuelLevel),
+        damages: draft.damages && draft.damages.length > 0 ? JSON.stringify(draft.damages) : undefined,
+        photos: draft.photos && draft.photos.length > 0 ? JSON.stringify(draft.photos) : undefined,
+        notes: draft.notes || (draft.signatureSvg ? 'Certifié avec émargement électronique' : undefined),
       };
 
       await api.post('/inspections', payload);

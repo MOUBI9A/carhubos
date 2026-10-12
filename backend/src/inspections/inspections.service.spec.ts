@@ -64,6 +64,11 @@ function makePrisma(overrides: any = {}) {
       findMany: jest.fn(async ({ where }: any) =>
         state.inspections.filter((i) => {
           if (where.bookingId && i.bookingId !== where.bookingId) return false;
+          if (where.carId && i.carId !== where.carId) return false;
+          if (where.car?.agencyId) {
+            const car = state.cars.find((c) => c.id === i.carId);
+            if (!car || car.agencyId !== where.car.agencyId) return false;
+          }
           return true;
         }),
       ),
@@ -253,6 +258,26 @@ describe('InspectionsService', () => {
 
       expect(state.payments.length).toBe(0);
       expect(auditLogs.log).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findAll', () => {
+    it('returns only inspections for cars belonging to the agency', async () => {
+      const { prisma, state } = makePrisma();
+      state.cars.push(
+        { id: 'car-1', agencyId: 'ag-1', brand: 'Dacia', model: 'Logan', plateNumber: '123-A-1' },
+        { id: 'car-2', agencyId: 'ag-2', brand: 'Renault', model: 'Clio', plateNumber: '456-B-2' },
+      );
+      state.inspections.push(
+        { id: 'insp-1', carId: 'car-1', type: 'PRE_RENTAL', mileage: 1000, fuelLevel: 8 },
+        { id: 'insp-2', carId: 'car-2', type: 'PRE_RENTAL', mileage: 2000, fuelLevel: 8 },
+      );
+      const auditLogs = makeAuditLogs(state);
+      const svc = new InspectionsService(prisma, auditLogs as any);
+
+      const result = await svc.findAll('ag-1');
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe('insp-1');
     });
   });
 
