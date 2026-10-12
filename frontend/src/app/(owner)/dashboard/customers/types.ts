@@ -15,6 +15,10 @@ export interface Customer {
   status: CustomerStatus;
   createdAt: string;
   updatedAt: string;
+  // The claimed RENTER portal account this row maps to, if any — set either
+  // by an accepted claim invite or an auto-match on the renter's own
+  // identity verification. Null means no linked portal account yet.
+  userId?: string | null;
   _count?: { bookings: number };
 }
 

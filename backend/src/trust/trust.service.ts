@@ -100,6 +100,107 @@ export class TrustService {
     return identity;
   }
 
+  /**
+   * Find-or-create the global identity for a RENTER portal account and link
+   * it — mirrors resolveIdentityForCustomer, on the User side. Only ever
+   * called with the caller's own userId (renter self-service "verify
+   * identity" step), never agency-initiated.
+   */
+  async resolveIdentityForRenterUser(
+    userId: string,
+    identityType: string,
+    identityNumber: string,
+  ) {
+    const identityHash = this.hashIdentity(identityType, identityNumber);
+    let identity = await this.prisma.renterIdentity.findUnique({
+      where: { identityHash },
+    });
+    if (!identity) {
+      identity = await this.prisma.renterIdentity.create({
+        data: {
+          identityHash,
+          identityType: (identityType || 'CIN').toUpperCase(),
+          identityMasked: this.mask(identityNumber),
+        },
+      });
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { renterIdentityId: identity.id },
+    });
+    return identity;
+  }
+
+  /**
+   * Moroccan-number match, digits only, country code / leading zero
+   * stripped to a canonical local number — a plaintext, best-effort
+   * comparison (unlike the identity hash, phone numbers aren't stored
+   * hashed anywhere in this schema).
+   */
+  private normalizePhone(phone: string): string {
+    const digits = (phone || '').replace(/\D/g, '');
+    if (digits.startsWith('212')) return digits.slice(3);
+    if (digits.startsWith('0')) return digits.slice(1);
+    return digits;
+  }
+
+  /**
+   * After a renter links their identity (resolveIdentityForRenterUser),
+   * claim every Customer row — across any agency — that resolves to the
+   * SAME physical person and isn't linked to a portal account yet: either
+   * by the deterministic identity hash, or (weaker, but still driven only
+   * by the renter's own action, never agency-initiated) a matching phone
+   * number. Returns which agencies gained a link, for the renter's own
+   * confirmation screen — no other agency data is exposed.
+   */
+  async linkCustomersToRenter(
+    userId: string,
+    renterIdentityId: string,
+    phone?: string,
+  ) {
+    const normalizedPhone = phone ? this.normalizePhone(phone) : null;
+
+    const candidates = await this.prisma.customer.findMany({
+      where: {
+        userId: null,
+        OR: [
+          { renterIdentityId },
+          ...(normalizedPhone
+            ? [{ phone: { contains: normalizedPhone } }]
+            : []),
+        ],
+      },
+      select: {
+        id: true,
+        agencyId: true,
+        phone: true,
+        renterIdentityId: true,
+        agency: { select: { name: true } },
+      },
+    });
+
+    // The phone leg above is a loose `contains` prefilter (format drift
+    // across agencies) — re-check it precisely before trusting it. The
+    // identityHash leg is already an exact match.
+    const matches = candidates.filter(
+      (c) =>
+        c.renterIdentityId === renterIdentityId ||
+        (normalizedPhone !== null &&
+          this.normalizePhone(c.phone) === normalizedPhone),
+    );
+    if (matches.length === 0) return [];
+
+    await this.prisma.customer.updateMany({
+      where: { id: { in: matches.map((c) => c.id) } },
+      data: { userId },
+    });
+
+    return matches.map((c) => ({
+      agencyId: c.agencyId,
+      agencyName: c.agency.name,
+    }));
+  }
+
   // ── Aggregate recomputation ─────────────────────────────────────────
   /** Recency-weighted score + risk level, cached on the identity row. */
   async recompute(identityId: string) {

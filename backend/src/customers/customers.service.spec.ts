@@ -302,3 +302,92 @@ describe('CustomersService.findAll — legacy bare-array path (P2 backlog)', () 
     expect(result).toEqual({ items: [], total: 0, page: 2, limit: 10 });
   });
 });
+
+describe('CustomersService.createInvite', () => {
+  it('cross-tenant 404s instead of leaking existence', async () => {
+    const prisma = { customer: { findFirst: jest.fn().mockResolvedValue(null) } };
+    const svc = new CustomersService(prisma as any, makeAudit() as any);
+
+    await expect(
+      svc.createInvite(AGENCY, 'someone-elses-customer', ACTOR),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('refuses to invite a customer already linked to a portal account', async () => {
+    const prisma = {
+      customer: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'c1', agencyId: AGENCY, userId: 'u1' }),
+      },
+    };
+    const svc = new CustomersService(prisma as any, makeAudit() as any);
+
+    await expect(svc.createInvite(AGENCY, 'c1', ACTOR)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+
+  it('reuses a still-live invite instead of minting a duplicate', async () => {
+    const live = { id: 'inv-live', token: 'existing-token' };
+    const create = jest.fn();
+    const prisma = {
+      customer: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'c1', agencyId: AGENCY, userId: null }),
+      },
+      customerInvite: {
+        findFirst: jest.fn().mockResolvedValue(live),
+        create,
+      },
+    };
+    const svc = new CustomersService(prisma as any, makeAudit() as any);
+
+    const result = await svc.createInvite(AGENCY, 'c1', ACTOR);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(result).toBe(live);
+  });
+
+  it('mints a fresh token and audit-logs it when no live invite exists', async () => {
+    const created = { id: 'inv-new', token: 'brand-new-token' };
+    const create = jest.fn().mockResolvedValue(created);
+    const audit = makeAudit();
+    const prisma = {
+      customer: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'c1', agencyId: AGENCY, userId: null }),
+      },
+      customerInvite: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create,
+      },
+    };
+    const svc = new CustomersService(prisma as any, audit as any);
+
+    const result = await svc.createInvite(AGENCY, 'c1', ACTOR);
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        agencyId: AGENCY,
+        customerId: 'c1',
+        createdByUserId: ACTOR,
+      }),
+    });
+    // Token must be a long, unguessable random string — not a predictable id.
+    const tokenArg = create.mock.calls[0][0].data.token;
+    expect(tokenArg).toMatch(/^[0-9a-f]{64}$/);
+    expect(audit.log).toHaveBeenCalledWith(
+      AGENCY,
+      ACTOR,
+      'CREATE_CUSTOMER_INVITE',
+      'CUSTOMER',
+      'c1',
+      null,
+      expect.objectContaining({ inviteId: created.id }),
+    );
+    expect(result).toBe(created);
+  });
+});

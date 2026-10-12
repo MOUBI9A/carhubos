@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import {
@@ -11,6 +12,9 @@ import {
   ListCustomersQueryDto,
   UpdateCustomerDto,
 } from './dto/customers.dto';
+
+/** Claim-invite links stay valid for 14 days before staff need to re-issue one. */
+const INVITE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class CustomersService {
@@ -242,5 +246,56 @@ export class CustomersService {
       where: { agencyId, status: 'BLACKLISTED' },
       orderBy: { updatedAt: 'desc' },
     });
+  }
+
+  /**
+   * Generate a single-use, expiring claim link for a Customer that isn't
+   * linked to a portal account yet. Staff share the link (WhatsApp/SMS/
+   * email — no automated send wired here); the renter's own
+   * POST /portal/claim-invite consumes it. A still-live (unconsumed,
+   * unexpired) invite for the same customer is reused instead of minting a
+   * new one, so repeated clicks don't pile up dead tokens.
+   */
+  async createInvite(agencyId: string, customerId: string, actorId: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, agencyId },
+    });
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+    if (customer.userId) {
+      throw new ConflictException(
+        'This client is already linked to a portal account.',
+      );
+    }
+
+    const now = new Date();
+    const live = await this.prisma.customerInvite.findFirst({
+      where: { customerId, consumedAt: null, expiresAt: { gt: now } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (live) return live;
+
+    const invite = await this.prisma.customerInvite.create({
+      data: {
+        token: randomBytes(32).toString('hex'),
+        agencyId,
+        customerId,
+        createdByUserId: actorId,
+        expiresAt: new Date(now.getTime() + INVITE_WINDOW_MS),
+      },
+    });
+
+    await this.auditLogs.log(
+      agencyId,
+      actorId,
+      'CREATE_CUSTOMER_INVITE',
+      'CUSTOMER',
+      customerId,
+      null,
+      { inviteId: invite.id, expiresAt: invite.expiresAt },
+    );
+
+    return invite;
   }
 }

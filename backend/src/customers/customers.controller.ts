@@ -97,4 +97,10 @@ export class CustomersController {
   remove(@CurrentUser() user: any, @Param('id') id: string) {
     return this.customersService.remove(user.agencyId, id);
   }
+
+  @Post(':id/invite')
+  @RequireCapabilities('customer.manage')
+  createInvite(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.customersService.createInvite(user.agencyId, id, user.id);
+  }
 }
