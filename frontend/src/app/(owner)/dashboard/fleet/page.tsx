@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { CarPhoto, AgencyImage } from '@/components/ui/AgencyImage';
@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
-import { useFleet } from './useFleet';
+import { useFleetPaginated } from './useFleetPaginated';
 import {
   CAR_STATUSES,
   STATUS_STYLES,
@@ -52,38 +52,52 @@ const FILTERS: Array<{ value: CarStatus | 'ALL'; label: string }> = [
 export default function FleetGuardian() {
   const t = useTranslations('ownerPages');
   const { showToast } = useToast();
-  const { data: cars, isLoading, error, refetch } = useFleet();
 
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CarStatus | 'ALL'>('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Debounce search input before it hits the server-side `search` param.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const {
+    data: cars,
+    total,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    error,
+    refetch,
+    loadMore,
+  } = useFleetPaginated(debouncedQuery);
+
   const setField = (key: keyof typeof INITIAL_FORM) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  // Search already happened server-side; status filter is client-side over
+  // whatever page(s) are currently loaded.
   const filtered = useMemo(() => {
     if (!cars) return [];
-    const q = query.trim().toLowerCase();
-    return cars.filter((car) => {
-      if (statusFilter !== 'ALL' && car.status !== statusFilter) return false;
-      if (!q) return true;
-      return `${car.brand} ${car.model} ${car.licensePlate}`
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [cars, query, statusFilter]);
+    if (statusFilter === 'ALL') return cars;
+    return cars.filter((car) => car.status === statusFilter);
+  }, [cars, statusFilter]);
 
+  // `stats.total` is the server-side count across the whole fleet; the
+  // per-status breakdown can only reflect whatever page(s) are loaded.
   const stats = useMemo(() => {
-    const counts = { total: 0, AVAILABLE: 0, RENTED: 0, MAINTENANCE: 0, OUT_OF_SERVICE: 0 };
+    const counts = { total, AVAILABLE: 0, RENTED: 0, MAINTENANCE: 0, OUT_OF_SERVICE: 0 };
     for (const car of cars ?? []) {
-      counts.total++;
       counts[car.status] = (counts[car.status] ?? 0) + 1;
     }
     return counts;
-  }, [cars]);
+  }, [cars, total]);
 
   const closeAddModal = () => {
     setIsAddModalOpen(false);
@@ -322,6 +336,15 @@ export default function FleetGuardian() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* ═══════ Load more ═══════ */}
+      {!isLoading && hasMore && (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={loadMore} isLoading={isLoadingMore}>
+            {isLoadingMore ? t('loadingMore') : t('loadMore')}
+          </Button>
         </div>
       )}
 

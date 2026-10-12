@@ -724,6 +724,8 @@
     "blacklistedClients": "Clients bloqués",
     "totalRentals": "Total des locations",
     "searchCustomers": "Rechercher par nom, téléphone, email ou numéro d’identité…",
+    "loadMore": "Charger plus",
+    "loadingMore": "Chargement…",
     "noCustomersYet": "Aucun client pour le moment",
     "registerFirstClient": "Enregistrez votre premier client pour commencer les locations et construire un historique de confiance.",
     "noMatchingClients": "Aucun client ne correspond",
