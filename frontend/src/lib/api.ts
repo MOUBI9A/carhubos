@@ -16,7 +16,17 @@ const api = axios.create({
 // Public routes that must never be hijacked by the 401 redirect — a logged-out
 // visitor is EXPECTED on these pages (the marketing site, auth screens). The root
 // "/" runs its own role-based redirect, so leave it alone too.
-const PUBLIC_PREFIXES = ['/landing', '/login', '/signup', '/verify-email', '/onboarding'];
+const PUBLIC_PREFIXES = [
+  '/landing',
+  '/login',
+  '/signup',
+  '/verify-email',
+  '/onboarding',
+  '/privacy',
+  '/terms',
+  '/support',
+  '/account-deletion',
+];
 function isPublicPath(pathname: string): boolean {
   return pathname === '/' || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }

@@ -1,9 +1,97 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterPushTokenDto } from './dto/push-token.dto';
+
+interface DeviceTokenRecord {
+  token: string;
+  platform: string;
+  deviceId?: string;
+  registeredAt: Date;
+}
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+  // User ID -> Map of Device Tokens
+  private readonly deviceTokens = new Map<string, Map<string, DeviceTokenRecord>>();
+
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Register a mobile push notification token (Expo Push Token, APNs, FCM)
+   * for an authenticated user.
+   */
+  async registerPushToken(userId: string, dto: RegisterPushTokenDto) {
+    if (!this.deviceTokens.has(userId)) {
+      this.deviceTokens.set(userId, new Map());
+    }
+
+    const userTokens = this.deviceTokens.get(userId)!;
+    userTokens.set(dto.token, {
+      token: dto.token,
+      platform: dto.platform,
+      deviceId: dto.deviceId,
+      registeredAt: new Date(),
+    });
+
+    this.logger.log(`Registered push token for user ${userId} on ${dto.platform}`);
+
+    return {
+      success: true,
+      message: 'Push token successfully registered.',
+      token: dto.token,
+      platform: dto.platform,
+    };
+  }
+
+  /**
+   * List notifications for the authenticated user, newest first.
+   */
+  async listUserNotifications(userId: string) {
+    return this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  /**
+   * Mark a notification as read. Strictly scoped by userId to prevent IDOR.
+   */
+  async markNotificationRead(userId: string, notificationId: string) {
+    const res = await this.prisma.notification.updateMany({
+      where: { id: notificationId, userId },
+      data: { read: true },
+    });
+
+    if (res.count === 0) {
+      throw new NotFoundException('Notification not found.');
+    }
+
+    return { id: notificationId, read: true };
+  }
+
+  /**
+   * Mark all notifications as read for the user.
+   */
+  async markAllRead(userId: string) {
+    await this.prisma.notification.updateMany({
+      where: { userId, read: false },
+      data: { read: true },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Get unread notification count for the user.
+   */
+  async getUnreadCount(userId: string) {
+    const count = await this.prisma.notification.count({
+      where: { userId, read: false },
+    });
+    return { unreadCount: count };
+  }
 
   async getWhatsAppLink(type: string, data: any) {
     let message = '';

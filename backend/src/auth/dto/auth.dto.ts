@@ -55,3 +55,13 @@ export class ResendVerificationDto {
   email?: string;
 }
 
+export class DeleteAccountDto {
+  @IsNotEmpty()
+  @IsString()
+  password: string;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+

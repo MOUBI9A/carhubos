@@ -48,6 +48,15 @@ export default function PublicLayout({
               </ul>
             </div>
             <div>
+              <h4 className="eyebrow mb-6">Légal & Support</h4>
+              <ul className="space-y-4">
+                <li><Link href="/privacy" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Politique de Confidentialité</Link></li>
+                <li><Link href="/terms" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Conditions Générales</Link></li>
+                <li><Link href="/support" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Assistance & Support</Link></li>
+                <li><Link href="/account-deletion" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Suppression de Compte</Link></li>
+              </ul>
+            </div>
+            <div>
               <h4 className="eyebrow mb-6">{t('getStartedSection')}</h4>
               <ul className="space-y-4">
                 <li><Link href="#contact" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('requestAccess')}</Link></li>

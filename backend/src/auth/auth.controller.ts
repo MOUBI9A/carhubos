@@ -1,7 +1,7 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Res, Get, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Res, Get, Delete, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, VerifyEmailDto, ResendVerificationDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, VerifyEmailDto, ResendVerificationDto, DeleteAccountDto } from './dto/auth.dto';
 import type { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AllowUnverified } from '../common/decorators/allow-unverified.decorator';
@@ -139,5 +139,27 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return data;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @Delete('me')
+  async deleteAccount(
+    @CurrentUser() user: any,
+    @Body() dto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.deleteAccount(
+      user.id,
+      dto.password,
+      dto.reason,
+    );
+    res.clearCookie('infinity_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+    return result;
   }
 }

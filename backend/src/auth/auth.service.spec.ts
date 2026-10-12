@@ -102,3 +102,77 @@ describe('AuthService.register — service-level behavior', () => {
     expect(userArg.role).toBe('AGENT'); // default with no agency and no explicit role
   });
 });
+
+describe('AuthService.deleteAccount — compliant account deletion', () => {
+  const bcrypt = require('bcryptjs');
+
+  it('rejects deletion if user does not exist', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue(null) },
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    await expect(svc.deleteAccount('missing-id', 'password123')).rejects.toThrow('User not found');
+  });
+
+  it('rejects deletion for ROOT_ADMIN platform administrators', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'root', role: 'ROOT_ADMIN' }) },
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    await expect(svc.deleteAccount('root', 'password123')).rejects.toThrow(
+      'Platform administrator accounts cannot be deleted through this endpoint.',
+    );
+  });
+
+  it('rejects deletion if password confirmation does not match', async () => {
+    const hashedPassword = await bcrypt.hash('realpassword123', 10);
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', role: 'RENTER', password: hashedPassword }) },
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    await expect(svc.deleteAccount('u1', 'wrongpassword')).rejects.toThrow('Invalid password confirmation.');
+  });
+
+  it('rejects agency OWNER deletion if active rentals exist', async () => {
+    const hashedPassword = await bcrypt.hash('mypassword123', 10);
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'owner-1', role: 'OWNER', agencyId: 'ag-1', password: hashedPassword }) },
+      booking: { count: jest.fn().mockResolvedValue(2) },
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    await expect(svc.deleteAccount('owner-1', 'mypassword123')).rejects.toThrow(
+      'Cannot delete agency account while 2 active or confirmed rental(s) exist.',
+    );
+  });
+
+  it('anonymizes user data and revokes consent upon valid deletion', async () => {
+    const hashedPassword = await bcrypt.hash('mypassword123', 10);
+    const tx = {
+      emailVerificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      consentGrant: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      renterDocument: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      agency: { update: jest.fn() },
+      user: { update: jest.fn().mockResolvedValue({ id: 'renter-1' }) },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'renter-1', role: 'RENTER', agencyId: null, password: hashedPassword }) },
+      booking: { count: jest.fn().mockResolvedValue(0) },
+      $transaction: jest.fn((cb: any) => cb(tx)),
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    const result = await svc.deleteAccount('renter-1', 'mypassword123', 'No longer need account');
+
+    expect(result.success).toBe(true);
+    expect(tx.consentGrant.updateMany).toHaveBeenCalledWith({
+      where: { grantorUserId: 'renter-1' },
+      data: { status: 'REVOKED' },
+    });
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'renter-1' },
+      data: expect.objectContaining({
+        name: 'Utilisateur Supprimé',
+        isVerified: false,
+      }),
+    }));
+  });
+});

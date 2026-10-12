@@ -4,15 +4,17 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { LoginDto, RegisterDto, ResendVerificationDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, ResendVerificationDto, DeleteAccountDto } from './dto/auth.dto';
 import { ROLE_PRESETS } from '../common/capabilities';
 import { DEFAULT_PLAN_KEY, TRIAL_DAYS } from '../common/plans';
 
@@ -23,6 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     @Optional() private emailService?: EmailService,
+    @Optional() private auditLogs?: AuditLogsService,
   ) {}
 
   /**
@@ -472,6 +475,137 @@ export class AuthService {
       onboardingCurrentStep: user.agency?.onboardingCurrentStep ?? 1,
       isImpersonated: fallbackUser?.isImpersonated,
       impersonatorId: fallbackUser?.impersonatorId,
+    };
+  }
+
+  /**
+   * Compliant Account Deletion & Right to be Forgotten (Apple 5.1.1(v) & Google Play Data Safety).
+   * Verifies password, prevents deletion if active rentals exist, revokes consent,
+   * soft-deletes agency if owner, anonymizes PII, and logs audit record.
+   */
+  async deleteAccount(userId: string, passwordConfirm: string, reason?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        agency: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === 'ROOT_ADMIN') {
+      throw new ForbiddenException(
+        'Platform administrator accounts cannot be deleted through this endpoint.',
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      passwordConfirm,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password confirmation.');
+    }
+
+    // Safety invariant: An agency OWNER cannot delete an account while active rentals exist.
+    if (user.role === 'OWNER' && user.agencyId) {
+      const activeBookingsCount = await this.prisma.booking.count({
+        where: {
+          agencyId: user.agencyId,
+          status: { in: ['ACTIVE', 'CONFIRMED'] },
+        },
+      });
+
+      if (activeBookingsCount > 0) {
+        throw new BadRequestException(
+          `Cannot delete agency account while ${activeBookingsCount} active or confirmed rental(s) exist. Please conclude or cancel existing bookings first.`,
+        );
+      }
+    }
+
+    // Safety invariant: A RENTER cannot delete an account if they currently have an active rental.
+    if (user.role === 'RENTER') {
+      const activeRentalCount = await this.prisma.booking.count({
+        where: {
+          renterId: user.id,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (activeRentalCount > 0) {
+        throw new BadRequestException(
+          'Cannot delete account while you have an ongoing vehicle rental. Please return the vehicle first.',
+        );
+      }
+    }
+
+    // Execute atomic deletion & data scrubbing
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Remove ephemeral email tokens
+      await tx.emailVerificationToken.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // 2. Revoke all active consent grants
+      await tx.consentGrant.updateMany({
+        where: { grantorUserId: user.id },
+        data: { status: 'REVOKED' },
+      });
+
+      // 3. Remove renter uploaded documents if any
+      await tx.renterDocument.deleteMany({
+        where: { ownerUserId: user.id },
+      });
+
+      // 4. Soft-delete agency if user was the agency OWNER
+      if (user.role === 'OWNER' && user.agencyId) {
+        await tx.agency.update({
+          where: { id: user.agencyId },
+          data: {
+            deletedAt: new Date(),
+            status: 'SUSPENDED',
+          },
+        });
+      }
+
+      // 5. If agencyId exists, log the audit record
+      if (user.agencyId && this.auditLogs) {
+        await this.auditLogs.log(
+          user.agencyId,
+          user.id,
+          'USER_ACCOUNT_DELETED',
+          'USER',
+          user.id,
+          { email: user.email, name: user.name, role: user.role, reason },
+          { status: 'DELETED_AND_SCRUBBED' },
+        );
+      }
+
+      // 6. Scrub personal PII from User record while preserving relational integrity
+      // for forensic/accounting records
+      const scrubbedEmail = `deleted_${user.id}_${Date.now()}@anonymized.fider`;
+      const randomizedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          name: 'Utilisateur Supprimé',
+          email: scrubbedEmail,
+          password: randomizedPassword,
+          qrHash: null,
+          isVerified: false,
+          emailVerifiedAt: null,
+        },
+      });
+    });
+
+    return {
+      success: true,
+      message: 'Account successfully deleted and personal data scrubbed in compliance with privacy regulations.',
     };
   }
 }
