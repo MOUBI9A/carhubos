@@ -201,6 +201,19 @@ export class WorkOrdersService {
       data,
     });
 
+    if (targetStatus === 'COMPLETED' && existing.fleetCarId) {
+      await this.prisma.maintenanceRecord.create({
+        data: {
+          carId: existing.fleetCarId,
+          type: 'REPAIR',
+          description: `Work Order ${existing.orderNumber}: ${existing.description}`,
+          cost: existing.totalAmount,
+          status: 'COMPLETED',
+          garageName: 'CarHub Workshop',
+        },
+      });
+    }
+
     await this.auditLogs.log(
       agencyId,
       actorId,

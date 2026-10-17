@@ -5,7 +5,10 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  type MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,6 +28,7 @@ import { emptySessionData } from './obd/telemetry.types';
 import type { SessionData } from './obd/telemetry.types';
 import { analyzeEvidence } from './rules/diagnostic-rules';
 import { simulateScenario } from './simulator/simulator';
+import { createTelemetryStream } from './simulator/streaming-simulator';
 import { calculateEstimate } from './estimates/estimate-calculator';
 import type { DiagnosticReasoningProvider } from './providers/diagnostic-provider';
 import { canonicalReportJson } from './reports/report-integrity';
@@ -580,5 +584,21 @@ export class DiagnosticsService {
   async getCustomerHealth(agencyId: string, id: string) {
     const s = await this.session(agencyId, id);
     return translateCustomerHealth(s);
+  }
+  streamSessionTelemetry(
+    agencyId: string,
+    id: string,
+    scenario = 'p0301',
+    seed = 1,
+  ): Observable<MessageEvent> {
+    this.scope(agencyId);
+    return createTelemetryStream(scenario, seed, 80).pipe(
+      map(
+        (msg) =>
+          ({
+            data: msg,
+          }) as MessageEvent,
+      ),
+    );
   }
 }

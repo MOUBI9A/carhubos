@@ -30,6 +30,9 @@ describe('WorkOrdersService', () => {
       car: {
         findUnique: jest.fn().mockResolvedValue({ id: 'car-1', agencyId }),
       },
+      maintenanceRecord: {
+        create: jest.fn().mockResolvedValue({ id: 'm-1' }),
+      },
     };
 
     auditLogs = {
@@ -155,6 +158,34 @@ describe('WorkOrdersService', () => {
 
       expect(updated.status).toBe('IN_PROGRESS');
       expect(updated.startedAt).toBeDefined();
+    });
+
+    it('creates MaintenanceRecord for fleetCar when transitioning to COMPLETED', async () => {
+      prisma.workOrder.findUnique.mockResolvedValue({
+        id: 'wo-1',
+        agencyId,
+        orderNumber: 'WO-2026-0001',
+        description: 'Brake service',
+        totalAmount: new Prisma.Decimal(1920),
+        status: 'QUALITY_CHECK',
+        fleetCarId: 'car-1',
+      });
+      prisma.workOrder.update.mockResolvedValue({
+        id: 'wo-1',
+        status: 'COMPLETED',
+      });
+
+      await service.updateStatus(agencyId, actorId, 'wo-1', {
+        status: 'COMPLETED',
+      });
+
+      expect(prisma.maintenanceRecord.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          carId: 'car-1',
+          type: 'REPAIR',
+          status: 'COMPLETED',
+        }),
+      });
     });
   });
 

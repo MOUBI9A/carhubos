@@ -350,7 +350,18 @@ export default function WorkOrdersPage() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {NEXT_STATUSES[order.status]?.length > 0 && (
+                        {order.status === 'COMPLETED' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setTargetStatus('INVOICED');
+                              setIsStatusOpen(true);
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30 rounded transition cursor-pointer"
+                          >
+                            Generate Invoice
+                          </button>
+                        ) : NEXT_STATUSES[order.status]?.length > 0 && (
                           <button
                             onClick={() => {
                               setSelectedOrder(order);

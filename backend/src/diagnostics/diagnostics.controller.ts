@@ -5,10 +5,14 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Res,
+  Sse,
   UseGuards,
+  type MessageEvent,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Observable } from 'rxjs';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -159,5 +163,20 @@ export class DiagnosticsController {
   @RequireCapabilities('diagnostics.view')
   healthSummary(@CurrentUser() u: Actor, @Param('id') id: string) {
     return this.service.getCustomerHealth(u.agencyId, id);
+  }
+  @Sse('sessions/:id/stream')
+  @RequireCapabilities('diagnostics.perform')
+  stream(
+    @CurrentUser() u: Actor,
+    @Param('id') id: string,
+    @Query('scenario') scenario?: string,
+    @Query('seed') seed?: string,
+  ): Observable<MessageEvent> {
+    return this.service.streamSessionTelemetry(
+      u.agencyId,
+      id,
+      scenario ?? 'p0301',
+      seed ? Number(seed) : 1,
+    );
   }
 }

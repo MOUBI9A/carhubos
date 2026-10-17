@@ -14,6 +14,7 @@ import { DiagnosticError, diagnosticInput } from './DiagnosticFeedback';
 import type { DiagnosticAction, DiagnosticFinding, DiagnosticScenario, DiagnosticSession, EstimateItem } from './types';
 import { CustomerVehicleHealthCard } from './CustomerVehicleHealthCard';
 import { PartsCatalogMatcher, type PartItem } from './PartsCatalogMatcher';
+import { DiagnosticBayGauges } from './DiagnosticBayGauges';
 
 type SessionMutation = UseMutationResult<DiagnosticSession, Error, { session: DiagnosticSession; command: DiagnosticAction }, unknown>;
 
@@ -124,6 +125,8 @@ export function DiagnosticSessionView({ session, scenarios, scenariosError, retr
         {!!session.events.length && <p className="text-xs text-text-muted">{t('newSessionForScenario')}</p>}
         {!canPerform && <p className="text-xs text-text-muted">{t('requiresPerform')}</p>}
       </Card>
+
+      <DiagnosticBayGauges sessionId={session.id} canPerform={canPerform} />
 
       <Card padding="none" className="overflow-hidden">
         <div className="p-5 border-b border-hairline"><h3 className="font-semibold flex items-center gap-2"><Activity aria-hidden="true" className="h-4 w-4 text-metal" />{t('evidenceTitle')}</h3><p className="mt-2 text-xs text-text-muted">{t('evidenceDescription')}</p></div>
