@@ -59,6 +59,14 @@
 - **ELM327 OBD-II Hardware Adapter**:
   - Web Bluetooth (BLE) and Web Serial hardware dongle pairing (`elm327Adapter.ts`) with live PID polling and Mode 03 DTC scanning.
   - Dedicated controls in `DiagnosticBayGauges.tsx`.
+- **Automotive APM Tracing & Privacy**:
+  - W3C TraceContext (`traceparent`, `X-Trace-Id`) propagation with VIN PII masking (`sanitizeVin`).
+  - Structured event logger for OBD connections, DTC detections, AI token costs, and work order transitions.
+- **Automotive Knowledge Graph & Technician Copilot**:
+  - Complete SAE J2012 / ISO 14229 dictionary localized for Moroccan climate (Marrakech/Ouarzazate ambient heat) and city driving conditions (Casablanca/Rabat DPF soot).
+  - Phased interactive checklist (Scan Tool, Electrical DMM/Scope, Mechanical pressure/smoke, Factory Torque specs).
+  - Multi-code synthesis engine correlating cross-system failure patterns with shared labor discounts.
+  - `TechnicianCopilotDrawer.tsx` frontend modal with instant DTC search and 1-click append to notes.
 - **Production Gate Harness**:
   - Automated 11-gate execution harness (`scripts/production-gate.sh`) verifying git cleanliness, migrations, backend/frontend builds and tests, and security baseline.
 - **Frontend Stack**: Next.js 16 App Router, Tailwind CSS, multi-lingual i18n (FR, AR, EN), technician workspace, and work orders dashboard.
@@ -68,13 +76,14 @@
 
 ## Recent Verification Evidence
 - **Production Gate**: **11/11 Gates Passed Cleanly with Concrete Evidence** (`scripts/production-gate.sh`).
-- **Backend Unit & Integration Suite**: **63 passed, 63 total; 524 tests passing** (Jest).
-- **Backend Live-DB E2E Suite**: **3 passed, 3 total; 16 tests passing** (`test/automotive-diagnostics.e2e-spec.ts`, `test/tenant-isolation.e2e-spec.ts`, `test/app.e2e-spec.ts`).
+- **Backend Unit & Integration Suite**: **65 passed, 65 total; 541 tests passing** (Jest).
+- **Backend Live-DB E2E Suite**: **3 passed, 3 total; 17 tests passing** (`test/automotive-diagnostics.e2e-spec.ts`, `test/tenant-isolation.e2e-spec.ts`, `test/app.e2e-spec.ts`).
 - **Backend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Backend Production Build**: `npm run build` **0 errors (dist/ clean)**.
-- **Frontend Vitest Suite**: **8 passed, 8 total; 33 tests passing**.
+- **Frontend Vitest Suite**: **9 passed, 9 total; 36 tests passing**.
 - **Frontend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Frontend Production Build**: `npm run build` **All 48 routes compiled and optimized (Turbopack)**.
 - **Mobile TypeScript**: `tsc --noEmit` **0 errors**.
 - **Database migrations**: Applied cleanly (`20261017200000_diagnostics`, `20261017203000_add_work_orders`).
 - **Git State**: Clean working tree on branch `feat/automotive-os-platform`.
+

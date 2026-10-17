@@ -299,4 +299,38 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .set('Cookie', foreignCookie)
       .expect(404);
   });
+
+  it('Step 9: Knowledge Graph & Copilot Guide — searches DTCs, fetches Moroccan field tips, and synthesizes multi-DTC copilot plan', async () => {
+    // 1. Search knowledge base
+    const searchRes = await request(app.getHttpServer())
+      .get('/api/diagnostics/knowledge/search?query=misfire')
+      .set('Cookie', authCookie)
+      .expect(200);
+
+    expect(Array.isArray(searchRes.body)).toBe(true);
+    expect(searchRes.body.some((e: any) => e.code === 'P0300')).toBe(true);
+
+    // 2. Lookup single DTC with Moroccan context
+    const dtcRes = await request(app.getHttpServer())
+      .get('/api/diagnostics/knowledge/dtc/P2463')
+      .set('Cookie', authCookie)
+      .expect(200);
+
+    expect(dtcRes.body.code).toBe('P2463');
+    expect(dtcRes.body.severity).toBe('CRITICAL');
+    expect(dtcRes.body.moroccanOperatingContext.climateRisk).toContain('Casablanca');
+
+    // 3. Multi-DTC Copilot Synthesis
+    const copilotRes = await request(app.getHttpServer())
+      .post('/api/diagnostics/knowledge/copilot')
+      .set('Cookie', authCookie)
+      .send({ dtcCodes: ['P0300', 'P0171'] })
+      .expect(201);
+
+    expect(copilotRes.body.analyzedCodes).toEqual(['P0300', 'P0171']);
+    expect(copilotRes.body.rootCauseHypothesis).toContain('CORRELATED LEAN MISFIRE');
+    expect(copilotRes.body.prioritizedActionPlan.length).toBeGreaterThan(0);
+    expect(copilotRes.body.estimatedTotalLaborHours).toBeGreaterThan(0);
+  });
 });
+

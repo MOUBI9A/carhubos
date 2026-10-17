@@ -15,6 +15,7 @@ import type { DiagnosticAction, DiagnosticFinding, DiagnosticScenario, Diagnosti
 import { CustomerVehicleHealthCard } from './CustomerVehicleHealthCard';
 import { PartsCatalogMatcher, type PartItem } from './PartsCatalogMatcher';
 import { DiagnosticBayGauges } from './DiagnosticBayGauges';
+import { TechnicianCopilotDrawer } from './TechnicianCopilotDrawer';
 
 type SessionMutation = UseMutationResult<DiagnosticSession, Error, { session: DiagnosticSession; command: DiagnosticAction }, unknown>;
 
@@ -37,6 +38,7 @@ export function DiagnosticSessionView({ session, scenarios, scenariosError, retr
   const [downloadError, setDownloadError] = useState<unknown>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [showAllEvidence, setShowAllEvidence] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const busy = mutation.isPending;
   const findings = session.analysis?.findings ?? [];
   const evidenceNewestFirst = [...session.events].sort((first, second) => Date.parse(second.observedAt) - Date.parse(first.observedAt) || second.sequence - first.sequence);
@@ -101,7 +103,23 @@ export function DiagnosticSessionView({ session, scenarios, scenariosError, retr
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h2 className="text-xl font-semibold">{session.vehicle.brand} {session.vehicle.model}</h2><p className="mt-1 text-xs font-mono text-text-muted break-all" dir="ltr">{session.vehicle.vin ?? session.id}</p></div>
-          <span className="rounded-full border border-hairline px-3 py-1 text-xs">{t(`statuses.${session.status}`)}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCopilotOpen(true)}
+              className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-semibold"
+            >
+              <Wrench className="w-3.5 h-3.5 text-amber-400" />
+              AI Copilot
+              {session.dtcs.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-[10px] font-mono">
+                  {session.dtcs.length} DTC
+                </span>
+              )}
+            </Button>
+            <span className="rounded-full border border-hairline px-3 py-1 text-xs">{t(`statuses.${session.status}`)}</span>
+          </div>
         </div>
         <p className="mt-4 text-sm font-medium text-metal">{t(session.source === 'SIMULATOR' ? 'simulatedEvidence' : 'importedEvidence')}</p>
         <p className="mt-1 text-xs text-text-muted">{t('sessionProvenance', { revision: session.revision, updated: dateTime(session.updatedAt) })}</p>
@@ -164,7 +182,13 @@ export function DiagnosticSessionView({ session, scenarios, scenariosError, retr
         {downloadError != null && <DiagnosticError error={downloadError} />}
         {session.report && <p role="status" className="text-sm text-success flex items-center gap-2"><CheckCircle2 aria-hidden="true" className="h-4 w-4" />{t('reportReady')}</p>}
       </Card>
+      <TechnicianCopilotDrawer
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        activeDtcs={session.dtcs.map((d) => d.code)}
+      />
     </div>
+
   );
 }
 
@@ -365,3 +389,4 @@ function EstimatePanel({ session, canEstimate, busy, onSave }: { session: Diagno
     </div>
   );
 }
+

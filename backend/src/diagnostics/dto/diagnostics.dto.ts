@@ -100,3 +100,13 @@ export class EstimateDto extends RevisionDto {
   @Matches(/^(0(\.\d{1,4})?|1(\.0{1,4})?)$/)
   vatRate?: string;
 }
+
+export class CopilotGuideDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @Matches(/^[PCBU][0-3][0-9A-F]{3}$/, { each: true })
+  dtcCodes: string[];
+}
+

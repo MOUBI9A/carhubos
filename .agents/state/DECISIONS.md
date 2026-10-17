@@ -49,3 +49,18 @@
 - **Alternatives Considered**: Optional or advisory DTC check (rejected: mechanics forget or bypass checks under pressure).
 - **Consequences**: Guaranteed proof of repair; automatic sync to vehicle's permanent `MaintenanceRecord` ledger only happens on confirmed, verified work orders.
 
+## ADR-008: Automotive APM Tracing & Telemetry Stream Privacy (W3C TraceContext & VIN Masking)
+- **Date**: 2026-10-18
+- **Decision**: Ingest and propagate W3C `traceparent` and `X-Trace-Id` headers across all automotive routes via `AutomotiveTelemetryInterceptor`. Enforce mandatory VIN masking (`sanitizeVin`) in all structured JSON log emissions to prevent customer PII leakage to observability aggregators.
+- **Reason**: Fleet and garage telemetry requires distributed tracing for diagnosis latency and token tracking, while strictly complying with data protection by never logging raw VINs in plaintext log indexes.
+- **Alternatives Considered**: Plain console logging or unmasked VIN logging (rejected: security liability, unsearchable spans).
+- **Consequences**: Production-ready Datadog / OpenTelemetry compatibility with guaranteed privacy.
+
+## ADR-009: Automotive Knowledge Graph & Multi-DTC Copilot Synthesis
+- **Date**: 2026-10-18
+- **Decision**: Build an in-memory SAE J2012 / ISO 14229 Knowledge Graph with deep Moroccan fleet localization (extreme heat >45°C impact on cooling and coils; low cetane/sulfur & urban traffic impact on DPF soot accumulation in Casablanca/Rabat). Provide multi-DTC Copilot synthesis to correlate root causes (e.g. lean fuel trim causing misfire) and prioritize technician action plans.
+- **Reason**: Mechanics need rapid, verified electrical/mechanical test steps with multimeter voltage and resistance ranges, factory torque specs, and local operating advice to avoid swapping expensive parts blindly.
+- **Alternatives Considered**: Direct unprompted LLM queries on every DTC click (rejected: high latency, token cost, non-deterministic pinout values).
+- **Consequences**: Instant technician guidance, accurate electrical diagnostic procedures, and evidence-grounded repair checklists.
+
+

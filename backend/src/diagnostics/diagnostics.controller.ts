@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -18,7 +19,9 @@ import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { DiagnosticsService } from './diagnostics.service';
+import { AutomotiveKnowledgeService } from './knowledge/automotive-knowledge.service';
 import {
+  CopilotGuideDto,
   CreateDiagnosticSessionDto,
   CreateDiagnosticVehicleDto,
   ConfirmDto,
@@ -33,13 +36,44 @@ type Actor = { id: string; agencyId: string; role: string };
 @Controller('diagnostics')
 @UseGuards(AuthGuard, CapabilitiesGuard)
 export class DiagnosticsController {
-  constructor(private readonly service: DiagnosticsService) {}
+  constructor(
+    private readonly service: DiagnosticsService,
+    private readonly knowledgeService: AutomotiveKnowledgeService,
+  ) {}
   @Get('access') access(@CurrentUser() user: Actor) {
     return this.service.access(user);
   }
   @Get('scenarios') @RequireCapabilities('diagnostics.view') scenarios() {
     return SCENARIOS;
   }
+  @Get('knowledge/search')
+  @RequireCapabilities('diagnostics.view')
+  searchKnowledge(
+    @Query('query') query?: string,
+    @Query('system') system?: string,
+  ) {
+    return this.knowledgeService.search(query, system as any);
+  }
+  @Get('knowledge/system/:system')
+  @RequireCapabilities('diagnostics.view')
+  knowledgeBySystem(@Param('system') system: string) {
+    return this.knowledgeService.listBySystem(system as any);
+  }
+  @Get('knowledge/dtc/:code')
+  @RequireCapabilities('diagnostics.view')
+  dtcKnowledge(@Param('code') code: string) {
+    const entry = this.knowledgeService.getByCode(code);
+    if (!entry) {
+      throw new NotFoundException(`DTC ${code} not found in knowledge base`);
+    }
+    return entry;
+  }
+  @Post('knowledge/copilot')
+  @RequireCapabilities('diagnostics.view')
+  copilotGuide(@Body() dto: CopilotGuideDto) {
+    return this.knowledgeService.generateCopilotGuide(dto.dtcCodes);
+  }
+
   @Get('vehicles') @RequireCapabilities('diagnostics.view') vehicles(
     @CurrentUser() u: Actor,
   ) {
