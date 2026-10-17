@@ -59,11 +59,13 @@
 ---
 
 ## Recent Verification Evidence
-- **Backend test suite**: **63 passed, 63 total; 523 tests passing** (Jest).
+- **Backend Unit & Integration Suite**: **63 passed, 63 total; 523 tests passing** (Jest).
+- **Backend Live-DB E2E Suite**: **3 passed, 3 total; 16 tests passing** (`test/automotive-diagnostics.e2e-spec.ts`, `test/tenant-isolation.e2e-spec.ts`, `test/app.e2e-spec.ts`).
 - **Backend TypeScript**: `tsc --noEmit` **0 errors**.
-- **Backend Production Build**: `npm run build` **0 errors**.
-- **Frontend Vitest suite**: **7 passed, 7 total; 26 tests passing**.
+- **Backend Production Build**: `npm run build` **0 errors (dist/ clean)**.
+- **Frontend Vitest Suite**: **7 passed, 7 total; 26 tests passing**.
 - **Frontend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Frontend Production Build**: `npm run build` **All 48 routes compiled and optimized (Turbopack)**.
 - **Mobile TypeScript**: `tsc --noEmit` **0 errors**.
 - **Database migrations**: Applied cleanly (`20261017200000_diagnostics`, `20261017203000_add_work_orders`).
+- **Git State**: Clean working tree on branch `feat/automotive-os-platform`.

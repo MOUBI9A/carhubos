@@ -42,3 +42,10 @@
 - **Alternatives Considered**: Arbitrary composite numerical score algorithm (rejected: misleading, statistically undefendable).
 - **Consequences**: High consumer trust, transparent dispute resolution, credible technician communication.
 
+## ADR-007: Mandatory Post-Repair Diagnostic DTC Verification & Live-DB E2E Acceptance
+- **Date**: 2026-10-18
+- **Decision**: Work orders cannot transition to `COMPLETED` unless a certified post-repair verification is recorded certifying that active DTCs are cleared and road-test notes are supplied. This invariant is proven by a live-DB HTTP e2e test suite (`test/automotive-diagnostics.e2e-spec.ts`) against real PostgreSQL.
+- **Reason**: Mechanics must not sign off on repairs without verifying that the root fault code does not return. Incomplete repairs returning to customers destroy trust and create repeat breakdowns.
+- **Alternatives Considered**: Optional or advisory DTC check (rejected: mechanics forget or bypass checks under pressure).
+- **Consequences**: Guaranteed proof of repair; automatic sync to vehicle's permanent `MaintenanceRecord` ledger only happens on confirmed, verified work orders.
+
