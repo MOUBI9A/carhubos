@@ -21,10 +21,10 @@ log_gate() {
   local detail="${3:-}"
   if [[ "$status" == "PASS" ]]; then
     echo -e "[\033[0;32mPASS\033[0m] Gate: $name ${detail:+($detail)}"
-    ((PASS_COUNT++))
+    PASS_COUNT=$((PASS_COUNT + 1))
   else
     echo -e "[\033[0;31mFAIL\033[0m] Gate: $name ${detail:+($detail)}"
-    ((FAIL_COUNT++))
+    FAIL_COUNT=$((FAIL_COUNT + 1))
     exit 1
   fi
 }
