@@ -53,17 +53,26 @@
   - Plain-language health assessment without misleading false precision.
   - Monitored subsystems: Engine & Combustion, Cooling, Emissions, Fuel & Air, Electrical.
   - Clear driveability verdict ("Safe to drive: Yes/No") and layman Q&A explaining what happened, what needs repair, and what happens if ignored.
+- **Automotive Workshop & Fleet Operational Pulse**:
+  - Live Command Centre dashboard widget (`AutomotiveOperationalPulse.tsx`) answering all core operational questions (§32): vehicles waiting in bay, diagnostics needing review, active repairs, blocked jobs/parts, and QC sign-offs.
+  - Backend metrics aggregation endpoint (`GET /api/work-orders/metrics/summary`) strictly scoped by `agencyId`.
+- **ELM327 OBD-II Hardware Adapter**:
+  - Web Bluetooth (BLE) and Web Serial hardware dongle pairing (`elm327Adapter.ts`) with live PID polling and Mode 03 DTC scanning.
+  - Dedicated controls in `DiagnosticBayGauges.tsx`.
+- **Production Gate Harness**:
+  - Automated 11-gate execution harness (`scripts/production-gate.sh`) verifying git cleanliness, migrations, backend/frontend builds and tests, and security baseline.
 - **Frontend Stack**: Next.js 16 App Router, Tailwind CSS, multi-lingual i18n (FR, AR, EN), technician workspace, and work orders dashboard.
 - **Mobile Stack**: Expo 52 React Native mobile application.
 
 ---
 
 ## Recent Verification Evidence
-- **Backend Unit & Integration Suite**: **63 passed, 63 total; 523 tests passing** (Jest).
+- **Production Gate**: **11/11 Gates Passed Cleanly with Concrete Evidence** (`scripts/production-gate.sh`).
+- **Backend Unit & Integration Suite**: **63 passed, 63 total; 524 tests passing** (Jest).
 - **Backend Live-DB E2E Suite**: **3 passed, 3 total; 16 tests passing** (`test/automotive-diagnostics.e2e-spec.ts`, `test/tenant-isolation.e2e-spec.ts`, `test/app.e2e-spec.ts`).
 - **Backend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Backend Production Build**: `npm run build` **0 errors (dist/ clean)**.
-- **Frontend Vitest Suite**: **7 passed, 7 total; 26 tests passing**.
+- **Frontend Vitest Suite**: **8 passed, 8 total; 33 tests passing**.
 - **Frontend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Frontend Production Build**: `npm run build` **All 48 routes compiled and optimized (Turbopack)**.
 - **Mobile TypeScript**: `tsc --noEmit` **0 errors**.
