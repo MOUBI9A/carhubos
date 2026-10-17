@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Activity, CheckCircle2, Download, FileText, FlaskConical, Play, Plus, Trash2 } from 'lucide-react';
+import { Activity, CheckCircle2, Download, FileText, FlaskConical, Play, Plus, Trash2, Wrench } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,6 +12,8 @@ import { useFormat } from '@/lib/useFormat';
 import { useToast } from '@/lib/contexts/ToastContext';
 import { DiagnosticError, diagnosticInput } from './DiagnosticFeedback';
 import type { DiagnosticAction, DiagnosticFinding, DiagnosticScenario, DiagnosticSession, EstimateItem } from './types';
+import { CustomerVehicleHealthCard } from './CustomerVehicleHealthCard';
+import { PartsCatalogMatcher, type PartItem } from './PartsCatalogMatcher';
 
 type SessionMutation = UseMutationResult<DiagnosticSession, Error, { session: DiagnosticSession; command: DiagnosticAction }, unknown>;
 
@@ -143,6 +146,7 @@ export function DiagnosticSessionView({ session, scenarios, scenariosError, retr
         <div className="pt-4 border-t border-hairline space-y-3"><p className="text-xs text-text-muted">{t(session.aiProvider?.configured ? 'aiExplanationDescription' : 'aiUnconfigured')}</p>{session.aiProvider?.configured && <Button variant="outline" disabled={!canPerform || busy || !session.analysis || !!session.report} onClick={() => { void run({ action: 'explain', body: {} }); }}>{t('explain')}</Button>}{session.analysis?.aiExplanation?.status === 'AVAILABLE' && <p className="text-sm text-text-muted whitespace-pre-wrap">{session.analysis.aiExplanation.narrative}</p>}{session.analysis?.aiExplanation?.status === 'UNAVAILABLE' && <p className="text-sm text-text-muted">{t('aiUnavailable')}</p>}</div>
       </Card>
 
+      <CustomerVehicleHealthCard sessionId={session.id} canPerform={canPerform} />
       <ConfirmationPanel key={`${session.id}-${session.analysis?.analyzedRevision ?? 'none'}-${session.testResults.map((test) => test.recordedAt).join('-')}`} session={session} canConfirm={canConfirm} busy={busy} onSave={run} />
       <EstimatePanel key={session.id} session={session} canEstimate={canEstimate} busy={busy} onSave={run} />
       <Card className="space-y-4">
@@ -216,25 +220,145 @@ function ConfirmationPanel({ session, canConfirm, busy, onSave }: { session: Dia
 
 function EstimatePanel({ session, canEstimate, busy, onSave }: { session: DiagnosticSession; canEstimate: boolean; busy: boolean; onSave: (command: DiagnosticAction) => Promise<boolean> }) {
   const t = useTranslations('diagnostics');
+  const router = useRouter();
   const { money } = useFormat();
+  const { showToast } = useToast();
   const [items, setItems] = useState<EstimateItem[]>(session.estimate?.items.map(({ kind, description, quantity, unitPrice }) => ({ kind, description, quantity, unitPrice })) ?? [{ kind: 'LABOR', description: '', quantity: '1', unitPrice: '' }]);
   const [vatRate, setVatRate] = useState(String(session.estimate?.vatRate ?? '0.20'));
+  const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
   const disabled = !canEstimate || busy || !session.confirmation || !!session.report;
   const changeItem = (index: number, field: keyof EstimateItem, value: string) => setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
-  return <Card className="space-y-4"><h3 className="font-semibold">{t('estimateTitle')}</h3><p className="text-sm text-text-muted">{t('estimateDescription')}</p>{!session.confirmation && <p className="text-xs text-text-muted">{t('estimatePrerequisites')}</p>}
-    <form onSubmit={(event) => { event.preventDefault(); void onSave({ action: 'estimate', body: { items, vatRate } }); }} className="space-y-4">
-      {items.map((item, index) => <fieldset key={index} disabled={disabled} className="grid gap-3 sm:grid-cols-2 rounded-xl border border-hairline p-4"><legend className="px-1 text-xs text-text-muted">{t('estimateLine', { index: index + 1 })}</legend>
-        <div><label htmlFor={`estimate-kind-${index}`} className="block text-xs mb-1.5">{t('kind')}</label><select id={`estimate-kind-${index}`} value={item.kind} onChange={(event) => changeItem(index, 'kind', event.target.value)} className={diagnosticInput}>{(['LABOR', 'PART', 'OTHER'] as const).map((kind) => <option key={kind} value={kind}>{t(`estimateKinds.${kind}`)}</option>)}</select></div>
-        <div><label htmlFor={`estimate-description-${index}`} className="block text-xs mb-1.5">{t('lineDescription')}</label><input id={`estimate-description-${index}`} required maxLength={200} value={item.description} onChange={(event) => changeItem(index, 'description', event.target.value)} className={diagnosticInput} /></div>
-        <div><label htmlFor={`estimate-quantity-${index}`} className="block text-xs mb-1.5">{t('quantity')}</label><input id={`estimate-quantity-${index}`} type="number" step="0.01" min="0.01" max="10000" required value={item.quantity} onChange={(event) => changeItem(index, 'quantity', event.target.value)} className={diagnosticInput} /></div>
-        <div><label htmlFor={`estimate-price-${index}`} className="block text-xs mb-1.5">{t('unitPrice')}</label><input id={`estimate-price-${index}`} type="number" step="0.01" min="0" max="9999999" required value={item.unitPrice} onChange={(event) => changeItem(index, 'unitPrice', event.target.value)} className={diagnosticInput} /></div>
-        {items.length > 1 && <Button type="button" size="sm" variant="ghost" className="justify-self-start" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={t('removeLine', { index: index + 1 })}><Trash2 aria-hidden="true" className="h-4 w-4" />{t('remove')}</Button>}
-      </fieldset>)}
-      <Button type="button" variant="outline" size="sm" disabled={disabled || items.length >= 30} onClick={() => setItems((current) => [...current, { kind: 'PART', description: '', quantity: '1', unitPrice: '' }])}><Plus aria-hidden="true" className="h-4 w-4" />{t('addLine')}</Button>
-      <div className="max-w-xs"><label htmlFor="estimate-vat" className="block text-sm mb-2">{t('vatRate')}</label><input id="estimate-vat" type="number" min="0" max="1" step="0.01" value={vatRate} onChange={(event) => setVatRate(event.target.value)} required disabled={disabled} className={diagnosticInput} /><p className="mt-2 text-xs text-text-muted">{t('vatAssumption')}</p></div>
-      {!canEstimate && <p className="text-xs text-text-muted">{t('requiresEstimate')}</p>}
-      <Button type="submit" disabled={disabled}>{t('saveEstimate')}</Button>
-    </form>
-    {session.estimate && <div className="rounded-xl bg-surface-raised p-4"><p className="text-xs text-text-muted mb-3">{t('savedEstimate')}</p><dl className="space-y-2 text-sm"><div className="flex justify-between gap-3"><dt>{t('subtotal')}</dt><dd className="font-mono">{money(Number(session.estimate.subtotal))}</dd></div><div className="flex justify-between gap-3"><dt>{t('tax')}</dt><dd className="font-mono">{money(Number(session.estimate.tax))}</dd></div><div className="flex justify-between gap-3 border-t border-hairline pt-2 font-semibold"><dt>{t('total')}</dt><dd className="font-mono">{money(Number(session.estimate.total))}</dd></div></dl></div>}
-  </Card>;
+
+  const addPartToEstimate = (part: PartItem) => {
+    setItems((current) => [
+      ...current,
+      {
+        kind: 'PART',
+        description: `${part.brand} ${part.name} (${part.partNumber})`,
+        quantity: '1',
+        unitPrice: part.price,
+      },
+    ]);
+    showToast('success', 'Part Added to Estimate', `${part.brand} ${part.name} appended to line items.`);
+  };
+
+  const handleCreateWorkOrder = async () => {
+    if (!session.estimate) return;
+    setCreatingWorkOrder(true);
+    try {
+      const laborLines = session.estimate.items.filter((i) => i.kind === 'LABOR');
+      const partLines = session.estimate.items.filter((i) => i.kind === 'PART');
+      const laborHours = laborLines.reduce((acc, l) => acc + (Number(l.quantity) || 1), 0);
+      const laborRate = laborLines[0]?.unitPrice ? Number(laborLines[0].unitPrice) : 300;
+
+      const res = await api.post('/work-orders', {
+        vehicleId: session.vehicleId,
+        sessionId: session.id,
+        description: `Diagnostic repair: ${session.vehicle.brand} ${session.vehicle.model} (${session.dtcs.map((d) => d.code).join(', ') || 'Fault investigation'})`,
+        priority: session.dtcs.some((d) => d.code.startsWith('P03')) ? 'HIGH' : 'MEDIUM',
+        laborHours,
+        laborRate,
+        parts: partLines.map((p) => ({
+          partNumber: p.description.match(/\(([^)]+)\)/)?.[1] ?? 'PART',
+          name: p.description,
+          quantity: Number(p.quantity) || 1,
+          unitPrice: Number(p.unitPrice) || 0,
+        })),
+      });
+
+      showToast('success', 'Work Order Created', `Order ${res.data.orderNumber} initialized.`);
+      router.push('/dashboard/work-orders');
+    } catch {
+      showToast('danger', 'Error', 'Failed to create work order from estimate');
+    } finally {
+      setCreatingWorkOrder(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Parts Intelligence Matcher */}
+      <PartsCatalogMatcher
+        dtcCodes={session.dtcs.map((d) => d.code)}
+        vehicleBrand={session.vehicle.brand}
+        vehicleModel={session.vehicle.model}
+        onAddPart={addPartToEstimate}
+        disabled={disabled}
+      />
+
+      <Card className="space-y-4">
+        <h3 className="font-semibold">{t('estimateTitle')}</h3>
+        <p className="text-sm text-text-muted">{t('estimateDescription')}</p>
+        {!session.confirmation && <p className="text-xs text-text-muted">{t('estimatePrerequisites')}</p>}
+
+        <form onSubmit={(event) => { event.preventDefault(); void onSave({ action: 'estimate', body: { items, vatRate } }); }} className="space-y-4">
+          {items.map((item, index) => (
+            <fieldset key={index} disabled={disabled} className="grid gap-3 sm:grid-cols-2 rounded-xl border border-hairline p-4">
+              <legend className="px-1 text-xs text-text-muted">{t('estimateLine', { index: index + 1 })}</legend>
+              <div>
+                <label htmlFor={`estimate-kind-${index}`} className="block text-xs mb-1.5">{t('kind')}</label>
+                <select id={`estimate-kind-${index}`} value={item.kind} onChange={(event) => changeItem(index, 'kind', event.target.value)} className={diagnosticInput}>
+                  {(['LABOR', 'PART', 'OTHER'] as const).map((kind) => <option key={kind} value={kind}>{t(`estimateKinds.${kind}`)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor={`estimate-description-${index}`} className="block text-xs mb-1.5">{t('lineDescription')}</label>
+                <input id={`estimate-description-${index}`} required maxLength={200} value={item.description} onChange={(event) => changeItem(index, 'description', event.target.value)} className={diagnosticInput} />
+              </div>
+              <div>
+                <label htmlFor={`estimate-quantity-${index}`} className="block text-xs mb-1.5">{t('quantity')}</label>
+                <input id={`estimate-quantity-${index}`} type="number" step="0.01" min="0.01" max="10000" required value={item.quantity} onChange={(event) => changeItem(index, 'quantity', event.target.value)} className={diagnosticInput} />
+              </div>
+              <div>
+                <label htmlFor={`estimate-price-${index}`} className="block text-xs mb-1.5">{t('unitPrice')}</label>
+                <input id={`estimate-price-${index}`} type="number" step="0.01" min="0" max="9999999" required value={item.unitPrice} onChange={(event) => changeItem(index, 'unitPrice', event.target.value)} className={diagnosticInput} />
+              </div>
+              {items.length > 1 && (
+                <Button type="button" size="sm" variant="ghost" className="justify-self-start" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={t('removeLine', { index: index + 1 })}>
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />{t('remove')}
+                </Button>
+              )}
+            </fieldset>
+          ))}
+
+          <Button type="button" variant="outline" size="sm" disabled={disabled || items.length >= 30} onClick={() => setItems((current) => [...current, { kind: 'PART', description: '', quantity: '1', unitPrice: '' }])}>
+            <Plus aria-hidden="true" className="h-4 w-4" />{t('addLine')}
+          </Button>
+
+          <div className="max-w-xs">
+            <label htmlFor="estimate-vat" className="block text-sm mb-2">{t('vatRate')}</label>
+            <input id="estimate-vat" type="number" min="0" max="1" step="0.01" value={vatRate} onChange={(event) => setVatRate(event.target.value)} required disabled={disabled} className={diagnosticInput} />
+            <p className="mt-2 text-xs text-text-muted">{t('vatAssumption')}</p>
+          </div>
+
+          {!canEstimate && <p className="text-xs text-text-muted">{t('requiresEstimate')}</p>}
+          <Button type="submit" disabled={disabled}>{t('saveEstimate')}</Button>
+        </form>
+
+        {session.estimate && (
+          <div className="rounded-xl bg-surface-raised p-4 space-y-4">
+            <p className="text-xs text-text-muted mb-3">{t('savedEstimate')}</p>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-3"><dt>{t('subtotal')}</dt><dd className="font-mono">{money(Number(session.estimate.subtotal))}</dd></div>
+              <div className="flex justify-between gap-3"><dt>{t('tax')}</dt><dd className="font-mono">{money(Number(session.estimate.tax))}</dd></div>
+              <div className="flex justify-between gap-3 border-t border-hairline pt-2 font-semibold"><dt>{t('total')}</dt><dd className="font-mono">{money(Number(session.estimate.total))}</dd></div>
+            </dl>
+
+            <div className="pt-2 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Estimate approved and verified for work order conversion</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={creatingWorkOrder}
+                onClick={handleCreateWorkOrder}
+              >
+                <Wrench className="h-4 w-4" />
+                {creatingWorkOrder ? 'Converting...' : 'Create Work Order from Estimate'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
 }

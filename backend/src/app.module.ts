@@ -46,6 +46,7 @@ import { EmailModule } from './email/email.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { WorkOrdersModule } from './work-orders/work-orders.module';
+import { PartsModule } from './parts/parts.module';
 
 const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
 
@@ -102,6 +103,7 @@ const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
     OnboardingModule,
     DiagnosticsModule,
     WorkOrdersModule,
+    PartsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -155,4 +155,9 @@ export class DiagnosticsController {
     response.setHeader('Cache-Control', 'private, no-store');
     response.send(buffer);
   }
+  @Get('sessions/:id/health-summary')
+  @RequireCapabilities('diagnostics.view')
+  healthSummary(@CurrentUser() u: Actor, @Param('id') id: string) {
+    return this.service.getCustomerHealth(u.agencyId, id);
+  }
 }

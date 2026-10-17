@@ -29,6 +29,7 @@ import { calculateEstimate } from './estimates/estimate-calculator';
 import type { DiagnosticReasoningProvider } from './providers/diagnostic-provider';
 import { canonicalReportJson } from './reports/report-integrity';
 import { DiagnosticReportService } from './reports/diagnostic-report.service';
+import { translateCustomerHealth } from './reports/customer-health-translator';
 
 const CAPS = [
   'diagnostics.view',
@@ -575,5 +576,9 @@ export class DiagnosticsService {
   }
   async pdf(agencyId: string, id: string) {
     return this.reports.pdf(await this.getReport(agencyId, id));
+  }
+  async getCustomerHealth(agencyId: string, id: string) {
+    const s = await this.session(agencyId, id);
+    return translateCustomerHealth(s);
   }
 }
