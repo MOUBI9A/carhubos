@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { Browser } from 'puppeteer';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -12,6 +13,7 @@ import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { VerifyWorkOrderDto } from './dto/verify-work-order.dto';
 import { assertValidTransition, WorkOrderStatus } from './work-order-state-machine';
+import { PublicService } from '../public/public.service';
 
 @Injectable()
 export class WorkOrdersService {
@@ -19,6 +21,7 @@ export class WorkOrdersService {
     private readonly prisma: PrismaService,
     private readonly auditLogs: AuditLogsService,
     private readonly entitlements: EntitlementsService,
+    private readonly publicService: PublicService,
   ) {}
 
   private scope(agencyId: string) {
@@ -359,4 +362,214 @@ export class WorkOrdersService {
       notes: 'Generated and settled workshop repair invoice',
     });
   }
+
+  async generatePdf(agencyId: string, id: string): Promise<Buffer> {
+    this.scope(agencyId);
+    const order = await this.findOne(agencyId, id);
+    const agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+    });
+
+    const esc = (val: unknown) => {
+      if (val === null || val === undefined) return '';
+      return String(val)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
+    const rawParts = (order as any).parts;
+    const parts = (Array.isArray(rawParts) ? rawParts : []) as Array<{
+      partNumber?: string;
+      name?: string;
+      quantity?: number;
+      unitPrice?: number;
+    }>;
+
+    const vehicleTitle = order.fleetCar
+      ? `${order.fleetCar.brand} ${order.fleetCar.model} (${order.fleetCar.licensePlate})`
+      : order.vehicle
+        ? `${order.vehicle.brand} ${order.vehicle.model} ${order.vehicle.year ?? ''}`
+        : 'Véhicule Atelier';
+
+    const vin = order.vehicle?.vin || 'Non renseigné';
+    const technicianName = order.assignedTechnician?.name || 'Technicien d\'Atelier';
+
+    const partsRows = parts.length > 0
+      ? parts.map((p) => {
+          const qty = Number(p.quantity || 1);
+          const price = Number(p.unitPrice || 0);
+          const total = qty * price;
+          return `<tr>
+            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${esc(p.partNumber || '-')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${esc(p.name || 'Pièce détachée')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${qty}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${price.toFixed(2)} MAD</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${total.toFixed(2)} MAD</td>
+          </tr>`;
+        }).join('')
+      : `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">Aucune pièce de rechange facturée</td></tr>`;
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ordre de Réparation ${esc(order.orderNumber)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 11px; color: #1e293b; margin: 30px; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #7c3aed; padding-bottom: 15px; margin-bottom: 20px; }
+    .title { font-size: 22px; font-weight: 900; color: #1e1b4b; text-transform: uppercase; margin: 0; }
+    .agency-name { font-size: 16px; font-weight: bold; color: #7c3aed; margin: 0 0 4px 0; }
+    .muted { color: #64748b; font-size: 10px; margin: 2px 0; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 10px; font-weight: bold; text-transform: uppercase; background: #f1f5f9; color: #475569; }
+    .grid { display: flex; gap: 20px; margin-bottom: 20px; }
+    .card { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc; }
+    .card-title { font-size: 11px; font-weight: bold; color: #7c3aed; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background: #f1f5f9; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; color: #475569; border-bottom: 2px solid #cbd5e1; }
+    .totals { margin-top: 20px; display: flex; justify-content: flex-end; }
+    .totals-box { width: 280px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #fafafa; }
+    .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
+    .grand-total { font-size: 14px; font-weight: 900; color: #7c3aed; border-top: 2px solid #cbd5e1; padding-top: 8px; margin-top: 4px; }
+    .qc-box { margin-top: 25px; border: 2px dashed ${order.dtcCleared ? '#10b981' : '#f59e0b'}; border-radius: 8px; padding: 15px; background: ${order.dtcCleared ? '#ecfdf5' : '#fffbeb'}; }
+    .qc-title { font-weight: bold; color: ${order.dtcCleared ? '#065f46' : '#92400e'}; font-size: 12px; margin-bottom: 5px; }
+    .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
+    .sig-box { width: 45%; border-top: 1px solid #94a3b8; padding-top: 8px; text-align: center; font-size: 10px; color: #64748b; }
+    footer { margin-top: 40px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h2 class="agency-name">${esc(agency?.name || 'CarHub Workshop')}</h2>
+      <p class="muted">${esc(agency?.address || 'Maroc')}</p>
+      <p class="muted">ICE / N° Fiscal: ${esc(agency?.taxId || 'N/A')}</p>
+      <p class="muted">Tél: ${esc(agency?.businessPhone || 'N/A')}</p>
+    </div>
+    <div style="text-align: right;">
+      <h1 class="title">Ordre de Réparation</h1>
+      <p style="font-family: monospace; font-size: 12px; font-weight: bold; margin: 4px 0;">${esc(order.orderNumber)}</p>
+      <span class="badge">${esc(order.status)}</span>
+      <p class="muted">Date: ${new Date(order.createdAt).toLocaleDateString('fr-FR')}</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Véhicule & Client</div>
+      <p style="margin: 0; font-size: 13px; font-weight: bold;">${esc(vehicleTitle)}</p>
+      <p class="muted">VIN: <span style="font-family: monospace;">${esc(vin)}</span></p>
+      <p class="muted">Technicien assigné: <strong>${esc(technicianName)}</strong></p>
+    </div>
+    <div class="card">
+      <div class="card-title">Motif & Description Atelier</div>
+      <p style="margin: 0; font-size: 11px;">${esc(order.description || 'Intervention mécanique / diagnostique')}</p>
+      ${order.priority ? `<p class="muted">Priorité: <strong>${esc(order.priority)}</strong></p>` : ''}
+    </div>
+  </div>
+
+  <h3 style="font-size: 13px; font-weight: bold; color: #1e1b4b; text-transform: uppercase; margin: 20px 0 5px 0;">Détail des Pièces & Main d'Œuvre</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Référence</th>
+        <th style="width: 40%;">Désignation</th>
+        <th style="width: 10%; text-align: center;">Qté</th>
+        <th style="width: 15%; text-align: right;">Prix Unitaire</th>
+        <th style="width: 15%; text-align: right;">Total HT</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${partsRows}
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">MO-STD</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Main d'Œuvre Spécialisée Atelier (${Number(order.laborHours).toFixed(1)} hrs @ ${Number(order.laborRate).toFixed(2)} MAD/h)</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${Number(order.laborHours).toFixed(1)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${Number(order.laborRate).toFixed(2)} MAD</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${Number(order.laborTotal).toFixed(2)} MAD</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-box">
+      <div class="total-row"><span>Total Pièces HT:</span><span>${Number(order.partsTotal).toFixed(2)} MAD</span></div>
+      <div class="total-row"><span>Total Main d'Œuvre HT:</span><span>${Number(order.laborTotal).toFixed(2)} MAD</span></div>
+      <div class="total-row"><span>Sous-total HT:</span><span>${(Number(order.partsTotal) + Number(order.laborTotal)).toFixed(2)} MAD</span></div>
+      <div class="total-row"><span>TVA (20%):</span><span>${Number(order.taxAmount).toFixed(2)} MAD</span></div>
+      <div class="total-row grand-total"><span>Total Net TTC:</span><span>${Number(order.totalAmount).toFixed(2)} MAD</span></div>
+    </div>
+  </div>
+
+  <div class="qc-box">
+    <div class="qc-title">Certification Post-Réparation & Diagnostic OBD-II</div>
+    <p style="margin: 2px 0; font-size: 11px;">
+      Codes défauts (DTC) réinitialisés & effacés : <strong>${order.dtcCleared ? 'OUI (VÉRIFIÉ)' : 'NON (EN ATTENTE)'}</strong>
+    </p>
+    <p style="margin: 2px 0; font-size: 10px; color: #64748b;">
+      Notes d'essai sur route : ${esc(order.verificationNotes || 'Essai statique et dynamique atelier')}
+    </p>
+    ${order.verifiedAt ? `<p style="margin: 2px 0; font-size: 10px; color: #065f46;">Contrôle qualité certifié le ${new Date(order.verifiedAt).toLocaleString('fr-FR')}</p>` : ''}
+  </div>
+
+  <div class="signatures">
+    <div class="sig-box">Bon pour Accord / Visa Client<br><br><br>Date & Signature</div>
+    <div class="sig-box">Responsable Atelier / Chef d'Équipe<br><br><br>Date & Signature</div>
+  </div>
+
+  <footer>
+    Fider / CarHub OS · Système d'Exploitation Automobile & Gestion d'Atelier · Document généré le ${new Date().toLocaleString('fr-FR')} · ID: ${order.id}
+  </footer>
+</body>
+</html>`;
+
+    let browser: Browser | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const puppeteer = typeof require !== 'undefined' ? require('puppeteer') : await import('puppeteer');
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+        ],
+      });
+      if (!browser) {
+        throw new Error('Failed to launch PDF headless browser engine');
+      }
+      const page = await browser.newPage();
+      await page.setJavaScriptEnabled(false);
+      await page.setContent(html, { waitUntil: 'load' });
+      const pdf = await page.pdf({
+        format: 'A4',
+        margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' },
+        printBackground: true,
+      });
+      return Buffer.from(pdf);
+    } finally {
+      if (browser) {
+        await browser.close().catch(() => {});
+      }
+    }
+  }
+
+  /**
+   * Generates a signed remote estimate approval link that can be shared with the car owner.
+   */
+  async getApprovalShareLink(agencyId: string, id: string) {
+    const order = await this.findOne(agencyId, id);
+    const token = this.publicService.generateEstimateToken(agencyId, id);
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      token,
+      sharePath: `/estimate-approval/${token}`,
+    };
+  }
 }
+

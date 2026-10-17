@@ -300,7 +300,7 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
         }),
       },
     };
-    const svc = new WorkOrdersService(prisma as any, {} as any, {} as any);
+    const svc = new WorkOrdersService(prisma as any, {} as any, {} as any, {} as any);
 
     await expect(svc.findOne(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
     await expect(svc.findOne(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();

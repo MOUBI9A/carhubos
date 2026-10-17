@@ -4,9 +4,10 @@ import { WorkOrdersService } from './work-orders.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { PublicModule } from '../public/public.module';
 
 @Module({
-  imports: [PrismaModule, AuditLogsModule, EntitlementsModule],
+  imports: [PrismaModule, AuditLogsModule, EntitlementsModule, PublicModule],
   controllers: [WorkOrdersController],
   providers: [WorkOrdersService],
   exports: [WorkOrdersService],

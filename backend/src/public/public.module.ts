@@ -7,5 +7,6 @@ import { CarsModule } from '../cars/cars.module';
   imports: [CarsModule],
   controllers: [PublicController],
   providers: [PublicService],
+  exports: [PublicService],
 })
 export class PublicModule {}

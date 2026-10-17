@@ -15,6 +15,7 @@ import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { TrustService } from '../trust/trust.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { AutomationEngine } from '../automations/automation-engine.service';
+import { RentalPricingEngine } from './pricing/rental-pricing.engine';
 
 @Injectable()
 export class BookingsService {
@@ -735,5 +736,42 @@ export class BookingsService {
     );
 
     return updated;
+  }
+
+  /**
+   * Generates a dynamic rental price quote incorporating duration tiers and Moroccan seasonality.
+   */
+  async getPricingQuote(
+    agencyId: string,
+    carId: string,
+    startDate: string,
+    endDate: string,
+    options?: { enableSeasonality?: boolean; enableDurationTiers?: boolean },
+  ) {
+    const car = await this.prisma.car.findFirst({
+      where: { id: carId, agencyId },
+      select: { id: true, brand: true, model: true, pricePerDay: true },
+    });
+    if (!car) {
+      throw new NotFoundException('Car not found');
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      throw new BadRequestException('Valid startDate and endDate (after startDate) are required');
+    }
+
+    const quote = RentalPricingEngine.calculate(car.pricePerDay, start, end, {
+      enableSeasonality: options?.enableSeasonality ?? true,
+      enableDurationTiers: options?.enableDurationTiers ?? true,
+    });
+
+    return {
+      carId: car.id,
+      brand: car.brand,
+      model: car.model,
+      ...quote,
+    };
   }
 }

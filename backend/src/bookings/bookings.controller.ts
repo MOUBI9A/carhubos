@@ -44,6 +44,20 @@ export class BookingsController {
     });
   }
 
+  @Get('pricing/quote')
+  @RequireCapabilities('booking.view')
+  getPricingQuote(
+    @CurrentUser() user: any,
+    @Query('carId') carId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('seasonality') seasonality?: string,
+  ) {
+    return this.bookingsService.getPricingQuote(user.agencyId, carId, startDate, endDate, {
+      enableSeasonality: seasonality === 'true' || seasonality === '1',
+    });
+  }
+
   @Get(':id')
   @RequireCapabilities('booking.view')
   findOne(@CurrentUser() user: any, @Param('id') id: string) {

@@ -53,6 +53,21 @@
   - Plain-language health assessment without misleading false precision.
   - Monitored subsystems: Engine & Combustion, Cooling, Emissions, Fuel & Air, Electrical.
   - Clear driveability verdict ("Safe to drive: Yes/No") and layman Q&A explaining what happened, what needs repair, and what happens if ignored.
+- **Work Order Printable PDF Job Card & Workshop Invoice Generator**:
+  - `generatePdf` endpoint (`GET /api/work-orders/:id/pdf`) producing official A4 printable workshop job cards & invoices in Moroccan Dirhams (MAD, 20% VAT).
+  - Secure HTML injection escaping, agency header with ICE/tax ID, vehicle dossier, itemized parts and labor, and post-repair DTC certification stamp.
+- **Customer Remote Estimate Approval Portal**:
+  - Public endpoints (`GET /api/public/estimates/:token`, `POST /api/public/estimates/:token/approve`).
+  - Cryptographic HMAC-SHA256 signed tamper-evident token with 7-day expiration and strict tenant isolation (404 on invalid).
+  - Dedicated public approval portal (`/estimate-approval/[token]`) with vehicle dossier, layman scope, MAD 20% VAT breakdown, digital sign-off, and instant confirmation.
+  - One-click "Lien Client" copy button on the garage dashboard.
+- **Telematics Fleet Map Live OBD Health Overlay**:
+  - Rebuilt `/dashboard/fleet-map` with real-time Moroccan operational hubs (Casablanca, Marrakech, Tangier, Rabat, Agadir, etc.), live OBD DTC health status badges (Nominal 🟢, Alerte 🟡, Critique 🔴), vehicle telemetry breakdown, and quick diagnostic bay drawer.
+- **Rental Core Rate Tiers & Seasonality Engine**:
+  - `RentalPricingEngine` with duration tiers (Weekly 10% discount, Monthly 20% discount), Moroccan Peak Summer Seasonality (+20% surge in July/August), strict Decimal.js math in MAD with 20% inclusive VAT.
+  - Dynamic pricing quote endpoint (`GET /api/bookings/pricing/quote`).
+- **Fleet Grid Pagination Adoption**:
+  - 12-item responsive paginated grid on `/dashboard/fleet` with previous/next controls, page indicators, and query-reset state.
 - **Automotive Workshop & Fleet Operational Pulse**:
   - Live Command Centre dashboard widget (`AutomotiveOperationalPulse.tsx`) answering all core operational questions (§32): vehicles waiting in bay, diagnostics needing review, active repairs, blocked jobs/parts, and QC sign-offs.
   - Backend metrics aggregation endpoint (`GET /api/work-orders/metrics/summary`) strictly scoped by `agencyId`.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { CarPhoto, AgencyImage } from '@/components/ui/AgencyImage';
@@ -17,6 +17,8 @@ import {
   RefreshCw,
   TrendingUp,
   SearchX,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
@@ -75,6 +77,20 @@ export default function FleetGuardian() {
         .includes(q);
     });
   }, [cars, query, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedCars = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
 
   const stats = useMemo(() => {
     const counts = { total: 0, AVAILABLE: 0, RENTED: 0, MAINTENANCE: 0, OUT_OF_SERVICE: 0 };
@@ -258,70 +274,108 @@ export default function FleetGuardian() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filtered.map((car) => {
-            const score = complianceScore(car.documents);
-            const health = complianceHealth(score);
-            const statusStyle = STATUS_STYLES[car.status];
-            return (
-              <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
-                <Card padding="none" className="group h-full cursor-pointer overflow-hidden">
-                  <CarPhoto
-                    alt={`${car.brand} ${car.model}`}
-                    plate={car.licensePlate}
-                    price={`${car.pricePerDay.toLocaleString()} MAD/day`}
-                    rounded="rounded-none"
-                  />
-                  <div className="space-y-4 p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold tracking-tight text-foreground">
-                          {car.brand} {car.model}
-                        </h3>
-                        <p className="mt-0.5 text-xs text-text-muted">
-                          <span className="font-mono tabular">{car.year}</span> ·{' '}
-                          <span className="font-mono tabular">{car.mileage.toLocaleString()}</span> km
-                        </p>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {paginatedCars.map((car) => {
+              const score = complianceScore(car.documents);
+              const health = complianceHealth(score);
+              const statusStyle = STATUS_STYLES[car.status];
+              return (
+                <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
+                  <Card padding="none" className="group h-full cursor-pointer overflow-hidden">
+                    <CarPhoto
+                      alt={`${car.brand} ${car.model}`}
+                      plate={car.licensePlate}
+                      price={`${car.pricePerDay.toLocaleString()} MAD/day`}
+                      rounded="rounded-none"
+                    />
+                    <div className="space-y-4 p-5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-semibold tracking-tight text-foreground">
+                            {car.brand} {car.model}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            <span className="font-mono tabular">{car.year}</span> ·{' '}
+                            <span className="font-mono tabular">{car.mileage.toLocaleString()}</span> km
+                          </p>
+                        </div>
+                        <Badge
+                          variant={car.status === 'AVAILABLE' ? 'outline' : car.status === 'OUT_OF_SERVICE' ? 'destructive' : 'secondary'}
+                          className="shrink-0"
+                        >
+                          <span className={cn('me-1 w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
+                          {car.status.replace(/_/g, ' ').toLowerCase()}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={car.status === 'AVAILABLE' ? 'outline' : car.status === 'OUT_OF_SERVICE' ? 'destructive' : 'secondary'}
-                        className="shrink-0"
-                      >
-                        <span className={cn('me-1 w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
-                        {car.status.replace(/_/g, ' ').toLowerCase()}
-                      </Badge>
-                    </div>
 
-                    {/* compliance meter */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-text-muted">Compliance</span>
-                        <span className={cn('font-mono tabular', HEALTH_STYLES[health].text)}>
-                          {car.documents.length === 0 ? 'No docs' : `${score}%`}
+                      {/* compliance meter */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-text-muted">Compliance</span>
+                          <span className={cn('font-mono tabular', HEALTH_STYLES[health].text)}>
+                            {car.documents.length === 0 ? 'No docs' : `${score}%`}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
+                          <div
+                            className={cn('h-full transition-all duration-700', HEALTH_STYLES[health].bar)}
+                            style={{ width: `${score}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-hairline pt-3">
+                        <span className={cn('flex items-center gap-1 text-xs font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(0)}% ROI
+                        </span>
+                        <span className="text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                          Manage →
                         </span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
-                        <div
-                          className={cn('h-full transition-all duration-700', HEALTH_STYLES[health].bar)}
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
                     </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
 
-                    <div className="flex items-center justify-between border-t border-hairline pt-3">
-                      <span className={cn('flex items-center gap-1 text-xs font-mono tabular', car.currentRoi >= 0 ? 'text-success' : 'text-danger')}>
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        {car.currentRoi >= 0 ? '+' : ''}{car.currentRoi.toFixed(0)}% ROI
-                      </span>
-                      <span className="text-xs text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                        Manage →
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
+          {/* Pagination controls */}
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-hairline pt-6">
+              <p className="text-xs text-text-muted">
+                Affichage de <span className="font-semibold text-foreground">{(page - 1) * PAGE_SIZE + 1}</span> à{' '}
+                <span className="font-semibold text-foreground">{Math.min(page * PAGE_SIZE, filtered.length)}</span> sur{' '}
+                <span className="font-semibold text-foreground">{filtered.length}</span> véhicules
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="gap-1 text-xs"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Précédent</span>
+                </Button>
+                <span className="text-xs font-mono px-3 py-1 bg-surface-elevated border border-hairline rounded-lg">
+                  Page {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="gap-1 text-xs"
+                >
+                  <span>Suivant</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

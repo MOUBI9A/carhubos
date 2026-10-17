@@ -5,17 +5,23 @@ import { WorkOrdersService } from './work-orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { PublicService } from '../public/public.service';
 
 describe('WorkOrdersService', () => {
   let service: WorkOrdersService;
   let prisma: any;
   let auditLogs: any;
   let entitlements: any;
+  let publicService: any;
 
   const agencyId = 'agency-1';
   const actorId = 'user-1';
 
   beforeEach(async () => {
+    publicService = {
+      generateEstimateToken: jest.fn().mockReturnValue('tok-sample-123'),
+      verifyEstimateToken: jest.fn(),
+    };
     prisma = {
       workOrder: {
         findMany: jest.fn(),
@@ -54,6 +60,7 @@ describe('WorkOrdersService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AuditLogsService, useValue: auditLogs },
         { provide: EntitlementsService, useValue: entitlements },
+        { provide: PublicService, useValue: publicService },
       ],
     }).compile();
 
@@ -266,4 +273,61 @@ describe('WorkOrdersService', () => {
       expect(metrics.criticalIssuesCount).toBe(1);
     });
   });
+
+  describe('generatePdf', () => {
+    it('generates a printable work order PDF buffer with Moroccan Dirham pricing', async () => {
+      prisma.workOrder.findUnique.mockResolvedValue({
+        id: 'wo-1',
+        agencyId,
+        orderNumber: 'WO-2026-0001',
+        status: 'IN_PROGRESS',
+        description: 'Misfire repair P0300',
+        laborHours: new Prisma.Decimal(1.5),
+        laborRate: new Prisma.Decimal(250),
+        laborTotal: new Prisma.Decimal(375),
+        partsTotal: new Prisma.Decimal(480),
+        taxAmount: new Prisma.Decimal(171),
+        totalAmount: new Prisma.Decimal(1026),
+        parts: [{ partNumber: 'NGK-P0300', name: 'Bougies Iridium', quantity: 4, unitPrice: 120 }],
+        dtcCleared: false,
+        createdAt: new Date(),
+        vehicle: { brand: 'Renault', model: 'Clio', vin: 'VF1BB0A0512345678', year: 2022 },
+        fleetCar: null,
+        assignedTechnician: { name: 'Karim Alami' },
+      });
+      prisma.agency = {
+        findUnique: jest.fn().mockResolvedValue({
+          id: agencyId,
+          name: 'Garage Alami Casablanca',
+          address: 'Boulevard Zerktouni, Casablanca',
+          taxId: 'ICE001234567890',
+          phone: '+212522000000',
+        }),
+      };
+
+      const buffer = await service.generatePdf(agencyId, 'wo-1');
+      expect(buffer).toBeInstanceOf(Buffer);
+      expect(buffer.length).toBeGreaterThan(500);
+      expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
+    }, 15000);
+  });
+
+  describe('getApprovalShareLink', () => {
+    it('returns signed remote share token and path for valid work order', async () => {
+      prisma.workOrder.findUnique.mockResolvedValue({
+        id: 'wo-1',
+        agencyId,
+        orderNumber: 'WO-2026-0001',
+        status: 'AWAITING_APPROVAL',
+      });
+
+      const res = await service.getApprovalShareLink(agencyId, 'wo-1');
+      expect(res.orderId).toBe('wo-1');
+      expect(res.orderNumber).toBe('WO-2026-0001');
+      expect(res.token).toBe('tok-sample-123');
+      expect(res.sharePath).toBe('/estimate-approval/tok-sample-123');
+      expect(publicService.generateEstimateToken).toHaveBeenCalledWith(agencyId, 'wo-1');
+    });
+  });
 });
+

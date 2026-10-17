@@ -61,6 +61,7 @@ describe('Automotive Adversarial & Financial Integrity Stress', () => {
       mockPrisma as unknown as PrismaService,
       mockAuditLogs as unknown as AuditLogsService,
       mockEntitlements as unknown as EntitlementsService,
+      { generateEstimateToken: jest.fn().mockReturnValue('tok-adv-123') } as any,
     );
   });
 

@@ -6,8 +6,10 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -45,6 +47,23 @@ export class WorkOrdersController {
     return this.service.getOperationalMetrics(user.agencyId);
   }
 
+  @Get(':id/pdf')
+  @RequireCapabilities('work_order.manage')
+  async downloadPdf(
+    @CurrentUser() user: UserSession,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.service.generatePdf(user.agencyId, id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="work-order-${id.slice(0, 8)}.pdf"`,
+    );
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(buffer);
+  }
+
   @Get(':id')
   @RequireCapabilities('work_order.manage')
   findOne(@CurrentUser() user: UserSession, @Param('id') id: string) {
@@ -78,5 +97,14 @@ export class WorkOrdersController {
     @Body() dto: VerifyWorkOrderDto,
   ) {
     return this.service.recordVerification(user.agencyId, user.id, id, dto);
+  }
+
+  @Get(':id/share-link')
+  @RequireCapabilities('work_order.view')
+  getApprovalShareLink(
+    @CurrentUser() user: UserSession,
+    @Param('id') id: string,
+  ) {
+    return this.service.getApprovalShareLink(user.agencyId, id);
   }
 }

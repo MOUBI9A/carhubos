@@ -16,6 +16,9 @@ import {
   Car,
   ChevronRight,
   Filter,
+  FileDown,
+  Share2,
+  Check,
 } from 'lucide-react';
 
 interface PartItem {
@@ -87,6 +90,7 @@ export default function WorkOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Form states
   const [description, setDescription] = useState('');
@@ -386,6 +390,58 @@ export default function WorkOrdersPage() {
                             {t('postRepairVerify')}
                           </button>
                         )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await api.get(`/work-orders/${order.id}/pdf`, {
+                                responseType: 'blob',
+                              });
+                              const blob = new Blob([res.data], { type: 'application/pdf' });
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `JobCard-${order.orderNumber}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                            } catch (e) {
+                              console.error('Failed to download Work Order PDF', e);
+                            }
+                          }}
+                          title="Télécharger Ordre de Réparation / Facture PDF"
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-surface-elevated hover:bg-surface border border-hairline rounded transition text-zinc-300 hover:text-white cursor-pointer"
+                        >
+                          <FileDown className="w-3.5 h-3.5 text-violet-400" />
+                          <span>PDF</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await api.get(`/work-orders/${order.id}/share-link`);
+                              const link = `${window.location.origin}${res.data.sharePath}`;
+                              await navigator.clipboard.writeText(link);
+                              setCopiedId(order.id);
+                              setTimeout(() => setCopiedId(null), 2500);
+                            } catch (e) {
+                              console.error('Failed to get approval share link', e);
+                            }
+                          }}
+                          title="Copier le lien d'approbation client en ligne"
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-surface-elevated hover:bg-surface border border-hairline rounded transition text-zinc-300 hover:text-white cursor-pointer"
+                        >
+                          {copiedId === order.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copié !</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Lien Client</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </td>
                   </tr>
