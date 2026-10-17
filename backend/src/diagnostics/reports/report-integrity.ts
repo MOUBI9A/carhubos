@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 // PostgreSQL JSONB does not preserve object-key order. Report digests therefore
 // use recursively sorted keys, while preserving array/evidence order.
 // Physical telemetry is normalized to 12 significant digits (well beyond PID
@@ -17,3 +19,25 @@ export function canonicalReportJson(value: unknown): string {
   };
   return JSON.stringify(normalize(value));
 }
+
+/**
+ * Computes a SHA-256 cryptographic digest of the canonical report JSON.
+ */
+export function computeReportHash(value: unknown): string {
+  const canonical = canonicalReportJson(value);
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
+/**
+ * Verifies that the provided report matches the expected SHA-256 digest without any tampering.
+ */
+export function verifyReportIntegrity(value: unknown, expectedHash: string): boolean {
+  const computed = computeReportHash(value);
+  return computed === expectedHash;
+}
+
+export const ReportIntegrityService = {
+  canonicalReportJson,
+  computeReportHash,
+  verifyReportIntegrity,
+};

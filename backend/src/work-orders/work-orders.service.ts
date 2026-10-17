@@ -100,12 +100,22 @@ export class WorkOrdersService {
     // Money math via Decimal
     const hours = new Prisma.Decimal(dto.laborHours ?? 0);
     const rate = new Prisma.Decimal(dto.laborRate ?? 300);
+
+    if (hours.lt(0) || rate.lt(0)) {
+      throw new BadRequestException('Labor hours and labor rate must be non-negative');
+    }
+
     const laborTotal = hours.times(rate).toDecimalPlaces(2);
 
     let partsTotal = new Prisma.Decimal(0);
     const lineItems = (dto.parts ?? []).map((p) => {
       const qty = new Prisma.Decimal(p.quantity);
       const unit = new Prisma.Decimal(p.unitPrice);
+
+      if (qty.lt(0) || unit.lt(0)) {
+        throw new BadRequestException('Parts quantity and unit price must be non-negative');
+      }
+
       const total = qty.times(unit).toDecimalPlaces(2);
       partsTotal = partsTotal.plus(total);
       return {
@@ -178,6 +188,13 @@ export class WorkOrdersService {
     assertValidTransition(existing.status, dto.status);
 
     const targetStatus = dto.status as WorkOrderStatus;
+
+    if (targetStatus === 'COMPLETED' && !existing.dtcCleared) {
+      throw new BadRequestException(
+        'Work order cannot be completed until post-repair diagnostic verification confirms DTCs are cleared',
+      );
+    }
+
     const now = new Date();
 
     const data: Prisma.WorkOrderUpdateInput = {
@@ -259,5 +276,36 @@ export class WorkOrdersService {
     );
 
     return updated;
+  }
+
+  async verifyPostRepair(
+    agencyId: string,
+    id: string,
+    actorId: string,
+    dto: VerifyWorkOrderDto,
+  ) {
+    return this.recordVerification(agencyId, actorId, id, dto);
+  }
+
+  async generateInvoiceFromWorkOrder(
+    agencyId: string,
+    id: string,
+    actorId: string,
+  ) {
+    this.scope(agencyId);
+    const existing = await this.findOne(agencyId, id);
+
+    if (existing.status === 'INVOICED') {
+      throw new BadRequestException('Work order is already invoiced');
+    }
+
+    if (existing.status !== 'COMPLETED') {
+      throw new BadRequestException('Work order must be in COMPLETED status before generating an invoice');
+    }
+
+    return this.updateStatus(agencyId, actorId, id, {
+      status: 'INVOICED',
+      notes: 'Generated and settled workshop repair invoice',
+    });
   }
 }

@@ -1,8 +1,8 @@
 # Current Operational State
 
 - **Active Branch**: `feat/automotive-os-platform`
-- **Active Phase**: Phase 7 (Predictive Maintenance Engine & Offline-Resilient Garage Architecture)
-- **Current Objective**: Predictive maintenance schedules, Moroccan driving intervals, offline garage buffer, real-time OBD telemetry streaming, diagnostic bay gauges, parts matching, and work orders state machine.
+- **Active Phase**: Phase 8 (Automotive Adversarial & Financial Invariant Hardening)
+- **Current Objective**: Adversarial stress testing, zero-decimal drift validation (MAD, 20% VAT), state machine bypass prevention, DTC verification enforcement, predictive maintenance, and offline garage resiliency.
 
 ---
 
@@ -11,6 +11,14 @@
 - **Fleet & Assets**: Vehicles (`Car`), Car Documents, Maintenance Records, Accidents.
 - **Financial Engine**: Bookings, Invoices, Payments, Stripe / Mock gateway integration, Decimal monetary precision (MAD, 20% VAT).
 - **Renter & Consent Vault**: HMAC-SHA256 salted identity hash, consent grants, document vault.
+- **Automotive Adversarial & Financial Integrity**:
+  - Dedicated stress test suite (`automotive-adversarial.spec.ts`) modeled after Creator Revenue OS's financial adversarial rigor.
+  - Mathematical conservation: Zero-decimal drift across fractional labor hours and odd parts pricing with exact `Prisma.Decimal(12,2)` precision.
+  - Hardened non-negative constraints rejecting negative labor hours, negative labor rates, and negative parts quantities.
+  - State machine bypass prevention: illegal jumps (e.g. `DRAFT` $\to$ `COMPLETED`) and illegal rollbacks (e.g. `COMPLETED` $\to$ `DRAFT`) strictly blocked.
+  - Mandatory post-repair diagnostic verification: `COMPLETED` transitions blocked until DTC clearance is explicitly certified by a technician.
+  - Cross-tenant injection & IDOR attack resistance: foreign vehicle/car insertions into work orders return 404.
+  - Double-invoicing prevention & cryptographic SHA-256 tamper-evident report seal invariant.
 - **Predictive Maintenance & Service Interval Engine**:
   - `PredictiveMaintenanceService` analyzing mileage intervals against Moroccan driving conditions (oil & filter every 10k km, air & cabin filters every 20k km, fuel filter every 30k km, brake pads every 30-45k km, timing belt every 100k km).
   - Vehicle schedule calculator with dynamic urgency classifications (`HEALTHY`, `UPCOMING`, `DUE_SOON`, `OVERDUE`).
@@ -51,7 +59,7 @@
 ---
 
 ## Recent Verification Evidence
-- **Backend test suite**: **62 passed, 62 total; 512 tests passing** (Jest).
+- **Backend test suite**: **63 passed, 63 total; 523 tests passing** (Jest).
 - **Backend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Backend Production Build**: `npm run build` **0 errors**.
 - **Frontend Vitest suite**: **7 passed, 7 total; 26 tests passing**.

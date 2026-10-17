@@ -169,6 +169,7 @@ describe('WorkOrdersService', () => {
         totalAmount: new Prisma.Decimal(1920),
         status: 'QUALITY_CHECK',
         fleetCarId: 'car-1',
+        dtcCleared: true,
       });
       prisma.workOrder.update.mockResolvedValue({
         id: 'wo-1',
