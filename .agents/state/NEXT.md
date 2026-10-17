@@ -1,31 +1,37 @@
 # Next Engineering Priorities
 
-The following high-leverage tasks are queued in sequence:
-
+## Completed Milestones
 1. **Prisma Schema & Migrations**:
-   - Add `DiagnosticVehicle`, `DiagnosticSession`, and `DiagnosticReport` models to `backend/prisma/schema.prisma`.
-   - Update `Agency`, `User`, and `Car` relation fields.
-   - Run `npx prisma generate` and verify types compile.
+   - `DiagnosticVehicle`, `DiagnosticSession`, and `WorkOrder` models added with full relational integrity.
+   - Deployed migrations `20261017200000_diagnostics` and `20261017203000_add_work_orders`.
 2. **Capabilities Matrix Expansion**:
-   - Add `diagnostics.view`, `diagnostics.perform`, `diagnostics.confirm`, `diagnostics.estimate`, and `work_order.manage` to `backend/src/common/capabilities.ts`.
-   - Update role presets (`OWNER`, `MANAGER`, `AGENT`).
+   - Added `diagnostics.view`, `diagnostics.perform`, `diagnostics.confirm`, `diagnostics.estimate`, and `work_order.manage` to `backend/src/common/capabilities.ts`.
+   - Updated role presets and added `Diagnostic technician` preset.
 3. **Backend Diagnostics Engine Integration**:
-   - Port `backend/src/diagnostics/` module:
-     - `diagnostics.controller.ts`, `diagnostics.service.ts`, `diagnostics.module.ts`.
-     - `dto/diagnostics.dto.ts`.
-     - `obd/normalizer.ts`, `obd/obd-decoder.ts`, `obd/telemetry.types.ts`.
-     - `rules/diagnostic-rules.ts`.
-     - `simulator/simulator.ts`, `simulator/scenarios.ts`.
-     - `providers/diagnostic-provider.ts`, `providers/anthropic.provider.ts`.
-     - `estimates/estimate-calculator.ts`.
-     - `reports/diagnostic-report.service.ts`.
-   - Wire `DiagnosticsModule` into `backend/src/app.module.ts`.
-4. **Verification & Tests**:
-   - Run `npx tsc --noEmit` on backend.
-   - Run `npx jest` to verify all diagnostic tests pass alongside existing 53 suites.
-5. **Frontend Diagnostics Workspace Integration**:
-   - Wire `/dashboard/diagnostics` and `/agent/diagnostics` routes.
-   - Connect `DiagnosticsWorkspace`, `DiagnosticSessionView`, and `DiagnosticFeedback` components.
-   - Add Sidebar navigation entry with diagnostic status badge.
-6. **Work Order & Repair Operations**:
-   - Implement Work Order state machine and procedures tracking.
+   - Integrated OBD normalizer, decoder, deterministic simulator, diagnostic rules, `AnthropicProvider`, and SHA-256 tamper-evident report generator.
+4. **Work Orders Module & State Machine**:
+   - Explicit 12-state machine (`work-order-state-machine.ts`) with transition rules.
+   - Multi-tenant isolated `WorkOrdersService` and `WorkOrdersController`.
+   - Post-repair verification with DTC re-scan requirement before completion.
+5. **Parts Intelligence & Moroccan Supplier Catalog**:
+   - Provider-neutral parts system with Moroccan distributor pricing in MAD (Autoplus Maroc, Somafaco, Maghreb Accessoires, Copart).
+   - Tiers: `OEM_DIRECT`, `AFTERMARKET_PREMIUM`, `AFTERMARKET_STANDARD`, `ECONOMY`.
+   - DTC to part matching and OEM cross-referencing.
+6. **Customer Vehicle Health Translator**:
+   - Evidence-grounded layman translation engine with monitored subsystem breakdowns and clear driveability verdicts without false precision.
+7. **Frontend Diagnostics & Work Orders Workspaces**:
+   - Integrated `DiagnosticsWorkspace`, `DiagnosticSessionView`, `CustomerVehicleHealthCard`, and `PartsCatalogMatcher`.
+   - Integrated `/dashboard/work-orders` with status filters, KPI cards, transition modal, and DTC verification modal.
+   - Merged localized i18n keys across `en.json`, `fr.json`, and `ar.json`.
+8. **Automated Verification**:
+   - Backend tests: **60/60 test suites passed, 504/504 tests passing**.
+   - Frontend tests: **5/5 test files passed, 19/19 tests passing**.
+   - TypeScript: **0 errors** across `backend`, `frontend`, and `mobile`.
+
+---
+
+## Next Horizon
+1. **Real-time Telemetry Streaming**:
+   - Server-Sent Events (SSE) streaming endpoint for live OBD telemetry packet feed in technician workstation.
+2. **Cloud Deployment & Production Verification**:
+   - Validate Azure Container Apps deployment configs and production gate criteria in `docs/PRODUCTION_GATE.md`.
