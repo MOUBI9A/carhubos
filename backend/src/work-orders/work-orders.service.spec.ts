@@ -23,6 +23,11 @@ describe('WorkOrdersService', () => {
         create: jest.fn(),
         update: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn(),
+      },
+      diagnosticSession: {
+        count: jest.fn(),
+        findMany: jest.fn(),
       },
       diagnosticVehicle: {
         findUnique: jest.fn().mockResolvedValue({ id: 'veh-1', agencyId }),
@@ -232,6 +237,33 @@ describe('WorkOrdersService', () => {
       await expect(
         service.findOne('other-agency', 'wo-1'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getOperationalMetrics', () => {
+    it('aggregates operational metrics answering core garage questions', async () => {
+      prisma.workOrder.groupBy.mockResolvedValue([
+        { status: 'DRAFT', _count: { id: 2 } },
+        { status: 'IN_PROGRESS', _count: { id: 3 } },
+        { status: 'WAITING_FOR_PARTS', _count: { id: 1 } },
+        { status: 'QUALITY_CHECK', _count: { id: 1 } },
+        { status: 'COMPLETED', _count: { id: 5 } },
+      ]);
+      prisma.diagnosticSession.count.mockResolvedValue(2);
+      prisma.diagnosticSession.findMany.mockResolvedValue([
+        { data: { dtcs: [{ code: 'P0300' }] } },
+        { data: { dtcs: [] } },
+      ]);
+
+      const metrics = await service.getOperationalMetrics(agencyId);
+
+      expect(metrics.waitingVehicles).toBe(2);
+      expect(metrics.activeRepairs).toBe(3);
+      expect(metrics.blockedJobs).toBe(1);
+      expect(metrics.readyForQc).toBe(1);
+      expect(metrics.completedThisMonth).toBe(5);
+      expect(metrics.diagnosticsNeedingReview).toBe(2);
+      expect(metrics.criticalIssuesCount).toBe(1);
     });
   });
 });

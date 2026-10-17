@@ -44,6 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { SrDataTable } from '@/components/ui/SrDataTable';
 import { useCustomerRisk } from './useCustomerRisk';
 import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
+import { AutomotiveOperationalPulse } from './components/AutomotiveOperationalPulse';
 
 export default function OwnerDashboard() {
   const t = useTranslations('ownerPages');
@@ -421,6 +422,9 @@ export default function OwnerDashboard() {
           <p className="mt-1 text-xs text-text-muted">Value in the waitlist queue</p>
         </Card>
       </div>
+
+      {/* ═══════ Automotive Workshop & Fleet Pulse ═══════ */}
+      <AutomotiveOperationalPulse />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">

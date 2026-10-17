@@ -39,6 +39,12 @@ export class WorkOrdersController {
     });
   }
 
+  @Get('metrics/summary')
+  @RequireCapabilities('work_order.manage')
+  getOperationalMetrics(@CurrentUser() user: UserSession) {
+    return this.service.getOperationalMetrics(user.agencyId);
+  }
+
   @Get(':id')
   @RequireCapabilities('work_order.manage')
   findOne(@CurrentUser() user: UserSession, @Param('id') id: string) {

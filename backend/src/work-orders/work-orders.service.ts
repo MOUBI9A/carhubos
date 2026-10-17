@@ -53,6 +53,57 @@ export class WorkOrdersService {
     });
   }
 
+  async getOperationalMetrics(agencyId: string) {
+    this.scope(agencyId);
+    await this.entitlements.assertOperating(agencyId);
+
+    const [statusCounts, sessionsNeedingReview, openSessions] = await Promise.all([
+      this.prisma.workOrder.groupBy({
+        by: ['status'],
+        where: { agencyId },
+        _count: { id: true },
+      }),
+      this.prisma.diagnosticSession.count({
+        where: { agencyId, status: 'ANALYZED' },
+      }),
+      this.prisma.diagnosticSession.findMany({
+        where: { agencyId, status: 'OPEN' },
+        select: { data: true },
+      }),
+    ]);
+
+    const counts: Record<string, number> = {};
+    for (const item of statusCounts) {
+      counts[item.status] = item._count.id;
+    }
+
+    const waitingVehicles = (counts['DRAFT'] || 0) + (counts['SCHEDULED'] || 0);
+    const activeRepairs = counts['IN_PROGRESS'] || 0;
+    const blockedJobs = (counts['WAITING_FOR_PARTS'] || 0) + (counts['BLOCKED'] || 0);
+    const readyForQc = (counts['READY_FOR_QUALITY_CHECK'] || 0) + (counts['QUALITY_CHECK'] || 0);
+    const awaitingApproval = counts['AWAITING_APPROVAL'] || 0;
+    const completedThisMonth = (counts['COMPLETED'] || 0) + (counts['INVOICED'] || 0);
+
+    let criticalIssuesCount = 0;
+    for (const session of openSessions) {
+      const data = session.data as any;
+      if (data?.dtcs && Array.isArray(data.dtcs) && data.dtcs.length > 0) {
+        criticalIssuesCount++;
+      }
+    }
+
+    return {
+      waitingVehicles,
+      diagnosticsNeedingReview: sessionsNeedingReview,
+      activeRepairs,
+      blockedJobs,
+      readyForQc,
+      awaitingApproval,
+      completedThisMonth,
+      criticalIssuesCount,
+    };
+  }
+
   async findOne(agencyId: string, id: string) {
     this.scope(agencyId);
     const order = await this.prisma.workOrder.findUnique({
