@@ -1,8 +1,8 @@
 # Current Operational State
 
 - **Active Branch**: `feat/automotive-os-platform`
-- **Active Phase**: Phase 6 (Diagnostic Bay Experience & Live Streaming Telemetry)
-- **Current Objective**: Real-time OBD telemetry streaming, diagnostic bay analog gauges, parts matching, work order execution, and fleet maintenance synchronization.
+- **Active Phase**: Phase 7 (Predictive Maintenance Engine & Offline-Resilient Garage Architecture)
+- **Current Objective**: Predictive maintenance schedules, Moroccan driving intervals, offline garage buffer, real-time OBD telemetry streaming, diagnostic bay gauges, parts matching, and work orders state machine.
 
 ---
 
@@ -11,6 +11,14 @@
 - **Fleet & Assets**: Vehicles (`Car`), Car Documents, Maintenance Records, Accidents.
 - **Financial Engine**: Bookings, Invoices, Payments, Stripe / Mock gateway integration, Decimal monetary precision (MAD, 20% VAT).
 - **Renter & Consent Vault**: HMAC-SHA256 salted identity hash, consent grants, document vault.
+- **Predictive Maintenance & Service Interval Engine**:
+  - `PredictiveMaintenanceService` analyzing mileage intervals against Moroccan driving conditions (oil & filter every 10k km, air & cabin filters every 20k km, fuel filter every 30k km, brake pads every 30-45k km, timing belt every 100k km).
+  - Vehicle schedule calculator with dynamic urgency classifications (`HEALTHY`, `UPCOMING`, `DUE_SOON`, `OVERDUE`).
+  - Fleet-wide predictive overview (`GET /api/maintenance/predictive-overview`) forecasting 30-day pending maintenance expenditure in MAD.
+  - Interactive UI card (`PredictiveMaintenanceCard.tsx`) with progress indicators, status filters, and 1-click work order estimate addition.
+- **Offline-Resilient Technician Bay Buffer**:
+  - `GarageOfflineBuffer` and `OfflineSyncBanner.tsx` supporting spotty garage WiFi networks.
+  - Safe local draft persistence in `localStorage`, automated action queuing, and online reconnection synchronization.
 - **Automotive Diagnostics Engine**:
   - `DiagnosticVehicle` & `DiagnosticSession` with full relational integrity.
   - Streaming OBD-II packet normalizer, PID decoder, re-order window, deduplication.
@@ -43,10 +51,10 @@
 ---
 
 ## Recent Verification Evidence
-- **Backend test suite**: **61 passed, 61 total; 506 tests passing** (Jest).
+- **Backend test suite**: **62 passed, 62 total; 512 tests passing** (Jest).
 - **Backend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Backend Production Build**: `npm run build` **0 errors**.
-- **Frontend Vitest suite**: **6 passed, 6 total; 21 tests passing**.
+- **Frontend Vitest suite**: **7 passed, 7 total; 26 tests passing**.
 - **Frontend TypeScript**: `tsc --noEmit` **0 errors**.
 - **Frontend Production Build**: `npm run build` **All 48 routes compiled and optimized (Turbopack)**.
 - **Mobile TypeScript**: `tsc --noEmit` **0 errors**.

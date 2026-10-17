@@ -14,6 +14,7 @@ import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
 import { SearchService } from './search/search.service';
 import { WorkOrdersService } from '../work-orders/work-orders.service';
 import { DiagnosticsService } from '../diagnostics/diagnostics.service';
+import { PredictiveMaintenanceService } from '../maintenance/predictive/predictive-maintenance.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -316,4 +317,23 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
     await expect(svc.session(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
     await expect(svc.session(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
   });
+
+  it('PredictiveMaintenanceService.calculateScheduleForCar 404s across tenants', async () => {
+    const prisma = {
+      car: {
+        findFirst: agencyScopedFindFirst(),
+      },
+      maintenanceRecord: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      workOrder: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const svc = new PredictiveMaintenanceService(prisma as any);
+
+    await expect(svc.calculateScheduleForCar(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.calculateScheduleForCar(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
 });
+
