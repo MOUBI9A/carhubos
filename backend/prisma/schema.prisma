@@ -58,6 +58,9 @@ model Agency {
   accidents        Accident[]
   checkoutSessions CheckoutSession[]
   vaultFiles       VaultFile[]
+  diagnosticVehicles DiagnosticVehicle[]
+  diagnosticSessions DiagnosticSession[]
+  workOrders         WorkOrder[]
 
   @@index([deletedAt])
 }
@@ -111,6 +114,8 @@ model User {
   notifications      Notification[]
   renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
   vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
+  diagnosticSessions DiagnosticSession[]
+  assignedWorkOrders WorkOrder[] @relation("AssignedTechnician")
 
   @@index([agencyId])
 }
@@ -177,7 +182,10 @@ model Car {
   inspections Inspection[]
   hubListing  HubListing?
   accidents   Accident[]
+  diagnosticVehicles DiagnosticVehicle[]
+  workOrders  WorkOrder[]
 
+  @@unique([id, agencyId])
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
   @@index([status])
@@ -837,3 +845,93 @@ model PlatformInvoice {
   @@index([agencyId])
   @@index([status])
 }
+
+// 🩺 AUTOMOTIVE DIAGNOSTICS & TELEMETRY
+model DiagnosticVehicle {
+  id         String   @id @default(uuid())
+  agencyId   String
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  fleetCarId String?
+  fleetCar   Car?     @relation(fields: [fleetCarId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  vin        String?
+  brand      String
+  model      String
+  year       Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sessions   DiagnosticSession[]
+  workOrders WorkOrder[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, fleetCarId])
+  @@index([agencyId, vin])
+}
+
+model DiagnosticSession {
+  id          String   @id @default(uuid())
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  vehicleId   String
+  vehicle     DiagnosticVehicle @relation(fields: [vehicleId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  source      String   @default("IMPORT")
+  status      String   @default("OPEN")
+  revision    Int      @default(0)
+  symptoms    String   @default("")
+  // Bounded pilot evidence only: capped ingest, explicit provenance.
+  data        Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workOrders  WorkOrder[]
+
+  @@unique([id, agencyId])
+  @@index([agencyId, createdAt])
+}
+
+// 🔧 WORK ORDERS & REPAIR OPERATIONS
+model WorkOrder {
+  id                   String    @id @default(uuid())
+  orderNumber          String
+  agencyId             String
+  agency               Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicleId            String?
+  vehicle              DiagnosticVehicle? @relation(fields: [vehicleId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  fleetCarId           String?
+  fleetCar             Car?      @relation(fields: [fleetCarId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  sessionId            String?
+  session              DiagnosticSession? @relation(fields: [sessionId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  assignedTechnicianId String?
+  assignedTechnician   User?     @relation("AssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  status               String    @default("DRAFT") // DRAFT, AWAITING_APPROVAL, APPROVED, SCHEDULED, IN_PROGRESS, WAITING_FOR_PARTS, BLOCKED, READY_FOR_QUALITY_CHECK, QUALITY_CHECK, COMPLETED, INVOICED, CANCELLED
+  priority             String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  description          String
+  customerNotes        String?
+  internalNotes        String?
+  laborHours           Decimal   @default(0) @db.Decimal(12, 2)
+  laborRate            Decimal   @default(300) @db.Decimal(12, 2)
+  partsTotal           Decimal   @default(0) @db.Decimal(12, 2)
+  laborTotal           Decimal   @default(0) @db.Decimal(12, 2)
+  taxAmount            Decimal   @default(0) @db.Decimal(12, 2)
+  totalAmount          Decimal   @default(0) @db.Decimal(12, 2)
+  currency             String    @default("MAD")
+  lineItems            Json      @default("[]")
+  verificationNotes    String?
+  dtcCleared           Boolean   @default(false)
+  verifiedAt           DateTime?
+  scheduledAt          DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  invoicedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, orderNumber])
+  @@index([agencyId, status])
+  @@index([agencyId, assignedTechnicianId])
+}
+
+

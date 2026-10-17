@@ -32,14 +32,21 @@ const ALL_AGENCY_CAPABILITIES = [
   'hub.manage',
   'staff.manage',
   'settings.manage',
+  'billing.manage',
+  'diagnostics.view',
+  'diagnostics.perform',
+  'diagnostics.confirm',
+  'diagnostics.estimate',
+  'work_order.manage',
 ];
 
-// Mirrors ROLE_PRESETS: OWNER = all 21, MANAGER = 19 (no staff/settings
-// management), AGENT = the 14-cap front-line subset.
+// Mirrors ROLE_PRESETS: OWNER = all, MANAGER = all except staff/settings/billing,
+// AGENT = the front-line subset.
 const ROLE_PRESETS = {
   OWNER: [...ALL_AGENCY_CAPABILITIES],
   MANAGER: ALL_AGENCY_CAPABILITIES.filter(
-    (c) => c !== 'staff.manage' && c !== 'settings.manage',
+    (c) =>
+      c !== 'staff.manage' && c !== 'settings.manage' && c !== 'billing.manage',
   ),
   AGENT: [
     'fleet.view',
@@ -58,6 +65,8 @@ const ROLE_PRESETS = {
     'payment.record',
     'trust.report',
     'reports.view',
+    'diagnostics.view',
+    'diagnostics.perform',
   ],
 };
 
