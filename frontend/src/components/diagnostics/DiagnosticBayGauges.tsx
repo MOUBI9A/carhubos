@@ -4,16 +4,19 @@ import { useEffect, useState, useRef } from 'react';
 import {
   Activity,
   AlertTriangle,
+  Bluetooth,
   CheckCircle,
   Gauge,
   Play,
   Radio,
   Square,
   Thermometer,
+  Usb,
   Zap,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { elm327 } from '@/lib/diagnostics/elm327Adapter';
 
 interface LiveObservation {
   metric: string;
@@ -44,6 +47,9 @@ export function DiagnosticBayGauges({
   onDtcDetected?: (dtcs: LiveDtc[]) => void;
 }) {
   const [isStreaming, setIsStreaming] = useState(false);
+  const [sourceMode, setSourceMode] = useState<'SIMULATOR' | 'BLUETOOTH' | 'SERIAL'>('SIMULATOR');
+  const [hardwareName, setHardwareName] = useState<string | null>(null);
+  const [hardwareError, setHardwareError] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState('p0301');
   const [rpm, setRpm] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -56,6 +62,7 @@ export function DiagnosticBayGauges({
   const [detectedDtcs, setDetectedDtcs] = useState<LiveDtc[]>([]);
   const [recentPackets, setRecentPackets] = useState<LivePacket[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const hwPollIntervalRef = useRef<any>(null);
 
   const startStream = () => {
     if (eventSourceRef.current) {
@@ -119,11 +126,76 @@ export function DiagnosticBayGauges({
     };
   };
 
+  const startHardwareStream = async (mode: 'BLUETOOTH' | 'SERIAL') => {
+    setHardwareError(null);
+    try {
+      let status;
+      if (mode === 'BLUETOOTH') {
+        status = await elm327.connectBluetooth();
+      } else {
+        status = await elm327.connectSerial();
+      }
+      setSourceMode(mode);
+      setHardwareName(status.deviceName ?? 'ELM327 OBD-II');
+      if (status.voltage) setVoltage(status.voltage);
+      setIsStreaming(true);
+
+      let seq = 0;
+      hwPollIntervalRef.current = setInterval(async () => {
+        try {
+          const rpmReading = await elm327.pollPid('0C');
+          if (rpmReading) {
+            setRpm(rpmReading.value);
+            setPacketCount((c) => c + 1);
+            setRecentPackets((prev) => [
+              { sequence: ++seq, observedAt: new Date().toISOString(), pid: 12, observation: rpmReading },
+              ...prev.slice(0, 7),
+            ]);
+          }
+
+          const spdReading = await elm327.pollPid('0D');
+          if (spdReading) setSpeed(spdReading.value);
+
+          const cltReading = await elm327.pollPid('05');
+          if (cltReading) setCoolant(cltReading.value);
+
+          const loadReading = await elm327.pollPid('04');
+          if (loadReading) setEngineLoad(loadReading.value);
+
+          const stftReading = await elm327.pollPid('06');
+          if (stftReading) setStft(stftReading.value);
+
+          const ltftReading = await elm327.pollPid('07');
+          if (ltftReading) setLtft(ltftReading.value);
+
+          if (seq % 15 === 0) {
+            const dtcs = await elm327.readDtcs();
+            if (dtcs.length > 0) {
+              const liveDtcs = dtcs.map((code) => ({ code, status: 'CONFIRMED' }));
+              setDetectedDtcs(liveDtcs);
+              if (onDtcDetected) onDtcDetected(liveDtcs);
+            }
+          }
+        } catch {}
+      }, 300);
+    } catch (err: any) {
+      setHardwareError(err.message || 'Failed to connect to OBD-II device');
+      setIsStreaming(false);
+    }
+  };
+
   const stopStream = () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    if (hwPollIntervalRef.current) {
+      clearInterval(hwPollIntervalRef.current);
+      hwPollIntervalRef.current = null;
+    }
+    elm327.disconnect();
+    setHardwareName(null);
+    setSourceMode('SIMULATOR');
     setIsStreaming(false);
   };
 
@@ -132,6 +204,10 @@ export function DiagnosticBayGauges({
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
+      if (hwPollIntervalRef.current) {
+        clearInterval(hwPollIntervalRef.current);
+      }
+      elm327.disconnect();
     };
   }, []);
 
@@ -150,43 +226,78 @@ export function DiagnosticBayGauges({
       {/* Header & Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-metal" />
-            Diagnostic Bay Live Telemetry Stream
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-metal" />
+              Diagnostic Bay Live Telemetry Stream
+            </h3>
+            {hardwareName && (
+              <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
+                {sourceMode === 'BLUETOOTH' ? <Bluetooth className="h-3 w-3" /> : <Usb className="h-3 w-3" />}
+                {hardwareName}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-xs text-text-muted">
-            High-frequency OBD-II parameter streaming and real-time fault detection
+            High-frequency OBD-II parameter streaming, live hardware pairing, and real-time fault detection
           </p>
+          {hardwareError && (
+            <p className="mt-1 text-xs text-red-400 font-medium">
+              {hardwareError}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={selectedScenario}
-            onChange={(e) => setSelectedScenario(e.target.value)}
-            disabled={isStreaming || !canPerform}
-            className="px-3 py-1.5 text-xs rounded-xl bg-surface border border-hairline focus:outline-none focus:border-primary text-text-primary"
-          >
-            <option value="p0301">Scenario: Cylinder 1 Misfire (P0301)</option>
-            <option value="p0171">Scenario: Lean Fuel Trim (P0171)</option>
-            <option value="p0420">Scenario: Catalyst Efficiency (P0420)</option>
-            <option value="overheating">Scenario: Engine Overheating (115°C+)</option>
-            <option value="city_driving">Scenario: Normal City Driving</option>
-            <option value="highway_driving">Scenario: Highway Cruise (110 km/h)</option>
-          </select>
+          {sourceMode === 'SIMULATOR' && (
+            <select
+              value={selectedScenario}
+              onChange={(e) => setSelectedScenario(e.target.value)}
+              disabled={isStreaming || !canPerform}
+              className="px-3 py-1.5 text-xs rounded-xl bg-surface border border-hairline focus:outline-none focus:border-primary text-text-primary"
+            >
+              <option value="p0301">Scenario: Cylinder 1 Misfire (P0301)</option>
+              <option value="p0171">Scenario: Lean Fuel Trim (P0171)</option>
+              <option value="p0420">Scenario: Catalyst Efficiency (P0420)</option>
+              <option value="overheating">Scenario: Engine Overheating (115°C+)</option>
+              <option value="city_driving">Scenario: Normal City Driving</option>
+              <option value="highway_driving">Scenario: Highway Cruise (110 km/h)</option>
+            </select>
+          )}
 
           {isStreaming ? (
             <Button variant="danger" size="sm" onClick={stopStream}>
               <Square className="h-3.5 w-3.5" /> Stop Stream
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={!canPerform}
-              onClick={startStream}
-            >
-              <Play className="h-3.5 w-3.5" /> Start Live Stream
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!canPerform}
+                onClick={startStream}
+              >
+                <Play className="h-3.5 w-3.5" /> Start Live Stream
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canPerform}
+                onClick={() => startHardwareStream('BLUETOOTH')}
+                title="Pair with Bluetooth ELM327 dongle"
+              >
+                <Bluetooth className="h-3.5 w-3.5 text-blue-400" /> BLE Dongle
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canPerform}
+                onClick={() => startHardwareStream('SERIAL')}
+                title="Connect USB OBD-II cable"
+              >
+                <Usb className="h-3.5 w-3.5 text-amber-400" /> USB Cable
+              </Button>
+            </>
           )}
         </div>
       </div>
