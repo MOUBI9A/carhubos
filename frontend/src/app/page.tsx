@@ -1,33 +1,22 @@
-"use client";
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import RootAuthRouter from '@/components/RootAuthRouter';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/contexts/AuthContext';
+/**
+ * Fast public entry path.
+ *
+ * Authentication is still verified by the existing `/auth/me` flow for users
+ * who present the HttpOnly session cookie. Visitors without any session cookie
+ * can go straight to the public landing page without hydrating AuthContext and
+ * waiting for a client-side redirect.
+ */
+export default async function RootPage() {
+  const cookieStore = await cookies();
+  const hasSessionCookie = Boolean(cookieStore.get('infinity_token')?.value);
 
-export default function RootPage() {
-  const { role, isLoading } = useAuth();
-  const router = useRouter();
+  if (!hasSessionCookie) {
+    redirect('/landing');
+  }
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!role) {
-        router.push('/landing');
-      } else {
-        switch (role) {
-          case 'ROOT_ADMIN': router.push('/admin'); break;
-          case 'OWNER': router.push('/dashboard'); break;
-          case 'AGENT': router.push('/agent'); break;
-          case 'RENTER': router.push('/portal'); break;
-        }
-      }
-    }
-  }, [role, isLoading, router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/20 flex items-center justify-center animate-pulse">
-        <div className="w-2 h-2 rounded-full bg-primary animate-ping"></div>
-      </div>
-    </div>
-  );
+  return <RootAuthRouter />;
 }
