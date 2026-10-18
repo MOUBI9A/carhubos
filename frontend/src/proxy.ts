@@ -7,6 +7,15 @@ import {
 } from './i18n/config';
 
 export function proxy(request: NextRequest) {
+  // Logged-out visitors do not need to boot the client AuthProvider and wait for
+  // /auth/me just to discover that the public landing page is their destination.
+  // Keep the existing client-side role redirect for authenticated users.
+  if (request.nextUrl.pathname === '/' && !request.cookies.has('infinity_token')) {
+    const landingUrl = request.nextUrl.clone();
+    landingUrl.pathname = '/landing';
+    return NextResponse.redirect(landingUrl);
+  }
+
   const existing = request.cookies.get(LOCALE_COOKIE)?.value;
   if (isLocale(existing)) {
     return NextResponse.next();
