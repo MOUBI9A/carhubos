@@ -44,4 +44,5 @@ STOPSIGNAL SIGTERM
 # container is scaled down; npm treats that signal as a failed command and
 # reports exit code 1 even when the application is shutting down normally.
 # Keeping Node as PID 1 also lets Nest receive the lifecycle signal directly.
+# Keep this direct entrypoint so platform scale-down remains a clean lifecycle event.
 CMD ["node", "dist/main"]
