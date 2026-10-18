@@ -43,4 +43,5 @@ STOPSIGNAL SIGTERM
 # Run Node directly instead of through npm. Vercel sends SIGTERM when a
 # container is scaled down; npm treats that signal as a failed command and
 # reports exit code 1 even when the application is shutting down normally.
+# Keeping Node as PID 1 also lets Nest receive the lifecycle signal directly.
 CMD ["node", "dist/main"]
