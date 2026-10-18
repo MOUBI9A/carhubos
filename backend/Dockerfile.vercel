@@ -38,5 +38,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 5406
+STOPSIGNAL SIGTERM
 
-CMD ["npm", "run", "start:prod"]
+# Run Node directly instead of through npm. Vercel sends SIGTERM when a
+# container is scaled down; npm treats that signal as a failed command and
+# reports exit code 1 even when the application is shutting down normally.
+CMD ["node", "dist/main"]
