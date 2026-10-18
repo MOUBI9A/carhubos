@@ -62,6 +62,10 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
 
+  // Vercel Containers send SIGTERM during scale-down and replacement. Let
+  // Nest close providers/connections cleanly instead of looking like a crash.
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
+
   await app.listen(process.env.PORT ?? 5406);
 }
 bootstrap().catch((err) => {
