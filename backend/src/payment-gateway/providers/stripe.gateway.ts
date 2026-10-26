@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import Stripe from 'stripe';
 import {
   CreateCheckoutInput,
@@ -37,9 +43,12 @@ export class StripeGateway implements PaymentGatewayProvider {
     if (!this.client) {
       const key = process.env.STRIPE_SECRET_KEY;
       if (!key) {
-        throw new Error(
-          'Stripe gateway selected but STRIPE_SECRET_KEY is not set. Add a ' +
-            'sk_test_… key (https://dashboard.stripe.com/test/apikeys) to backend/.env.',
+        // Config fault, not a caller fault: the gateway was selected but never
+        // given a key. 503 rather than 500 so it reads as "not available yet"
+        // in logs and monitoring instead of "the app is broken".
+        throw new ServiceUnavailableException(
+          'Online payment is not available: the Stripe gateway is selected but ' +
+            'STRIPE_SECRET_KEY is not set (see backend/.env.example).',
         );
       }
       this.client = new Stripe(key);
@@ -53,26 +62,58 @@ export class StripeGateway implements PaymentGatewayProvider {
     // Stripe expects the amount in the currency's minor unit as an integer.
     // MAD is 2-decimal, so centimes = round(amount * 100) — integer, no float drift.
     const unitAmount = Math.round(input.amount * 100);
-    const session = await this.stripe().checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: input.currency.toLowerCase(),
-            unit_amount: unitAmount,
-            product_data: { name: input.description },
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe().checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: input.currency.toLowerCase(),
+              unit_amount: unitAmount,
+              product_data: { name: input.description },
+            },
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      // Echoed back so we can correlate to our CheckoutSession if ever needed;
-      // settlement keys off the session id (providerRef).
-      metadata: { sessionId: input.sessionId },
-    });
+        ],
+        success_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        // Echoed back so we can correlate to our CheckoutSession if ever needed;
+        // settlement keys off the session id (providerRef).
+        metadata: { sessionId: input.sessionId },
+      });
+    } catch (err) {
+      // Stripe refusing the call is an UPSTREAM failure, not an app bug — an
+      // unhandled throw here surfaced to the agency as a bare 500 "Internal
+      // server error", which tells the person taking the payment nothing and
+      // hides the real cause (e.g. an account-level setting Stripe requires
+      // before Checkout works at all).
+      //
+      // The provider's own message goes to the log, NOT to the response: it is
+      // written for whoever owns the Stripe account — the platform — and an
+      // agency user is not that person. They get an actionable operational
+      // message and still have the manual "record a payment" path.
+      if (err instanceof ServiceUnavailableException) throw err;
+      this.logger.error(
+        // Spell out the unit: `472500 MAD` in a log at 2am reads as four hundred
+        // seventy-two thousand dirhams, not 4725.00.
+        `Stripe refused a checkout session (amount=${unitAmount} centimes = ` +
+          `${input.amount} ${input.currency}, sessionId=${input.sessionId}): ` +
+          `${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new BadGatewayException(
+        'The payment provider rejected this request, so no payment link was ' +
+          'created. Record the payment manually, or try again shortly.',
+      );
+    }
     if (!session.url) {
-      throw new Error('Stripe did not return a checkout URL.');
+      this.logger.error(
+        `Stripe created session ${session.id} without a checkout URL.`,
+      );
+      throw new BadGatewayException(
+        'The payment provider did not return a payment link. Record the ' +
+          'payment manually, or try again shortly.',
+      );
     }
     return { providerRef: session.id, redirectUrl: session.url };
   }
@@ -83,21 +124,38 @@ export class StripeGateway implements PaymentGatewayProvider {
   ): Promise<WebhookEvent> {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!secret) {
-      throw new Error(
-        'STRIPE_WEBHOOK_SECRET is not set — cannot verify the webhook signature.',
+      // Config fault. 503 also tells Stripe to retry later, which is what we
+      // want — the delivery is legitimate, we just can't verify it yet.
+      throw new ServiceUnavailableException(
+        'Cannot verify the webhook signature: STRIPE_WEBHOOK_SECRET is not set.',
       );
     }
+
+    // This endpoint is PUBLIC and unauthenticated — anyone on the internet can
+    // POST to it. Every rejection below therefore has to be a 4xx: an unsigned
+    // or forged request is a bad REQUEST, not an internal fault. Throwing a
+    // bare Error made each one a 500 with a stack trace, which meant background
+    // internet noise looked identical to a real outage in the logs, and would
+    // page whoever is on call once error tracking lands in Phase 9.
     const signature = headers['stripe-signature'];
     if (!signature) {
-      throw new Error('Missing stripe-signature header.');
+      throw new BadRequestException('Missing stripe-signature header.');
     }
     // constructEvent throws on a bad signature — this authenticates the call.
     // Never trust the body without it.
-    const event = this.stripe().webhooks.constructEvent(
-      rawBody,
-      signature,
-      secret,
-    );
+    let event: Stripe.Event;
+    try {
+      event = this.stripe().webhooks.constructEvent(rawBody, signature, secret);
+    } catch (err) {
+      // Worth seeing (someone is posting forged webhooks) but not as an error
+      // with a stack — it is an expected, handled rejection.
+      this.logger.warn(
+        `Rejected a Stripe webhook with an invalid signature: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      throw new BadRequestException('Invalid Stripe webhook signature.');
+    }
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;

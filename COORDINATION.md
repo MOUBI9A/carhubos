@@ -282,7 +282,7 @@ Pick a lane that doesn't touch the other agent's files. Current backlog (details
 - ~~Lane 4 — Infra/CI~~ **DONE** (live-DB e2e job + Playwright e2e job both in `.github/workflows/ci.yml`, R27).
 - ~~Lane 4b — Vault file storage~~ **DONE end-to-end** (R38 backend, R39 frontend). Awaiting the founder's real Supabase project keys for a live smoke test — dormant/503 until then, same as Stripe. See "Vault file storage — architecture" below for the full spec.
 - ~~Lane 5a — SaaS-subscription checkout~~ **DONE** (R46, 2026-07-27) — founder provided the product-call, V1 built (upgrade-only, one-shot, no proration).
-- **Lane 5b — Founder-gated (do NOT start without the founder):** Phase 9 deploy, Phase 10 final review, making CI a required PR check, **Stripe live test** (needs real `.env` keys — founder's). **Blocked by Founder as of 2026-07-24** — the founder will provide keys later; not being worked in the meantime.
+- **Lane 5b — Founder-gated (do NOT start without the founder):** Phase 9 deploy, Phase 10 final review, making CI a required PR check. ~~**Stripe live test** (needs real `.env` keys)~~ — **this part was stale and is now unblocked (R50, 2026-08-11).** The founder had already added `PAYMENT_PROVIDER=stripe` + `rk_test_…` + `whsec_…` to `backend/.env`; nobody re-checked. The test-mode smoke test has now been run: the key authenticates fine, and the only thing left is a **one-click founder action** — set a business name at https://dashboard.stripe.com/account, which Stripe requires before Checkout works at all. Full settlement still needs `stripe listen` (or a tunnel) so Stripe can reach the machine. **Re-verify a "blocked" flag before carrying it forward — this one had been false for weeks.**
 
 ## Open findings — flagged by one agent, owned by the other
 
@@ -2916,3 +2916,84 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+---
+
+### R50 — Stripe test-mode smoke test finally run: the keys were already there, and it surfaced a real 500-instead-of-4xx bug on the public webhook endpoint (sole developer, 2026-08-11)
+
+**The lane was never actually blocked.** "Live Stripe test — Blocked by
+Founder, needs real `.env` keys" has been sitting in Open lanes since
+2026-07-24. It is stale: `backend/.env` already contains
+`PAYMENT_PROVIDER=stripe`, a restricted test key (`rk_test_…`) and a
+webhook secret (`whsec_…`). Nobody re-checked the premise after the founder
+added them. **Lesson worth keeping: re-verify a "blocked" flag before
+carrying it into another session — the blocker may have been cleared
+without anyone updating the board.**
+
+**What the smoke test proved.** `POST /payments/checkout/:invoiceId` against
+a real DUE invoice (4725.00 MAD) reaches Stripe and Stripe *authenticates
+the key* — the call fails on an account-level business rule, not on auth:
+
+```
+In order to use Checkout, you must set an account or business name
+at https://dashboard.stripe.com/account.
+```
+
+So the adapter, the key, the MAD→centimes conversion and the request shape
+are all correct. **Founder action, one click, no code:** set a business name
+in the Stripe dashboard, then the checkout path can be run end to end. This
+is on the setup console page (`docs/setup-console.html`) so it does not get
+lost again.
+
+**The real bug it exposed — every gateway failure was a bare 500.**
+`stripe.gateway.ts` threw plain `Error`s, which Nest renders as
+`500 Internal server error` plus a stack trace. Two of those paths are
+reachable by **anyone on the internet**: `/api/payments/webhooks/:provider`
+is public and unauthenticated by design (the gateway is the caller). So an
+unsigned or forged POST produced a 500 with a stack, identical in the logs
+to a genuine outage — and once error tracking lands in Phase 9, identical
+to a page-someone alert. Confirmed live before the fix, both 500.
+
+Mapping now, each verified live and pinned by tests:
+
+| Situation | Was | Now |
+|---|---|---|
+| Webhook with no `stripe-signature` | 500 | **400** `Missing stripe-signature header.` |
+| Webhook with a forged signature | 500 | **400** `Invalid Stripe webhook signature.` (logged `warn`, not `error`) |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` unset | 500 | **503** — a config fault is "not available yet", not "we crashed" |
+| Stripe refuses the checkout call | 500 | **502** with an operator-actionable message |
+| `PAYMENT_PROVIDER=cmi` (scaffold) | 500 | **503**, same reasoning |
+
+**Deliberate call on the 502 body:** the provider's own wording goes to the
+log, never to the response. Stripe writes those messages for whoever owns
+the Stripe account — the *platform* — and an agency user is not that
+person; telling them to go fix a setting in a dashboard they cannot reach
+is noise at best and an internals leak at worst. They get "record the
+payment manually, or try again shortly", which is a real path they already
+have. A test pins this (asserts `dashboard.stripe.com` never appears in the
+thrown message *and* does appear in the log), so a future "let's surface the
+real error" refactor has to argue with it consciously.
+
+**Also confirmed while in there:** `CheckoutService.createCheckout` calls
+the gateway *before* writing the `CheckoutSession` row, so a gateway failure
+leaves no orphan PENDING session — checked against the live DB after four
+failed attempts (still only the two pre-existing 2026-07-28 MOCK rows).
+Pre-existing correct behaviour; noting it so nobody "tidies" the ordering.
+
+**Still not verified end-to-end, and honest about why:** full settlement
+(hosted page → card → webhook → `settleCheckout`) needs Stripe to reach this
+machine, i.e. `stripe listen --forward-to localhost:5406/api/payments/webhooks/stripe`
+or a tunnel. The settlement logic itself is covered by
+`settle-checkout.spec.ts` / `settle-subscription-checkout.spec.ts`.
+
+**Verified:** backend **50 suites / 408 tests**, `tsc --noEmit` + `eslint`
+clean; new `stripe.gateway.spec.ts` (16 tests). Every status in the table
+above re-probed against the running server after the fix, not just asserted
+in unit tests.
+
+**New founder-facing page:** `docs/setup-console.html` (branch
+`docs-setup-console`, PR #10) — every pending env var and decision in one
+place, including this Stripe business-name item and the fact that
+`TWILIO_WHATSAPP_NUMBER` is still Twilio's shared public sandbox (it only
+delivers to numbers that separately opted into that sandbox, so no real
+customer will ever receive a notification from it).
