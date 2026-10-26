@@ -2916,3 +2916,50 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+---
+
+### R51 — The message catalogs had 42 duplicate keys, 9 of them with two different translations (sole developer, 2026-08-11)
+
+**Read this before editing `frontend/messages/*.json` with a script.**
+
+`JSON.parse` keeps only the **last** occurrence of a repeated key. All three
+catalogs had accumulated duplicates inside the same object, so the earlier
+definition was dead — and where the two disagreed, a translation somebody
+wrote had never been rendered. Editing the first `confirmBlacklist` in
+`fr.json` changed nothing, with no error and no warning.
+
+**Why no existing test caught it.** `locales.test.ts` imports the catalogs,
+which means `JSON.parse` has already run — and parsing is exactly the step
+that collapses a duplicate. No test operating on the parsed object can ever
+see one, however it is written. The new guard reads the unparsed source via
+Vite's `?raw` and scans it depth-aware, so a repeat inside one object fails
+while `common.save` + `nav.save` stay legal. It is proven to catch an
+injected duplicate, not merely to pass on clean files.
+
+**The trap for the next agent:** do NOT "fix up" a catalog with
+`json.load` → `json.dump`. Until #12 merges, that silently drops the
+duplicates as an invisible side effect riding along in whatever commit you
+were actually making. The i18n work in PRs #8 and #9 therefore inserts keys
+**textually** (after the `"ownerPages": {` line) rather than re-serialising.
+Keep doing that, or merge #12 first.
+
+**Also landed this session (founder decision, 2026-08-11: translate the new
+owner screens now rather than after the beta):** `TelematicsPanel` +
+`TelematicsSettings` (PR #8, 75 keys) and `RateRulesSettings` (PR #9, 50
+keys) are fully FR/AR/EN, verified live in all three locales with `dir="rtl"`
+and no raw keys or console errors. Three judgement calls worth not
+re-litigating: "Traccar" stays untranslated (a product name the operator
+sees in their own provider's dashboard); rate-rule dates stay as raw ISO
+slices (mono tabular bounds meant for comparison down a list, not prose);
+and the Arabic season summary uses `←` because U+2192 is not in the bidi
+mirroring set, so a `→` there points from the end date to the start date.
+
+**Still English, unchanged and pre-existing:** the fleet detail page that
+*hosts* the GPS panel ("Compliance score", "Rental history", "Log
+maintenance"), and the staff-access card on the settings page ("Manage
+staff", "This is a read-only overview…"). The GPS panel is now a translated
+island on an untranslated page — the inverse of before. Also visible there:
+an English sentence inside the RTL container renders with its full stop
+leading (".No documents registered yet"), a bidi artifact in pre-existing
+copy.
