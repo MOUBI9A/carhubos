@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
 import api from '@/lib/api';
+import { RateRulesSettings } from './RateRulesSettings';
 
 interface AgencyMember {
   id: string;
@@ -306,6 +307,8 @@ export default function OwnerSettings() {
             </button>.
           </p>
         </Card>
+
+        <RateRulesSettings />
       </div>
 
       {/* Subdomain Modal */}

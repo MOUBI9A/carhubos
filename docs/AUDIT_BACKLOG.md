@@ -193,6 +193,45 @@ Verified E2E in-browser as `renter@carhub.os`: the consent invariant holds — a
 
 ---
 
+## PHASE 14 — Rate tiers & seasonality ✅ DONE (`feat-rate-tiers`; see [PRICING.md](PRICING.md))
+
+Founder decision (2026-08-08): price depends on season/date **and** duration
+**and** vehicle class — all three.
+
+- ✅ **[H] Pricing engine** — `PricingService`, pure and unit-testable.
+  Seasonal per day, duration once on the subtotal, class/car scoping.
+  No rules configured = byte-for-byte the previous total.
+- ✅ **[H] Per-day seasonal application** — a rental crossing a season
+  boundary is split day by day. Any whole-booking scheme keys off the start
+  or end date and is gameable by shifting the booking a day.
+- ✅ **[H] Rules never stack** — one winner per day (priority → specificity
+  car>class>agency → id). Two +20% rules compounding to +44% is a bug that
+  only surfaces in a customer dispute.
+- ✅ **[H] Decimal throughout, per-day rounding** — daily rates round to 2dp
+  individually so the invoice reconciles against its own line items; a test
+  asserts breakdown sums == subtotal, another pins 333.33 × 3 = 999.99.
+- ✅ **[H] Quote and booking share one engine** — `GET /pricing/quote` and
+  `BookingsService.create` cannot diverge. Verified live: 4725 → 4725.
+- ✅ **[H] Nonsense guards** — negative prices impossible (clamped AND
+  rejected), PERCENT bounded −100…1000, dateless "seasons" and
+  maxDays<minDays refused with specific messages.
+- ✅ **[M] Capability split** — `settings.manage` to write the price list,
+  `booking.create` to read a quote (front desk quotes without repricing).
+- ✅ **[M] Owner UI** — rate-tier manager on Settings, with an explainer of
+  the per-day / once / never-stack model, since that is what an operator
+  needs to predict a customer's bill.
+- ⬜ **[M] Late fees still use flat `pricePerDay`** — arguably a late day in
+  peak season should cost the peak rate, but that reprices an already-signed
+  booking. **Product call, deliberately not guessed at.**
+- ⬜ **[L] Day-of-week rules** (weekend uplift) — would need a new rule kind;
+  `SEASONAL` is date-range only.
+- ⬜ **[L] Quote simulator in the settings UI** — engine returns the full
+  breakdown and the endpoint is live; the page just doesn't render a
+  "what would 5 days in August cost?" preview yet.
+- ⬜ **[L] i18n** — English-only, same follow-up as the telematics surfaces.
+
+---
+
 ## Market-Ready Checklist (definition of done)
 
 - [ ] No secrets/DB/build-output in git; history clean; secrets rotated & managed.

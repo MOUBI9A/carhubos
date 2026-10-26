@@ -2916,3 +2916,62 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+---
+
+### R49 — Rate tiers & seasonality (2026-08-10)
+
+**Founder decision:** price depends on season/date **and** duration **and**
+vehicle class — all three. Shipped on `feat-rate-tiers`. Full rationale:
+**[docs/PRICING.md](docs/PRICING.md)**.
+
+**Shape.** `Car.pricePerDay` stays the base; `RateRule` rows move it.
+Seasonal rules are date-windowed and applied **per day**; duration rules are
+day-count-windowed and applied **once** to the subtotal; either can be scoped
+to a `vehicleClass` or pinned to one car. No rules configured → byte-for-byte
+the previous total, so this is safe to merge before anyone configures
+anything.
+
+**Two things that are correctness, not preference — please don't "simplify"
+them later:**
+
+1. **Seasonal is per-day.** Any whole-booking scheme must key off the start
+   date (book a day early, get the whole peak week cheap) or the end date
+   (gameable the other way). Per-day is the only version that can't be
+   gamed and that staff can explain line by line.
+2. **Rules never stack.** One winner per day: priority → specificity
+   (car > class > agency-wide) → id for determinism. Two innocent-looking
+   +20% rules compounding to +44% is a bug you find in a customer dispute,
+   not in review.
+
+**The invariant worth protecting:** `GET /pricing/quote` and
+`BookingsService.create` call the SAME engine. There is deliberately no
+second pricing path — quoting one number at the desk and charging another is
+the failure mode this whole thing is built against. Verified live end to
+end: quote 4725 → booking created at 4725. If you add a pricing surface,
+route it through `PricingService`, don't reimplement.
+
+**Money notes:** all Decimal. Daily rates round to 2dp *individually* (a
+daily rate is a price the customer is quoted and the invoice prints, so
+`7 × 750.00 = 5250.00` must be literally true and reconcile against its own
+line items) — there's a test asserting breakdown-sums == subtotal, and one
+pinning the 333.33 × 3 = 999.99 float trap.
+
+**Open findings / unclaimed:**
+
+- **Late fees still use the flat `car.pricePerDay`** (`bookings.service.ts`
+  overdue path), NOT the rate engine. Arguably a late day in peak season
+  should cost the peak rate — left alone deliberately because it reprices an
+  already-signed booking, which is a product call, not a refactor. Flagging
+  so nobody "fixes" it silently.
+- **No day-of-week rules** (weekend uplift). Would need a new rule kind;
+  `SEASONAL` is date-range only.
+- **UI is English-only**, same as the telematics surfaces (R48). The
+  settings page around it IS translated, so this is the same genuine
+  inconsistency — both are unclaimed.
+
+**Verified:** backend **51 suites / 430 tests** (38 new: 23 engine + 15
+CRUD/boundary), tsc + eslint clean both sides. Live: per-day boundary split
+(600/600/750/750 across 30 Jul→3 Aug), duration on subtotal (7 × 750 = 5250,
+−10% → 4725), quote==booking, both validation guards firing, and the owner UI
+creating + deleting a rule against the real API.

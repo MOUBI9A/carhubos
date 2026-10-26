@@ -15,6 +15,7 @@ import { PdfEngineService } from '../pdf-engine/pdf-engine.service';
 import { TrustService } from '../trust/trust.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { AutomationEngine } from '../automations/automation-engine.service';
+import { PricingService } from '../pricing/pricing.service';
 
 @Injectable()
 export class BookingsService {
@@ -29,6 +30,10 @@ export class BookingsService {
     // above) keep compiling; Nest always injects it in the app since
     // BookingsModule imports AutomationsModule.
     private automationEngine?: AutomationEngine,
+    // Also optional, same reason. When absent (unit specs only) pricing
+    // falls back to the flat pricePerDay × days it has always used, so the
+    // rate engine can never change a test's expected total by surprise.
+    private pricing?: PricingService,
   ) {}
 
   async create(
@@ -177,9 +182,19 @@ export class BookingsService {
     // 6. Calculate total price
     // car.pricePerDay is a Prisma.Decimal — the whole price/VAT chain stays in
     // Decimal space so we never round-trip money through binary float.
+    //
+    // The rate engine prices season (per day), duration (once, on the
+    // subtotal) and vehicle class on top of pricePerDay. With no rules
+    // configured it returns exactly pricePerDay × days, so an agency that
+    // never touches pricing sees no behaviour change. The SAME engine backs
+    // GET /pricing/quote, so the number quoted at the desk is the number the
+    // booking is created at — quoting one price and charging another is the
+    // failure mode worth engineering against here.
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const totalPrice = car.pricePerDay.times(diffDays);
+    const totalPrice = this.pricing
+      ? (await this.pricing.quote(agencyId, car, start, end)).total
+      : car.pricePerDay.times(diffDays);
 
     // 7. Create booking, invoice, and initial PENDING payment in a transaction
     const booking = await this.prisma.$transaction(async (tx) => {
