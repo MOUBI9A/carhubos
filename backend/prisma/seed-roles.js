@@ -274,6 +274,127 @@ async function main() {
   }
   console.log(`  ✓ fleet documents: ${firstFleetCars.length} top vehicles covered (${addedComplianceDocuments} records added)`);
 
+  // Add a small, realistic booking pipeline for the dashboard demo: one
+  // completed rental, one active rental, one approved pickup, and one request.
+  // The composite business lookup keeps repeated role-seed runs idempotent.
+  const demoCustomers = await prisma.customer.findMany({
+    where: { agencyId: agency.id },
+    orderBy: { createdAt: 'asc' },
+    take: 3,
+    select: { id: true },
+  });
+  const demoBookings = [
+    {
+      marker: 'DEMO-BOOKING-01',
+      plate: 'DEMO-198-A',
+      customerIndex: 0,
+      startDate: new Date('2026-10-24T10:00:00.000Z'),
+      endDate: new Date('2026-10-27T10:00:00.000Z'),
+      totalPrice: 1020,
+      status: 'COMPLETED',
+      depositAmount: 1000,
+      depositStatus: 'RETURNED',
+      invoiceStatus: 'PAID',
+      paidAmount: 1020,
+      paymentDate: new Date('2026-10-24T10:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-02',
+      plate: 'DEMO-121-A',
+      customerIndex: 1,
+      startDate: new Date('2026-11-02T09:00:00.000Z'),
+      endDate: new Date('2026-11-06T09:00:00.000Z'),
+      totalPrice: 1440,
+      status: 'ACTIVE',
+      depositAmount: 1200,
+      depositStatus: 'HELD',
+      invoiceStatus: 'PARTIAL',
+      paidAmount: 720,
+      paymentDate: new Date('2026-11-02T09:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-03',
+      plate: 'DEMO-120-A',
+      customerIndex: 2,
+      startDate: new Date('2026-11-06T11:00:00.000Z'),
+      endDate: new Date('2026-11-09T11:00:00.000Z'),
+      totalPrice: 960,
+      status: 'APPROVED',
+      depositAmount: 1000,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-04',
+      plate: 'DEMO-122-A',
+      customerIndex: 0,
+      startDate: new Date('2026-11-10T12:00:00.000Z'),
+      endDate: new Date('2026-11-14T12:00:00.000Z'),
+      totalPrice: 3600,
+      status: 'REQUESTED',
+      depositAmount: 1500,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+  ];
+  let addedBookings = 0;
+  for (const spec of demoBookings) {
+    const customer = demoCustomers[spec.customerIndex];
+    const car = await prisma.car.findUnique({
+      where: { agencyId_licensePlate: { agencyId: agency.id, licensePlate: spec.plate } },
+      select: { id: true },
+    });
+    if (!customer || !car) continue;
+    const existing = await prisma.booking.findFirst({
+      where: { agencyId: agency.id, carId: car.id, startDate: spec.startDate },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    const booking = await prisma.booking.create({
+      data: {
+        startDate: spec.startDate,
+        endDate: spec.endDate,
+        totalPrice: spec.totalPrice,
+        depositAmount: spec.depositAmount,
+        depositStatus: spec.depositStatus,
+        depositMethod: 'CASH',
+        status: spec.status,
+        carId: car.id,
+        customerId: customer.id,
+        agencyId: agency.id,
+      },
+    });
+    const invoice = await prisma.invoice.create({
+      data: {
+        amount: spec.totalPrice,
+        taxAmount: spec.totalPrice === 1020 ? 170 : spec.totalPrice === 1440 ? 240 : spec.totalPrice === 960 ? 160 : 600,
+        status: spec.invoiceStatus,
+        bookingId: booking.id,
+        agencyId: agency.id,
+      },
+    });
+    if (spec.paidAmount > 0 && spec.paymentDate) {
+      await prisma.payment.create({
+        data: {
+          amount: spec.paidAmount,
+          method: 'TRANSFER',
+          type: 'INCOME',
+          status: 'VERIFIED',
+          reference: spec.marker,
+          date: spec.paymentDate,
+          invoiceId: invoice.id,
+        },
+      });
+    }
+    addedBookings++;
+  }
+  console.log(`  ✓ demo bookings: ${demoBookings.length} configured (${addedBookings} added)`);
+
   const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
   if (existingCars === missingDemoCars.length) {
     const customers = [

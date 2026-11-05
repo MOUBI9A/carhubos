@@ -3004,3 +3004,16 @@ now appears in the authenticated owner Command Center welcome banner.
 **Verified:** role seed completed, the database agency name is
 `CarHub Rentals Casablanca`, and the refreshed screenshot confirms the new
 name without the word "Demo".
+
+### R54 — Seeded demo booking pipeline (sole developer, 2026-11-05)
+
+Added four idempotent bookings to the demo agency for presentation and live
+dashboard checks: one COMPLETED rental, one ACTIVE rental, one APPROVED
+pickup, and one REQUESTED booking. Each booking has a customer, fleet car,
+deposit state, and invoice; the completed and active rentals also have
+verified transfer payments (1020 MAD and 720 MAD respectively).
+
+**Verified:** role seed completed with 4 bookings added, and a database query
+confirmed all four booking statuses plus their related invoices and payments.
+The new owner Command Center and Booking planner screenshots show the seeded
+data in the running application.
