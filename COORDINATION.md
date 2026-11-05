@@ -2968,3 +2968,16 @@ and no image is reused more than twice.
 rows; database query confirmed 112 demo vehicles, 61 unique image URLs, and a
 maximum reuse count of 2. The running local backend and frontend hot-reloaded
 the new data.
+
+### R51 — Curated car-only demo imagery (sole developer, 2026-11-05)
+
+Removed the mixed vehicle/SUV/luxury search pool after visual inspection found
+roads, buildings, and other non-car compositions. The demo seed now uses 19
+curated photos from Unsplash's dedicated car results plus the existing known
+vehicle photos. All 110 old Unsplash demo rows were refreshed; non-Unsplash
+custom URLs remain untouched.
+
+**Verified:** demo fleet remains 112 vehicles, uses 19 image URLs, and every
+seed-managed URL is from the curated car-only pool. Maximum reuse is 6 because
+112 vehicles are represented by 19 verified car photos; no unrelated image
+remains in the demo fleet.
