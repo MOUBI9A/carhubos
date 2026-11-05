@@ -102,20 +102,107 @@ async function main() {
     }
   }
 
-  // Populate the demo agency with a small fleet + customers so the owner and
-  // manager land on a dashboard with real data (idempotent: only if empty).
-  const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
-  if (existingCars === 0) {
-    const cars = [
-      { brand: 'Dacia', model: 'Duster', year: 2023, licensePlate: 'DEMO-101-A', imageUrl: 'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85', pricePerDay: 450, status: 'AVAILABLE', mileage: 32000 },
-      { brand: 'Renault', model: 'Clio 5', year: 2024, licensePlate: 'DEMO-102-A', imageUrl: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85', pricePerDay: 350, status: 'AVAILABLE', mileage: 12000 },
-      { brand: 'Volkswagen', model: 'Golf 8', year: 2023, licensePlate: 'DEMO-103-A', imageUrl: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85', pricePerDay: 600, status: 'RENTED', mileage: 28000 },
-      { brand: 'Hyundai', model: 'Tucson', year: 2024, licensePlate: 'DEMO-104-A', imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85', pricePerDay: 900, status: 'AVAILABLE', mileage: 8000 },
-    ];
-    for (const c of cars) {
-      await prisma.car.create({ data: { ...c, agencyId: agency.id } });
-    }
+  // Populate the demo agency with a representative 112-vehicle Moroccan
+  // rental fleet. The plate range is deterministic so this remains idempotent
+  // and only fills missing demo vehicles on later runs.
+  const demoFleetImages = [
+    'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=1200&q=85',
+  ];
+  const demoFleetCatalog = [
+    ['Dacia', 'Duster', 450, 'DIESEL', 'MANUAL'],
+    ['Dacia', 'Logan', 280, 'PETROL', 'MANUAL'],
+    ['Dacia', 'Sandero', 300, 'PETROL', 'MANUAL'],
+    ['Dacia', 'Jogger', 520, 'HYBRID', 'AUTOMATIC'],
+    ['Renault', 'Clio 5', 350, 'PETROL', 'MANUAL'],
+    ['Renault', 'Megane', 480, 'DIESEL', 'MANUAL'],
+    ['Renault', 'Captur', 550, 'PETROL', 'AUTOMATIC'],
+    ['Renault', 'Arkana', 680, 'HYBRID', 'AUTOMATIC'],
+    ['Peugeot', '208', 360, 'PETROL', 'MANUAL'],
+    ['Peugeot', '308', 520, 'DIESEL', 'AUTOMATIC'],
+    ['Peugeot', '2008', 580, 'PETROL', 'AUTOMATIC'],
+    ['Peugeot', '3008', 760, 'DIESEL', 'AUTOMATIC'],
+    ['Citroen', 'C3', 330, 'PETROL', 'MANUAL'],
+    ['Citroen', 'C4', 470, 'PETROL', 'AUTOMATIC'],
+    ['Citroen', 'C5 Aircross', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Volkswagen', 'Polo', 420, 'PETROL', 'AUTOMATIC'],
+    ['Volkswagen', 'Golf 8', 600, 'DIESEL', 'AUTOMATIC'],
+    ['Volkswagen', 'T-Roc', 680, 'PETROL', 'AUTOMATIC'],
+    ['Volkswagen', 'Tiguan', 820, 'DIESEL', 'AUTOMATIC'],
+    ['Hyundai', 'i10', 320, 'PETROL', 'MANUAL'],
+    ['Hyundai', 'i20', 360, 'PETROL', 'MANUAL'],
+    ['Hyundai', 'Tucson', 900, 'DIESEL', 'AUTOMATIC'],
+    ['Hyundai', 'Santa Fe', 1200, 'DIESEL', 'AUTOMATIC'],
+    ['Kia', 'Picanto', 300, 'PETROL', 'MANUAL'],
+    ['Kia', 'Rio', 350, 'PETROL', 'MANUAL'],
+    ['Kia', 'Sportage', 820, 'DIESEL', 'AUTOMATIC'],
+    ['Toyota', 'Yaris', 420, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'Corolla', 520, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'C-HR', 720, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'RAV4', 980, 'HYBRID', 'AUTOMATIC'],
+    ['Skoda', 'Fabia', 360, 'PETROL', 'MANUAL'],
+    ['Skoda', 'Octavia', 560, 'DIESEL', 'AUTOMATIC'],
+    ['Skoda', 'Karoq', 720, 'DIESEL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'A-Class', 950, 'PETROL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'C-Class', 1250, 'DIESEL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'GLC', 1500, 'DIESEL', 'AUTOMATIC'],
+    ['BMW', '1 Series', 900, 'PETROL', 'AUTOMATIC'],
+    ['BMW', '3 Series', 1200, 'DIESEL', 'AUTOMATIC'],
+    ['BMW', 'X1', 1100, 'DIESEL', 'AUTOMATIC'],
+    ['Audi', 'A3', 850, 'PETROL', 'AUTOMATIC'],
+    ['Audi', 'A4', 1150, 'DIESEL', 'AUTOMATIC'],
+    ['Audi', 'Q3', 1250, 'DIESEL', 'AUTOMATIC'],
+    ['Ford', 'Fiesta', 340, 'PETROL', 'MANUAL'],
+    ['Ford', 'Focus', 460, 'DIESEL', 'MANUAL'],
+    ['Ford', 'Puma', 620, 'PETROL', 'AUTOMATIC'],
+    ['Nissan', 'Micra', 330, 'PETROL', 'MANUAL'],
+    ['Nissan', 'Qashqai', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Nissan', 'Juke', 580, 'PETROL', 'AUTOMATIC'],
+    ['Seat', 'Ibiza', 350, 'PETROL', 'MANUAL'],
+    ['Seat', 'Leon', 480, 'PETROL', 'AUTOMATIC'],
+    ['Seat', 'Ateca', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Fiat', 'Tipo', 340, 'DIESEL', 'MANUAL'],
+    ['Fiat', '500', 380, 'PETROL', 'MANUAL'],
+    ['Fiat', 'Doblo', 540, 'DIESEL', 'MANUAL'],
+    ['Range Rover', 'Velar', 1800, 'DIESEL', 'AUTOMATIC'],
+  ];
+  const existingDemoCars = await prisma.car.findMany({
+    where: { agencyId: agency.id, licensePlate: { startsWith: 'DEMO-' } },
+    select: { licensePlate: true },
+  });
+  const existingDemoPlates = new Set(existingDemoCars.map((car) => car.licensePlate));
+  const missingDemoCars = [];
+  for (let index = 0; index < 112; index++) {
+    const licensePlate = `DEMO-${String(101 + index).padStart(3, '0')}-A`;
+    if (existingDemoPlates.has(licensePlate)) continue;
+    const [brand, model, pricePerDay, fuelType, gearbox] = demoFleetCatalog[index % demoFleetCatalog.length];
+    missingDemoCars.push({
+      brand,
+      model,
+      year: 2021 + (index % 5),
+      licensePlate,
+      imageUrl: demoFleetImages[index % demoFleetImages.length],
+      pricePerDay,
+      fuelType,
+      gearbox,
+      status: index % 17 === 0 ? 'MAINTENANCE' : index % 5 === 0 ? 'RENTED' : 'AVAILABLE',
+      mileage: 8000 + ((index * 2371) % 72000),
+      agencyId: agency.id,
+    });
+  }
+  if (missingDemoCars.length > 0) {
+    await prisma.car.createMany({ data: missingDemoCars });
+  }
+  console.log(`  ✓ demo fleet: ${existingDemoCars.length + missingDemoCars.length} vehicles (${missingDemoCars.length} added)`);
 
+  const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
+  if (existingCars === missingDemoCars.length) {
     const customers = [
       { firstName: 'Karim', lastName: 'Bennani', phone: '+212661112233', identityType: 'CIN', identityNumber: 'DEMOK1122', status: 'ACTIVE' },
       { firstName: 'Salma', lastName: 'Idrissi', phone: '+212662223344', identityType: 'CIN', identityNumber: 'DEMOS3344', email: 'salma@example.ma', status: 'ACTIVE' },
@@ -124,7 +211,7 @@ async function main() {
     for (const cu of customers) {
       await prisma.customer.create({ data: { ...cu, agencyId: agency.id } });
     }
-    console.log(`  ✓ seeded ${cars.length} cars + ${customers.length} customers into the demo agency`);
+    console.log(`  ✓ seeded ${customers.length} customers into the demo agency`);
   }
 
   // Backfill imagery on an existing demo fleet without overwriting an agency's

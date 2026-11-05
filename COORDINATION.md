@@ -2938,3 +2938,20 @@ Vitest 9 files / 36 tests passed. Full repository lint remains red on 16
 pre-existing findings outside this change (15 backend, 1 frontend); no new
 lint findings were introduced by the imagery changes. A live HTTP API check
 was unavailable because the local backend was not running.
+
+### R49 — Expanded demo fleet to 112 vehicles (sole developer, 2026-11-05)
+
+Replaced the four-car-only demo seed gate with an idempotent deterministic
+fleet catalog that guarantees 112 demo vehicles for `demo@carhub.os`. The
+catalog covers Moroccan rental staples and premium models across Dacia,
+Renault, Peugeot, Citroen, Volkswagen, Hyundai, Kia, Toyota, Skoda, Mercedes-
+Benz, BMW, Audi, Ford, Nissan, Seat, Fiat, and Range Rover. Each vehicle has
+a unique demo plate, year, MAD daily rate, fuel type, gearbox, mileage, status,
+and real image URL. Missing rows are inserted with `createMany`; existing
+vehicles and agency-owned data are preserved.
+
+**Verified:** first seed run added 108 vehicles; database count is 112 total
+and 112 with images; second seed run added 0 vehicles. Backend typecheck and
+Jest passed (66 suites / 555 tests passed, 1 suite and 4 tests skipped).
+Frontend typecheck and Vitest passed (9 files / 36 tests). Repository lint
+remains red only on the same pre-existing 15 backend and 1 frontend findings.
