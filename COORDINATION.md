@@ -2955,3 +2955,16 @@ and 112 with images; second seed run added 0 vehicles. Backend typecheck and
 Jest passed (66 suites / 555 tests passed, 1 suite and 4 tests skipped).
 Frontend typecheck and Vitest passed (9 files / 36 tests). Repository lint
 remains red only on the same pre-existing 15 backend and 1 frontend findings.
+
+### R50 — Removed repetitive demo fleet imagery (sole developer, 2026-11-05)
+
+Expanded the demo vehicle image pool from 8 URLs to 61 distinct Unsplash
+vehicle photos. The seed now rotates legacy demo-seed URLs into the larger
+pool for the 112 demo vehicles, while never overwriting a custom URL entered
+by an agency owner. The resulting fleet has 112 vehicles, 61 unique images,
+and no image is reused more than twice.
+
+**Verified:** `seed-roles.js` completed successfully and refreshed 112 legacy
+rows; database query confirmed 112 demo vehicles, 61 unique image URLs, and a
+maximum reuse count of 2. The running local backend and frontend hot-reloaded
+the new data.

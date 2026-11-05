@@ -105,7 +105,7 @@ async function main() {
   // Populate the demo agency with a representative 112-vehicle Moroccan
   // rental fleet. The plate range is deterministic so this remains idempotent
   // and only fills missing demo vehicles on later runs.
-  const demoFleetImages = [
+  const legacyDemoFleetImages = [
     'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
     'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85',
     'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
@@ -114,6 +114,69 @@ async function main() {
     'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1200&q=85',
     'https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=1200&q=85',
     'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=1200&q=85',
+  ];
+  const demoFleetImages = [
+    'https://images.unsplash.com/photo-1421091242698-34f6ad7fc088?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1470115636492-6d2b56f9146d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1471958680802-1345a694ba6d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1478059299873-f047d8c5fe1a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1486673748761-a8d18475c757?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1507679252487-e3db58b1642e?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1514179974491-a7885781ed87?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1519817914152-22d216bb9170?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1522255272218-7ac5249be344?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1523496922380-91d5afba98a3?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1528154291023-a6525fabe5b4?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1529369623266-f5264b696110?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1542242476-5a3565835a38?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1546614042-7df3c24c9e5d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1549294413-26f195200c16?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1549439602-43ebca2327af?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1557598628-bdd7d0767917?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1559385301-0187cb6eff46?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1560009320-c01920eef9f8?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1565043666747-69f6646db940?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1566625147574-b1cf1ff6cf7d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1567808291548-fc3ee04dbcf0?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1582639510494-c80b5de9f148?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1585503418537-88331351ad99?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1591363748916-d7f3f2df01b0?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1598248691267-4a62dfdfd8a8?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1612057473166-af2affdb92ad?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1612287970084-4eb0bc4d4e34?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1612563893490-d86ed296e5e6?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1615063029891-497bebd4f03c?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1620998258282-bc3bd5fee9e9?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1622893288761-823ba60f17a6?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1630165356623-266076eaceb6?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1630587148265-761cbd139043?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1650959818516-03d68079f9a0?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1674719645138-c3fd1aaf8307?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1675957421588-bbe528181589?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1694649686884-0d62d0dc47d1?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1705624843697-4461f9dce482?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1712885046114-5ea81a2f7555?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1757922588932-cb0fa4dda952?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1757922589576-129377dadac9?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1758692513983-ebf181d2ec2a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1758915753451-b478b4e6f920?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1759310347910-091a3f3c26e6?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1760261799672-2469a6c4c6f3?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1760690344266-966d1bf7c46c?auto=format&fit=crop&w=1200&q=85',
   ];
   const demoFleetCatalog = [
     ['Dacia', 'Duster', 450, 'DIESEL', 'MANUAL'],
@@ -200,6 +263,24 @@ async function main() {
     await prisma.car.createMany({ data: missingDemoCars });
   }
   console.log(`  ✓ demo fleet: ${existingDemoCars.length + missingDemoCars.length} vehicles (${missingDemoCars.length} added)`);
+
+  // Rotate only legacy seed URLs into the larger pool. A custom URL entered by
+  // an agency owner is never overwritten.
+  const seededDemoCars = await prisma.car.findMany({
+    where: { agencyId: agency.id, licensePlate: { startsWith: 'DEMO-' } },
+    select: { id: true, licensePlate: true, imageUrl: true },
+  });
+  let refreshedDemoImages = 0;
+  for (const car of seededDemoCars) {
+    if (!legacyDemoFleetImages.includes(car.imageUrl)) continue;
+    const plateNumber = Number(car.licensePlate.match(/^DEMO-(\d+)-A$/)?.[1]);
+    if (!Number.isInteger(plateNumber)) continue;
+    const imageUrl = demoFleetImages[(plateNumber - 101) % demoFleetImages.length];
+    if (imageUrl === car.imageUrl) continue;
+    await prisma.car.update({ where: { id: car.id }, data: { imageUrl } });
+    refreshedDemoImages++;
+  }
+  console.log(`  ✓ demo imagery: ${demoFleetImages.length} unique photos (${refreshedDemoImages} legacy rows refreshed)`);
 
   const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
   if (existingCars === missingDemoCars.length) {
