@@ -357,6 +357,7 @@ export default function CarProfile({ params }: { params: Promise<{ id: string }>
         <div className="flex flex-col md:flex-row">
           <div className="md:w-80 lg:w-96 shrink-0">
             <CarPhoto
+              src={car.imageUrl}
               alt={`${car.brand} ${car.model}`}
               plate={car.licensePlate}
               price={`${car.pricePerDay.toLocaleString()} MAD/day`}

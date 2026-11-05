@@ -475,6 +475,7 @@ export default function BookingsScheduler() {
                     <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
                       <div className="h-20 border-b border-hairline px-6 flex items-center gap-3 hover:bg-surface-raised transition-colors cursor-pointer group">
                         <CarPhoto
+                          src={car.imageUrl}
                           alt={`${car.brand} ${car.model}`}
                           rounded="rounded-lg"
                           className="w-14 shrink-0"
@@ -628,6 +629,7 @@ export default function BookingsScheduler() {
             {/* Vehicle */}
             <div className="flex items-center gap-4 rounded-2xl bg-surface border border-hairline p-3">
               <CarPhoto
+                src={selectedBooking.car.imageUrl}
                 alt={`${selectedBooking.car.brand} ${selectedBooking.car.model}`}
                 plate={selectedBooking.car.licensePlate}
                 className="w-20 shrink-0"

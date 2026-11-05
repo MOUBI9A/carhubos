@@ -27,6 +27,7 @@ type Car = {
   brand: string;
   model: string;
   licensePlate: string;
+  imageUrl?: string | null;
   status: string;
 };
 
@@ -177,7 +178,7 @@ export default function AgentOperations() {
                   return (
                     <Card key={car.id} padding="sm" className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <CarPhoto alt={`${car.brand} ${car.model}`} className="w-16 shrink-0" rounded="rounded-lg" />
+                        <CarPhoto src={car.imageUrl} alt={`${car.brand} ${car.model}`} className="w-16 shrink-0" rounded="rounded-lg" />
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">{car.brand} {car.model}</p>
                           <p className="font-mono tabular text-xs text-text-muted truncate">{car.licensePlate}</p>

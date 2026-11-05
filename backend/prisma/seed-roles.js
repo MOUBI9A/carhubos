@@ -107,10 +107,10 @@ async function main() {
   const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
   if (existingCars === 0) {
     const cars = [
-      { brand: 'Dacia', model: 'Duster', year: 2023, licensePlate: 'DEMO-101-A', pricePerDay: 450, status: 'AVAILABLE', mileage: 32000 },
-      { brand: 'Renault', model: 'Clio 5', year: 2024, licensePlate: 'DEMO-102-A', pricePerDay: 350, status: 'AVAILABLE', mileage: 12000 },
-      { brand: 'Volkswagen', model: 'Golf 8', year: 2023, licensePlate: 'DEMO-103-A', pricePerDay: 600, status: 'RENTED', mileage: 28000 },
-      { brand: 'Hyundai', model: 'Tucson', year: 2024, licensePlate: 'DEMO-104-A', pricePerDay: 900, status: 'AVAILABLE', mileage: 8000 },
+      { brand: 'Dacia', model: 'Duster', year: 2023, licensePlate: 'DEMO-101-A', imageUrl: 'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85', pricePerDay: 450, status: 'AVAILABLE', mileage: 32000 },
+      { brand: 'Renault', model: 'Clio 5', year: 2024, licensePlate: 'DEMO-102-A', imageUrl: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85', pricePerDay: 350, status: 'AVAILABLE', mileage: 12000 },
+      { brand: 'Volkswagen', model: 'Golf 8', year: 2023, licensePlate: 'DEMO-103-A', imageUrl: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85', pricePerDay: 600, status: 'RENTED', mileage: 28000 },
+      { brand: 'Hyundai', model: 'Tucson', year: 2024, licensePlate: 'DEMO-104-A', imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85', pricePerDay: 900, status: 'AVAILABLE', mileage: 8000 },
     ];
     for (const c of cars) {
       await prisma.car.create({ data: { ...c, agencyId: agency.id } });
@@ -125,6 +125,21 @@ async function main() {
       await prisma.customer.create({ data: { ...cu, agencyId: agency.id } });
     }
     console.log(`  ✓ seeded ${cars.length} cars + ${customers.length} customers into the demo agency`);
+  }
+
+  // Backfill imagery on an existing demo fleet without overwriting an agency's
+  // own uploaded photo. The URLs are public reference photos for the demo only.
+  const demoCarImages = {
+    'DEMO-101-A': 'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-102-A': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-103-A': 'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-104-A': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
+  };
+  for (const [licensePlate, imageUrl] of Object.entries(demoCarImages)) {
+    await prisma.car.updateMany({
+      where: { agencyId: agency.id, licensePlate, imageUrl: null },
+      data: { imageUrl },
+    });
   }
 
   // Give the demo renter a global trust identity + a global document vault, so

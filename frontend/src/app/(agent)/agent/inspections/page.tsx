@@ -17,6 +17,7 @@ type Car = {
   brand: string;
   model: string;
   licensePlate: string;
+  imageUrl?: string | null;
   mileage: number;
 };
 
@@ -131,6 +132,7 @@ export default function Inspections() {
                 <Card key={item.id} className="flex flex-col md:flex-row md:items-center justify-between gap-5">
                   <div className="flex items-center gap-4 min-w-0">
                     <CarPhoto
+                      src={item.car?.imageUrl}
                       alt={`${item.car?.brand || ''} ${item.car?.model || ''}`.trim() || t('vehicle')}
                       className="w-24 shrink-0"
                     />
@@ -241,6 +243,7 @@ export default function Inspections() {
         {selectedReport && (
           <div className="space-y-6">
             <CarPhoto
+              src={selectedReport.car?.imageUrl}
               alt={`${selectedReport.car?.brand || ''} ${selectedReport.car?.model || ''}`.trim() || t('vehicle')}
               plate={selectedReport.car?.licensePlate}
             />

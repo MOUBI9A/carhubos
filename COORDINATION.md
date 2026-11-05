@@ -2916,3 +2916,25 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+### R48 — Real fleet vehicle data and imagery (sole developer, 2026-11-05)
+
+Added an optional tenant-owned `Car.imageUrl` field with a migration,
+validated HTTPS URL input on create/update, and idempotent demo-seed imagery
+for Dacia Duster, Renault Clio 5, Volkswagen Golf 8, Hyundai Tucson, Range
+Rover Velar, Mercedes-Benz G-Class, and Volkswagen Touareg. Existing agency
+photos are preserved because the seed backfill only fills null values.
+
+Passed `imageUrl` through the public fleet projection and wired it into the
+owner fleet/detail/hub, public agency, renter booking, agent operations and
+inspection, and owner booking card surfaces. The owner "Register vehicle"
+form now accepts an optional public HTTPS photo URL, while blank URLs retain
+the existing Fider placeholder.
+
+**Verified:** migration deployed and Prisma client generated; demo rows contain
+real Unsplash image URLs; backend `tsc --noEmit` clean; backend Jest 66 passed
+(1 skipped suite, 4 skipped tests); frontend `tsc --noEmit` clean; frontend
+Vitest 9 files / 36 tests passed. Full repository lint remains red on 16
+pre-existing findings outside this change (15 backend, 1 frontend); no new
+lint findings were introduced by the imagery changes. A live HTTP API check
+was unavailable because the local backend was not running.

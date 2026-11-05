@@ -70,6 +70,7 @@ export class PublicController {
         model: true,
         year: true,
         pricePerDay: true,
+        imageUrl: true,
         fuelType: true,
         gearbox: true,
         status: true,

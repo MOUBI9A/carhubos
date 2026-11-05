@@ -14,6 +14,7 @@ export interface BookingCar {
   model: string;
   year: number;
   licensePlate: string;
+  imageUrl?: string | null;
   pricePerDay: number;
   status: string;
 }

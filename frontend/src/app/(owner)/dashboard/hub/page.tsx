@@ -273,6 +273,7 @@ export default function HubPage() {
                 >
                   <Card padding="none" className="group h-full overflow-hidden">
                     <CarPhoto
+                      src={listing.car.imageUrl}
                       alt={`${listing.car.brand} ${listing.car.model}`}
                       plate={listing.car.licensePlate}
                       price={`${listing.dailyRateB2B.toLocaleString()} MAD/day`}

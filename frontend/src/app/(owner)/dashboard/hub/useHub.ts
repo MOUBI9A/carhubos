@@ -11,6 +11,7 @@ export interface HubListingCar {
   model: string;
   year: number;
   licensePlate: string;
+  imageUrl?: string | null;
   pricePerDay: number;
   fuelType: string;
   gearbox: string;

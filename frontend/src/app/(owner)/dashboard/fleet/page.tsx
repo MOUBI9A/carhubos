@@ -38,6 +38,7 @@ const INITIAL_FORM = {
   model: '',
   year: String(new Date().getFullYear()),
   licensePlate: '',
+  imageUrl: '',
   pricePerDay: '',
   fuelType: 'DIESEL',
   gearbox: 'MANUAL',
@@ -131,6 +132,7 @@ export default function FleetGuardian() {
         model: form.model.trim(),
         year,
         licensePlate: form.licensePlate.trim().toUpperCase(),
+        imageUrl: form.imageUrl.trim() || undefined,
         pricePerDay,
         fuelType: form.fuelType,
         gearbox: form.gearbox,
@@ -284,6 +286,7 @@ export default function FleetGuardian() {
                 <Link key={car.id} href={`/dashboard/fleet/${car.id}`}>
                   <Card padding="none" className="group h-full cursor-pointer overflow-hidden">
                     <CarPhoto
+                      src={car.imageUrl}
                       alt={`${car.brand} ${car.model}`}
                       plate={car.licensePlate}
                       price={`${car.pricePerDay.toLocaleString()} MAD/day`}
@@ -465,6 +468,18 @@ export default function FleetGuardian() {
                 <option value="AUTOMATIC">Automatic</option>
               </select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="eyebrow px-1">Photo URL <span className="text-text-faint normal-case tracking-normal">(optional)</span></p>
+            <input
+              value={form.imageUrl}
+              onChange={setField('imageUrl')}
+              type="url"
+              placeholder="https://.../vehicle-photo.jpg"
+              className="w-full bg-surface border border-hairline rounded-2xl px-4 py-3.5 text-sm text-foreground outline-none focus:border-primary transition-all placeholder:text-text-faint"
+            />
+            <p className="px-1 text-xs text-text-muted">Use a public HTTPS image URL. Leave blank to use the Fider vehicle placeholder.</p>
           </div>
 
           <div className="flex gap-4">

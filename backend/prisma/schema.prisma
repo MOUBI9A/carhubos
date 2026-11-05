@@ -163,6 +163,7 @@ model Car {
   model         String
   year          Int
   licensePlate  String
+  imageUrl      String?
   pricePerDay   Decimal  @db.Decimal(12, 2)
   fuelType      String   @default("DIESEL")
   gearbox       String   @default("MANUAL")
