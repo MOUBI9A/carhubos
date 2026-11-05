@@ -3017,3 +3017,16 @@ verified transfer payments (1020 MAD and 720 MAD respectively).
 confirmed all four booking statuses plus their related invoices and payments.
 The new owner Command Center and Booking planner screenshots show the seeded
 data in the running application.
+
+### R55 — Expanded demo booking coverage (sole developer, 2026-11-05)
+
+Expanded the idempotent demo pipeline from four to thirteen bookings across
+the visible scheduler window and historical lifecycle states. The additional
+records cover requested, approved, active, overdue, completed, and cancelled
+rentals, each with an agency-scoped invoice and realistic deposit state; paid
+examples include verified transfer payments.
+
+**Verified:** role seed added 9 records, then a database query confirmed 13
+bookings, 13 invoices, and 5 payment rows for `CarHub Rentals Casablanca`.
+The refreshed Booking planner shows the expanded scheduler with 9 active
+bookings and one cancelled booking filter count.
