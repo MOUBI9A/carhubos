@@ -230,6 +230,49 @@ async function main() {
   }
   console.log(`  ✓ demo imagery: ${demoFleetImages.length} unique photos (${refreshedDemoImages} legacy rows refreshed)`);
 
+  // Give the first four fleet cards a complete compliance story so the demo
+  // dashboard opens with real document coverage instead of four empty states.
+  // These are demo metadata records with future expiry dates; real agency
+  // uploads remain untouched because the lookup is limited to missing types.
+  const firstFleetCars = await prisma.car.findMany({
+    where: {
+      agencyId: agency.id,
+      // Keep the screenshot/demo order deterministic even when PostgreSQL
+      // returns equal-createdAt rows in a different physical order.
+      licensePlate: { in: ['DEMO-198-A', 'DEMO-121-A', 'DEMO-120-A', 'DEMO-122-A'] },
+    },
+    select: { id: true, licensePlate: true },
+  });
+  const complianceDocuments = [
+    ['INSURANCE', new Date(Date.UTC(2027, 5, 30))],
+    ['CARTE_GRISE', new Date(Date.UTC(2028, 1, 29))],
+    ['TECHNICAL_INSPECTION', new Date(Date.UTC(2027, 10, 15))],
+    ['VIGNETTE', new Date(Date.UTC(2027, 11, 31))],
+  ];
+  let addedComplianceDocuments = 0;
+  for (const car of firstFleetCars) {
+    for (const [type, expiryDate] of complianceDocuments) {
+      const existing = await prisma.carDocument.findFirst({
+        where: { carId: car.id, type },
+        select: { id: true },
+      });
+      if (existing) continue;
+      await prisma.carDocument.create({
+        data: {
+          carId: car.id,
+          type,
+          issueDate: new Date(Date.UTC(2026, 0, 15)),
+          expiryDate,
+          status: 'VALID',
+          isMandatory: true,
+          fileUrl: `https://demo.fider.local/car-documents/${encodeURIComponent(car.licensePlate)}/${type.toLowerCase()}.pdf`,
+        },
+      });
+      addedComplianceDocuments++;
+    }
+  }
+  console.log(`  ✓ fleet documents: ${firstFleetCars.length} top vehicles covered (${addedComplianceDocuments} records added)`);
+
   const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
   if (existingCars === missingDemoCars.length) {
     const customers = [

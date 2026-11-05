@@ -2981,3 +2981,15 @@ custom URLs remain untouched.
 seed-managed URL is from the curated car-only pool. Maximum reuse is 6 because
 112 vehicles are represented by 19 verified car photos; no unrelated image
 remains in the demo fleet.
+
+### R52 — Seeded top fleet compliance documents (sole developer, 2026-11-05)
+
+Seeded four valid compliance records per top Fleet card: INSURANCE,
+CARTE_GRISE, TECHNICAL_INSPECTION, and VIGNETTE. The records use future expiry
+dates, demo document URLs, and an idempotent missing-type lookup. The exact
+visible top cards are targeted deterministically: DEMO-198-A, DEMO-121-A,
+DEMO-120-A, and DEMO-122-A.
+
+**Verified:** 16 records were added, reruns add no duplicates, the API returns
+four VALID documents for each target vehicle, and the new Fleet screenshot
+shows all four top cards at 100% compliance.
