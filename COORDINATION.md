@@ -2993,3 +2993,14 @@ DEMO-120-A, and DEMO-122-A.
 **Verified:** 16 records were added, reruns add no duplicates, the API returns
 four VALID documents for each target vehicle, and the new Fleet screenshot
 shows all four top cards at 100% compliance.
+
+### R53 — Renamed demo agency for presentation screenshots (sole developer, 2026-11-05)
+
+Updated the seeded agency name from `CarHub Demo Agency` to
+`CarHub Rentals Casablanca` in both create and upsert paths, so existing local
+databases are updated on the next idempotent role-seed run. The renamed value
+now appears in the authenticated owner Command Center welcome banner.
+
+**Verified:** role seed completed, the database agency name is
+`CarHub Rentals Casablanca`, and the refreshed screenshot confirms the new
+name without the word "Demo".

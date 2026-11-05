@@ -35,11 +35,12 @@ async function main() {
   const agency = await prisma.agency.upsert({
     where: { contactEmail: 'demo@carhub.os' },
     update: {
+      name: 'CarHub Rentals Casablanca',
       onboardingStatus: 'COMPLETED',
       onboardingCompletedAt: new Date(),
     },
     create: {
-      name: 'CarHub Demo Agency',
+      name: 'CarHub Rentals Casablanca',
       city: 'Casablanca',
       contactEmail: 'demo@carhub.os',
       subscriptionTier: 'BUSINESS',
