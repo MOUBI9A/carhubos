@@ -75,7 +75,14 @@ export async function createRoleFixtures(agencyId: string) {
           isVerified: true,
           agencyId: agencyScoped ? agencyId : null,
           ...(agencyScoped ? {
-            memberships: { create: { agencyId, rolePreset: role, capabilities: ROLE_PRESETS[role] } },
+            memberships: { create: {
+              agencyId, rolePreset: role,
+              // This E2E starts with no diagnostic grants before testing
+              // an explicit view/perform grant. Production presets are intact.
+              capabilities: role === 'AGENT'
+                ? ROLE_PRESETS[role].filter((cap: string) => cap !== 'diagnostics.view' && cap !== 'diagnostics.perform')
+                : ROLE_PRESETS[role],
+            } },
           } : {}),
         },
       });
