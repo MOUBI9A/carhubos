@@ -19,6 +19,21 @@ A second local PostgreSQL 17 instance restored the same production backup. `pris
 
 The Supabase project currently shows no managed physical backups or PITR enabled. Protect the logical files; no backup has been copied to a remote repository.
 
+## Live database migration result (November 11, 2026)
+
+Seven additive migrations were applied to the verified Supabase project through
+an atomic SQL migration procedure, with Prisma-compatible SHA-256 migration
+history entries. This identical procedure first passed on a restored production
+backup, and Prisma itself reported the recreated migration history as current.
+
+After production execution, an independent read-only database check confirmed:
+21 successful Prisma migrations, zero incomplete, eight new feature tables,
+RLS enabled on all eight, no direct anon/authenticated SELECT grants, and the
+original 4 agencies / 11 users / 4 bookings / 13 cars preserved.
+
+**This database result does not itself mean the public web application was
+deployed.** The frontend/backend cutover is a separate step below.
+
 ## Before production database changes
 
 1. Verify the production Vercel and Supabase environments resolve to the intended same project.

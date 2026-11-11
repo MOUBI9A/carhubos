@@ -83,7 +83,7 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
     await page.getByRole('button', { name: /Continue/i }).click();
 
     // 6) Step 3: Fleet Setup
-    await expect(page.getByText('Fleet Setup')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Fleet Setup', exact: true })).toBeVisible();
     await expect(page.getByText(/At least 1 vehicle is required/i)).toBeVisible();
 
     // Add Vehicle via form
