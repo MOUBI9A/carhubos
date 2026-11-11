@@ -34,21 +34,27 @@ async function main() {
   // A shared demo agency for the agency-scoped roles (owner/manager/agent).
   const agency = await prisma.agency.upsert({
     where: { contactEmail: 'demo@carhub.os' },
-    update: {},
+    update: {
+      name: 'CarHub Rentals Casablanca',
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
+    },
     create: {
-      name: 'CarHub Demo Agency',
+      name: 'CarHub Rentals Casablanca',
       city: 'Casablanca',
       contactEmail: 'demo@carhub.os',
       subscriptionTier: 'BUSINESS',
       status: 'ACTIVE',
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
     },
   });
 
   const accounts = [
-    { email: 'root@carhub.os', name: 'Platform Owner', role: 'ROOT_ADMIN', agencyId: null },
-    { email: 'owner@carhub.os', name: 'Agency Owner', role: 'OWNER', agencyId: agency.id },
-    { email: 'manager@carhub.os', name: 'Agency Manager', role: 'MANAGER', agencyId: agency.id },
-    { email: 'agent@carhub.os', name: 'Rental Agent', role: 'AGENT', agencyId: agency.id },
+    { email: 'root@carhub.os', name: 'Platform Owner', role: 'ROOT_ADMIN', agencyId: null, isVerified: true },
+    { email: 'owner@carhub.os', name: 'Agency Owner', role: 'OWNER', agencyId: agency.id, isVerified: true },
+    { email: 'manager@carhub.os', name: 'Agency Manager', role: 'MANAGER', agencyId: agency.id, isVerified: true },
+    { email: 'agent@carhub.os', name: 'Rental Agent', role: 'AGENT', agencyId: agency.id, isVerified: true },
     { email: 'renter@carhub.os', name: 'Sami Renter', role: 'RENTER', agencyId: null, trustScore: 82, isVerified: true },
   ];
 
@@ -57,15 +63,23 @@ async function main() {
   for (const a of accounts) {
     const user = await prisma.user.upsert({
       where: { email: a.email },
-      update: { password, role: a.role, name: a.name, agencyId: a.agencyId ?? null },
+      update: {
+        password,
+        role: a.role,
+        name: a.name,
+        agencyId: a.agencyId ?? null,
+        isVerified: true,
+        emailVerifiedAt: new Date(),
+      },
       create: {
         email: a.email,
         password,
         name: a.name,
         role: a.role,
         agencyId: a.agencyId ?? null,
+        isVerified: true,
+        emailVerifiedAt: new Date(),
         ...(a.trustScore ? { trustScore: a.trustScore } : {}),
-        ...(a.isVerified ? { isVerified: a.isVerified } : {}),
       },
     });
     if (a.role === 'RENTER') renterUser = user;
@@ -89,20 +103,439 @@ async function main() {
     }
   }
 
-  // Populate the demo agency with a small fleet + customers so the owner and
-  // manager land on a dashboard with real data (idempotent: only if empty).
-  const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
-  if (existingCars === 0) {
-    const cars = [
-      { brand: 'Dacia', model: 'Duster', year: 2023, licensePlate: 'DEMO-101-A', pricePerDay: 450, status: 'AVAILABLE', mileage: 32000 },
-      { brand: 'Renault', model: 'Clio 5', year: 2024, licensePlate: 'DEMO-102-A', pricePerDay: 350, status: 'AVAILABLE', mileage: 12000 },
-      { brand: 'Volkswagen', model: 'Golf 8', year: 2023, licensePlate: 'DEMO-103-A', pricePerDay: 600, status: 'RENTED', mileage: 28000 },
-      { brand: 'Hyundai', model: 'Tucson', year: 2024, licensePlate: 'DEMO-104-A', pricePerDay: 900, status: 'AVAILABLE', mileage: 8000 },
-    ];
-    for (const c of cars) {
-      await prisma.car.create({ data: { ...c, agencyId: agency.id } });
-    }
+  // Populate the demo agency with a representative 112-vehicle Moroccan
+  // rental fleet. The plate range is deterministic so this remains idempotent
+  // and only fills missing demo vehicles on later runs.
+  const demoFleetImages = [
+    'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1567808291548-fc3ee04dbcf0?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1765211003784-a82564cb8d3d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1771962033103-da4ef275b9c0?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1779184638442-fcbd65b0437a?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1786245134325-daaab2159ae7?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1786245134362-eb644f448a5e?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=1200&q=85',
+  ];
+  const demoFleetCatalog = [
+    ['Dacia', 'Duster', 450, 'DIESEL', 'MANUAL'],
+    ['Dacia', 'Logan', 280, 'PETROL', 'MANUAL'],
+    ['Dacia', 'Sandero', 300, 'PETROL', 'MANUAL'],
+    ['Dacia', 'Jogger', 520, 'HYBRID', 'AUTOMATIC'],
+    ['Renault', 'Clio 5', 350, 'PETROL', 'MANUAL'],
+    ['Renault', 'Megane', 480, 'DIESEL', 'MANUAL'],
+    ['Renault', 'Captur', 550, 'PETROL', 'AUTOMATIC'],
+    ['Renault', 'Arkana', 680, 'HYBRID', 'AUTOMATIC'],
+    ['Peugeot', '208', 360, 'PETROL', 'MANUAL'],
+    ['Peugeot', '308', 520, 'DIESEL', 'AUTOMATIC'],
+    ['Peugeot', '2008', 580, 'PETROL', 'AUTOMATIC'],
+    ['Peugeot', '3008', 760, 'DIESEL', 'AUTOMATIC'],
+    ['Citroen', 'C3', 330, 'PETROL', 'MANUAL'],
+    ['Citroen', 'C4', 470, 'PETROL', 'AUTOMATIC'],
+    ['Citroen', 'C5 Aircross', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Volkswagen', 'Polo', 420, 'PETROL', 'AUTOMATIC'],
+    ['Volkswagen', 'Golf 8', 600, 'DIESEL', 'AUTOMATIC'],
+    ['Volkswagen', 'T-Roc', 680, 'PETROL', 'AUTOMATIC'],
+    ['Volkswagen', 'Tiguan', 820, 'DIESEL', 'AUTOMATIC'],
+    ['Hyundai', 'i10', 320, 'PETROL', 'MANUAL'],
+    ['Hyundai', 'i20', 360, 'PETROL', 'MANUAL'],
+    ['Hyundai', 'Tucson', 900, 'DIESEL', 'AUTOMATIC'],
+    ['Hyundai', 'Santa Fe', 1200, 'DIESEL', 'AUTOMATIC'],
+    ['Kia', 'Picanto', 300, 'PETROL', 'MANUAL'],
+    ['Kia', 'Rio', 350, 'PETROL', 'MANUAL'],
+    ['Kia', 'Sportage', 820, 'DIESEL', 'AUTOMATIC'],
+    ['Toyota', 'Yaris', 420, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'Corolla', 520, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'C-HR', 720, 'HYBRID', 'AUTOMATIC'],
+    ['Toyota', 'RAV4', 980, 'HYBRID', 'AUTOMATIC'],
+    ['Skoda', 'Fabia', 360, 'PETROL', 'MANUAL'],
+    ['Skoda', 'Octavia', 560, 'DIESEL', 'AUTOMATIC'],
+    ['Skoda', 'Karoq', 720, 'DIESEL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'A-Class', 950, 'PETROL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'C-Class', 1250, 'DIESEL', 'AUTOMATIC'],
+    ['Mercedes-Benz', 'GLC', 1500, 'DIESEL', 'AUTOMATIC'],
+    ['BMW', '1 Series', 900, 'PETROL', 'AUTOMATIC'],
+    ['BMW', '3 Series', 1200, 'DIESEL', 'AUTOMATIC'],
+    ['BMW', 'X1', 1100, 'DIESEL', 'AUTOMATIC'],
+    ['Audi', 'A3', 850, 'PETROL', 'AUTOMATIC'],
+    ['Audi', 'A4', 1150, 'DIESEL', 'AUTOMATIC'],
+    ['Audi', 'Q3', 1250, 'DIESEL', 'AUTOMATIC'],
+    ['Ford', 'Fiesta', 340, 'PETROL', 'MANUAL'],
+    ['Ford', 'Focus', 460, 'DIESEL', 'MANUAL'],
+    ['Ford', 'Puma', 620, 'PETROL', 'AUTOMATIC'],
+    ['Nissan', 'Micra', 330, 'PETROL', 'MANUAL'],
+    ['Nissan', 'Qashqai', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Nissan', 'Juke', 580, 'PETROL', 'AUTOMATIC'],
+    ['Seat', 'Ibiza', 350, 'PETROL', 'MANUAL'],
+    ['Seat', 'Leon', 480, 'PETROL', 'AUTOMATIC'],
+    ['Seat', 'Ateca', 700, 'DIESEL', 'AUTOMATIC'],
+    ['Fiat', 'Tipo', 340, 'DIESEL', 'MANUAL'],
+    ['Fiat', '500', 380, 'PETROL', 'MANUAL'],
+    ['Fiat', 'Doblo', 540, 'DIESEL', 'MANUAL'],
+    ['Range Rover', 'Velar', 1800, 'DIESEL', 'AUTOMATIC'],
+  ];
+  const existingDemoCars = await prisma.car.findMany({
+    where: { agencyId: agency.id, licensePlate: { startsWith: 'DEMO-' } },
+    select: { licensePlate: true },
+  });
+  const existingDemoPlates = new Set(existingDemoCars.map((car) => car.licensePlate));
+  const missingDemoCars = [];
+  for (let index = 0; index < 112; index++) {
+    const licensePlate = `DEMO-${String(101 + index).padStart(3, '0')}-A`;
+    if (existingDemoPlates.has(licensePlate)) continue;
+    const [brand, model, pricePerDay, fuelType, gearbox] = demoFleetCatalog[index % demoFleetCatalog.length];
+    missingDemoCars.push({
+      brand,
+      model,
+      year: 2021 + (index % 5),
+      licensePlate,
+      imageUrl: demoFleetImages[index % demoFleetImages.length],
+      pricePerDay,
+      fuelType,
+      gearbox,
+      status: index % 17 === 0 ? 'MAINTENANCE' : index % 5 === 0 ? 'RENTED' : 'AVAILABLE',
+      mileage: 8000 + ((index * 2371) % 72000),
+      agencyId: agency.id,
+    });
+  }
+  if (missingDemoCars.length > 0) {
+    await prisma.car.createMany({ data: missingDemoCars });
+  }
+  console.log(`  ✓ demo fleet: ${existingDemoCars.length + missingDemoCars.length} vehicles (${missingDemoCars.length} added)`);
 
+  // Rotate seed-hosted Unsplash URLs into the curated car-only pool. A custom
+  // URL hosted elsewhere by an agency owner is never overwritten.
+  const seededDemoCars = await prisma.car.findMany({
+    where: { agencyId: agency.id, licensePlate: { startsWith: 'DEMO-' } },
+    select: { id: true, licensePlate: true, imageUrl: true },
+  });
+  let refreshedDemoImages = 0;
+  for (const car of seededDemoCars) {
+    if (!car.imageUrl?.startsWith('https://images.unsplash.com/')) continue;
+    const plateNumber = Number(car.licensePlate.match(/^DEMO-(\d+)-A$/)?.[1]);
+    if (!Number.isInteger(plateNumber)) continue;
+    const imageUrl = demoFleetImages[(plateNumber - 101) % demoFleetImages.length];
+    if (imageUrl === car.imageUrl) continue;
+    await prisma.car.update({ where: { id: car.id }, data: { imageUrl } });
+    refreshedDemoImages++;
+  }
+  console.log(`  ✓ demo imagery: ${demoFleetImages.length} unique photos (${refreshedDemoImages} legacy rows refreshed)`);
+
+  // Give the first four fleet cards a complete compliance story so the demo
+  // dashboard opens with real document coverage instead of four empty states.
+  // These are demo metadata records with future expiry dates; real agency
+  // uploads remain untouched because the lookup is limited to missing types.
+  const firstFleetCars = await prisma.car.findMany({
+    where: {
+      agencyId: agency.id,
+      // Keep the screenshot/demo order deterministic even when PostgreSQL
+      // returns equal-createdAt rows in a different physical order.
+      licensePlate: { in: ['DEMO-198-A', 'DEMO-121-A', 'DEMO-120-A', 'DEMO-122-A'] },
+    },
+    select: { id: true, licensePlate: true },
+  });
+  const complianceDocuments = [
+    ['INSURANCE', new Date(Date.UTC(2027, 5, 30))],
+    ['CARTE_GRISE', new Date(Date.UTC(2028, 1, 29))],
+    ['TECHNICAL_INSPECTION', new Date(Date.UTC(2027, 10, 15))],
+    ['VIGNETTE', new Date(Date.UTC(2027, 11, 31))],
+  ];
+  let addedComplianceDocuments = 0;
+  for (const car of firstFleetCars) {
+    for (const [type, expiryDate] of complianceDocuments) {
+      const existing = await prisma.carDocument.findFirst({
+        where: { carId: car.id, type },
+        select: { id: true },
+      });
+      if (existing) continue;
+      await prisma.carDocument.create({
+        data: {
+          carId: car.id,
+          type,
+          issueDate: new Date(Date.UTC(2026, 0, 15)),
+          expiryDate,
+          status: 'VALID',
+          isMandatory: true,
+          fileUrl: `https://demo.fider.local/car-documents/${encodeURIComponent(car.licensePlate)}/${type.toLowerCase()}.pdf`,
+        },
+      });
+      addedComplianceDocuments++;
+    }
+  }
+  console.log(`  ✓ fleet documents: ${firstFleetCars.length} top vehicles covered (${addedComplianceDocuments} records added)`);
+
+  // Add a small, realistic booking pipeline for the dashboard demo: one
+  // completed rental, one active rental, one approved pickup, and one request.
+  // The composite business lookup keeps repeated role-seed runs idempotent.
+  const demoCustomers = await prisma.customer.findMany({
+    where: { agencyId: agency.id },
+    orderBy: { createdAt: 'asc' },
+    take: 3,
+    select: { id: true },
+  });
+  const demoBookings = [
+    {
+      marker: 'DEMO-BOOKING-01',
+      plate: 'DEMO-198-A',
+      customerIndex: 0,
+      startDate: new Date('2026-10-24T10:00:00.000Z'),
+      endDate: new Date('2026-10-27T10:00:00.000Z'),
+      totalPrice: 1020,
+      taxAmount: 170,
+      status: 'COMPLETED',
+      depositAmount: 1000,
+      depositStatus: 'RETURNED',
+      invoiceStatus: 'PAID',
+      paidAmount: 1020,
+      paymentDate: new Date('2026-10-24T10:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-02',
+      plate: 'DEMO-121-A',
+      customerIndex: 1,
+      startDate: new Date('2026-11-02T09:00:00.000Z'),
+      endDate: new Date('2026-11-06T09:00:00.000Z'),
+      totalPrice: 1440,
+      taxAmount: 240,
+      status: 'ACTIVE',
+      depositAmount: 1200,
+      depositStatus: 'HELD',
+      invoiceStatus: 'PARTIAL',
+      paidAmount: 720,
+      paymentDate: new Date('2026-11-02T09:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-03',
+      plate: 'DEMO-120-A',
+      customerIndex: 2,
+      startDate: new Date('2026-11-06T11:00:00.000Z'),
+      endDate: new Date('2026-11-09T11:00:00.000Z'),
+      totalPrice: 960,
+      taxAmount: 160,
+      status: 'APPROVED',
+      depositAmount: 1000,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-04',
+      plate: 'DEMO-122-A',
+      customerIndex: 0,
+      startDate: new Date('2026-11-10T12:00:00.000Z'),
+      endDate: new Date('2026-11-14T12:00:00.000Z'),
+      totalPrice: 3600,
+      taxAmount: 600,
+      status: 'REQUESTED',
+      depositAmount: 1500,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-05',
+      plate: 'DEMO-123-A',
+      customerIndex: 0,
+      startDate: new Date('2026-11-05T08:00:00.000Z'),
+      endDate: new Date('2026-11-07T08:00:00.000Z'),
+      totalPrice: 1170,
+      taxAmount: 195,
+      status: 'REQUESTED',
+      depositAmount: 1000,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-06',
+      plate: 'DEMO-124-A',
+      customerIndex: 1,
+      startDate: new Date('2026-11-07T09:00:00.000Z'),
+      endDate: new Date('2026-11-10T09:00:00.000Z'),
+      totalPrice: 900,
+      taxAmount: 150,
+      status: 'APPROVED',
+      depositAmount: 900,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-07',
+      plate: 'DEMO-125-A',
+      customerIndex: 2,
+      startDate: new Date('2026-11-04T10:00:00.000Z'),
+      endDate: new Date('2026-11-08T10:00:00.000Z'),
+      totalPrice: 1440,
+      taxAmount: 240,
+      status: 'ACTIVE',
+      depositAmount: 1200,
+      depositStatus: 'HELD',
+      invoiceStatus: 'PARTIAL',
+      paidAmount: 720,
+      paymentDate: new Date('2026-11-04T10:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-08',
+      plate: 'DEMO-126-A',
+      customerIndex: 0,
+      startDate: new Date('2026-11-09T11:00:00.000Z'),
+      endDate: new Date('2026-11-12T11:00:00.000Z'),
+      totalPrice: 1320,
+      taxAmount: 220,
+      status: 'APPROVED',
+      depositAmount: 1000,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-09',
+      plate: 'DEMO-127-A',
+      customerIndex: 1,
+      startDate: new Date('2026-11-12T12:00:00.000Z'),
+      endDate: new Date('2026-11-15T12:00:00.000Z'),
+      totalPrice: 1080,
+      taxAmount: 180,
+      status: 'REQUESTED',
+      depositAmount: 900,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-10',
+      plate: 'DEMO-128-A',
+      customerIndex: 2,
+      startDate: new Date('2026-11-15T09:00:00.000Z'),
+      endDate: new Date('2026-11-18T09:00:00.000Z'),
+      totalPrice: 2100,
+      taxAmount: 350,
+      status: 'APPROVED',
+      depositAmount: 1200,
+      depositStatus: 'PENDING',
+      invoiceStatus: 'DUE',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+    {
+      marker: 'DEMO-BOOKING-11',
+      plate: 'DEMO-129-A',
+      customerIndex: 0,
+      startDate: new Date('2026-10-15T10:00:00.000Z'),
+      endDate: new Date('2026-10-18T10:00:00.000Z'),
+      totalPrice: 1500,
+      taxAmount: 250,
+      status: 'COMPLETED',
+      depositAmount: 1000,
+      depositStatus: 'RETURNED',
+      invoiceStatus: 'PAID',
+      paidAmount: 1500,
+      paymentDate: new Date('2026-10-15T10:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-12',
+      plate: 'DEMO-130-A',
+      customerIndex: 1,
+      startDate: new Date('2026-10-30T09:00:00.000Z'),
+      endDate: new Date('2026-11-02T09:00:00.000Z'),
+      totalPrice: 1260,
+      taxAmount: 210,
+      status: 'OVERDUE',
+      depositAmount: 1000,
+      depositStatus: 'CLAIMED',
+      invoiceStatus: 'PARTIAL',
+      paidAmount: 630,
+      paymentDate: new Date('2026-10-30T09:00:00.000Z'),
+    },
+    {
+      marker: 'DEMO-BOOKING-13',
+      plate: 'DEMO-131-A',
+      customerIndex: 2,
+      startDate: new Date('2026-11-06T14:00:00.000Z'),
+      endDate: new Date('2026-11-08T14:00:00.000Z'),
+      totalPrice: 840,
+      taxAmount: 140,
+      status: 'CANCELLED',
+      depositAmount: 800,
+      depositStatus: 'RETURNED',
+      invoiceStatus: 'CANCELLED',
+      paidAmount: 0,
+      paymentDate: null,
+    },
+  ];
+  let addedBookings = 0;
+  for (const spec of demoBookings) {
+    const customer = demoCustomers[spec.customerIndex];
+    const car = await prisma.car.findUnique({
+      where: { agencyId_licensePlate: { agencyId: agency.id, licensePlate: spec.plate } },
+      select: { id: true },
+    });
+    if (!customer || !car) continue;
+    const existing = await prisma.booking.findFirst({
+      where: { agencyId: agency.id, carId: car.id, startDate: spec.startDate },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    const booking = await prisma.booking.create({
+      data: {
+        startDate: spec.startDate,
+        endDate: spec.endDate,
+        totalPrice: spec.totalPrice,
+        depositAmount: spec.depositAmount,
+        depositStatus: spec.depositStatus,
+        depositMethod: 'CASH',
+        status: spec.status,
+        carId: car.id,
+        customerId: customer.id,
+        agencyId: agency.id,
+      },
+    });
+    const invoice = await prisma.invoice.create({
+      data: {
+        amount: spec.totalPrice,
+        taxAmount: spec.taxAmount,
+        status: spec.invoiceStatus,
+        bookingId: booking.id,
+        agencyId: agency.id,
+      },
+    });
+    if (spec.paidAmount > 0 && spec.paymentDate) {
+      await prisma.payment.create({
+        data: {
+          amount: spec.paidAmount,
+          method: 'TRANSFER',
+          type: 'INCOME',
+          status: 'VERIFIED',
+          reference: spec.marker,
+          date: spec.paymentDate,
+          invoiceId: invoice.id,
+        },
+      });
+    }
+    addedBookings++;
+  }
+  console.log(`  ✓ demo bookings: ${demoBookings.length} configured (${addedBookings} added)`);
+
+  const existingCars = await prisma.car.count({ where: { agencyId: agency.id } });
+  if (existingCars === missingDemoCars.length) {
     const customers = [
       { firstName: 'Karim', lastName: 'Bennani', phone: '+212661112233', identityType: 'CIN', identityNumber: 'DEMOK1122', status: 'ACTIVE' },
       { firstName: 'Salma', lastName: 'Idrissi', phone: '+212662223344', identityType: 'CIN', identityNumber: 'DEMOS3344', email: 'salma@example.ma', status: 'ACTIVE' },
@@ -111,7 +544,22 @@ async function main() {
     for (const cu of customers) {
       await prisma.customer.create({ data: { ...cu, agencyId: agency.id } });
     }
-    console.log(`  ✓ seeded ${cars.length} cars + ${customers.length} customers into the demo agency`);
+    console.log(`  ✓ seeded ${customers.length} customers into the demo agency`);
+  }
+
+  // Backfill imagery on an existing demo fleet without overwriting an agency's
+  // own uploaded photo. The URLs are public reference photos for the demo only.
+  const demoCarImages = {
+    'DEMO-101-A': 'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-102-A': 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-103-A': 'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
+    'DEMO-104-A': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
+  };
+  for (const [licensePlate, imageUrl] of Object.entries(demoCarImages)) {
+    await prisma.car.updateMany({
+      where: { agencyId: agency.id, licensePlate, imageUrl: null },
+      data: { imageUrl },
+    });
   }
 
   // Give the demo renter a global trust identity + a global document vault, so

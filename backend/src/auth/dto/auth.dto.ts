@@ -41,3 +41,27 @@ export class RegisterDto {
   @IsString()
   agencyName?: string;
 }
+
+export class VerifyEmailDto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class ResendVerificationDto {
+  @IsOptional()
+  @NormalizeEmail()
+  @IsEmail()
+  email?: string;
+}
+
+export class DeleteAccountDto {
+  @IsNotEmpty()
+  @IsString()
+  password: string;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+

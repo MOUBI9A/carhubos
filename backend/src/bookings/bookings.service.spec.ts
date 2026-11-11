@@ -1,4 +1,6 @@
 import { BookingsService } from './bookings.service';
+import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 /**
  * Unit tests for the late-fee charge in updateStatus(): an OVERDUE booking
@@ -87,7 +89,9 @@ describe('BookingsService.updateStatus — late fee', () => {
       amount: { times: () => ({ toNumber: () => 100000 }) }, // 1000.00 MAD in cents
     });
     tx.payment.aggregate
-      .mockResolvedValueOnce({ _sum: { amount: { times: () => ({ toNumber: () => 100000 }) } } }) // income
+      .mockResolvedValueOnce({
+        _sum: { amount: { times: () => ({ toNumber: () => 100000 }) } },
+      }) // income
       .mockResolvedValueOnce({ _sum: { amount: null } }); // refund
 
     const prisma = makePrisma(tx);
@@ -236,8 +240,76 @@ describe('BookingsService.findAll — overlap window + pagination', () => {
 
     const result = await svc.findAll('agency-1', { page: 2, pageSize: 10 });
 
-    expect(result).toEqual({ items: [{ id: 'b1' }], total: 42, page: 2, pageSize: 10 });
+    expect(result).toEqual({
+      items: [{ id: 'b1' }],
+      total: 42,
+      page: 2,
+      pageSize: 10,
+    });
     expect(findMany.mock.calls[0][0].skip).toBe(10); // (page - 1) * pageSize
     expect(findMany.mock.calls[0][0].take).toBe(10);
+  });
+});
+
+describe('BookingsService.getPricingQuote — dynamic pricing', () => {
+  it('returns rate tier quote with weekly discount for 7 days', async () => {
+    const prisma = {
+      car: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'car-1',
+          brand: 'Hyundai',
+          model: 'Tucson',
+          pricePerDay: new Prisma.Decimal(400),
+        }),
+      },
+    };
+
+    const svc = new BookingsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const quote = await svc.getPricingQuote(
+      'agency-1',
+      'car-1',
+      '2026-04-01T10:00:00Z',
+      '2026-04-08T10:00:00Z',
+    );
+
+    expect(quote.carId).toBe('car-1');
+    expect(quote.days).toBe(7);
+    expect(quote.durationTier).toBe('WEEKLY');
+    // 400 * 0.90 = 360 MAD/day -> 2520 MAD total
+    expect(quote.totalPriceMad.toString()).toBe('2520');
+  });
+
+  it('throws NotFoundException when car does not exist or belongs to another agency', async () => {
+    const prisma = {
+      car: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+    };
+
+    const svc = new BookingsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      svc.getPricingQuote(
+        'agency-1',
+        'car-cross-tenant',
+        '2026-04-01T10:00:00Z',
+        '2026-04-08T10:00:00Z',
+      ),
+    ).rejects.toThrow(NotFoundException);
   });
 });

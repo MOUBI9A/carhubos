@@ -25,6 +25,7 @@ type PublicCar = {
   brand: string;
   model: string;
   year: number;
+  imageUrl?: string | null;
   pricePerDay: number;
   fuelType?: string | null;
   gearbox?: string | null;
@@ -120,7 +121,7 @@ export default function AgencyPublicPage() {
           {fleet.map((car) => (
             <Card key={car.id} padding="none" className="group h-full overflow-hidden">
               <div className="p-6 md:p-8">
-                <CarPhoto alt={`${car.brand} ${car.model}`} plate={car.fuelType || 'FIDER'} price={money(car.pricePerDay)} rounded="rounded-2xl" className="mb-6 transition-transform duration-700 group-hover:scale-[1.01]" />
+                <CarPhoto src={car.imageUrl} alt={`${car.brand} ${car.model}`} plate={car.fuelType || 'FIDER'} price={money(car.pricePerDay)} rounded="rounded-2xl" className="mb-6 transition-transform duration-700 group-hover:scale-[1.01]" />
                 <div className="flex justify-between items-start gap-4 mb-6">
                   <div><p className="eyebrow mb-2">{car.fuelType || '—'}</p><h3 className="text-2xl font-semibold text-foreground leading-tight">{car.brand} {car.model}</h3></div>
                   <Badge variant="secondary" className="shrink-0">{car.year}</Badge>

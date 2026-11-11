@@ -26,6 +26,7 @@ import {
   UserCog,
   CreditCard,
   FolderOpen,
+  Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
@@ -56,6 +57,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('admin.settings'), href: '/admin/settings', icon: Settings },
     ],
     OWNER: [
+      { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('owner.erp'), href: '/dashboard/erp', icon: BarChart3 },
       { label: t('owner.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('owner.reports'), href: '/dashboard/reports', icon: FileText },
@@ -72,23 +74,32 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('owner.search'), href: '/dashboard/search', icon: Search },
       { label: t('owner.staff'), href: '/dashboard/staff', icon: UserCog },
       { label: t('owner.billing'), href: '/dashboard/billing', icon: CreditCard },
+      { label: t('diagnostics'), href: '/dashboard/diagnostics', icon: Activity },
+      { label: t('workOrders'), href: '/dashboard/work-orders', icon: Wrench },
       { label: t('owner.settings'), href: '/dashboard/settings', icon: Settings },
     ],
     MANAGER: [
+      { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('manager.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('manager.fleet'), href: '/dashboard/fleet', icon: Car },
       { label: t('manager.bookings'), href: '/dashboard/bookings', icon: Calendar },
       { label: t('manager.customers'), href: '/dashboard/customers', icon: Users },
+      { label: t('diagnostics'), href: '/dashboard/diagnostics', icon: Activity },
+      { label: t('workOrders'), href: '/dashboard/work-orders', icon: Wrench },
       { label: t('manager.waitlist'), href: '/dashboard/waitlist', icon: History },
       { label: t('manager.blacklist'), href: '/dashboard/blacklist', icon: Ban },
       { label: t('manager.search'), href: '/dashboard/search', icon: Search },
     ],
     AGENT: [
+      { label: 'Guardian Vision', href: '/agent/guardian', icon: ShieldCheck },
       { label: t('agent.operations'), href: '/agent', icon: LayoutDashboard },
       { label: t('agent.tasks'), href: '/agent/tasks', icon: FileText },
       { label: t('agent.inspections'), href: '/agent/inspections', icon: ShieldCheck },
+      { label: t('diagnostics'), href: '/agent/diagnostics', icon: Activity },
+      { label: t('workOrders'), href: '/dashboard/work-orders', icon: Wrench },
     ],
     RENTER: [
+      { label: 'Guardian Vision', href: '/portal/inspections', icon: ShieldCheck },
       { label: t('renter.vault'), href: '/portal', icon: ShieldCheck },
       { label: t('renter.book'), href: '/portal/book', icon: Car },
       { label: t('renter.history'), href: '/portal/history', icon: History },

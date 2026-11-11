@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Min,
   Max,
 } from 'class-validator';
@@ -38,6 +39,10 @@ export class CreateCarDto {
   @IsString()
   @IsNotEmpty()
   licensePlate: string;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  imageUrl?: string;
 
   @IsNumber()
   @Min(0)

@@ -12,6 +12,9 @@ import { PaymentsService } from '../payments/payments.service';
 import { TasksService } from '../tasks/tasks.service';
 import { RefusalLogsService } from '../refusal-logs/refusal-logs.service';
 import { SearchService } from './search/search.service';
+import { WorkOrdersService } from '../work-orders/work-orders.service';
+import { DiagnosticsService } from '../diagnostics/diagnostics.service';
+import { PredictiveMaintenanceService } from '../maintenance/predictive/predictive-maintenance.service';
 
 /**
  * Cross-cutting regression test for the tenant-isolation invariant: an
@@ -44,7 +47,11 @@ function agencyScopedFindFirst() {
   // returns a row when BOTH the id and the caller's agencyId match.
   return jest.fn(({ where }: any) => {
     const matches = where.id === RESOURCE_ID && where.agencyId === AGENCY_B;
-    return Promise.resolve(matches ? { id: RESOURCE_ID, agencyId: AGENCY_B } : null);
+    return Promise.resolve(
+      matches
+        ? { id: RESOURCE_ID, agencyId: AGENCY_B, data: { events: [], dtcs: [] } }
+        : null,
+    );
   });
 }
 
@@ -281,4 +288,52 @@ describe('Multi-tenant boundary — agency A can never reach agency B resources'
     const resultForB = await svc.search(AGENCY_B, 'Dacia');
     expect(resultForB.total).toBe(3);
   });
+
+  it('WorkOrdersService.findOne 404s across tenants', async () => {
+    const prisma = {
+      workOrder: {
+        findUnique: jest.fn(({ where }: any) => {
+          const match =
+            where.id_agencyId.id === RESOURCE_ID &&
+            where.id_agencyId.agencyId === AGENCY_B;
+          return Promise.resolve(match ? { id: RESOURCE_ID, agencyId: AGENCY_B } : null);
+        }),
+      },
+    };
+    const svc = new WorkOrdersService(prisma as any, {} as any, {} as any, {} as any);
+
+    await expect(svc.findOne(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.findOne(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('DiagnosticsService.session 404s across tenants', async () => {
+    const prisma = {
+      diagnosticSession: {
+        findFirst: agencyScopedFindFirst(),
+      },
+    };
+    const svc = new DiagnosticsService(prisma as any, {} as any, {} as any, {} as any);
+
+    await expect(svc.session(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.session(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
+
+  it('PredictiveMaintenanceService.calculateScheduleForCar 404s across tenants', async () => {
+    const prisma = {
+      car: {
+        findFirst: agencyScopedFindFirst(),
+      },
+      maintenanceRecord: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      workOrder: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const svc = new PredictiveMaintenanceService(prisma as any);
+
+    await expect(svc.calculateScheduleForCar(AGENCY_A, RESOURCE_ID)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.calculateScheduleForCar(AGENCY_B, RESOURCE_ID)).resolves.toBeDefined();
+  });
 });
+

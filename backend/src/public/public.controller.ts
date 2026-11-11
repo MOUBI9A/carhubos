@@ -1,7 +1,8 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CarsService } from '../cars/cars.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PublicService } from './public.service';
 
 /**
  * Hard ceiling for the bare (unpaginated) call. `GET /public/fleet` is the only
@@ -20,6 +21,7 @@ export class PublicController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly carsService: CarsService,
+    private readonly publicService: PublicService,
   ) {}
 
   /**
@@ -68,6 +70,7 @@ export class PublicController {
         model: true,
         year: true,
         pricePerDay: true,
+        imageUrl: true,
         fuelType: true,
         gearbox: true,
         status: true,
@@ -129,5 +132,18 @@ export class PublicController {
         city: true,
       },
     });
+  }
+
+  @Get('estimates/:token')
+  async getPublicEstimate(@Param('token') token: string) {
+    return this.publicService.getPublicEstimate(token);
+  }
+
+  @Post('estimates/:token/approve')
+  async approvePublicEstimate(
+    @Param('token') token: string,
+    @Body() body: { customerName?: string; signature?: string; notes?: string },
+  ) {
+    return this.publicService.approvePublicEstimate(token, body || {});
   }
 }

@@ -2916,3 +2916,117 @@ resolved by the founder re-granting iTerm2's Desktop-folder access and
 fully restarting iTerm2 (TCC grants don't apply to an already-running
 process). Flagging here only because it cost real wall-clock time on this
 pass, not because it's a codebase issue.
+
+### R48 — Real fleet vehicle data and imagery (sole developer, 2026-11-05)
+
+Added an optional tenant-owned `Car.imageUrl` field with a migration,
+validated HTTPS URL input on create/update, and idempotent demo-seed imagery
+for Dacia Duster, Renault Clio 5, Volkswagen Golf 8, Hyundai Tucson, Range
+Rover Velar, Mercedes-Benz G-Class, and Volkswagen Touareg. Existing agency
+photos are preserved because the seed backfill only fills null values.
+
+Passed `imageUrl` through the public fleet projection and wired it into the
+owner fleet/detail/hub, public agency, renter booking, agent operations and
+inspection, and owner booking card surfaces. The owner "Register vehicle"
+form now accepts an optional public HTTPS photo URL, while blank URLs retain
+the existing Fider placeholder.
+
+**Verified:** migration deployed and Prisma client generated; demo rows contain
+real Unsplash image URLs; backend `tsc --noEmit` clean; backend Jest 66 passed
+(1 skipped suite, 4 skipped tests); frontend `tsc --noEmit` clean; frontend
+Vitest 9 files / 36 tests passed. Full repository lint remains red on 16
+pre-existing findings outside this change (15 backend, 1 frontend); no new
+lint findings were introduced by the imagery changes. A live HTTP API check
+was unavailable because the local backend was not running.
+
+### R49 — Expanded demo fleet to 112 vehicles (sole developer, 2026-11-05)
+
+Replaced the four-car-only demo seed gate with an idempotent deterministic
+fleet catalog that guarantees 112 demo vehicles for `demo@carhub.os`. The
+catalog covers Moroccan rental staples and premium models across Dacia,
+Renault, Peugeot, Citroen, Volkswagen, Hyundai, Kia, Toyota, Skoda, Mercedes-
+Benz, BMW, Audi, Ford, Nissan, Seat, Fiat, and Range Rover. Each vehicle has
+a unique demo plate, year, MAD daily rate, fuel type, gearbox, mileage, status,
+and real image URL. Missing rows are inserted with `createMany`; existing
+vehicles and agency-owned data are preserved.
+
+**Verified:** first seed run added 108 vehicles; database count is 112 total
+and 112 with images; second seed run added 0 vehicles. Backend typecheck and
+Jest passed (66 suites / 555 tests passed, 1 suite and 4 tests skipped).
+Frontend typecheck and Vitest passed (9 files / 36 tests). Repository lint
+remains red only on the same pre-existing 15 backend and 1 frontend findings.
+
+### R50 — Removed repetitive demo fleet imagery (sole developer, 2026-11-05)
+
+Expanded the demo vehicle image pool from 8 URLs to 61 distinct Unsplash
+vehicle photos. The seed now rotates legacy demo-seed URLs into the larger
+pool for the 112 demo vehicles, while never overwriting a custom URL entered
+by an agency owner. The resulting fleet has 112 vehicles, 61 unique images,
+and no image is reused more than twice.
+
+**Verified:** `seed-roles.js` completed successfully and refreshed 112 legacy
+rows; database query confirmed 112 demo vehicles, 61 unique image URLs, and a
+maximum reuse count of 2. The running local backend and frontend hot-reloaded
+the new data.
+
+### R51 — Curated car-only demo imagery (sole developer, 2026-11-05)
+
+Removed the mixed vehicle/SUV/luxury search pool after visual inspection found
+roads, buildings, and other non-car compositions. The demo seed now uses 19
+curated photos from Unsplash's dedicated car results plus the existing known
+vehicle photos. All 110 old Unsplash demo rows were refreshed; non-Unsplash
+custom URLs remain untouched.
+
+**Verified:** demo fleet remains 112 vehicles, uses 19 image URLs, and every
+seed-managed URL is from the curated car-only pool. Maximum reuse is 6 because
+112 vehicles are represented by 19 verified car photos; no unrelated image
+remains in the demo fleet.
+
+### R52 — Seeded top fleet compliance documents (sole developer, 2026-11-05)
+
+Seeded four valid compliance records per top Fleet card: INSURANCE,
+CARTE_GRISE, TECHNICAL_INSPECTION, and VIGNETTE. The records use future expiry
+dates, demo document URLs, and an idempotent missing-type lookup. The exact
+visible top cards are targeted deterministically: DEMO-198-A, DEMO-121-A,
+DEMO-120-A, and DEMO-122-A.
+
+**Verified:** 16 records were added, reruns add no duplicates, the API returns
+four VALID documents for each target vehicle, and the new Fleet screenshot
+shows all four top cards at 100% compliance.
+
+### R53 — Renamed demo agency for presentation screenshots (sole developer, 2026-11-05)
+
+Updated the seeded agency name from `CarHub Demo Agency` to
+`CarHub Rentals Casablanca` in both create and upsert paths, so existing local
+databases are updated on the next idempotent role-seed run. The renamed value
+now appears in the authenticated owner Command Center welcome banner.
+
+**Verified:** role seed completed, the database agency name is
+`CarHub Rentals Casablanca`, and the refreshed screenshot confirms the new
+name without the word "Demo".
+
+### R54 — Seeded demo booking pipeline (sole developer, 2026-11-05)
+
+Added four idempotent bookings to the demo agency for presentation and live
+dashboard checks: one COMPLETED rental, one ACTIVE rental, one APPROVED
+pickup, and one REQUESTED booking. Each booking has a customer, fleet car,
+deposit state, and invoice; the completed and active rentals also have
+verified transfer payments (1020 MAD and 720 MAD respectively).
+
+**Verified:** role seed completed with 4 bookings added, and a database query
+confirmed all four booking statuses plus their related invoices and payments.
+The new owner Command Center and Booking planner screenshots show the seeded
+data in the running application.
+
+### R55 — Expanded demo booking coverage (sole developer, 2026-11-05)
+
+Expanded the idempotent demo pipeline from four to thirteen bookings across
+the visible scheduler window and historical lifecycle states. The additional
+records cover requested, approved, active, overdue, completed, and cancelled
+rentals, each with an agency-scoped invoice and realistic deposit state; paid
+examples include verified transfer payments.
+
+**Verified:** role seed added 9 records, then a database query confirmed 13
+bookings, 13 invoices, and 5 payment rows for `CarHub Rentals Casablanca`.
+The refreshed Booking planner shows the expanded scheduler with 9 active
+bookings and one cancelled booking filter count.

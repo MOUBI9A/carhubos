@@ -99,14 +99,26 @@ export class InspectionsService {
       });
     }
 
-    // 3. Return/damage inspection flow: compare against the PRE_RENTAL baseline
-    // for this booking and, if new damage is detected, auto-raise a damage
-    // charge on the booking's invoice (conservatively — see estimateDamageAmount).
+    // 3. Compare with PRE_RENTAL evidence, flag review, never fabricate payment.
     if (data.type === 'POST_RENTAL' && data.bookingId) {
       await this.autoAssessDamage(agencyId, data.bookingId, inspection);
     }
 
     return inspection;
+  }
+
+  async findAll(agencyId: string) {
+    return this.prisma.inspection.findMany({
+      where: { car: { agencyId } },
+      include: {
+        car: {
+          select: { id: true, brand: true, model: true, licensePlate: true },
+        },
+        inspector: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
   }
 
   async findByCar(agencyId: string, carId: string) {
@@ -154,13 +166,7 @@ export class InspectionsService {
     };
   }
 
-  /**
-   * Looks up the PRE_RENTAL baseline for this booking and, if new damage is
-   * detected against the just-created POST_RENTAL inspection, raises a
-   * conservative auto-charge on the booking's invoice + writes an AuditLog.
-   * No-op (no throw) when there is no PRE_RENTAL baseline or no invoice to
-   * attach a charge to — this is a best-effort assist, not a hard requirement.
-   */
+  /** Flag new damage for staff review; no charge or money movement occurs. */
   private async autoAssessDamage(
     agencyId: string,
     bookingId: string,
@@ -175,78 +181,28 @@ export class InspectionsService {
     const diff = this.diffInspections(pre, post);
     if (!diff.hasNewDamage) return null;
 
-    const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId, agencyId },
-      include: { invoices: { orderBy: { createdAt: 'desc' }, take: 1 } },
-    });
-    const invoice = booking?.invoices[0];
-    if (!invoice) return null; // nothing to attach the charge to — needs manual handling
-
-    const { amount, manualReview, signalSource } = this.estimateDamageAmount(diff.damagesAdded);
-
-    let reference = 'Damage charge (auto-assessed from inspection diff)';
-    reference += manualReview
-      ? ` — MANUAL REVIEW REQUIRED: no reliable cost signal on the new damage entries; amount defaulted to placeholder ${this.damageChargePlaceholder.toFixed(2)}. Staff must verify and correct the amount.`
-      : ` — estimated from ${signalSource}.`;
-
-    const payment = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.payment.create({
-        data: {
-          amount,
-          type: 'INCOME',
-          method: 'CASH',
-          status: 'VERIFIED',
-          reference: reference.slice(0, 500),
-          verifiedById: post.inspectorId ?? null,
-          date: new Date(),
-          invoiceId: invoice.id,
-        },
-      });
-
-      // Reconcile: net verified income vs invoice amount (integer cents) —
-      // mirrors the pattern used for deposit-claim damage charges.
-      const totalCents = invoice.amount.times(100).toNumber();
-      const [incomeAgg, refundAgg] = await Promise.all([
-        tx.payment.aggregate({
-          where: { invoiceId: invoice.id, status: 'VERIFIED', type: 'INCOME' },
-          _sum: { amount: true },
-        }),
-        tx.payment.aggregate({
-          where: { invoiceId: invoice.id, status: 'VERIFIED', type: 'REFUND' },
-          _sum: { amount: true },
-        }),
-      ]);
-      const incomeCents = (incomeAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
-      const refundCents = (refundAgg._sum.amount ?? new Prisma.Decimal(0)).times(100).toNumber();
-      const paidCents = incomeCents - refundCents;
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          status: paidCents >= totalCents ? 'PAID' : paidCents > 0 ? 'PARTIAL' : 'DUE',
-        },
-      });
-
-      return created;
-    });
-
+    // Detection is evidence for human review, NOT evidence that funds were received.
+    // Never create VERIFIED income, an invoice payment, or a deposit claim here.
+    const { amount, manualReview, signalSource } =
+      this.estimateDamageAmount(diff.damagesAdded);
     await this.auditLogs.log(
       agencyId,
       post.inspectorId ?? 'system',
-      'AUTO_DAMAGE_CHARGE',
+      'DAMAGE_REVIEW_REQUIRED',
       'BOOKING',
       bookingId,
       { preInspectionId: pre.id, postInspectionId: post.id },
       {
-        paymentId: payment.id,
-        amount,
-        manualReview,
+        proposedAmount: amount.toString(),
+        manualReview: true, // liability and collection always require explicit review
+        sourceCostProvided: !manualReview,
+        signalSource,
         damagesAdded: diff.damagesAdded,
         fuelLevelDelta: diff.fuelLevelDelta,
         mileageDelta: diff.mileageDelta,
       },
     );
-
-    return payment;
+    return null;
   }
 
   private parseDamages(json?: string | null): any[] {

@@ -20,6 +20,9 @@ async function main() {
   await prisma.car.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.task.deleteMany();
+  if (prisma.emailVerificationToken) {
+    await prisma.emailVerificationToken.deleteMany();
+  }
   await prisma.user.deleteMany();
   await prisma.webhookSubscription.deleteMany();
   await prisma.agency.deleteMany();
@@ -36,6 +39,8 @@ async function main() {
       contactEmail: 'operations@prestige-rentals.ma',
       businessPhone: '+212522000000',
       subscriptionTier: 'BUSINESS',
+      onboardingStatus: 'COMPLETED',
+      onboardingCompletedAt: new Date(),
     }
   });
 
@@ -47,6 +52,8 @@ async function main() {
       password: hashedPassword,
       role: 'OWNER',
       agencyId: agency.id,
+      isVerified: true,
+      emailVerifiedAt: new Date(),
     }
   });
 
@@ -57,6 +64,8 @@ async function main() {
       password: hashedPassword,
       role: 'AGENT',
       agencyId: agency.id,
+      isVerified: true,
+      emailVerifiedAt: new Date(),
     }
   });
 
@@ -107,6 +116,7 @@ async function main() {
         model: 'Velar',
         year: 2024,
         licensePlate: '1-A-2024',
+        imageUrl: 'https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=85',
         pricePerDay: 1500,
         status: 'AVAILABLE',
         mileage: 5000,
@@ -120,6 +130,7 @@ async function main() {
         model: 'G-Class',
         year: 2023,
         licensePlate: '77-B-2023',
+        imageUrl: 'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=85',
         pricePerDay: 2500,
         status: 'RENTED',
         mileage: 12000,
@@ -133,6 +144,7 @@ async function main() {
         model: 'Touareg',
         year: 2024,
         licensePlate: '10-W-2024',
+        imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=85',
         pricePerDay: 1200,
         status: 'AVAILABLE',
         mileage: 8000,

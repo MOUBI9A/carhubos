@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/contexts/ToastContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useCommandCentre, commandCentreKeys } from './useCommandCentre';
 import api from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -43,6 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { SrDataTable } from '@/components/ui/SrDataTable';
 import { useCustomerRisk } from './useCustomerRisk';
 import { RiskAssessmentPanel } from './components/RiskAssessmentPanel';
+import { AutomotiveOperationalPulse } from './components/AutomotiveOperationalPulse';
 
 export default function OwnerDashboard() {
   const t = useTranslations('ownerPages');
@@ -53,6 +55,8 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useCommandCentre();
+  const { user } = useAuth();
+  const [showFirstRunBanner, setShowFirstRunBanner] = useState(true);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isGuardianModalOpen, setIsGuardianModalOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
@@ -268,6 +272,74 @@ export default function OwnerDashboard() {
         </div>
       </header>
 
+      {/* ═══════ First-run onboarding completion banner ═══════ */}
+      {showFirstRunBanner && data.activeRentals === 0 && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-surface to-surface-raised border border-primary/25 p-6 md:p-8 shadow-lg">
+          <div className="absolute -top-12 -end-12 w-44 h-44 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Workspace Live
+                </span>
+                <span className="text-xs text-text-muted">• Setup 85% Complete</span>
+              </div>
+              <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground tracking-tight">
+                Welcome to {user?.agencyName || 'Your Agency Workspace'}
+              </h2>
+              <p className="text-xs md:text-sm text-text-muted max-w-xl leading-relaxed">
+                Your onboarding is complete and {data.fleet.total} vehicle{data.fleet.total > 1 ? 's are' : ' is'} loaded in your fleet ready for rental. Start by booking your first car, adding customers, or inviting front-desk agents.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="primary"
+                className="text-xs py-2 px-3.5 rounded-xl"
+                onClick={() => setIsBookingModalOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5 me-1.5" />
+                Create First Booking
+              </Button>
+              <Button
+                variant="outline"
+                className="text-xs py-2 px-3 rounded-xl"
+                onClick={() => {
+                  setIsBookingModalOpen(true);
+                  setIsRegisterOpen(true);
+                }}
+              >
+                <Users className="w-3.5 h-3.5 me-1.5" />
+                Add Customer
+              </Button>
+              <Button
+                variant="outline"
+                className="text-xs py-2 px-3 rounded-xl"
+                onClick={() => router.push('/dashboard/fleet')}
+              >
+                <Car className="w-3.5 h-3.5 me-1.5" />
+                Add Vehicle
+              </Button>
+              <Button
+                variant="outline"
+                className="text-xs py-2 px-3 rounded-xl"
+                onClick={() => router.push('/dashboard/staff')}
+              >
+                Invite Staff
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowFirstRunBanner(false)}
+                className="text-text-faint hover:text-foreground p-1.5 text-xs transition-colors"
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══════ Primary metrics ═══════ */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Net revenue MTD — the page's single brass hero figure */}
@@ -350,6 +422,9 @@ export default function OwnerDashboard() {
           <p className="mt-1 text-xs text-text-muted">Value in the waitlist queue</p>
         </Card>
       </div>
+
+      {/* ═══════ Automotive Workshop & Fleet Pulse ═══════ */}
+      <AutomotiveOperationalPulse />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">

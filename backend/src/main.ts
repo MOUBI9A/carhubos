@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
+import { AutomotiveTelemetryService } from './common/telemetry/automotive-telemetry.service';
+import { AutomotiveTelemetryInterceptor } from './common/telemetry/automotive-telemetry.interceptor';
 import {
   requestIdMiddleware,
   RequestWithId,
@@ -43,7 +45,12 @@ async function bootstrap() {
   });
   app.useGlobalFilters(new AllExceptionsFilter());
   // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
-  app.useGlobalInterceptors(new DecimalToNumberInterceptor());
+  const automotiveTelemetry = new AutomotiveTelemetryService();
+  app.useGlobalInterceptors(
+    new DecimalToNumberInterceptor(),
+    new AutomotiveTelemetryInterceptor(automotiveTelemetry),
+  );
+
 
   app.useGlobalPipes(
     new ValidationPipe({

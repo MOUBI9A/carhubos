@@ -13,6 +13,7 @@ datasource db {
 
 // 🏛️ PILLAR 1: SAAS CORE & MULTI-TENANCY
 model Agency {
+  guardianReports GuardianReport[]
   id               String    @id @default(uuid())
   name             String
   subdomain        String?   @unique
@@ -25,6 +26,13 @@ model Agency {
   website          String? // Public site shown on the settings page + landing profile
   status           String    @default("ACTIVE") // ACTIVE, SUSPENDED
   subscriptionTier String    @default("STARTER") // STARTER, PRO, BUSINESS
+  onboardingStatus      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  onboardingCurrentStep Int       @default(1)
+  onboardingCompletedAt DateTime?
+  currency              String    @default("MAD")
+  country               String    @default("Morocco")
+  timezone              String    @default("Africa/Casablanca")
+  defaultDeposit        Decimal?  @default(5000) @db.Decimal(12, 2)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // Soft-delete tombstone; null = live. Never hard-delete an agency.
@@ -51,6 +59,9 @@ model Agency {
   accidents        Accident[]
   checkoutSessions CheckoutSession[]
   vaultFiles       VaultFile[]
+  diagnosticVehicles DiagnosticVehicle[]
+  diagnosticSessions DiagnosticSession[]
+  workOrders         WorkOrder[]
 
   @@index([deletedAt])
 }
@@ -80,6 +91,7 @@ model User {
   trustScore Int      @default(50) // Renter trust level (0-100)
   qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
   isVerified Boolean  @default(false)
+  emailVerifiedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -90,6 +102,7 @@ model User {
   rentals          Booking[]          @relation("Renter")
   verifiedPayments Payment[]          @relation("PaymentVerifier")
   memberships      AgencyMembership[]
+  emailVerificationTokens EmailVerificationToken[]
 
   // 🌐 PILLAR 6 link: the global, cross-tenant identity this claimed RENTER portal
   // account resolves to. Null until the renter claims/verifies their identity.
@@ -102,8 +115,25 @@ model User {
   notifications      Notification[]
   renterDocuments    RenterDocument[] // the renter's OWN global identity-document vault
   vaultFilesUploaded VaultFile[] // agency Vault files this staff member uploaded
+  diagnosticSessions DiagnosticSession[]
+  assignedWorkOrders WorkOrder[] @relation("AssignedTechnician")
 
   @@index([agencyId])
+}
+
+// ✉️ EMAIL VERIFICATION TOKEN (Secure hashed single-use token)
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 // 🔐 CAPABILITY ENGINE (schema foundation; guard wiring is a later task)
@@ -129,11 +159,13 @@ model AgencyMembership {
 
 // 🚘 PILLAR 2: ASSET INTELLIGENCE & GUARDIAN
 model Car {
+  guardianReports GuardianReport[]
   id            String   @id @default(uuid())
   brand         String
   model         String
   year          Int
   licensePlate  String
+  imageUrl      String?
   pricePerDay   Decimal  @db.Decimal(12, 2)
   fuelType      String   @default("DIESEL")
   gearbox       String   @default("MANUAL")
@@ -153,7 +185,10 @@ model Car {
   inspections Inspection[]
   hubListing  HubListing?
   accidents   Accident[]
+  diagnosticVehicles DiagnosticVehicle[]
+  workOrders  WorkOrder[]
 
+  @@unique([id, agencyId])
   @@unique([agencyId, licensePlate])
   @@index([agencyId])
   @@index([status])
@@ -269,6 +304,7 @@ model AuditLog {
 
 // 💰 PILLAR 4: FINANCIAL BRAIN & ERP
 model Booking {
+  guardianReports GuardianReport[]
   id            String   @id @default(uuid())
   startDate     DateTime
   endDate       DateTime
@@ -812,4 +848,188 @@ model PlatformInvoice {
 
   @@index([agencyId])
   @@index([status])
+}
+
+// 🩺 AUTOMOTIVE DIAGNOSTICS & TELEMETRY
+model DiagnosticVehicle {
+  id         String   @id @default(uuid())
+  agencyId   String
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  fleetCarId String?
+  fleetCar   Car?     @relation(fields: [fleetCarId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  vin        String?
+  brand      String
+  model      String
+  year       Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sessions   DiagnosticSession[]
+  workOrders WorkOrder[]
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, fleetCarId])
+  @@index([agencyId, vin])
+}
+
+model DiagnosticSession {
+  id          String   @id @default(uuid())
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  vehicleId   String
+  vehicle     DiagnosticVehicle @relation(fields: [vehicleId, agencyId], references: [id, agencyId], onDelete: Restrict)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  source      String   @default("IMPORT")
+  status      String   @default("OPEN")
+  revision    Int      @default(0)
+  symptoms    String   @default("")
+  // Bounded pilot evidence only: capped ingest, explicit provenance.
+  data        Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workOrders  WorkOrder[]
+
+  @@unique([id, agencyId])
+  @@index([agencyId, createdAt])
+}
+
+// 🔧 WORK ORDERS & REPAIR OPERATIONS
+model WorkOrder {
+  id                   String    @id @default(uuid())
+  orderNumber          String
+  agencyId             String
+  agency               Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicleId            String?
+  vehicle              DiagnosticVehicle? @relation(fields: [vehicleId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  fleetCarId           String?
+  fleetCar             Car?      @relation(fields: [fleetCarId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  sessionId            String?
+  session              DiagnosticSession? @relation(fields: [sessionId, agencyId], references: [id, agencyId], onDelete: SetNull)
+  assignedTechnicianId String?
+  assignedTechnician   User?     @relation("AssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  status               String    @default("DRAFT") // DRAFT, AWAITING_APPROVAL, APPROVED, SCHEDULED, IN_PROGRESS, WAITING_FOR_PARTS, BLOCKED, READY_FOR_QUALITY_CHECK, QUALITY_CHECK, COMPLETED, INVOICED, CANCELLED
+  priority             String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  description          String
+  customerNotes        String?
+  internalNotes        String?
+  laborHours           Decimal   @default(0) @db.Decimal(12, 2)
+  laborRate            Decimal   @default(300) @db.Decimal(12, 2)
+  partsTotal           Decimal   @default(0) @db.Decimal(12, 2)
+  laborTotal           Decimal   @default(0) @db.Decimal(12, 2)
+  taxAmount            Decimal   @default(0) @db.Decimal(12, 2)
+  totalAmount          Decimal   @default(0) @db.Decimal(12, 2)
+  currency             String    @default("MAD")
+  lineItems            Json      @default("[]")
+  verificationNotes    String?
+  dtcCleared           Boolean   @default(false)
+  verifiedAt           DateTime?
+  scheduledAt          DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  invoicedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([id, agencyId])
+  @@unique([agencyId, orderNumber])
+  @@index([agencyId, status])
+  @@index([agencyId, assignedTechnicianId])
+}
+
+/// One mutually reviewed condition snapshot per booking and inspection phase.
+/// Historical reports remain separate from live vehicle defect status.
+model GuardianReport {
+  id                       String             @id @default(uuid())
+  agencyId                 String
+  agency                   Agency             @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  bookingId                String
+  booking                  Booking            @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  carId                    String
+  car                      Car                @relation(fields: [carId], references: [id], onDelete: Restrict)
+  phase                    String // OUT or IN
+  mode                     String             @default("FULL") // QUICK or FULL
+  status                   String             @default("DRAFT")
+  revision                 Int                @default(1)
+  agencyApprovedRevision   Int?
+  customerApprovedRevision Int?
+  mileage                  Int
+  fuelLevel                Int
+  createdById              String
+  publishedAt              DateTime?
+  mutuallyApprovedAt       DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  findings                 GuardianFinding[]
+  evidence                 GuardianEvidence[]
+  events                   GuardianEvent[]
+
+  @@unique([bookingId, phase])
+  @@index([agencyId, carId])
+  @@index([agencyId, status])
+}
+
+/// Immutable bytes: storage is private, with original SHA-256 and uploader metadata.
+/// Signed URLs are generated per authorized request; no public permanent URL.
+model GuardianEvidence {
+  id             String            @id @default(uuid())
+  reportId       String
+  report         GuardianReport    @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  kind           String // OVERVIEW, ODOMETER, FUEL, DAMAGE, VIDEO, REPAIR
+  storagePath    String            @unique
+  sha256         String
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  uploadedById   String
+  uploadedByRole String // AGENCY or CUSTOMER
+  createdAt      DateTime          @default(now())
+  findingPhoto   GuardianFinding? @relation("GuardianFindingPhoto")
+  findingVideos  GuardianFinding[] @relation("GuardianFindingVideo")
+  repairPhoto    GuardianFinding? @relation("GuardianRepairPhoto")
+
+  @@index([reportId, kind])
+}
+
+/// Each finding has its own mandatory close-up photo. Individual damage may
+/// remain OPEN across many bookings until a repair is documented.
+model GuardianFinding {
+  id             String            @id @default(uuid())
+  reportId       String
+  report         GuardianReport    @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  zone           String
+  kind           String
+  description    String            @default("")
+  source         String // AGENCY or CUSTOMER
+  status         String            @default("PROPOSED") // PROPOSED, ACCEPTED, DISPUTED; repair tracked separately by repairedAt
+  photoId        String @unique
+  photo          GuardianEvidence  @relation("GuardianFindingPhoto", fields: [photoId], references: [id], onDelete: Restrict)
+  videoId        String?
+  video          GuardianEvidence? @relation("GuardianFindingVideo", fields: [videoId], references: [id], onDelete: Restrict)
+  videoOffsetSec Int?
+  agencyNote     String?
+  repairPhotoId  String? @unique
+  repairPhoto    GuardianEvidence? @relation("GuardianRepairPhoto", fields: [repairPhotoId], references: [id], onDelete: Restrict)
+  repairedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([reportId, status])
+  @@index([status, createdAt])
+}
+
+/// Append-only approval, correction, rejection and repair history.
+model GuardianEvent {
+  id        String         @id @default(uuid())
+  reportId  String
+  report    GuardianReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  revision  Int
+  actorId   String
+  actorRole String
+  action    String
+  details   Json           @default("{}")
+  createdAt DateTime       @default(now())
+
+  @@index([reportId, createdAt])
 }

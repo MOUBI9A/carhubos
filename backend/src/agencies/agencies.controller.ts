@@ -10,6 +10,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CapabilitiesGuard } from '../common/guards/capabilities.guard';
 import { RequireCapabilities } from '../common/decorators/require-capabilities.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AllowIncompleteOnboarding } from '../common/decorators/allow-incomplete-onboarding.decorator';
 import { IsOptional, IsString, IsEmail, MaxLength } from 'class-validator';
 
 class UpdateAgencyDto {
@@ -43,6 +44,7 @@ class UpdateAgencyDto {
  * open to any authenticated staff (CapabilitiesGuard no-ops without
  * `@RequireCapabilities`, matching the pattern already used elsewhere).
  */
+@AllowIncompleteOnboarding()
 @UseGuards(AuthGuard, CapabilitiesGuard)
 @Controller('agencies')
 export class AgenciesController {

@@ -25,7 +25,7 @@ export function DashboardLayout({
   /** If set, only these roles may view this area; others are sent to their own home. */
   allow?: string[];
 }) {
-  const { role, isLoading } = useAuth();
+  const { user, role, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const tc = useTranslations('common');
@@ -40,18 +40,43 @@ export function DashboardLayout({
     if (isLoading) return;
     if (!role) {
       router.push('/login');
+    } else if (role !== 'ROOT_ADMIN' && user?.isVerified === false) {
+      router.push('/verify-email');
+    } else if (role === 'OWNER' && user?.onboardingStatus !== 'COMPLETED') {
+      router.push('/onboarding');
     } else if (allow && !allow.includes(role)) {
       router.push(HOME_BY_ROLE[role] ?? '/login');
     }
-  }, [role, isLoading, allow, router]);
+  }, [user, role, isLoading, allow, router]);
 
-  const blocked = !!allow && !!role && !allow.includes(role);
+  const blocked =
+    (!role && !isLoading) ||
+    (!!allow && !!role && !allow.includes(role)) ||
+    (role !== 'ROOT_ADMIN' && user?.isVerified === false) ||
+    (role === 'OWNER' && user?.onboardingStatus !== 'COMPLETED');
 
-  if (isLoading || !role || blocked) {
+  if (isLoading || blocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-12 h-12 rounded-2xl bg-surface border border-hairline flex items-center justify-center">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+      <div className="min-h-screen bg-background text-foreground flex">
+        {/* Placeholder sidebar skeleton for immediate layout paint */}
+        <div className="hidden lg:flex w-64 flex-col border-r border-hairline bg-surface/50 p-6 space-y-6">
+          <div className="h-8 w-28 bg-surface-raised rounded-lg animate-pulse" />
+          <div className="space-y-3 pt-4">
+            <div className="h-9 w-full bg-surface-raised rounded-lg animate-pulse" />
+            <div className="h-9 w-full bg-surface-raised rounded-lg animate-pulse" />
+            <div className="h-9 w-full bg-surface-raised rounded-lg animate-pulse" />
+            <div className="h-9 w-full bg-surface-raised rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="flex-1 p-6 lg:p-8 space-y-6">
+          <div className="h-10 w-48 bg-surface-raised rounded-lg animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="h-28 bg-surface-raised rounded-xl animate-pulse" />
+            <div className="h-28 bg-surface-raised rounded-xl animate-pulse" />
+            <div className="h-28 bg-surface-raised rounded-xl animate-pulse" />
+            <div className="h-28 bg-surface-raised rounded-xl animate-pulse" />
+          </div>
+          <div className="h-64 bg-surface-raised rounded-xl animate-pulse" />
         </div>
       </div>
     );

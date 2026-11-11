@@ -32,6 +32,8 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Unit tests
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
         run: npx jest
       - name: Lint
         run: npx eslint .

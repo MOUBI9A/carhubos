@@ -9,8 +9,8 @@ echo "[security-baseline] Backend production dependency audit"
 echo "[security-baseline] Frontend production dependency audit"
 (cd frontend && npm audit --omit=dev --audit-level=high)
 
-echo "[security-baseline] Backend static security checks"
-(cd backend && bash ./scripts/security-baseline.sh)
+echo "[security-baseline] Multi-tenant boundary static checks"
+(cd backend && npx jest src/common/multi-tenant-boundary.spec.ts --silent)
 
 echo "[security-baseline] Checking for committed .env files"
 tracked_env_files=$(git ls-files "*.env" "*.env.*" ":!:*.env.example" ":!:*.env.sample" || true)

@@ -51,6 +51,7 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
+            <Link href="/portal/inspections" className="text-sm font-bold text-text-muted hover:text-foreground">Guardian Vision</Link>
             <Link href="/portal" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('vault')}</Link>
             <Link href="/portal/book" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('book')}</Link>
             <Link href="/portal/history" className="text-sm font-bold text-text-muted hover:text-foreground transition-colors">{t('history')}</Link>
@@ -69,6 +70,7 @@ export default function RenterLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
       
+      <nav className="md:hidden flex gap-5 px-4 py-3 overflow-x-auto border-b border-hairline text-sm" aria-label="Portal navigation"><Link href="/portal">{t('vault')}</Link><Link href="/portal/book">{t('book')}</Link><Link href="/portal/history">{t('history')}</Link><Link href="/portal/inspections" className="whitespace-nowrap">Guardian Vision</Link></nav>
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
         {children}
       </main>

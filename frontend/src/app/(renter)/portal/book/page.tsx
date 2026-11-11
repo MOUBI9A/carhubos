@@ -16,6 +16,7 @@ type PublicCar = {
   model: string;
   year: number;
   pricePerDay: number;
+  imageUrl?: string | null;
   fuelType?: string | null;
   gearbox?: string | null;
   agency?: { name?: string | null; city?: string | null } | null;
@@ -143,6 +144,7 @@ export default function BookCar() {
           {visibleCars.map((car) => (
             <Card key={car.id} padding="none" className="overflow-hidden group hover:translate-y-[-4px]">
               <CarPhoto
+                src={car.imageUrl}
                 alt={`${car.brand} ${car.model}`}
                 plate={car.fuelType || t('model')}
                 price={money(car.pricePerDay)}

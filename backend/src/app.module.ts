@@ -42,6 +42,12 @@ import { AccidentsModule } from './accidents/accidents.module';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { VaultModule } from './vault/vault.module';
+import { GuardianModule } from './guardian/guardian.module';
+import { EmailModule } from './email/email.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+import { WorkOrdersModule } from './work-orders/work-orders.module';
+import { PartsModule } from './parts/parts.module';
 
 const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
 
@@ -94,6 +100,12 @@ const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
     PaymentGatewayModule,
     CheckoutModule,
     VaultModule,
+    GuardianModule,
+    EmailModule,
+    OnboardingModule,
+    DiagnosticsModule,
+    WorkOrdersModule,
+    PartsModule,
   ],
   controllers: [AppController],
   providers: [

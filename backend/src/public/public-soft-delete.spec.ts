@@ -24,7 +24,7 @@ describe('Public endpoints exclude soft-deleted agencies', () => {
       },
       agency: { findFirst: jest.fn().mockResolvedValue(null) },
     };
-    const controller = new PublicController(prisma as any, {} as any);
+    const controller = new PublicController(prisma as any, {} as any, {} as any);
     return { controller, prisma };
   };
 
@@ -92,7 +92,7 @@ describe('Public endpoints exclude soft-deleted agencies', () => {
         },
         agency: { findFirst: jest.fn().mockResolvedValue(null) },
       };
-      return { controller: new PublicController(prisma as any, {} as any), prisma };
+      return { controller: new PublicController(prisma as any, {} as any, {} as any), prisma };
     };
 
     it('caps the bare call instead of returning the whole table', async () => {

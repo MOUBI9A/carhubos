@@ -1,0 +1,104 @@
+# Current Operational State
+
+- **Active Branch**: `feat/automotive-os-platform`
+- **Active Phase**: Phase 8 (Automotive Adversarial & Financial Invariant Hardening)
+- **Current Objective**: Adversarial stress testing, zero-decimal drift validation (MAD, 20% VAT), state machine bypass prevention, DTC verification enforcement, predictive maintenance, and offline garage resiliency.
+
+---
+
+## Working Subsystems
+- **Multi-tenant Core**: Agency tenant isolation, scoped queries (`where: { id, agencyId }`), 404 IDOR guard, capability engine (`AgencyMembership`).
+- **Fleet & Assets**: Vehicles (`Car`), Car Documents, Maintenance Records, Accidents.
+- **Financial Engine**: Bookings, Invoices, Payments, Stripe / Mock gateway integration, Decimal monetary precision (MAD, 20% VAT).
+- **Renter & Consent Vault**: HMAC-SHA256 salted identity hash, consent grants, document vault.
+- **Automotive Adversarial & Financial Integrity**:
+  - Dedicated stress test suite (`automotive-adversarial.spec.ts`) modeled after Creator Revenue OS's financial adversarial rigor.
+  - Mathematical conservation: Zero-decimal drift across fractional labor hours and odd parts pricing with exact `Prisma.Decimal(12,2)` precision.
+  - Hardened non-negative constraints rejecting negative labor hours, negative labor rates, and negative parts quantities.
+  - State machine bypass prevention: illegal jumps (e.g. `DRAFT` $\to$ `COMPLETED`) and illegal rollbacks (e.g. `COMPLETED` $\to$ `DRAFT`) strictly blocked.
+  - Mandatory post-repair diagnostic verification: `COMPLETED` transitions blocked until DTC clearance is explicitly certified by a technician.
+  - Cross-tenant injection & IDOR attack resistance: foreign vehicle/car insertions into work orders return 404.
+  - Double-invoicing prevention & cryptographic SHA-256 tamper-evident report seal invariant.
+- **Predictive Maintenance & Service Interval Engine**:
+  - `PredictiveMaintenanceService` analyzing mileage intervals against Moroccan driving conditions (oil & filter every 10k km, air & cabin filters every 20k km, fuel filter every 30k km, brake pads every 30-45k km, timing belt every 100k km).
+  - Vehicle schedule calculator with dynamic urgency classifications (`HEALTHY`, `UPCOMING`, `DUE_SOON`, `OVERDUE`).
+  - Fleet-wide predictive overview (`GET /api/maintenance/predictive-overview`) forecasting 30-day pending maintenance expenditure in MAD.
+  - Interactive UI card (`PredictiveMaintenanceCard.tsx`) with progress indicators, status filters, and 1-click work order estimate addition.
+- **Offline-Resilient Technician Bay Buffer**:
+  - `GarageOfflineBuffer` and `OfflineSyncBanner.tsx` supporting spotty garage WiFi networks.
+  - Safe local draft persistence in `localStorage`, automated action queuing, and online reconnection synchronization.
+- **Automotive Diagnostics Engine**:
+  - `DiagnosticVehicle` & `DiagnosticSession` with full relational integrity.
+  - Streaming OBD-II packet normalizer, PID decoder, re-order window, deduplication.
+  - Server-Sent Events (SSE) telemetry stream endpoint (`GET /api/diagnostics/sessions/:id/stream`) delivering live packets, DTC events, and completion signals.
+  - Deterministic simulator covering misfires (P0300, P0301), lean trims (P0171), catalyst efficiency (P0420), oxygen sensors, coolant overheating, and sensor faults.
+  - AI reasoning adapter (`AnthropicProvider`) with fallback and evidence provenance.
+  - Tamper-evident SHA-256 canonical diagnostic report generator with PDF export.
+- **Diagnostic Bay Gauges Experience**:
+  - High-frequency interactive SVG gauges: Tachometer / RPM (0-7000 RPM with redline alert), Speedometer (0-240 km/h), Coolant Temperature (with >105°C overheating alarm), Fuel Trims (STFT/LTFT +/- 25% bars), and Engine Load.
+  - Real-time rolling packet inspection feed and live DTC pop-up banner during vehicle drive cycles.
+- **Work Orders & Repair State Machine**:
+  - `WorkOrder` entity with 12 distinct auditable states: `DRAFT`, `AWAITING_APPROVAL`, `APPROVED`, `SCHEDULED`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `BLOCKED`, `READY_FOR_QUALITY_CHECK`, `QUALITY_CHECK`, `COMPLETED`, `INVOICED`, `CANCELLED`.
+  - Automatic `MaintenanceRecord` creation upon work order completion for fleet assets.
+  - Dedicated "Generate Invoice" flow transitioning completed work orders to invoiced status.
+  - Sequenced order numbering (`WO-YYYY-0001`).
+  - Post-repair verification with DTC re-scan enforcement prior to completion.
+  - Direct conversion from Diagnostic Session Estimate to Work Order.
+- **Parts Intelligence & Supplier Catalog**:
+  - Provider-neutral parts system with Moroccan distributor pricing in MAD (Autoplus Maroc, Somafaco, Maghreb Accessoires, Copart).
+  - Tiers: `OEM_DIRECT`, `AFTERMARKET_PREMIUM`, `AFTERMARKET_STANDARD`, `ECONOMY`.
+  - Engine & DTC matching (Bosch, NGK, Brembo, Valeo, Febi Bilstein, Continental/VDO, Walker).
+  - One-click "Add to Estimate" integration.
+- **Customer Vehicle Health Translator**:
+  - Plain-language health assessment without misleading false precision.
+  - Monitored subsystems: Engine & Combustion, Cooling, Emissions, Fuel & Air, Electrical.
+  - Clear driveability verdict ("Safe to drive: Yes/No") and layman Q&A explaining what happened, what needs repair, and what happens if ignored.
+- **Work Order Printable PDF Job Card & Workshop Invoice Generator**:
+  - `generatePdf` endpoint (`GET /api/work-orders/:id/pdf`) producing official A4 printable workshop job cards & invoices in Moroccan Dirhams (MAD, 20% VAT).
+  - Secure HTML injection escaping, agency header with ICE/tax ID, vehicle dossier, itemized parts and labor, and post-repair DTC certification stamp.
+- **Customer Remote Estimate Approval Portal**:
+  - Public endpoints (`GET /api/public/estimates/:token`, `POST /api/public/estimates/:token/approve`).
+  - Cryptographic HMAC-SHA256 signed tamper-evident token with 7-day expiration and strict tenant isolation (404 on invalid).
+  - Dedicated public approval portal (`/estimate-approval/[token]`) with vehicle dossier, layman scope, MAD 20% VAT breakdown, digital sign-off, and instant confirmation.
+  - One-click "Lien Client" copy button on the garage dashboard.
+- **Telematics Fleet Map Live OBD Health Overlay**:
+  - Rebuilt `/dashboard/fleet-map` with real-time Moroccan operational hubs (Casablanca, Marrakech, Tangier, Rabat, Agadir, etc.), live OBD DTC health status badges (Nominal 🟢, Alerte 🟡, Critique 🔴), vehicle telemetry breakdown, and quick diagnostic bay drawer.
+- **Rental Core Rate Tiers & Seasonality Engine**:
+  - `RentalPricingEngine` with duration tiers (Weekly 10% discount, Monthly 20% discount), Moroccan Peak Summer Seasonality (+20% surge in July/August), strict Decimal.js math in MAD with 20% inclusive VAT.
+  - Dynamic pricing quote endpoint (`GET /api/bookings/pricing/quote`).
+- **Fleet Grid Pagination Adoption**:
+  - 12-item responsive paginated grid on `/dashboard/fleet` with previous/next controls, page indicators, and query-reset state.
+- **Automotive Workshop & Fleet Operational Pulse**:
+  - Live Command Centre dashboard widget (`AutomotiveOperationalPulse.tsx`) answering all core operational questions (§32): vehicles waiting in bay, diagnostics needing review, active repairs, blocked jobs/parts, and QC sign-offs.
+  - Backend metrics aggregation endpoint (`GET /api/work-orders/metrics/summary`) strictly scoped by `agencyId`.
+- **ELM327 OBD-II Hardware Adapter**:
+  - Web Bluetooth (BLE) and Web Serial hardware dongle pairing (`elm327Adapter.ts`) with live PID polling and Mode 03 DTC scanning.
+  - Dedicated controls in `DiagnosticBayGauges.tsx`.
+- **Automotive APM Tracing & Privacy**:
+  - W3C TraceContext (`traceparent`, `X-Trace-Id`) propagation with VIN PII masking (`sanitizeVin`).
+  - Structured event logger for OBD connections, DTC detections, AI token costs, and work order transitions.
+- **Automotive Knowledge Graph & Technician Copilot**:
+  - Complete SAE J2012 / ISO 14229 dictionary localized for Moroccan climate (Marrakech/Ouarzazate ambient heat) and city driving conditions (Casablanca/Rabat DPF soot).
+  - Phased interactive checklist (Scan Tool, Electrical DMM/Scope, Mechanical pressure/smoke, Factory Torque specs).
+  - Multi-code synthesis engine correlating cross-system failure patterns with shared labor discounts.
+  - `TechnicianCopilotDrawer.tsx` frontend modal with instant DTC search and 1-click append to notes.
+- **Production Gate Harness**:
+  - Automated 11-gate execution harness (`scripts/production-gate.sh`) verifying git cleanliness, migrations, backend/frontend builds and tests, and security baseline.
+- **Frontend Stack**: Next.js 16 App Router, Tailwind CSS, multi-lingual i18n (FR, AR, EN), technician workspace, and work orders dashboard.
+- **Mobile Stack**: Expo 52 React Native mobile application.
+
+---
+
+## Recent Verification Evidence
+- **Production Gate**: **11/11 Gates Passed Cleanly with Concrete Evidence** (`scripts/production-gate.sh`).
+- **Backend Unit & Integration Suite**: **65 passed, 65 total; 541 tests passing** (Jest).
+- **Backend Live-DB E2E Suite**: **3 passed, 3 total; 17 tests passing** (`test/automotive-diagnostics.e2e-spec.ts`, `test/tenant-isolation.e2e-spec.ts`, `test/app.e2e-spec.ts`).
+- **Backend TypeScript**: `tsc --noEmit` **0 errors**.
+- **Backend Production Build**: `npm run build` **0 errors (dist/ clean)**.
+- **Frontend Vitest Suite**: **9 passed, 9 total; 36 tests passing**.
+- **Frontend TypeScript**: `tsc --noEmit` **0 errors**.
+- **Frontend Production Build**: `npm run build` **All 48 routes compiled and optimized (Turbopack)**.
+- **Mobile TypeScript**: `tsc --noEmit` **0 errors**.
+- **Database migrations**: Applied cleanly (`20261017200000_diagnostics`, `20261017203000_add_work_orders`).
+- **Git State**: Clean working tree on branch `feat/automotive-os-platform`.
+

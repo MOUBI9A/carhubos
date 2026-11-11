@@ -46,6 +46,11 @@ export const AGENCY_CAPABILITIES = [
   'staff.manage',
   'settings.manage',
   'billing.manage',
+  'diagnostics.view',
+  'diagnostics.perform',
+  'diagnostics.confirm',
+  'diagnostics.estimate',
+  'work_order.manage',
 ] as const;
 
 /**
@@ -102,6 +107,8 @@ export const ROLE_PRESETS: Record<string, string[]> = {
     'payment.record',
     'trust.report',
     'reports.view',
+    'diagnostics.view',
+    'diagnostics.perform',
   ],
 };
 
@@ -112,6 +119,7 @@ export const ROLE_PRESETS: Record<string, string[]> = {
  *   Front desk    — bookings, customers, contracts, deposits, taking payment.
  *   Fleet manager — the fleet, inspections, booking hand-off, and B2B hub.
  *   Accountant    — the finance surface only.
+ *   Technician    — diagnostics, work orders, inspections.
  */
 export const STAFF_PRESETS: Record<string, string[]> = {
   'Front desk': [
@@ -141,5 +149,14 @@ export const STAFF_PRESETS: Record<string, string[]> = {
     'payment.verify',
     'expense.manage',
     'reports.view',
+  ],
+  'Diagnostic technician': [
+    'fleet.view',
+    'diagnostics.view',
+    'diagnostics.perform',
+    'diagnostics.confirm',
+    'diagnostics.estimate',
+    'work_order.manage',
+    'inspection.perform',
   ],
 };

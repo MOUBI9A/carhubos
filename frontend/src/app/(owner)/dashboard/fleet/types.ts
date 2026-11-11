@@ -41,6 +41,7 @@ export interface FleetCar {
   model: string;
   year: number;
   licensePlate: string;
+  imageUrl?: string | null;
   pricePerDay: number;
   fuelType: string;
   gearbox: string;

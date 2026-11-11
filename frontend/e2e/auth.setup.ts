@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { API_URL, STORAGE_STATE } from '../playwright.config';
+import { createRoleFixtures } from './fixtures';
 
 /**
  * Registers a fresh, isolated agency for this run, seeds it with a couple of
@@ -32,6 +33,15 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
     reg.ok(),
     `register failed (${reg.status()}): ${await reg.text()}`,
   ).toBeTruthy();
+  const regJson = await reg.json();
+
+  // 1b) Verify email with token
+  if (regJson.debugVerificationToken) {
+    const verifyRes = await request.post(`${API_URL}/auth/verify-email`, {
+      data: { token: regJson.debugVerificationToken },
+    });
+    expect(verifyRes.ok(), `verify email failed: ${await verifyRes.text()}`).toBeTruthy();
+  }
 
   // 2) Log in on the API request context so subsequent seed calls carry the
   //    auth cookie (the request context persists Set-Cookie between calls).
@@ -49,6 +59,16 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
     const res = await request.post(`${API_URL}/cars`, { data: car });
     expect(res.ok(), `seed car failed (${res.status()}): ${await res.text()}`).toBeTruthy();
   }
+
+  // 3b) Complete agency onboarding so dashboard access is fully granted
+  const completeRes = await request.post(`${API_URL}/onboarding/complete`, {});
+  expect(completeRes.ok(), `onboarding complete failed: ${await completeRes.text()}`).toBeTruthy();
+  // Create restricted role users only in the disposable test database.
+  const whoami = await request.get(API_URL + '/auth/me');
+  expect(whoami.ok(), 'Fixture identity check failed').toBeTruthy();
+  const agencyId = (await whoami.json()).user?.agencyId;
+  if (!agencyId) throw new Error('E2E agency must be linked before role seeding');
+  await createRoleFixtures(agencyId);
   const customer = await request.post(`${API_URL}/customers`, {
     data: {
       firstName: 'Test',
