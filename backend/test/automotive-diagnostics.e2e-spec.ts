@@ -100,7 +100,9 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .expect(200);
 
     const cookies = loginRes.get('Set-Cookie');
-    authCookie = Array.isArray(cookies) ? cookies.find((c) => c.startsWith('infinity_token=')) || '' : '';
+    authCookie = Array.isArray(cookies)
+      ? cookies.find((c) => c.startsWith('infinity_token=')) || ''
+      : '';
 
     const foreignLogin = await request(app.getHttpServer())
       .post('/api/auth/login')
@@ -108,22 +110,33 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .expect(200);
 
     const foreignCookies = foreignLogin.get('Set-Cookie');
-    foreignCookie = Array.isArray(foreignCookies) ? foreignCookies.find((c) => c.startsWith('infinity_token=')) || '' : '';
+    foreignCookie = Array.isArray(foreignCookies)
+      ? foreignCookies.find((c) => c.startsWith('infinity_token=')) || ''
+      : '';
   });
 
   afterAll(async () => {
     try {
-      if (workOrderId) await prisma.workOrder.deleteMany({ where: { id: workOrderId } });
-      if (sessionId) await prisma.diagnosticSession.deleteMany({ where: { id: sessionId } });
-      if (vehicleId) await prisma.diagnosticVehicle.deleteMany({ where: { id: vehicleId } });
+      if (workOrderId)
+        await prisma.workOrder.deleteMany({ where: { id: workOrderId } });
+      if (sessionId)
+        await prisma.diagnosticSession.deleteMany({ where: { id: sessionId } });
+      if (vehicleId)
+        await prisma.diagnosticVehicle.deleteMany({ where: { id: vehicleId } });
 
       const agencyIds = [agencyId, foreignAgencyId].filter(Boolean);
-      await prisma.maintenanceRecord.deleteMany({ where: { car: { agencyId: { in: agencyIds } } } });
+      await prisma.maintenanceRecord.deleteMany({
+        where: { car: { agencyId: { in: agencyIds } } },
+      });
       await prisma.car.deleteMany({ where: { agencyId: { in: agencyIds } } });
-      await prisma.agencyMembership.deleteMany({ where: { agencyId: { in: agencyIds } } });
+      await prisma.agencyMembership.deleteMany({
+        where: { agencyId: { in: agencyIds } },
+      });
       await prisma.user.deleteMany({ where: { agencyId: { in: agencyIds } } });
       await prisma.agency.deleteMany({ where: { id: { in: agencyIds } } });
-    } catch {}
+    } catch {
+      /* Teardown is best-effort for disposable E2E records. */
+    }
     await app.close();
   });
 
@@ -194,7 +207,14 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
-    const sparkPlug = res.body.find((p: any) => p.name.toLowerCase().includes('spark') || p.name.toLowerCase().includes('bougie') || p.partNumber.includes('BOSCH') || p.partNumber.includes('NGK') || p.partNumber.includes('ILZKR7B11'));
+    const sparkPlug = res.body.find(
+      (p: any) =>
+        p.name.toLowerCase().includes('spark') ||
+        p.name.toLowerCase().includes('bougie') ||
+        p.partNumber.includes('BOSCH') ||
+        p.partNumber.includes('NGK') ||
+        p.partNumber.includes('ILZKR7B11'),
+    );
     expect(sparkPlug).toBeDefined();
     expect(Number(sparkPlug.price)).toBeGreaterThan(0);
     expect(sparkPlug.currency).toBe('MAD');
@@ -207,11 +227,17 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .send({
         vehicleId,
         sessionId,
-        description: 'Remplacement bougies d allumage et bobine suite defaut P0300',
+        description:
+          'Remplacement bougies d allumage et bobine suite defaut P0300',
         laborHours: 1.5,
         laborRate: 250,
         parts: [
-          { partNumber: 'NGK-P0300', name: 'Bougies NGK Iridium', quantity: 4, unitPrice: 120 },
+          {
+            partNumber: 'NGK-P0300',
+            name: 'Bougies NGK Iridium',
+            quantity: 4,
+            unitPrice: 120,
+          },
         ],
       })
       .expect(201);
@@ -278,7 +304,8 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .set('Cookie', authCookie)
       .send({
         dtcCleared: true,
-        verificationNotes: 'Essai sur route 15 km effectue. 0 code defaut actif. Ralenti stable a 800 RPM.',
+        verificationNotes:
+          'Essai sur route 15 km effectue. 0 code defaut actif. Ralenti stable a 800 RPM.',
       })
       .expect(201);
 
@@ -318,7 +345,9 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
 
     expect(dtcRes.body.code).toBe('P2463');
     expect(dtcRes.body.severity).toBe('CRITICAL');
-    expect(dtcRes.body.moroccanOperatingContext.climateRisk).toContain('Casablanca');
+    expect(dtcRes.body.moroccanOperatingContext.climateRisk).toContain(
+      'Casablanca',
+    );
 
     // 3. Multi-DTC Copilot Synthesis
     const copilotRes = await request(app.getHttpServer())
@@ -328,9 +357,10 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
       .expect(201);
 
     expect(copilotRes.body.analyzedCodes).toEqual(['P0300', 'P0171']);
-    expect(copilotRes.body.rootCauseHypothesis).toContain('CORRELATED LEAN MISFIRE');
+    expect(copilotRes.body.rootCauseHypothesis).toContain(
+      'CORRELATED LEAN MISFIRE',
+    );
     expect(copilotRes.body.prioritizedActionPlan.length).toBeGreaterThan(0);
     expect(copilotRes.body.estimatedTotalLaborHours).toBeGreaterThan(0);
   });
 });
-

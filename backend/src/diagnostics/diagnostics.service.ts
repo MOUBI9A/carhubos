@@ -597,7 +597,7 @@ export class DiagnosticsService {
         (msg) =>
           ({
             data: msg,
-          }) as MessageEvent,
+          }),
       ),
     );
   }

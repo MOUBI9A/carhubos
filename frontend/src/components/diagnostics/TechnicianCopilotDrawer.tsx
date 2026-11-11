@@ -108,6 +108,15 @@ export function TechnicianCopilotDrawer({
   const [searching, setSearching] = useState(false);
   const [selectedDtc, setSelectedDtc] = useState<DtcDetail | null>(null);
 
+  async function loadDtcDetail(code: string) {
+    try {
+      const res = await api.get<DtcDetail>(`/diagnostics/knowledge/dtc/${code}`);
+      setSelectedDtc(res.data);
+    } catch {
+      setSelectedDtc(null);
+    }
+  }
+
   // Fetch synthesis when opened with active DTCs
   useEffect(() => {
     if (!isOpen) return;
@@ -130,14 +139,6 @@ export function TechnicianCopilotDrawer({
     }
   }, [isOpen, activeDtcs.join(',')]);
 
-  const loadDtcDetail = async (code: string) => {
-    try {
-      const res = await api.get<DtcDetail>(`/diagnostics/knowledge/dtc/${code}`);
-      setSelectedDtc(res.data);
-    } catch {
-      setSelectedDtc(null);
-    }
-  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
 
 /**
  * E2E config for CarHub Infinity OS.
@@ -17,6 +18,10 @@ import { defineConfig, devices } from '@playwright/test';
 export const FRONTEND_URL = process.env.PW_FRONTEND_URL ?? 'http://localhost:3002';
 export const API_URL = process.env.PW_API_URL ?? 'http://localhost:5406/api';
 export const STORAGE_STATE = 'playwright/.auth/user.json';
+
+// One test identity across setup and browser worker processes; isolated DB only.
+process.env.E2E_RUN_ID ??= String(Date.now());
+process.env.E2E_FIXTURE_PASSWORD ??= randomBytes(20).toString('hex');
 
 const isCI = !!process.env.CI;
 const localChannel = process.env.PW_CHANNEL || 'chrome';

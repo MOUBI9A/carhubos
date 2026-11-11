@@ -13,7 +13,7 @@ describe('NotificationsService', () => {
         count: jest.fn(),
       },
     };
-    service = new NotificationsService(prisma as any);
+    service = new NotificationsService(prisma);
   });
 
   describe('registerPushToken', () => {

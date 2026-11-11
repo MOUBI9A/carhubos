@@ -1,7 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PublicService } from './public.service';
+import * as crypto from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
@@ -53,7 +58,9 @@ describe('PublicService — Customer Estimate Approval', () => {
       const token = service.generateEstimateToken(agencyId, workOrderId);
       const [payloadB64, sig] = token.split('.');
       const tampered = `${payloadB64}x.${sig}`;
-      expect(() => service.verifyEstimateToken(tampered)).toThrow(UnauthorizedException);
+      expect(() => service.verifyEstimateToken(tampered)).toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rejects expired tokens', () => {
@@ -63,15 +70,18 @@ describe('PublicService — Customer Estimate Approval', () => {
         agencyId,
         exp: Date.now() - 1000,
       };
-      const b64 = Buffer.from(JSON.stringify(expiredPayload)).toString('base64url');
-      const crypto = require('crypto');
+      const b64 = Buffer.from(JSON.stringify(expiredPayload)).toString(
+        'base64url',
+      );
       const sig = crypto
         .createHmac('sha256', (service as any).getSigningKey())
         .update(b64)
         .digest('base64url');
       const expiredToken = `${b64}.${sig}`;
 
-      expect(() => service.verifyEstimateToken(expiredToken)).toThrow(UnauthorizedException);
+      expect(() => service.verifyEstimateToken(expiredToken)).toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -93,7 +103,14 @@ describe('PublicService — Customer Estimate Approval', () => {
         taxAmount: new Prisma.Decimal(540),
         totalAmount: new Prisma.Decimal(3240),
         currency: 'MAD',
-        parts: [{ partNumber: 'CLUTCH-KIT-01', name: 'Kit Embrayage Valeo', quantity: 1, unitPrice: 1500 }],
+        parts: [
+          {
+            partNumber: 'CLUTCH-KIT-01',
+            name: 'Kit Embrayage Valeo',
+            quantity: 1,
+            unitPrice: 1500,
+          },
+        ],
         createdAt: new Date(),
         agency: {
           id: agencyId,
@@ -127,7 +144,9 @@ describe('PublicService — Customer Estimate Approval', () => {
       const token = service.generateEstimateToken(agencyId, workOrderId);
       prisma.workOrder.findUnique.mockResolvedValue(null);
 
-      await expect(service.getPublicEstimate(token)).rejects.toThrow(NotFoundException);
+      await expect(service.getPublicEstimate(token)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -151,7 +170,7 @@ describe('PublicService — Customer Estimate Approval', () => {
 
       const res = await service.approvePublicEstimate(token, {
         customerName: 'Youssef Mansouri',
-        notes: 'D\'accord pour le montant de 3240 MAD.',
+        notes: "D'accord pour le montant de 3240 MAD.",
       });
 
       expect(res.success).toBe(true);

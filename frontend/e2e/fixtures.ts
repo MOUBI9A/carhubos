@@ -72,6 +72,7 @@ export async function createRoleFixtures(agencyId: string) {
           password,
           name: `E2E ${role}`,
           role,
+          isVerified: true,
           agencyId: agencyScoped ? agencyId : null,
           ...(agencyScoped ? {
             memberships: { create: { agencyId, rolePreset: role, capabilities: ROLE_PRESETS[role] } },

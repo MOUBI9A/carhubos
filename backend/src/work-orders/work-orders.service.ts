@@ -12,7 +12,10 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { UpdateWorkOrderStatusDto } from './dto/update-work-order-status.dto';
 import { VerifyWorkOrderDto } from './dto/verify-work-order.dto';
-import { assertValidTransition, WorkOrderStatus } from './work-order-state-machine';
+import {
+  assertValidTransition,
+  WorkOrderStatus,
+} from './work-order-state-machine';
 import { PublicService } from '../public/public.service';
 
 @Injectable()
@@ -32,7 +35,11 @@ export class WorkOrdersService {
 
   async findAll(
     agencyId: string,
-    filters?: { status?: string; vehicleId?: string; assignedTechnicianId?: string },
+    filters?: {
+      status?: string;
+      vehicleId?: string;
+      assignedTechnicianId?: string;
+    },
   ) {
     this.scope(agencyId);
     return this.prisma.workOrder.findMany({
@@ -60,20 +67,21 @@ export class WorkOrdersService {
     this.scope(agencyId);
     await this.entitlements.assertOperating(agencyId);
 
-    const [statusCounts, sessionsNeedingReview, openSessions] = await Promise.all([
-      this.prisma.workOrder.groupBy({
-        by: ['status'],
-        where: { agencyId },
-        _count: { id: true },
-      }),
-      this.prisma.diagnosticSession.count({
-        where: { agencyId, status: 'ANALYZED' },
-      }),
-      this.prisma.diagnosticSession.findMany({
-        where: { agencyId, status: 'OPEN' },
-        select: { data: true },
-      }),
-    ]);
+    const [statusCounts, sessionsNeedingReview, openSessions] =
+      await Promise.all([
+        this.prisma.workOrder.groupBy({
+          by: ['status'],
+          where: { agencyId },
+          _count: { id: true },
+        }),
+        this.prisma.diagnosticSession.count({
+          where: { agencyId, status: 'ANALYZED' },
+        }),
+        this.prisma.diagnosticSession.findMany({
+          where: { agencyId, status: 'OPEN' },
+          select: { data: true },
+        }),
+      ]);
 
     const counts: Record<string, number> = {};
     for (const item of statusCounts) {
@@ -82,10 +90,13 @@ export class WorkOrdersService {
 
     const waitingVehicles = (counts['DRAFT'] || 0) + (counts['SCHEDULED'] || 0);
     const activeRepairs = counts['IN_PROGRESS'] || 0;
-    const blockedJobs = (counts['WAITING_FOR_PARTS'] || 0) + (counts['BLOCKED'] || 0);
-    const readyForQc = (counts['READY_FOR_QUALITY_CHECK'] || 0) + (counts['QUALITY_CHECK'] || 0);
+    const blockedJobs =
+      (counts['WAITING_FOR_PARTS'] || 0) + (counts['BLOCKED'] || 0);
+    const readyForQc =
+      (counts['READY_FOR_QUALITY_CHECK'] || 0) + (counts['QUALITY_CHECK'] || 0);
     const awaitingApproval = counts['AWAITING_APPROVAL'] || 0;
-    const completedThisMonth = (counts['COMPLETED'] || 0) + (counts['INVOICED'] || 0);
+    const completedThisMonth =
+      (counts['COMPLETED'] || 0) + (counts['INVOICED'] || 0);
 
     let criticalIssuesCount = 0;
     for (const session of openSessions) {
@@ -156,7 +167,9 @@ export class WorkOrdersService {
     const rate = new Prisma.Decimal(dto.laborRate ?? 300);
 
     if (hours.lt(0) || rate.lt(0)) {
-      throw new BadRequestException('Labor hours and labor rate must be non-negative');
+      throw new BadRequestException(
+        'Labor hours and labor rate must be non-negative',
+      );
     }
 
     const laborTotal = hours.times(rate).toDecimalPlaces(2);
@@ -167,7 +180,9 @@ export class WorkOrdersService {
       const unit = new Prisma.Decimal(p.unitPrice);
 
       if (qty.lt(0) || unit.lt(0)) {
-        throw new BadRequestException('Parts quantity and unit price must be non-negative');
+        throw new BadRequestException(
+          'Parts quantity and unit price must be non-negative',
+        );
       }
 
       const total = qty.times(unit).toDecimalPlaces(2);
@@ -183,7 +198,9 @@ export class WorkOrdersService {
 
     const subtotal = laborTotal.plus(partsTotal);
     // 20% Moroccan standard VAT
-    const taxAmount = subtotal.times(new Prisma.Decimal(0.20)).toDecimalPlaces(2);
+    const taxAmount = subtotal
+      .times(new Prisma.Decimal(0.2))
+      .toDecimalPlaces(2);
     const grandTotal = subtotal.plus(taxAmount).toDecimalPlaces(2);
 
     const year = new Date().getFullYear();
@@ -224,7 +241,10 @@ export class WorkOrdersService {
       'WORK_ORDER',
       workOrder.id,
       null,
-      { orderNumber: workOrder.orderNumber, total: Number(grandTotal.toString()) },
+      {
+        orderNumber: workOrder.orderNumber,
+        total: Number(grandTotal.toString()),
+      },
     );
 
     return workOrder;
@@ -241,7 +261,7 @@ export class WorkOrdersService {
 
     assertValidTransition(existing.status, dto.status);
 
-    const targetStatus = dto.status as WorkOrderStatus;
+    const targetStatus = dto.status;
 
     if (targetStatus === 'COMPLETED' && !existing.dtcCleared) {
       throw new BadRequestException(
@@ -315,7 +335,9 @@ export class WorkOrdersService {
         dtcCleared: dto.dtcCleared,
         verifiedAt: now,
         // If in QUALITY_CHECK, verification advances to COMPLETED
-        ...(existing.status === 'QUALITY_CHECK' ? { status: 'COMPLETED', completedAt: now } : {}),
+        ...(existing.status === 'QUALITY_CHECK'
+          ? { status: 'COMPLETED', completedAt: now }
+          : {}),
       },
     });
 
@@ -326,7 +348,11 @@ export class WorkOrdersService {
       'WORK_ORDER',
       id,
       { verifiedAt: existing.verifiedAt, dtcCleared: existing.dtcCleared },
-      { verifiedAt: now, dtcCleared: dto.dtcCleared, notes: dto.verificationNotes },
+      {
+        verifiedAt: now,
+        dtcCleared: dto.dtcCleared,
+        notes: dto.verificationNotes,
+      },
     );
 
     return updated;
@@ -354,7 +380,9 @@ export class WorkOrdersService {
     }
 
     if (existing.status !== 'COMPLETED') {
-      throw new BadRequestException('Work order must be in COMPLETED status before generating an invoice');
+      throw new BadRequestException(
+        'Work order must be in COMPLETED status before generating an invoice',
+      );
     }
 
     return this.updateStatus(agencyId, actorId, id, {
@@ -372,7 +400,17 @@ export class WorkOrdersService {
 
     const esc = (val: unknown) => {
       if (val === null || val === undefined) return '';
-      return String(val)
+      const printable =
+        typeof val === 'string'
+          ? val
+          : typeof val === 'number' ||
+              typeof val === 'boolean' ||
+              typeof val === 'bigint'
+            ? val.toString()
+            : typeof val === 'object'
+              ? (JSON.stringify(val) ?? '')
+              : '';
+      return (printable ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -395,22 +433,26 @@ export class WorkOrdersService {
         : 'Véhicule Atelier';
 
     const vin = order.vehicle?.vin || 'Non renseigné';
-    const technicianName = order.assignedTechnician?.name || 'Technicien d\'Atelier';
+    const technicianName =
+      order.assignedTechnician?.name || "Technicien d'Atelier";
 
-    const partsRows = parts.length > 0
-      ? parts.map((p) => {
-          const qty = Number(p.quantity || 1);
-          const price = Number(p.unitPrice || 0);
-          const total = qty * price;
-          return `<tr>
+    const partsRows =
+      parts.length > 0
+        ? parts
+            .map((p) => {
+              const qty = Number(p.quantity || 1);
+              const price = Number(p.unitPrice || 0);
+              const total = qty * price;
+              return `<tr>
             <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${esc(p.partNumber || '-')}</td>
             <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${esc(p.name || 'Pièce détachée')}</td>
             <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${qty}</td>
             <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${price.toFixed(2)} MAD</td>
             <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${total.toFixed(2)} MAD</td>
           </tr>`;
-        }).join('')
-      : `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">Aucune pièce de rechange facturée</td></tr>`;
+            })
+            .join('')
+        : `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">Aucune pièce de rechange facturée</td></tr>`;
 
     const html = `<!doctype html>
 <html>
@@ -527,8 +569,7 @@ export class WorkOrdersService {
 
     let browser: Browser | undefined;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const puppeteer = typeof require !== 'undefined' ? require('puppeteer') : await import('puppeteer');
+      const puppeteer = await import('puppeteer');
       browser = await puppeteer.launch({
         headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
@@ -572,4 +613,3 @@ export class WorkOrdersService {
     };
   }
 }
-

@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { API_URL, STORAGE_STATE } from '../playwright.config';
+import { createRoleFixtures } from './fixtures';
 
 /**
  * Registers a fresh, isolated agency for this run, seeds it with a couple of
@@ -62,6 +63,12 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
   // 3b) Complete agency onboarding so dashboard access is fully granted
   const completeRes = await request.post(`${API_URL}/onboarding/complete`, {});
   expect(completeRes.ok(), `onboarding complete failed: ${await completeRes.text()}`).toBeTruthy();
+  // Create restricted role users only in the disposable test database.
+  const whoami = await request.get(API_URL + '/auth/me');
+  expect(whoami.ok(), 'Fixture identity check failed').toBeTruthy();
+  const agencyId = (await whoami.json()).user?.agencyId;
+  if (!agencyId) throw new Error('E2E agency must be linked before role seeding');
+  await createRoleFixtures(agencyId);
   const customer = await request.post(`${API_URL}/customers`, {
     data: {
       firstName: 'Test',

@@ -4,6 +4,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ConflictException } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/auth.dto';
 
 /**
@@ -20,14 +21,19 @@ describe('RegisterDto — DTO-level privilege boundary', () => {
     // declared on the DTO class. Structurally proving the class has no
     // agencyId property is the source-level guarantee that backs that pipe
     // config for this endpoint specifically.
-    expect(Object.getOwnPropertyNames(new RegisterDto())).not.toContain('agencyId');
+    expect(Object.getOwnPropertyNames(new RegisterDto())).not.toContain(
+      'agencyId',
+    );
   });
 
-  it.each(['ROOT_ADMIN', 'MANAGER'])('rejects role=%s at validation time', async (role) => {
-    const dto = plainToInstance(RegisterDto, { ...base, role });
-    const errors = await validate(dto);
-    expect(errors.some((e) => e.property === 'role')).toBe(true);
-  });
+  it.each(['ROOT_ADMIN', 'MANAGER'])(
+    'rejects role=%s at validation time',
+    async (role) => {
+      const dto = plainToInstance(RegisterDto, { ...base, role });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'role')).toBe(true);
+    },
+  );
 
   it.each(['OWNER', 'AGENT', 'RENTER'])('accepts role=%s', async (role) => {
     const dto = plainToInstance(RegisterDto, { ...base, role });
@@ -49,11 +55,20 @@ describe('AuthService.register — service-level behavior', () => {
     };
   }
 
-  function makeService(tx: ReturnType<typeof makeTx>, existingUser: any = null) {
-    const usersService = { findOneByEmail: jest.fn().mockResolvedValue(existingUser) };
+  function makeService(
+    tx: ReturnType<typeof makeTx>,
+    existingUser: any = null,
+  ) {
+    const usersService = {
+      findOneByEmail: jest.fn().mockResolvedValue(existingUser),
+    };
     const jwtService = { signAsync: jest.fn().mockResolvedValue('signed-jwt') };
     const prisma = { $transaction: jest.fn((cb: any) => cb(tx)) };
-    return new AuthService(usersService as any, jwtService as any, prisma as any);
+    return new AuthService(
+      usersService as any,
+      jwtService as any,
+      prisma as any,
+    );
   }
 
   it('rejects registration when the email already exists', async () => {
@@ -61,14 +76,22 @@ describe('AuthService.register — service-level behavior', () => {
     const svc = makeService(tx, { id: 'existing' });
 
     await expect(
-      svc.register({ email: 'a@b.com', password: 'longenough1', name: 'A' } as any),
+      svc.register({
+        email: 'a@b.com',
+        password: 'longenough1',
+        name: 'A',
+      } as any),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.user.create).not.toHaveBeenCalled();
   });
 
   it('creating an agency seeds an OWNER AgencyMembership regardless of the requested role', async () => {
     const tx = makeTx();
-    tx.user.create.mockResolvedValue({ id: 'u1', email: 'a@b.com', agencyId: 'agency-1' });
+    tx.user.create.mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.com',
+      agencyId: 'agency-1',
+    });
     const svc = makeService(tx);
 
     await svc.register({
@@ -80,7 +103,11 @@ describe('AuthService.register — service-level behavior', () => {
 
     expect(tx.agencyMembership.create).toHaveBeenCalledTimes(1);
     const membershipArg = tx.agencyMembership.create.mock.calls[0][0].data;
-    expect(membershipArg).toMatchObject({ userId: 'u1', agencyId: 'agency-1', rolePreset: 'OWNER' });
+    expect(membershipArg).toMatchObject({
+      userId: 'u1',
+      agencyId: 'agency-1',
+      rolePreset: 'OWNER',
+    });
 
     // The new agency's id is the only agencyId ever used — never a
     // client-supplied one (RegisterDto has no such field to begin with).
@@ -90,10 +117,18 @@ describe('AuthService.register — service-level behavior', () => {
 
   it('registering without agencyName creates no agency and no membership', async () => {
     const tx = makeTx();
-    tx.user.create.mockResolvedValue({ id: 'u2', email: 'a@b.com', agencyId: undefined });
+    tx.user.create.mockResolvedValue({
+      id: 'u2',
+      email: 'a@b.com',
+      agencyId: undefined,
+    });
     const svc = makeService(tx);
 
-    await svc.register({ email: 'a@b.com', password: 'longenough1', name: 'A' });
+    await svc.register({
+      email: 'a@b.com',
+      password: 'longenough1',
+      name: 'A',
+    });
 
     expect(tx.agency.create).not.toHaveBeenCalled();
     expect(tx.agencyMembership.create).not.toHaveBeenCalled();
@@ -104,19 +139,23 @@ describe('AuthService.register — service-level behavior', () => {
 });
 
 describe('AuthService.deleteAccount — compliant account deletion', () => {
-  const bcrypt = require('bcryptjs');
-
   it('rejects deletion if user does not exist', async () => {
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue(null) },
     };
     const svc = new AuthService({} as any, {} as any, prisma as any);
-    await expect(svc.deleteAccount('missing-id', 'password123')).rejects.toThrow('User not found');
+    await expect(
+      svc.deleteAccount('missing-id', 'password123'),
+    ).rejects.toThrow('User not found');
   });
 
   it('rejects deletion for ROOT_ADMIN platform administrators', async () => {
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ id: 'root', role: 'ROOT_ADMIN' }) },
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'root', role: 'ROOT_ADMIN' }),
+      },
     };
     const svc = new AuthService({} as any, {} as any, prisma as any);
     await expect(svc.deleteAccount('root', 'password123')).rejects.toThrow(
@@ -127,16 +166,35 @@ describe('AuthService.deleteAccount — compliant account deletion', () => {
   it('rejects deletion if password confirmation does not match', async () => {
     const hashedPassword = await bcrypt.hash('realpassword123', 10);
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', role: 'RENTER', password: hashedPassword }) },
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'u1',
+            role: 'RENTER',
+            password: hashedPassword,
+          }),
+      },
     };
     const svc = new AuthService({} as any, {} as any, prisma as any);
-    await expect(svc.deleteAccount('u1', 'wrongpassword')).rejects.toThrow('Invalid password confirmation.');
+    await expect(svc.deleteAccount('u1', 'wrongpassword')).rejects.toThrow(
+      'Invalid password confirmation.',
+    );
   });
 
   it('rejects agency OWNER deletion if active rentals exist', async () => {
     const hashedPassword = await bcrypt.hash('mypassword123', 10);
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ id: 'owner-1', role: 'OWNER', agencyId: 'ag-1', password: hashedPassword }) },
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'owner-1',
+            role: 'OWNER',
+            agencyId: 'ag-1',
+            password: hashedPassword,
+          }),
+      },
       booking: { count: jest.fn().mockResolvedValue(2) },
     };
     const svc = new AuthService({} as any, {} as any, prisma as any);
@@ -148,31 +206,48 @@ describe('AuthService.deleteAccount — compliant account deletion', () => {
   it('anonymizes user data and revokes consent upon valid deletion', async () => {
     const hashedPassword = await bcrypt.hash('mypassword123', 10);
     const tx = {
-      emailVerificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      emailVerificationToken: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       consentGrant: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
       renterDocument: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       agency: { update: jest.fn() },
       user: { update: jest.fn().mockResolvedValue({ id: 'renter-1' }) },
     };
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ id: 'renter-1', role: 'RENTER', agencyId: null, password: hashedPassword }) },
+      user: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'renter-1',
+            role: 'RENTER',
+            agencyId: null,
+            password: hashedPassword,
+          }),
+      },
       booking: { count: jest.fn().mockResolvedValue(0) },
       $transaction: jest.fn((cb: any) => cb(tx)),
     };
     const svc = new AuthService({} as any, {} as any, prisma as any);
-    const result = await svc.deleteAccount('renter-1', 'mypassword123', 'No longer need account');
+    const result = await svc.deleteAccount(
+      'renter-1',
+      'mypassword123',
+      'No longer need account',
+    );
 
     expect(result.success).toBe(true);
     expect(tx.consentGrant.updateMany).toHaveBeenCalledWith({
       where: { grantorUserId: 'renter-1' },
       data: { status: 'REVOKED' },
     });
-    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'renter-1' },
-      data: expect.objectContaining({
-        name: 'Utilisateur Supprimé',
-        isVerified: false,
+    expect(tx.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'renter-1' },
+        data: expect.objectContaining({
+          name: 'Utilisateur Supprimé',
+          isVerified: false,
+        }),
       }),
-    }));
+    );
   });
 });
