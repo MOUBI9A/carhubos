@@ -151,7 +151,7 @@ describe('InspectionsService', () => {
       expect(state.invoices[0].status).toBe('DUE');
     });
 
-    it('auto-creates a VERIFIED damage-charge Payment + AuditLog when POST_RENTAL introduces new damage vs a clean PRE_RENTAL', async () => {
+    it('creates an audit review event WITHOUT a payment when POST_RENTAL introduces damage', async () => {
       const { prisma, state } = makePrisma();
       state.cars.push({ id: 'car-1', agencyId: 'ag-1', nextServiceKm: null, brand: 'Dacia', model: 'Logan' });
       state.bookings.push({ id: 'bk-1', agencyId: 'ag-1', carId: 'car-1' });
@@ -184,24 +184,17 @@ describe('InspectionsService', () => {
       });
 
       expect(result.id).toBeDefined();
-      expect(state.payments.length).toBe(1);
-      expect(state.payments[0].status).toBe('VERIFIED');
-      expect(state.payments[0].type).toBe('INCOME');
-      expect(state.payments[0].invoiceId).toBe('inv-1');
-      expect(state.payments[0].reference).toContain('Damage charge (auto-assessed from inspection diff)');
-      // No real cost signal on the damage entry -> placeholder amount + manual review note
-      expect(state.payments[0].amount.toNumber()).toBe(0);
-      expect(state.payments[0].reference).toContain('MANUAL REVIEW REQUIRED');
-
+      expect(state.payments.length).toBe(0);
+      expect(state.invoices[0].status).toBe('DUE');
       expect(auditLogs.log).toHaveBeenCalledTimes(1);
       const [agencyId, , action, entityType, entityId] = auditLogs.log.mock.calls[0];
       expect(agencyId).toBe('ag-1');
-      expect(action).toBe('AUTO_DAMAGE_CHARGE');
+      expect(action).toBe('DAMAGE_REVIEW_REQUIRED');
       expect(entityType).toBe('BOOKING');
       expect(entityId).toBe('bk-1');
     });
 
-    it('sums real declared cost signals on new damage entries instead of using the placeholder', async () => {
+    it('logs a proposed estimate but does not create verified income even when cost is declared', async () => {
       const { prisma, state } = makePrisma();
       state.cars.push({ id: 'car-1', agencyId: 'ag-1', nextServiceKm: null, brand: 'Dacia', model: 'Logan' });
       state.bookings.push({ id: 'bk-1', agencyId: 'ag-1', carId: 'car-1' });
@@ -232,8 +225,9 @@ describe('InspectionsService', () => {
         inspectorId: 'user-2',
       });
 
-      expect(state.payments[0].amount.toNumber()).toBe(350);
-      expect(state.payments[0].reference).not.toContain('MANUAL REVIEW REQUIRED');
+      expect(state.payments).toHaveLength(0);
+      expect(state.auditLogs[0].after.proposedAmount).toBe('350');
+      expect(state.auditLogs[0].after.manualReview).toBe(true);
     });
 
     it('scopes bookings by tenant — wrong agencyId throws NotFoundException', async () => {

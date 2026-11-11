@@ -12,8 +12,10 @@ import { defineConfig, devices } from '@playwright/test';
  * globs `**​/*.spec.ts`, never tries to execute them.
  */
 
-export const FRONTEND_URL = 'http://localhost:3002';
-export const API_URL = 'http://localhost:5406/api';
+// Override only for explicitly isolated E2E environments. Never point E2E
+// fixtures at a production URL or use E2E_ALLOW_REMOTE_TEST_DB by default.
+export const FRONTEND_URL = process.env.PW_FRONTEND_URL ?? 'http://localhost:3002';
+export const API_URL = process.env.PW_API_URL ?? 'http://localhost:5406/api';
 export const STORAGE_STATE = 'playwright/.auth/user.json';
 
 const isCI = !!process.env.CI;

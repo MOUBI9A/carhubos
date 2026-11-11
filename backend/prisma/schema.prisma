@@ -13,6 +13,7 @@ datasource db {
 
 // 🏛️ PILLAR 1: SAAS CORE & MULTI-TENANCY
 model Agency {
+  guardianReports GuardianReport[]
   id               String    @id @default(uuid())
   name             String
   subdomain        String?   @unique
@@ -158,6 +159,7 @@ model AgencyMembership {
 
 // 🚘 PILLAR 2: ASSET INTELLIGENCE & GUARDIAN
 model Car {
+  guardianReports GuardianReport[]
   id            String   @id @default(uuid())
   brand         String
   model         String
@@ -302,6 +304,7 @@ model AuditLog {
 
 // 💰 PILLAR 4: FINANCIAL BRAIN & ERP
 model Booking {
+  guardianReports GuardianReport[]
   id            String   @id @default(uuid())
   startDate     DateTime
   endDate       DateTime
@@ -935,4 +938,98 @@ model WorkOrder {
   @@index([agencyId, assignedTechnicianId])
 }
 
+/// One mutually reviewed condition snapshot per booking and inspection phase.
+/// Historical reports remain separate from live vehicle defect status.
+model GuardianReport {
+  id                       String             @id @default(uuid())
+  agencyId                 String
+  agency                   Agency             @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  bookingId                String
+  booking                  Booking            @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  carId                    String
+  car                      Car                @relation(fields: [carId], references: [id], onDelete: Restrict)
+  phase                    String // OUT or IN
+  mode                     String             @default("FULL") // QUICK or FULL
+  status                   String             @default("DRAFT")
+  revision                 Int                @default(1)
+  agencyApprovedRevision   Int?
+  customerApprovedRevision Int?
+  mileage                  Int
+  fuelLevel                Int
+  createdById              String
+  publishedAt              DateTime?
+  mutuallyApprovedAt       DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  findings                 GuardianFinding[]
+  evidence                 GuardianEvidence[]
+  events                   GuardianEvent[]
 
+  @@unique([bookingId, phase])
+  @@index([agencyId, carId])
+  @@index([agencyId, status])
+}
+
+/// Immutable bytes: storage is private, with original SHA-256 and uploader metadata.
+/// Signed URLs are generated per authorized request; no public permanent URL.
+model GuardianEvidence {
+  id             String            @id @default(uuid())
+  reportId       String
+  report         GuardianReport    @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  kind           String // OVERVIEW, ODOMETER, FUEL, DAMAGE, VIDEO, REPAIR
+  storagePath    String            @unique
+  sha256         String
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  uploadedById   String
+  uploadedByRole String // AGENCY or CUSTOMER
+  createdAt      DateTime          @default(now())
+  findingPhoto   GuardianFinding? @relation("GuardianFindingPhoto")
+  findingVideos  GuardianFinding[] @relation("GuardianFindingVideo")
+  repairPhoto    GuardianFinding? @relation("GuardianRepairPhoto")
+
+  @@index([reportId, kind])
+}
+
+/// Each finding has its own mandatory close-up photo. Individual damage may
+/// remain OPEN across many bookings until a repair is documented.
+model GuardianFinding {
+  id             String            @id @default(uuid())
+  reportId       String
+  report         GuardianReport    @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  zone           String
+  kind           String
+  description    String            @default("")
+  source         String // AGENCY or CUSTOMER
+  status         String            @default("PROPOSED") // PROPOSED, ACCEPTED, DISPUTED; repair tracked separately by repairedAt
+  photoId        String @unique
+  photo          GuardianEvidence  @relation("GuardianFindingPhoto", fields: [photoId], references: [id], onDelete: Restrict)
+  videoId        String?
+  video          GuardianEvidence? @relation("GuardianFindingVideo", fields: [videoId], references: [id], onDelete: Restrict)
+  videoOffsetSec Int?
+  agencyNote     String?
+  repairPhotoId  String? @unique
+  repairPhoto    GuardianEvidence? @relation("GuardianRepairPhoto", fields: [repairPhotoId], references: [id], onDelete: Restrict)
+  repairedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([reportId, status])
+  @@index([status, createdAt])
+}
+
+/// Append-only approval, correction, rejection and repair history.
+model GuardianEvent {
+  id        String         @id @default(uuid())
+  reportId  String
+  report    GuardianReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  revision  Int
+  actorId   String
+  actorRole String
+  action    String
+  details   Json           @default("{}")
+  createdAt DateTime       @default(now())
+
+  @@index([reportId, createdAt])
+}

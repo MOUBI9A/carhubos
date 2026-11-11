@@ -57,6 +57,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('admin.settings'), href: '/admin/settings', icon: Settings },
     ],
     OWNER: [
+      { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('owner.erp'), href: '/dashboard/erp', icon: BarChart3 },
       { label: t('owner.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('owner.reports'), href: '/dashboard/reports', icon: FileText },
@@ -78,6 +79,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('owner.settings'), href: '/dashboard/settings', icon: Settings },
     ],
     MANAGER: [
+      { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('manager.command'), href: '/dashboard', icon: LayoutDashboard },
       { label: t('manager.fleet'), href: '/dashboard/fleet', icon: Car },
       { label: t('manager.bookings'), href: '/dashboard/bookings', icon: Calendar },
@@ -89,6 +91,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('manager.search'), href: '/dashboard/search', icon: Search },
     ],
     AGENT: [
+      { label: 'Guardian Vision', href: '/agent/guardian', icon: ShieldCheck },
       { label: t('agent.operations'), href: '/agent', icon: LayoutDashboard },
       { label: t('agent.tasks'), href: '/agent/tasks', icon: FileText },
       { label: t('agent.inspections'), href: '/agent/inspections', icon: ShieldCheck },
@@ -96,6 +99,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('workOrders'), href: '/dashboard/work-orders', icon: Wrench },
     ],
     RENTER: [
+      { label: 'Guardian Vision', href: '/portal/inspections', icon: ShieldCheck },
       { label: t('renter.vault'), href: '/portal', icon: ShieldCheck },
       { label: t('renter.book'), href: '/portal/book', icon: Car },
       { label: t('renter.history'), href: '/portal/history', icon: History },

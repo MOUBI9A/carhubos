@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -27,8 +31,7 @@ export class VaultStorageService {
 
     const url = process.env.SUPABASE_URL;
     const key =
-      process.env.SUPABASE_SECRET_KEY ??
-      process.env.SUPABASE_SERVICE_ROLE_KEY;
+      process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !key) {
       throw new ServiceUnavailableException(
@@ -58,6 +61,37 @@ export class VaultStorageService {
       );
       throw new ServiceUnavailableException('Failed to store the file.');
     }
+  }
+
+  /**
+   * Server-only original-object read for authorized PDF evidence embedding.
+   * Callers must authorize the report before supplying a stored object path.
+   * Do not return raw storage paths or permanent object URLs to browsers.
+   */
+  async downloadEvidence(
+    storagePath: string,
+    maxBytes = 8 * 1024 * 1024,
+  ): Promise<Buffer> {
+    const { data, error } = await this.getClient()
+      .storage.from(this.getBucket())
+      .download(storagePath);
+    if (error || !data) {
+      throw new ServiceUnavailableException(
+        'Private inspection evidence is unavailable.',
+      );
+    }
+    if (data.size > maxBytes) {
+      throw new ServiceUnavailableException(
+        'Inspection evidence exceeds PDF image limit.',
+      );
+    }
+    const bytes = Buffer.from(await data.arrayBuffer());
+    if (bytes.length > maxBytes) {
+      throw new ServiceUnavailableException(
+        'Inspection evidence exceeds PDF image limit.',
+      );
+    }
+    return bytes;
   }
 
   /**
