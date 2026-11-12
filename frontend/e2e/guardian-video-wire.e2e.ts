@@ -152,6 +152,24 @@ test("Guardian video: real HTTP TUS transfer resumes after page reload and prese
   };
   let pending: unknown[] = [];
   let finalizeCalls = 0;
+  // This spec is about browser/TUS transport; isolate identity from the
+  // backend fixtures so it also works against a local frontend-only runner.
+  await page.route("**/api/auth/me", async (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: {
+          id: "qa-owner-wire",
+          role: "OWNER",
+          name: "QA Owner",
+          agencyId: "qa-agency-wire",
+          isVerified: true,
+          onboardingStatus: "COMPLETED",
+        },
+      }),
+    }),
+  );
   await page.route("**/api/guardian/staff/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     let data: unknown = report;
