@@ -65,6 +65,7 @@ model Agency {
   aiSettings         AgencyAiSettings?
   aiSettingsChanges  AiSettingsChange[]
   aiUsageRecords     AiUsageRecord[]
+  aiPlatformReviews AiPlatformReview[]
 
   @@index([deletedAt])
 }
@@ -1085,5 +1086,46 @@ model AiUsageRecord {
   createdAt          DateTime @default(now())
 
   @@unique([agencyId, requestKey])
+  @@index([agencyId, createdAt])
+}
+
+
+// === PHASE 1C — PLATFORM-ONLY AI REVIEW AND EMERGENCY CONTROL ===
+// A platform decision is NOT enough to authorize inference: the reviewed
+// provider remains unavailable and every agency must independently opt in.
+model AiPlatformPolicy {
+  id                String   @id // singleton "GLOBAL"
+  emergencyDisabled Boolean  @default(true)
+  revision          Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  events            AiPlatformPolicyEvent[]
+}
+
+model AiPlatformPolicyEvent {
+  id                String   @id @default(uuid())
+  policyId          String
+  policy            AiPlatformPolicy @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  revision          Int
+  actorId           String
+  emergencyDisabled Boolean
+  reason            String   @db.VarChar(400)
+  createdAt         DateTime @default(now())
+
+  @@unique([policyId, revision])
+  @@index([createdAt])
+}
+
+model AiPlatformReview {
+  id          String   @id @default(uuid())
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  actorId     String
+  revision    Int
+  approved    Boolean
+  reason      String   @db.VarChar(400)
+  createdAt   DateTime @default(now())
+
+  @@unique([agencyId, revision])
   @@index([agencyId, createdAt])
 }

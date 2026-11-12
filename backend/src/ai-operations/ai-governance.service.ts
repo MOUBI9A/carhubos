@@ -51,7 +51,11 @@ export class AiGovernanceService {
       });
       canEdit = membership?.capabilities.includes('settings.manage') ?? false;
     }
-    return this.presentSettings(stored, canEdit);
+    const policy = await this.prisma.aiPlatformPolicy.findUnique({
+      where: { id: 'GLOBAL' },
+      select: { emergencyDisabled: true },
+    });
+    return this.presentSettings(stored, canEdit, policy?.emergencyDisabled ?? true);
   }
 
   private presentSettings(
@@ -61,6 +65,7 @@ export class AiGovernanceService {
       'monthlyBudgetUsdCents' | 'monthlyRequestLimit' | 'revision'
     > | null,
     canEdit = false,
+    platformEmergencyDisabled = true,
   ) {
     const settings = stored ?? DEFAULTS;
 
@@ -72,6 +77,7 @@ export class AiGovernanceService {
       settings.requestedEnabled &&
       settings.platformApproved &&
       platformEnabled &&
+      !platformEmergencyDisabled &&
       providerIntegrationReady &&
       settings.monthlyBudgetUsdCents > 0 &&
       settings.monthlyRequestLimit > 0,
@@ -86,6 +92,7 @@ export class AiGovernanceService {
       revision: settings.revision,
       platformApproved: settings.platformApproved,
       platformEnabled,
+      platformEmergencyDisabled,
       providerIntegrationReady,
       effectiveEnabled,
       actionMode: 'MONITOR' as const,
@@ -118,6 +125,10 @@ export class AiGovernanceService {
       preferredLanguage: dto.preferredLanguage,
       monthlyBudgetUsdCents: dto.monthlyBudgetUsdCents,
       monthlyRequestLimit: dto.monthlyRequestLimit,
+      // Any new or amended agency request invalidates the last platform
+      // approval, including budget expansion, language or opt-out/opt-in.
+      // Platform approval can ONLY be restored via founder-only review.
+      platformApproved: false,
     };
     if (
       !Number.isSafeInteger(dto.expectedRevision) ||
@@ -184,11 +195,15 @@ export class AiGovernanceService {
             },
           },
         });
-        // Return the exact written state while the row is locked. Reading
-        // again after commit could return a *different* owner's revision.
-        return persisted;
+        const policy = await tx.aiPlatformPolicy.findUnique({
+          where: { id: 'GLOBAL' },
+          select: { emergencyDisabled: true },
+        });
+        // Return the exact revision and contemporaneous global switch.
+        // Reading settings after commit could return another owner's revision.
+        return { settings: persisted, platformEmergencyDisabled: policy?.emergencyDisabled ?? true };
       });
-      return this.presentSettings(persisted, true);
+      return this.presentSettings(persisted.settings, true, persisted.platformEmergencyDisabled);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
