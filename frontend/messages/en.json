@@ -1549,7 +1549,15 @@
     "requests": "Requests",
     "tokens": "Tokens",
     "cost": "Recorded cost (USD)",
-    "usageNote": "No model is currently connected. Only verified server-recorded usage is counted; this is not a payment invoice."
+    "usageNote": "No model is currently connected. Only verified server-recorded usage is counted; this is not a payment invoice.",
+    "quotaTitle": "AI quota reservations (internal)",
+    "quotaStatus": "The provider is disconnected; reservations are for future verified calls only.",
+    "quotaHeld": "Reserved requests (of monthly limit)",
+    "quotaCommitted": "Committed requests",
+    "quotaReservedCost": "Estimated reserved cost (USD)",
+    "quotaCommittedCost": "Recorded committed cost (USD)",
+    "quotaNote": "This is a server-side accounting snapshot, not an invoice or payment. Reservations may expire and are reconciled only by a trusted internal process.",
+    "quotaUnavailable": "Quota reservation data is unavailable. Existing settings remain usable."
   },
   "aiPlatform": {
     "reject": "Reject request",
