@@ -122,3 +122,11 @@ No model gets SQL credentials, direct vehicle-control APIs, payment gateway sign
 6. Pilot only with **3–5 consenting agencies** and human monitoring, independent of Guardian video PR #20 and compliance PR #22. No fake demo data in production dashboards.
 
 **Release status:** Phase 1A is a separate draft PR for technical validation; the full 21-section product vision is *not* claimed to be implemented. Promotion to production is gated on review, tests, tenant security and explicit change approval. Later AI phases require separate funded/approved provider and legal decisions.
+
+## Phase 1C — draft platform review, emergency gate, and read-only tools
+
+A separate stacked engineering branch implements platform-only, versioned agency AI approval/revocation; a default-locked global AI emergency control; per-revision platform audit records; fail-closed checks for the current ROOT_ADMIN identity; and a five-entry read-only agency tool registry. A founder-only screen supports reviewing eligible requests and the emergency policy with written justifications.
+
+Important: this implementation deliberately does **not** activate an AI model. Its `providerIntegrationReady` value remains false, the `effectiveInferenceEnabled` response remains false, and clearing the administrative emergency switch never authorizes inference by itself. Any OWNER preference/budget change automatically invalidates prior platform approval.
+
+The next unresolved safety gate remains **atomic budget/request reservations and trusted provider-usage reconciliation**, before any paid model invocation. See `docs/AI_PLATFORM_CONTROLS_PHASE1C_20261112.md` for verified contracts, permissions, limitations, tests and production release gates.

@@ -41,6 +41,7 @@ function setup() {
     agencyMembership: {
       findUnique: jest.fn(async () => ({ capabilities: ['reports.view', 'settings.manage'] })),
     },
+    aiPlatformPolicy: { findUnique: jest.fn(async () => ({ emergencyDisabled: true })) },
     agencyAiSettings: { findUnique, create, updateMany },
     aiSettingsChange: { create: auditCreate },
     aiUsageRecord: {
@@ -154,6 +155,31 @@ describe('Phase 1B: tenant AI governance', () => {
     });
     expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('apiKey');
     expect(prisma.aiUsageRecord.create).not.toHaveBeenCalled();
+  });
+
+  it('invalidates platform approval after an owner changes preferences or budget', async () => {
+    const { service, setStored, updateMany, auditCreate } = setup();
+    setStored({
+      agencyId: AGENCY, revision: 5, platformApproved: true,
+      preferredLanguage: 'EN', requestedEnabled: true,
+      monthlyBudgetUsdCents: 500, monthlyRequestLimit: 10,
+    });
+    await expect(service.updateSettings(AGENCY, ACTOR, {
+      ...requested, expectedRevision: 5, monthlyBudgetUsdCents: 2000,
+    })).resolves.toMatchObject({
+      requestedEnabled: true, monthlyBudgetUsdCents: 2000,
+      platformApproved: false, effectiveEnabled: false, revision: 6,
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { agencyId: AGENCY, revision: 5 },
+      data: expect.objectContaining({ platformApproved: false, revision: 6 }),
+    });
+    expect(auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        agencyId: AGENCY, revision: 6,
+        snapshot: expect.objectContaining({ platformApproved: false }),
+      }),
+    });
   });
 
   it('uses optimistic revision updates and returns 409 for stale versions', async () => {

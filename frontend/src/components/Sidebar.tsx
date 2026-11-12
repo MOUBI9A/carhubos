@@ -55,6 +55,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('admin.provision'), href: '/admin/provision', icon: Plus },
       { label: t('admin.agencies'), href: '/admin/agencies', icon: ShieldCheck },
       { label: t('admin.auditLogs'), href: '/admin/logs', icon: FileText },
+      { label: t('admin.aiControl'), href: '/admin/ai-control', icon: BrainCircuit },
       { label: t('admin.settings'), href: '/admin/settings', icon: Settings },
     ],
     OWNER: [
