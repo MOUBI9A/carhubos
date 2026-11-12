@@ -33,7 +33,7 @@ test.describe("Agency Operations Intelligence — authenticated, read-only", () 
     expect(Array.isArray(payload.signals)).toBe(true);
     expect(payload.signals.every((signal: { actionMode: string }) => signal.actionMode === "REVIEW_ONLY")).toBe(true);
 
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Operations Intelligence|Intelligence opérationnelle|الذكاء التشغيلي/ })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("99.9%");
     await expect(page.locator("body")).not.toContainText("2,481");
     expect(unsafeRequests).toEqual([]);
@@ -41,7 +41,7 @@ test.describe("Agency Operations Intelligence — authenticated, read-only", () 
 
   test("does not advertise unsupported automation execution metrics", async ({ page }) => {
     await page.goto("/dashboard/automations");
-    await expect(page.getByText("Saved rule definitions")).toBeVisible();
+    await expect(page.getByText("Saved rule definitions", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("99.9%")).toHaveCount(0);
     await expect(page.getByText("85%")).toHaveCount(0);
     await expect(page.getByText("2,481")).toHaveCount(0);
