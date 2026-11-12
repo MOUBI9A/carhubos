@@ -42,3 +42,16 @@ This addendum supplements `COMPLIANCE_20_POINT_AUDIT_20261112.md`, especially ch
 - Frontend full Vitest: **61 passed**; TypeScript, scoped ESLint and Next.js production build passed.
 - The database migration includes conditional revocation of `anon`/`authenticated` to remain compatible with both Supabase roles and standalone PostgreSQL CI.
 - No live user data, data-rights requests, legal contacts or production migrations were modified. All updates remain subject to PR review and GitHub CI.
+
+## Additional end-to-end coverage
+
+The authenticated Playwright full-stack suite now includes an isolated privacy-request test. It signs in with a generated E2E agency account, submits an ERASURE review request, repeats the submission to confirm one pending entry, and confirms **no DELETE /api/auth/me request** is sent. This test runs against the test runner's disposable database only, not production. Its result must be checked on the new GitHub CI head before release.
+
+## Primary regulatory references to review with counsel
+
+- Moroccan CNDP rights information (access, rectification, objection): https://www.cndp.ma/vos-droits-en-matiere-de-protection-des-donnees-a-caractere-personnel/
+- Moroccan personal data Law 09-08: https://www.cndp.ma/textes-et-lois/
+- Moroccan consumer law 31-08 and transparent information: https://www.mcinet.gov.ma/en/content/consumer-protection
+- WCAG 2.2 accessibility: https://www.w3.org/TR/WCAG22/
+
+These references guide the checklist but do not establish CarHub's final legal obligations without knowing the business controller, user populations, processing agreements, and jurisdiction-specific facts.

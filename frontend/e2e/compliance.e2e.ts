@@ -77,3 +77,26 @@ test.describe("Public compliance and transparent signup", () => {
     await expect(page.getByText(/CONFORMITÉ LOI 09-08 & CNDP/i)).toHaveCount(0);
   });
 });
+
+// Uses the fresh, synthetic owner identity seeded by auth.setup.ts against the
+// isolated CI database. Never point this test at the public production site.
+test.describe('Authenticated privacy rights intake (non-destructive)', () => {
+  test('records a request and prevents duplicate pending submissions', async ({ page }) => {
+    const deletionCalls: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() === 'DELETE' && request.url().endsWith('/api/auth/me')) {
+        deletionCalls.push(request.url());
+      }
+    });
+    await page.goto('/account-deletion');
+    await expect(page.getByRole('heading', { name: /Demander l.examen de mes droits/ })).toBeVisible();
+    const requestType = page.getByLabel('Type de demande');
+    await requestType.selectOption('ERASURE');
+    await page.getByRole('button', { name: 'Enregistrer ma demande' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Demande enregistrée pour examen' })).toBeVisible();
+    await expect(page.getByText('En attente')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Enregistrer ma demande' }).click();
+    await expect(page.getByText('En attente')).toHaveCount(1);
+    expect(deletionCalls).toHaveLength(0);
+  });
+});
