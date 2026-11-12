@@ -1552,6 +1552,9 @@
     "usageNote": "No model is currently connected. Only verified server-recorded usage is counted; this is not a payment invoice."
   },
   "aiPlatform": {
+    "reject": "Reject request",
+    "rejected": "Rejected",
+    "revoked": "Approval revoked",
     "title": "Platform AI Control",
     "description": "Private founder controls for agency AI requests and emergency platform readiness. Every change is reviewed and recorded.",
     "noModel": "No model provider is connected. Recording an approval or clearing the emergency switch will NOT run AI models, bill agencies, send messages or act on vehicles.",
