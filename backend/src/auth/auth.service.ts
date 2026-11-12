@@ -496,6 +496,45 @@ export class AuthService {
   }
 
   /**
+   * Safe, non-destructive data-rights intake. The operator must separately
+   * verify the requester's authority, retention obligations and result.
+   * No ID images, free-text messages or outward notifications are collected.
+   */
+  async submitPrivacyRequest(
+    userId: string,
+    type: 'ACCESS' | 'RECTIFICATION' | 'ERASURE' | 'OPPOSITION',
+  ) {
+    // Database partial unique index guarantees no duplicate pending request,
+    // including concurrent POSTs; createMany(skipDuplicates) is idempotent.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    await this.prisma.privacyRequest.createMany({
+      data: [{ userId, type }],
+      skipDuplicates: true,
+    });
+    const item = await this.prisma.privacyRequest.findFirst({
+      where: { userId, type, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, type: true, status: true, createdAt: true },
+    });
+    if (!item) throw new ConflictException('Could not record privacy request');
+    return item;
+  }
+
+  async listMyPrivacyRequests(userId: string) {
+    return this.prisma.privacyRequest.findMany({
+      where: { userId },
+      select: { id: true, type: true, status: true, createdAt: true, closedAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+  }
+
+  /**
    * Self-service account closure. Verifies password, prevents closure when
    * active rentals exist, revokes consent and scrubs account credentials.
    * This is NOT guaranteed full erasure: linked contracts/audit history and

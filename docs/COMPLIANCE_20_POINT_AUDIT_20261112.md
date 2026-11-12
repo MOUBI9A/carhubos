@@ -36,6 +36,8 @@
 | 19 | Licensed assets | `frontend/public/img` has five provided image assets; fonts loaded via `next/font/google`. No provenance/attribution records found. | Created license review checklist; did **not** fabricate ownership or licences. | Identify owners/licenses for every photograph, illustration, font and icon; replace or license unknown assets. |
 | 20 | Data deletion requests | `/account-deletion` calls `DELETE /auth/me`; `AuthService.deleteAccount` scrubs core user fields, revokes consent and deletes *database rows*, but does not guarantee storage deletion or retained audit erasure. | Removed false complete-erasure promise; no longer copies raw name/email/free-text reason into **new** deletion audit metadata. | Implement and test full retained-data inventory, storage purge, archive exceptions, deletion request tracking, and data-export rights. Historical audit data needs review. **P0 release gate.** |
 
+**Engineering update:** A separate authenticated privacy-rights intake queue and tests have been added. This is non-destructive and remains pending legal/operator review and production database migration. See [Privacy requests addendum](COMPLIANCE_PRIVACY_REQUESTS_ADDENDUM_20261112.md) for implementation, limits and release gates.
+
 ## Security and production considerations
 
 1. **Never automatically delete identity evidence or signed inspection records** during a rollout. Retention exceptions and user rights need per-category, jurisdiction-aware decisions.

@@ -86,7 +86,7 @@ export default function PrivacyPolicyPage() {
             La loi marocaine n° 09-08 prévoit notamment des droits d&apos;information,
             d&apos;accès, de rectification et d&apos;opposition, selon les conditions
             applicables. Vous pouvez consulter notre page de{" "}
-            <Link href="/account-deletion" className="text-primary underline">fermeture de compte</Link>
+            <Link href="/account-deletion" className="text-primary underline">fermeture de compte et demandes relatives aux données</Link>
             {" "}ou écrire à{" "}
             <a href="mailto:privacy@carhub.codes" className="text-primary underline">
               privacy@carhub.codes

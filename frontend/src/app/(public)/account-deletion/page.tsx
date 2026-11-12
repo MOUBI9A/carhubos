@@ -6,6 +6,7 @@ import { ArrowLeft, ShieldCheck, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useToast } from "@/lib/contexts/ToastContext";
 import api from "@/lib/api";
+import PrivacyRequestPanel from "./PrivacyRequestPanel";
 
 export default function AccountDeletionPage() {
   const { user, logout } = useAuth();
@@ -69,6 +70,8 @@ export default function AccountDeletionPage() {
           </a>. Ne transmettez pas de copie de pièce d&apos;identité lors du premier contact.
         </p>
       </div>
+
+      {user && !closed && <PrivacyRequestPanel />}
 
       {closed ? (
         <div role="status" className="rounded-2xl border border-success/30 bg-surface p-8">

@@ -76,3 +76,9 @@ export class DeleteAccountDto {
   reason?: string;
 }
 
+
+/** Categories only: do not collect a free-text reason or ID documents. */
+export class PrivacyRequestDto {
+  @IsIn(['ACCESS', 'RECTIFICATION', 'ERASURE', 'OPPOSITION'])
+  type: 'ACCESS' | 'RECTIFICATION' | 'ERASURE' | 'OPPOSITION';
+}
