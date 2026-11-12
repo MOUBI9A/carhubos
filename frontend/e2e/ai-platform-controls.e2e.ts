@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { API_URL } from "../playwright.config";
 
 /**
  * These use a fresh, isolated agency owner seeded by auth.setup.ts. The
@@ -7,19 +8,19 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Phase 1C platform security and read-only tool API", () => {
   test("agency owner cannot read or edit founder AI emergency policy", async ({ page }) => {
-    const policy = await page.request.get("/api/saas-admin/ai-control/policy");
+    const policy = await page.request.get(`${API_URL}/saas-admin/ai-control/policy`);
     expect(policy.status()).toBe(403);
-    const attempts = await page.request.get("/api/saas-admin/ai-control/requests");
+    const attempts = await page.request.get(`${API_URL}/saas-admin/ai-control/requests`);
     expect(attempts.status()).toBe(403);
 
-    const update = await page.request.patch("/api/saas-admin/ai-control/policy", {
+    const update = await page.request.patch(`${API_URL}/saas-admin/ai-control/policy`, {
       data: {
         expectedRevision: 1, emergencyDisabled: false,
         reason: "Owner cannot change a founder platform policy.",
       },
     });
     expect(update.status()).toBe(403);
-    const review = await page.request.patch("/api/saas-admin/ai-control/agencies/agency-a/review", {
+    const review = await page.request.patch(`${API_URL}/saas-admin/ai-control/agencies/agency-a/review`, {
       data: {
         expectedRevision: 1, approve: true,
         reason: "Owner cannot approve their own agency AI request.",
@@ -29,7 +30,7 @@ test.describe("Phase 1C platform security and read-only tool API", () => {
   });
 
   test("exposes a fixed registry and single-tenant aggregate previews only", async ({ page }) => {
-    const list = await page.request.get("/api/ai-operations/tools");
+    const list = await page.request.get(`${API_URL}/ai-operations/tools`);
     expect(list.status()).toBe(200);
     const tools = await list.json();
     expect(tools.map((tool: { id: string }) => tool.id)).toEqual([
@@ -40,7 +41,7 @@ test.describe("Phase 1C platform security and read-only tool API", () => {
       tool.mode === "READ_ONLY" && tool.executesActions === false,
     )).toBe(true);
 
-    const preview = await page.request.get("/api/ai-operations/tools/fleet_overview/preview");
+    const preview = await page.request.get(`${API_URL}/ai-operations/tools/fleet_overview/preview`);
     expect(preview.status()).toBe(200);
     const data = await preview.json();
     expect(data).toMatchObject({
@@ -51,7 +52,7 @@ test.describe("Phase 1C platform security and read-only tool API", () => {
     expect(data.metrics).not.toHaveProperty("customer");
     expect(data.metrics).not.toHaveProperty("email");
 
-    const unknown = await page.request.get("/api/ai-operations/tools/execute-payment/preview");
+    const unknown = await page.request.get(`${API_URL}/ai-operations/tools/execute-payment/preview`);
     expect(unknown.status()).toBe(400);
   });
 });
