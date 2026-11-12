@@ -20,7 +20,11 @@ type AgencyRequest = {
   preferredLanguage: string;
   monthlyBudgetUsdCents: number;
   monthlyRequestLimit: number;
-  agency: { name: string; status: string };
+  agency: {
+    name: string;
+    status: string;
+    aiPlatformReviews?: { decision: "APPROVE" | "REJECT" | "REVOKE"; revision: number }[];
+  };
 };
 
 const reasonIsValid = (value: string) =>
@@ -96,7 +100,8 @@ export default function AiPlatformControlPage() {
     setMessage("");
     try {
       const { data } = await api.patch<{
-        agencyId: string; platformApproved: boolean; revision: number;
+        agencyId: string; platformApproved: boolean;
+        decision: "APPROVE" | "REJECT" | "REVOKE"; revision: number;
       }>(`/saas-admin/ai-control/agencies/${encodeURIComponent(selected.agencyId)}/review`, {
         expectedRevision: selected.revision,
         approve,
@@ -105,8 +110,12 @@ export default function AiPlatformControlPage() {
       // A separate read after commit can fail or return a later revision.
       // Apply the exact state confirmed by the successful review transaction.
       setRequests((current) => current.map((item) => item.agencyId === data.agencyId
-        ? { ...item, platformApproved: data.platformApproved, revision: data.revision }
-        : item));
+        ? {
+          ...item, platformApproved: data.platformApproved, revision: data.revision,
+          agency: { ...item.agency, aiPlatformReviews: [
+            { decision: data.decision, revision: data.revision },
+          ] },
+        } : item));
       setReviewReason("");
       setMessage(t("reviewSaved"));
     } catch {
@@ -188,7 +197,13 @@ export default function AiPlatformControlPage() {
               <div key={request.agencyId} className="space-y-4 rounded-xl border border-hairline bg-surface-raised p-5">
                 <p className="text-sm font-semibold text-foreground">{request.agency.name}</p>
                 <p className="text-sm text-text-muted">
-                  {t("approval")}: {request.platformApproved ? t("approved") : t("notApproved")}
+                  {t("approval")}: {
+                    request.platformApproved ? t("approved") :
+                    request.agency.aiPlatformReviews?.[0]?.revision === request.revision
+                      ? request.agency.aiPlatformReviews[0].decision === "REJECT"
+                        ? t("rejected") : t("revoked")
+                      : t("notApproved")
+                  }
                   {" · "}{t("limit")}: {request.monthlyRequestLimit}
                   {" · "}{t("budget")}: ${(request.monthlyBudgetUsdCents / 100).toFixed(0)}/month
                 </p>
@@ -207,9 +222,9 @@ export default function AiPlatformControlPage() {
                     {t("approve")}
                   </button>
                   <button type="button" onClick={() => void reviewAgency(false)}
-                    disabled={busy || !reasonIsValid(reviewReason) || !request.platformApproved}
+                    disabled={busy || !reasonIsValid(reviewReason)}
                     className="rounded-xl border border-hairline px-4 py-3 text-sm font-semibold text-foreground disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary">
-                    {t("revoke")}
+                    {request.platformApproved ? t("revoke") : t("reject")}
                   </button>
                 </div>
               </div>
