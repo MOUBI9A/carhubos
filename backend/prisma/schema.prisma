@@ -1026,6 +1026,8 @@ model GuardianUploadIntent {
   evidenceId        String?                    @unique
   evidence          GuardianEvidence?          @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
   completedRevision Int?
+  // Only the privileged orphan sweeper updates this timestamp.
+  lastSweptAt       DateTime?
 
   @@index([agencyId, reportId, actorId, status])
   @@index([status, expiresAt])

@@ -60,6 +60,7 @@ describe('Guardian signed TUS authorization and streamed object verification', (
     createSignedUploadUrl: jest.Mock;
     createSignedUrl: jest.Mock;
     download: jest.Mock;
+    remove: jest.Mock;
   };
   let getBucket: jest.Mock;
   let from: jest.Mock;
@@ -78,6 +79,7 @@ describe('Guardian signed TUS authorization and streamed object verification', (
         .fn()
         .mockResolvedValue({ data: { signedUrl: SIGNED_URL }, error: null }),
       download: jest.fn(),
+      remove: jest.fn().mockResolvedValue({ data: [], error: null }),
     };
     getBucket = jest
       .fn()
@@ -364,4 +366,40 @@ describe('Guardian signed TUS authorization and streamed object verification', (
     await assertion;
     expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
   });
+
+  it('deletes only an exact Guardian video path from the private bucket', async () => {
+    await new VaultStorageService().removeGuardianAbandonedVideo(PATH);
+    expect(getBucket).toHaveBeenCalledWith('vault-files');
+    expect(bucketApi.remove).toHaveBeenCalledTimes(1);
+    expect(bucketApi.remove).toHaveBeenCalledWith([PATH]);
+  });
+
+  it.each([
+    'agency-a/guardian/report-a',
+    'agency-a/guardian/report-a/*.mp4',
+    '../guardian.mp4',
+    PATH + '?token=secret',
+  ])('will not remove arbitrary or wildcard paths: %s', async (path) => {
+    await expect(
+      new VaultStorageService().removeGuardianAbandonedVideo(path),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(bucketApi.remove).not.toHaveBeenCalled();
+  });
+
+  it('never removes anything if storage bucket is public', async () => {
+    getBucket.mockResolvedValue({ data: { public: true }, error: null });
+    await expect(
+      new VaultStorageService().removeGuardianAbandonedVideo(PATH),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(bucketApi.remove).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a sanitized retryable error when provider deletion fails', async () => {
+    bucketApi.remove.mockRejectedValueOnce(new Error('private-token=should-not-leak'));
+    await expect(
+      new VaultStorageService().removeGuardianAbandonedVideo(PATH),
+    ).rejects.toThrow('Abandoned inspection video cleanup failed. Retry later.');
+    expect(loggerError).not.toHaveBeenCalled();
+  });
+
 });

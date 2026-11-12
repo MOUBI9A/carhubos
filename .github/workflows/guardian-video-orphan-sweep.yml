@@ -1,0 +1,50 @@
+name: Guardian video orphan cleanup (explicit opt-in)
+
+on:
+  schedule:
+    # Once daily; repeated sweeps are required after late TUS writes.
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guardian-video-orphan-cleanup
+  cancel-in-progress: false
+
+jobs:
+  clean-orphaned-videos:
+    # Intentionally OFF until the operator sets this repository variable
+    # and configures the guardian-sweep environment and its required secrets.
+    if: ${{ vars.GUARDIAN_ORPHAN_SWEEP_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: guardian-sweep
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.GUARDIAN_SWEEP_DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.GUARDIAN_SWEEP_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.GUARDIAN_SWEEP_SUPABASE_SECRET_KEY }}
+      SUPABASE_VAULT_BUCKET: ${{ vars.GUARDIAN_SWEEP_BUCKET }}
+      GUARDIAN_ORPHAN_SWEEP_ENABLED: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9b683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Reject missing configuration
+        run: |
+          test -n "$DATABASE_URL"
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_SECRET_KEY"
+          test -n "$SUPABASE_VAULT_BUCKET"
+      - run: npm ci --no-audit --no-fund
+      - run: npx prisma generate
+      - run: npm run build
+      - name: Sweep only aged, unattached and canceled objects
+        run: node dist/guardian/guardian-video-cleanup.cli.js --apply

@@ -21,6 +21,7 @@ CREATE TABLE "GuardianUploadIntent" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "evidenceId" TEXT,
     "completedRevision" INTEGER,
+    "lastSweptAt" TIMESTAMP(3),
 
     CONSTRAINT "GuardianUploadIntent_pkey" PRIMARY KEY ("id")
 );

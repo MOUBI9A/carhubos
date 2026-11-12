@@ -397,6 +397,27 @@ export class VaultStorageService {
    * row; a stray orphaned object is a cheap cleanup problem, not a correctness
    * one, and the caller (vault.service.ts) removes the DB row regardless.
    */
+  /**
+   * Strict, privileged orphan-video deletion. Called only after the sweeper
+   * claims an expired/canceled intent under the report lock and verifies that
+   * no GuardianEvidence references the exact path. Unlike normal best-effort
+   * cleanup, failures MUST surface so the scheduled job reports and retries.
+   */
+  async removeGuardianAbandonedVideo(storagePath: string): Promise<void> {
+    this.assertGuardianVideoPath(storagePath);
+    const bucket = await this.guardianPrivateBucket();
+    try {
+      const { error } = await this.getClient()
+        .storage.from(bucket)
+        .remove([storagePath]);
+      if (error) throw new Error('Storage cleanup rejected');
+    } catch {
+      throw new ServiceUnavailableException(
+        'Abandoned inspection video cleanup failed. Retry later.',
+      );
+    }
+  }
+
   async remove(storagePath: string): Promise<void> {
     const { error } = await this.getClient()
       .storage.from(this.getBucket())
