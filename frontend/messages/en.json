@@ -1465,6 +1465,7 @@
     "emptyDescription": "Create a work order from a diagnostic session or vehicle check-in to begin shop tracking."
   },
   "aiOperations": {
+    "settingsLink": "AI settings",
     "phase": "Phase 1 · monitor only",
     "title": "Operations Intelligence",
     "description": "Verified counts from this agency's records. Rule-based monitoring is a safe foundation for future AI assistants; it is not an autonomous AI agent.",
@@ -1514,5 +1515,39 @@
       "DOCUMENTS_EXPIRING_7D": "Vehicle documents with a recorded expiry within seven days need human validation.",
       "URGENT_TASKS": "Tasks marked URGENT remain pending or in progress."
     }
+  },
+  "aiGovernance": {
+    "back": "Back to Operations Intelligence",
+    "title": "AI access and limits",
+    "description": "Request future AI access, choose your language and set spending caps. This page does not activate a model or charge your agency.",
+    "safetyTitle": "Default off · human approval required",
+    "safetyDetails": "Platform approval and a reviewed model integration are required before any inference. No outbound messages, penalties, payments or vehicle commands can run from this feature.",
+    "loading": "Loading current agency settings…",
+    "loadError": "Unable to load verified AI settings. Retry later.",
+    "saveError": "Could not save. Another owner may have changed these settings. Reload before retrying.",
+    "statusTitle": "Current AI status",
+    "active": "AI access active",
+    "disabled": "AI inference disabled",
+    "pendingReview": "Opt-in requested. Platform review and provider integration are still required.",
+    "notRequested": "This agency has not requested AI access.",
+    "statusDetails": "The Operations Intelligence monitor remains deterministic and available separately. No AI provider is connected.",
+    "controlsTitle": "Agency preferences",
+    "optIn": "Request future AI access",
+    "optInNote": "This is only a request; turning it on cannot start inference or billing.",
+    "language": "Preferred language",
+    "monthlyRequests": "Monthly request limit (0–10,000)",
+    "monthlyBudget": "Monthly budget cap in USD (0–1,000)",
+    "budgetNote": "Limits are reserved for future verified model calls. A number above zero does not enable spending.",
+    "ownerOnly": "Only the agency Owner with settings.manage permission can update these settings.",
+    "saving": "Saving…",
+    "save": "Save preferences",
+    "saved": "Preferences saved. AI access is still subject to platform review.",
+    "invalid": "Enter whole numbers within the allowed limits.",
+    "usageTitle": "Recorded AI usage",
+    "period": "Period:",
+    "requests": "Requests",
+    "tokens": "Tokens",
+    "cost": "Recorded cost (USD)",
+    "usageNote": "No model is currently connected. Only verified server-recorded usage is counted; this is not a payment invoice."
   }
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Activity, AlertTriangle, BrainCircuit, CarFront, Clock3,
-  FileClock, FileText, RefreshCw, ShieldCheck, Wrench, ListTodo,
+  FileClock, FileText, RefreshCw, ShieldCheck, Wrench, ListTodo, Settings2,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -99,6 +99,11 @@ export default function AiOperationsPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t("title")}</h1>
           <p className="max-w-3xl text-sm text-text-muted">{t("description")}</p>
         </div>
+        <Link href="/dashboard/ai-operations/settings"
+          className="inline-flex items-center gap-2 rounded-xl border border-hairline bg-surface px-4 py-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-primary">
+          <Settings2 className="h-4 w-4" aria-hidden="true" />
+          {t("settingsLink")}
+        </Link>
         <button
           type="button"
           onClick={() => setRefreshKey((key) => key + 1)}
