@@ -27,7 +27,7 @@ export class AiGovernanceController {
 
   @Get('settings')
   getSettings(@CurrentUser() user: AgencyUser) {
-    return this.governance.getSettings(user.agencyId ?? '');
+    return this.governance.getSettings(user.agencyId ?? '', { id: user.id, role: user.role });
   }
 
   @Get('usage')

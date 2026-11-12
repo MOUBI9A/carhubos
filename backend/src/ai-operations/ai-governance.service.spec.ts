@@ -38,6 +38,9 @@ function setup() {
   const findUnique = jest.fn(async () => stored);
   const db = {
     agency: { findFirst: jest.fn(async () => active ? { id: AGENCY } : null) },
+    agencyMembership: {
+      findUnique: jest.fn(async () => ({ capabilities: ['reports.view', 'settings.manage'] })),
+    },
     agencyAiSettings: { findUnique, create, updateMany },
     aiSettingsChange: { create: auditCreate },
     aiUsageRecord: {
@@ -88,6 +91,18 @@ describe('Phase 1B: tenant AI governance', () => {
     expect(auditCreate).not.toHaveBeenCalled();
   });
 
+  it('shows editability only for an owner with a live settings.manage membership', async () => {
+    const { service, prisma } = setup();
+    expect((await service.getSettings(AGENCY, { id: ACTOR, role: 'OWNER' })).canEdit).toBe(true);
+    expect((await service.getSettings(AGENCY, { id: ACTOR, role: 'MANAGER' })).canEdit).toBe(false);
+    prisma.agencyMembership.findUnique.mockResolvedValue({ capabilities: ['reports.view'] });
+    expect((await service.getSettings(AGENCY, { id: ACTOR, role: 'OWNER' })).canEdit).toBe(false);
+    expect(prisma.agencyMembership.findUnique).toHaveBeenCalledWith({
+      where: { userId_agencyId: { userId: ACTOR, agencyId: AGENCY } },
+      select: { capabilities: true },
+    });
+  });
+
   it('stays disabled even when opted-in, budget positive, and platform flag true', async () => {
     const { service, setStored } = setup();
     setStored({
@@ -120,7 +135,9 @@ describe('Phase 1B: tenant AI governance', () => {
 
   it('saves an agency opt-in request and audit entry together, without platform approval', async () => {
     const { service, prisma, auditCreate, create } = setup();
+    const postCommitRead = jest.spyOn(service, 'getSettings');
     const response = await service.updateSettings(AGENCY, ACTOR, requested);
+    expect(postCommitRead).not.toHaveBeenCalled(); // exact transaction snapshot, no race
     expect(response).toMatchObject({
       requestedEnabled: true, preferredLanguage: 'FR', revision: 1,
       platformApproved: false, effectiveEnabled: false,

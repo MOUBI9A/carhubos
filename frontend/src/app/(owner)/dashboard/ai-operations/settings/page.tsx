@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 type Language = "EN" | "FR" | "AR";
 type Settings = {
   requestedEnabled: boolean;
+  canEdit: boolean;
   preferredLanguage: Language;
   monthlyBudgetUsdCents: number;
   monthlyRequestLimit: number;
@@ -31,8 +32,8 @@ export default function AiGovernanceSettingsPage() {
   const t = useTranslations("aiGovernance");
   const locale = useLocale();
   const { role } = useAuth();
-  const canEdit = role === "OWNER";
   const [settings, setSettings] = useState<Settings | null>(null);
+  const canEdit = role === "OWNER" && settings?.canEdit === true;
   const [usage, setUsage] = useState<Usage | null>(null);
   const [requestedEnabled, setRequestedEnabled] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState<Language>("EN");

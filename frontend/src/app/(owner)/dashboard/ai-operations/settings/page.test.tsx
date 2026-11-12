@@ -19,6 +19,7 @@ vi.mock("next-intl", () => ({
 
 const settings = {
   requestedEnabled: false,
+  canEdit: true,
   preferredLanguage: "EN",
   monthlyBudgetUsdCents: 0,
   monthlyRequestLimit: 0,
@@ -92,6 +93,18 @@ describe("AI governance settings (model-off by default)", () => {
   it("allows managers to read but never to mutate tenant AI settings", async () => {
     auth.role = "MANAGER";
     mockLoads();
+    render(<AiGovernanceSettingsPage />);
+    await screen.findByText("disabled");
+    expect(screen.getByText("ownerOnly")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("optIn")).toBeDisabled();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it("respects a server-side revoked settings.manage capability for an Owner", async () => {
+    vi.mocked(api.get).mockImplementation(async (path: string) => ({
+      data: path.endsWith("/settings") ? { ...settings, canEdit: false } : usage,
+    } as never));
     render(<AiGovernanceSettingsPage />);
     await screen.findByText("disabled");
     expect(screen.getByText("ownerOnly")).toBeVisible();

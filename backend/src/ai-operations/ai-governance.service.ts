@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type AgencyAiSettings } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateAiGovernanceDto } from './ai-governance.dto';
 
@@ -33,11 +33,35 @@ export class AiGovernanceService {
     }
   }
 
-  async getSettings(agencyId: string) {
+  async getSettings(
+    agencyId: string,
+    actor?: { id: string; role: string },
+  ) {
     this.requireAgency(agencyId);
     const stored = await this.prisma.agencyAiSettings.findUnique({
       where: { agencyId },
     });
+    // The backend remains the authority: a role label alone does not convey
+    // permission to edit if membership capability settings.manage was removed.
+    let canEdit = false;
+    if (actor?.role === 'OWNER' && actor.id) {
+      const membership = await this.prisma.agencyMembership.findUnique({
+        where: { userId_agencyId: { userId: actor.id, agencyId } },
+        select: { capabilities: true },
+      });
+      canEdit = membership?.capabilities.includes('settings.manage') ?? false;
+    }
+    return this.presentSettings(stored, canEdit);
+  }
+
+  private presentSettings(
+    stored: Pick<
+      AgencyAiSettings,
+      'requestedEnabled' | 'platformApproved' | 'preferredLanguage' |
+      'monthlyBudgetUsdCents' | 'monthlyRequestLimit' | 'revision'
+    > | null,
+    canEdit = false,
+  ) {
     const settings = stored ?? DEFAULTS;
 
     // A future provider integration must explicitly replace this separate
@@ -55,6 +79,7 @@ export class AiGovernanceService {
 
     return {
       requestedEnabled: settings.requestedEnabled,
+      canEdit,
       preferredLanguage: settings.preferredLanguage,
       monthlyBudgetUsdCents: settings.monthlyBudgetUsdCents,
       monthlyRequestLimit: settings.monthlyRequestLimit,
@@ -106,7 +131,7 @@ export class AiGovernanceService {
     ) throw new ForbiddenException('Invalid AI governance settings.');
 
     try {
-      await this.prisma.$transaction(async (tx) => {
+      const persisted = await this.prisma.$transaction(async (tx) => {
         const activeAgency = await tx.agency.findFirst({
           where: { id: agencyId, status: 'ACTIVE', deletedAt: null },
           select: { id: true },
@@ -125,8 +150,9 @@ export class AiGovernanceService {
         }
 
         const revision = previous + 1;
+        let persisted: AgencyAiSettings;
         if (!current) {
-          await tx.agencyAiSettings.create({
+          persisted = await tx.agencyAiSettings.create({
             data: { agencyId, ...changed, revision },
           });
         } else {
@@ -137,6 +163,13 @@ export class AiGovernanceService {
           if (updated.count !== 1) {
             throw new ConflictException('Settings changed; reload and try again.');
           }
+          const afterUpdate = await tx.agencyAiSettings.findUnique({
+            where: { agencyId },
+          });
+          if (!afterUpdate) {
+            throw new ConflictException('Settings changed; reload and try again.');
+          }
+          persisted = afterUpdate;
         }
 
         // Append-only via agency-facing API: no edit/delete/approval routes.
@@ -151,7 +184,11 @@ export class AiGovernanceService {
             },
           },
         });
+        // Return the exact written state while the row is locked. Reading
+        // again after commit could return a *different* owner's revision.
+        return persisted;
       });
+      return this.presentSettings(persisted, true);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -159,8 +196,6 @@ export class AiGovernanceService {
       ) throw new ConflictException('Settings changed; reload and try again.');
       throw error;
     }
-
-    return this.getSettings(agencyId);
   }
 
   async getUsage(agencyId: string, now = new Date()) {

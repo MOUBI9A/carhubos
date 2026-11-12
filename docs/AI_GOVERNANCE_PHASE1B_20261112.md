@@ -83,3 +83,10 @@ The latter **does not** grant access or authorize a charge. It saves an agency r
 - Add audited human review and consent before any proposed action or customer communication. Payment/penalty/vehicle-control requests remain unsupported.
 - Resolve production privacy, legal review and test account passwords as separately tracked in draft Compliance PR #22 and Guardian PR #20.
 - Never merge this stacked PR without PR #23 acceptance plus migration/testing/security signoff.
+
+## Additional concurrency and capability review
+
+A read-only Codex CLI security review identified two issues and both have been addressed:
+- **Concurrent owner updates:** the PATCH now returns the exact committed settings snapshot **from inside the transaction** instead of issuing another read after commit. This preserves the caller's revision and prevents accidental overwrite after an intervening save.
+- **Revoked owner capability:** GET settings now derives `canEdit` from the signed-in Owner role **and current database membership capability `settings.manage`**. The frontend disables changes if that capability was removed; the PATCH backend guard independently enforces it.
+- Added regression tests for both cases. All changes remain disabled for inference and autonomous actions.
