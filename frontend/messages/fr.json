@@ -1552,6 +1552,9 @@
     "usageNote": "Aucun modèle n'est connecté. Seules les utilisations vérifiées sont comptées ; ceci n'est pas une facture."
   },
   "aiPlatform": {
+    "reject": "Rejeter la demande",
+    "rejected": "Rejetée",
+    "revoked": "Approbation révoquée",
     "title": "Contrôle IA de la plateforme",
     "description": "Contrôles fondateur pour les demandes IA et le verrouillage d'urgence. Chaque décision est consignée.",
     "noModel": "Aucun fournisseur IA n'est connecté. Approuver ou lever le verrou n'active aucun modèle, paiement, message ou commande de véhicule.",
