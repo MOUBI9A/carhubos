@@ -504,8 +504,8 @@ export class AuthService {
     userId: string,
     type: 'ACCESS' | 'RECTIFICATION' | 'ERASURE' | 'OPPOSITION',
   ) {
-    // Database partial unique index guarantees no duplicate pending request,
-    // including concurrent POSTs; createMany(skipDuplicates) is idempotent.
+    // Database partial unique index guarantees no duplicate open request,
+    // including one already IN_REVIEW or concurrent POSTs.
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -517,7 +517,7 @@ export class AuthService {
       skipDuplicates: true,
     });
     const item = await this.prisma.privacyRequest.findFirst({
-      where: { userId, type, status: 'PENDING' },
+      where: { userId, type, status: { in: ['PENDING', 'IN_REVIEW'] } },
       orderBy: { createdAt: 'desc' },
       select: { id: true, type: true, status: true, createdAt: true },
     });

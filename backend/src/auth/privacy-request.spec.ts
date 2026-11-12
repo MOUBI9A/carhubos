@@ -57,7 +57,7 @@ describe("authenticated data-rights intake", () => {
     });
     expect(prisma.privacyRequest.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: "user-1", type: "ACCESS", status: "PENDING" },
+        where: { userId: "user-1", type: "ACCESS", status: { in: ["PENDING", "IN_REVIEW"] } },
       }),
     );
   });
@@ -66,6 +66,17 @@ describe("authenticated data-rights intake", () => {
     const { svc, prisma } = setup(false);
     await expect(svc.submitPrivacyRequest("unknown", "ERASURE")).rejects.toThrow("User not found");
     expect(prisma.privacyRequest.createMany).not.toHaveBeenCalled();
+  });
+
+  it("returns an already-in-review request rather than creating another open request", async () => {
+    const { svc, prisma } = setup();
+    prisma.privacyRequest.createMany.mockResolvedValue({ count: 0 });
+    prisma.privacyRequest.findFirst.mockResolvedValue({
+      ...recorded, status: "IN_REVIEW",
+    });
+    await expect(svc.submitPrivacyRequest("user-1", "ACCESS")).resolves.toEqual(
+      expect.objectContaining({ status: "IN_REVIEW" }),
+    );
   });
 
   it("returns only requests belonging to that signed-in user", async () => {

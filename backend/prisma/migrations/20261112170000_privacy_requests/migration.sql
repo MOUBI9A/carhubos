@@ -15,7 +15,7 @@ CREATE TABLE "PrivacyRequest" (
 CREATE INDEX "PrivacyRequest_userId_createdAt_idx" ON "PrivacyRequest" ("userId","createdAt");
 CREATE INDEX "PrivacyRequest_status_createdAt_idx" ON "PrivacyRequest" ("status","createdAt");
 -- Idempotence is enforced in PostgreSQL even under concurrent requests.
-CREATE UNIQUE INDEX "PrivacyRequest_one_pending_per_type" ON "PrivacyRequest" ("userId","type") WHERE "status" = 'PENDING';
+CREATE UNIQUE INDEX "PrivacyRequest_one_open_per_type" ON "PrivacyRequest" ("userId","type") WHERE "status" IN ('PENDING', 'IN_REVIEW');
 
 -- Prevent public or anon Data API access even if the table is exposed by PostgREST.
 ALTER TABLE "PrivacyRequest" ENABLE ROW LEVEL SECURITY;

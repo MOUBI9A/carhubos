@@ -6,7 +6,7 @@
 
 - Logged-in users can submit one of four data-rights review requests: ACCESS, RECTIFICATION, ERASURE or OPPOSITION.
 - The backend determines the user from the authenticated session; it does **not** accept another user's identifier, sensitive free text, document scans, or contact details.
-- A strict database constraint allows one pending request per user and request type, even under simultaneous POSTs. API throttling also limits request creation.
+- A strict database constraint allows one open request (PENDING or IN_REVIEW) per user and request type, even under simultaneous POSTs. API throttling also limits request creation.
 - Users can view their own recent requests (up to 30), but cannot query other users or change a request's status.
 - The new request table is protected by PostgreSQL RLS, with direct anonymous/authenticated Data API privileges revoked. Application services must use trusted database credentials.
 - The UI says **request recorded for human review**, not request fulfilled. Nothing is automatically erased, exported, or emailed.
@@ -55,3 +55,7 @@ The authenticated Playwright full-stack suite now includes an isolated privacy-r
 - WCAG 2.2 accessibility: https://www.w3.org/TR/WCAG22/
 
 These references guide the checklist but do not establish CarHub's final legal obligations without knowing the business controller, user populations, processing agreements, and jurisdiction-specific facts.
+
+### Open-request lifecycle constraint verified
+
+After review, the partial unique constraint was tightened to cover both `PENDING` and `IN_REVIEW`. A new request of the same category is permitted only after the previous request is `CLOSED`. An isolated PostgreSQL migration rehearsal confirmed those transitions, rejected an invalid category, confirmed RLS, and removed the disposable database afterwards. The service and 13 focused backend tests reflect the same contract.
