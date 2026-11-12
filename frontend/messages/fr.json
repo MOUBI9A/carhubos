@@ -56,6 +56,7 @@
     "owner": {
       "erp": "Console ERP Titan",
       "command": "Centre de commande",
+      "aiOperations": "Intelligence opérationnelle",
       "reports": "Usine de rapports",
       "fleet": "Gardien de flotte",
       "bookings": "Planificateur",
@@ -74,6 +75,7 @@
     },
     "manager": {
       "command": "Centre de commande",
+      "aiOperations": "Intelligence opérationnelle",
       "fleet": "Gardien de flotte",
       "bookings": "Planificateur",
       "customers": "CRM clients",
@@ -1461,5 +1463,56 @@
     "save": "Créer l ordre",
     "noOrders": "Aucun ordre de travail pour le moment.",
     "emptyDescription": "Créez un ordre de travail à partir d une session de diagnostic pour commencer le suivi."
+  },
+  "aiOperations": {
+    "phase": "Phase 1 · surveillance uniquement",
+    "title": "Intelligence opérationnelle",
+    "description": "Chiffres tirés des données réelles de votre agence. Ce suivi à règles fixes prépare les futurs assistants IA ; ce n'est pas un agent autonome.",
+    "refresh": "Actualiser",
+    "safetyTitle": "Vérification humaine obligatoire",
+    "safetyDescription": "Aucun modèle IA externe n'est appelé. Les alertes ne peuvent ni encaisser, ni envoyer de messages, ni modifier des contrats, ni pénaliser, ni commander un véhicule.",
+    "loading": "Lecture des données de l’agence…",
+    "error": "Impossible de charger les chiffres vérifiés. Aucune donnée inventée. Réessayez.",
+    "sampledAt": "Vérifié à",
+    "dataSource": "Base agence (lecture seule)",
+    "monitor": "SURVEILLANCE",
+    "metricsTitle": "Indicateurs opérationnels",
+    "signalsTitle": "Points à vérifier",
+    "signalsDescription": "Ces signaux reposent sur des règles et ne constituent ni une accusation ni une décision automatique.",
+    "noSignals": "Aucun signal positif dans ces contrôles limités. Cela ne signifie pas qu'il n'existe aucun autre problème.",
+    "source": "Source",
+    "review": "Examiner les dossiers",
+    "limitationsTitle": "Limites de ce suivi",
+    "limitations": "Une facture à payer n'est pas nécessairement en retard. Les chiffres sont interrogés séparément. Aucun GPS en direct, paiement externe vérifié, diagnostic IA, message ou action autonome.",
+    "metrics": {
+      "vehiclesTotal": "Véhicules au total",
+      "vehiclesAvailable": "Véhicules disponibles",
+      "vehiclesMaintenance": "Véhicules en maintenance",
+      "activeRentals": "Locations actives",
+      "returnsNext24h": "Retours dans les prochaines 24 h",
+      "overdueReturns": "Retours tardifs ou signalés en retard",
+      "openInvoices": "Factures à payer ou partielles",
+      "documentsExpired": "Documents expirés",
+      "documentsExpiring7d": "Documents expirant sous sept jours",
+      "urgentTasks": "Tâches urgentes ouvertes"
+    },
+    "signals": {
+      "OVERDUE_RETURNS": "Retours tardifs",
+      "RETURNS_NEXT_24H": "Retours sous 24 h",
+      "OPEN_INVOICES": "Factures à examiner",
+      "MAINTENANCE_VEHICLES": "Véhicules en maintenance",
+      "DOCUMENTS_EXPIRED": "Documents de véhicule expirés",
+      "DOCUMENTS_EXPIRING_7D": "Documents bientôt expirés",
+      "URGENT_TASKS": "Tâches urgentes"
+    },
+    "details": {
+      "OVERDUE_RETURNS": "Vérifiez les locations en retard et leur statut avant de contacter les clients.",
+      "RETURNS_NEXT_24H": "Ces locations actives se terminent dans les 24 prochaines heures.",
+      "OPEN_INVOICES": "Factures marquées DUE ou PARTIAL. Aucun retard ni règlement bancaire n’est déduit.",
+      "MAINTENANCE_VEHICLES": "Ces véhicules sont marqués MAINTENANCE dans leur dossier.",
+      "DOCUMENTS_EXPIRED": "Les documents dont la date est dépassée ou dont le statut est EXPIRED nécessitent un examen.",
+      "DOCUMENTS_EXPIRING_7D": "Pièces de véhicule à échéance sous sept jours ; confirmez leur validité.",
+      "URGENT_TASKS": "Tâches URGENT encore en attente ou en cours."
+    }
   }
 }

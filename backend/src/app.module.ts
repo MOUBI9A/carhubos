@@ -48,6 +48,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { WorkOrdersModule } from './work-orders/work-orders.module';
 import { PartsModule } from './parts/parts.module';
+import { AiOperationsModule } from './ai-operations/ai-operations.module';
 
 const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
 
@@ -106,6 +107,7 @@ const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
     DiagnosticsModule,
     WorkOrdersModule,
     PartsModule,
+    AiOperationsModule,
   ],
   controllers: [AppController],
   providers: [

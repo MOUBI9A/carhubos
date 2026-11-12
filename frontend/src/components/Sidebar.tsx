@@ -27,6 +27,7 @@ import {
   CreditCard,
   FolderOpen,
   Wrench,
+  BrainCircuit,
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Avatar } from '@/components/ui/Avatar';
@@ -60,6 +61,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('owner.erp'), href: '/dashboard/erp', icon: BarChart3 },
       { label: t('owner.command'), href: '/dashboard', icon: LayoutDashboard },
+      { label: t('owner.aiOperations'), href: '/dashboard/ai-operations', icon: BrainCircuit },
       { label: t('owner.reports'), href: '/dashboard/reports', icon: FileText },
       { label: t('owner.fleet'), href: '/dashboard/fleet', icon: Car },
       { label: t('owner.bookings'), href: '/dashboard/bookings', icon: Calendar },
@@ -81,6 +83,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     MANAGER: [
       { label: 'Guardian Vision', href: '/dashboard/guardian', icon: ShieldCheck },
       { label: t('manager.command'), href: '/dashboard', icon: LayoutDashboard },
+      { label: t('manager.aiOperations'), href: '/dashboard/ai-operations', icon: BrainCircuit },
       { label: t('manager.fleet'), href: '/dashboard/fleet', icon: Car },
       { label: t('manager.bookings'), href: '/dashboard/bookings', icon: Calendar },
       { label: t('manager.customers'), href: '/dashboard/customers', icon: Users },
