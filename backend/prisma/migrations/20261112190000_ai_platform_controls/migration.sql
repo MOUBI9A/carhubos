@@ -37,11 +37,16 @@ CREATE TABLE "AiPlatformReview" (
   "actorId" TEXT NOT NULL,
   "revision" INTEGER NOT NULL,
   "approved" BOOLEAN NOT NULL,
+  "decision" TEXT NOT NULL,
   "reason" VARCHAR(400) NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "AiPlatformReview_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "AiPlatformReview_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "AiPlatformReview_revision_check" CHECK ("revision" >= 2),
+  CONSTRAINT "AiPlatformReview_decision_check" CHECK (
+    ("approved" = true AND "decision" = 'APPROVE') OR
+    ("approved" = false AND "decision" IN ('REJECT','REVOKE'))
+  ),
   CONSTRAINT "AiPlatformReview_reason_check" CHECK (length(trim("reason")) >= 12)
 );
 CREATE UNIQUE INDEX "AiPlatformReview_agencyId_revision_key"
