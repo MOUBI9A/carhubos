@@ -84,7 +84,17 @@ export class AiPlatformControlsService {
         preferredLanguage: true,
         monthlyBudgetUsdCents: true,
         monthlyRequestLimit: true,
-        agency: { select: { name: true, status: true } },
+        agency: {
+          select: {
+            name: true,
+            status: true,
+            aiPlatformReviews: {
+              orderBy: { revision: 'desc' },
+              take: 1,
+              select: { decision: true, revision: true },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
       take: 100,
@@ -181,9 +191,14 @@ export class AiPlatformControlsService {
         ) {
           throw new BadRequestException('Agency must request access with positive caps before approval.');
         }
-        if (settings.platformApproved === dto.approve) {
-          throw new ConflictException('Review is already in the requested state.');
+        // An explicit rejection is a review decision even before approval.
+        // Save its reason and revision so rejected != pending.
+        if (dto.approve && settings.platformApproved) {
+          throw new ConflictException('Agency is already approved.');
         }
+        const decision = dto.approve
+          ? 'APPROVE' as const
+          : settings.platformApproved ? 'REVOKE' as const : 'REJECT' as const;
 
         const revision = settings.revision + 1;
         const updated = await tx.agencyAiSettings.updateMany({
@@ -199,6 +214,7 @@ export class AiPlatformControlsService {
             actorId,
             revision,
             approved: dto.approve,
+            decision,
             reason: dto.reason.trim(),
           },
         });
@@ -213,6 +229,7 @@ export class AiPlatformControlsService {
               monthlyBudgetUsdCents: settings.monthlyBudgetUsdCents,
               monthlyRequestLimit: settings.monthlyRequestLimit,
               platformApproved: dto.approve,
+              decision,
               revision,
               changeSource: 'PLATFORM_REVIEW',
             },
@@ -220,7 +237,7 @@ export class AiPlatformControlsService {
         });
         // Committed version derived from the exact transaction, never re-read
         // from an outside request after another owner could have changed it.
-        return { agencyId, platformApproved: dto.approve, revision };
+        return { agencyId, platformApproved: dto.approve, decision, revision };
       });
       return {
         ...saved,
