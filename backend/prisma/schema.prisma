@@ -1123,6 +1123,7 @@ model AiPlatformReview {
   actorId     String
   revision    Int
   approved    Boolean
+  decision    String   // APPROVE, REJECT, REVOKE
   reason      String   @db.VarChar(400)
   createdAt   DateTime @default(now())
 
