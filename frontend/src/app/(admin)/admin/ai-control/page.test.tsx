@@ -30,7 +30,7 @@ const requests = [{
   preferredLanguage: "EN",
   monthlyBudgetUsdCents: 2000,
   monthlyRequestLimit: 20,
-  agency: { name: "Demo Agency", status: "ACTIVE" },
+  agency: { name: "Demo Agency", status: "ACTIVE", aiPlatformReviews: [] },
 }];
 
 function mockLoads() {
@@ -84,7 +84,7 @@ describe("Founder-only platform AI governance", () => {
   it("records agency review for an opted-in, capped tenant without any other mutations", async () => {
     mockLoads();
     vi.mocked(api.patch).mockResolvedValueOnce({ data: {
-      agencyId: "agency-a", platformApproved: true, revision: 2,
+      agencyId: "agency-a", platformApproved: true, decision: "APPROVE", revision: 2,
       effectiveInferenceEnabled: false,
     } } as never);
     render(<AiPlatformControlPage />);
@@ -108,6 +108,32 @@ describe("Founder-only platform AI governance", () => {
     expect(screen.getByText("noModel")).toBeVisible();
     expect(await screen.findByText("reviewSaved")).toBeVisible();
     expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a reasoned rejection even for an unapproved request", async () => {
+    mockLoads();
+    vi.mocked(api.patch).mockResolvedValueOnce({ data: {
+      agencyId: "agency-a", platformApproved: false, decision: "REJECT",
+      revision: 2, effectiveInferenceEnabled: false,
+    } } as never);
+    render(<AiPlatformControlPage />);
+    await screen.findByText("switchLocked");
+    fireEvent.change(screen.getByLabelText("selectAgency"), {
+      target: { value: "agency-a" },
+    });
+    fireEvent.change(screen.getAllByLabelText("reason")[1], {
+      target: { value: "Agency has not completed the required verification." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "reject" }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      "/saas-admin/ai-control/agencies/agency-a/review",
+      {
+        expectedRevision: 1, approve: false,
+        reason: "Agency has not completed the required verification.",
+      },
+    ));
+    expect(await screen.findByText("rejected", { exact: false })).toBeVisible();
+    expect(screen.getByText("noModel")).toBeVisible();
   });
 
   it("never requests platform policy for an unauthorized role", () => {
