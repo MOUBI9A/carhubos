@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MEDIA_KINDS, ZONES } from './guardian.service';
@@ -24,6 +25,19 @@ export class GuardianRevisionDto {
 }
 export class GuardianEvidenceDto extends GuardianRevisionDto {
   @IsIn(MEDIA_KINDS) kind!: string;
+}
+export class GuardianVideoUploadDto extends GuardianRevisionDto {
+  @IsIn(['VIDEO']) kind!: 'VIDEO';
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  @Matches(/^[^\p{Cc}/\\]+$/u)
+  filename!: string;
+  @IsIn(['video/mp4']) mimeType!: 'video/mp4';
+  @IsInt()
+  @Min(6 * 1024 * 1024)
+  @Max(150 * 1024 * 1024)
+  expectedSizeBytes!: number;
 }
 export class GuardianFindingDto extends GuardianRevisionDto {
   @IsIn(ZONES) zone!: string;

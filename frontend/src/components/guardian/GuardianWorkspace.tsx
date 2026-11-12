@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { EvidencePreview } from "./EvidencePreview";
 import { ReportActions } from "./ReportActions";
+import { VideoUpload } from "./VideoUpload";
 import {
   CAR_ZONES,
   guardianError,
@@ -158,7 +159,7 @@ export function GuardianWorkspace({
               : "A shared vehicle condition record. Capture the evidence, resolve findings, and request customer approval."}
           </p>
           <p className="text-xs text-text-faint mt-3">
-            Pilot · Human review · Photos up to 8 MB · MP4 video up to 32 MB
+            Pilot · Human review · Photos up to 8 MiB · Staff MP4 video up to 150 MiB
           </p>
         </div>
       </header>
@@ -401,7 +402,7 @@ export function GuardianWorkspace({
                       : report.status === "MUTUALLY_APPROVED"
                         ? ["REPAIR"]
                         : report.status === "DRAFT"
-                          ? ["OVERVIEW", "ODOMETER", "FUEL", "DAMAGE", "VIDEO"]
+                          ? ["OVERVIEW", "ODOMETER", "FUEL", "DAMAGE"]
                           : ["DAMAGE"]
                   }
                   upload={(kind, file) =>
@@ -427,6 +428,13 @@ export function GuardianWorkspace({
                       }
                     })
                   }
+                />
+              )}
+              {!customer && (
+                <VideoUpload
+                  key={report.id}
+                  report={report}
+                  refresh={() => refresh(report.id)}
                 />
               )}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">

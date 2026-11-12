@@ -14,6 +14,7 @@ datasource db {
 // 🏛️ PILLAR 1: SAAS CORE & MULTI-TENANCY
 model Agency {
   guardianReports GuardianReport[]
+  guardianUploadIntents GuardianUploadIntent[]
   id               String    @id @default(uuid())
   name             String
   subdomain        String?   @unique
@@ -964,6 +965,7 @@ model GuardianReport {
   findings                 GuardianFinding[]
   evidence                 GuardianEvidence[]
   events                   GuardianEvent[]
+  uploadIntents            GuardianUploadIntent[]
 
   @@unique([bookingId, phase])
   @@index([agencyId, carId])
@@ -988,8 +990,45 @@ model GuardianEvidence {
   findingPhoto   GuardianFinding? @relation("GuardianFindingPhoto")
   findingVideos  GuardianFinding[] @relation("GuardianFindingVideo")
   repairPhoto    GuardianFinding? @relation("GuardianRepairPhoto")
+  uploadIntent   GuardianUploadIntent?
 
   @@index([reportId, kind])
+}
+
+enum GuardianUploadIntentStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+/// Server-issued, actor-bound authorization for one private resumable MP4.
+/// The exact object path and booking/revision/phase snapshots cannot be chosen
+/// by a client. Finalization links one immutable, verified evidence row.
+model GuardianUploadIntent {
+  id                String                     @id @default(uuid())
+  reportId          String
+  report            GuardianReport             @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  agencyId          String
+  agency            Agency                     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  actorId           String
+  side              String // AGENCY or CUSTOMER
+  kind              String                     @default("VIDEO")
+  storagePath       String                     @unique
+  filename          String
+  mimeType          String
+  expectedSizeBytes Int
+  revisionAtInit    Int
+  phaseAtInit       String // OUT or IN, immutable authorization snapshot
+  bookingId         String // Immutable report-booking association snapshot
+  status            GuardianUploadIntentStatus @default(PENDING)
+  expiresAt         DateTime
+  createdAt         DateTime                   @default(now())
+  evidenceId        String?                    @unique
+  evidence          GuardianEvidence?          @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  completedRevision Int?
+
+  @@index([agencyId, reportId, actorId, status])
+  @@index([status, expiresAt])
 }
 
 /// Each finding has its own mandatory close-up photo. Individual damage may

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { GuardianUploadIntent, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { VaultStorageService } from '../vault/vault-storage.service';
 
@@ -53,6 +53,15 @@ const details = {
   events: { orderBy: { createdAt: 'asc' as const } },
 };
 type Side = 'AGENCY' | 'CUSTOMER';
+const VIDEO_MIN_BYTES = 6 * 1024 * 1024;
+const VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+type VideoInit = {
+  revision: number;
+  kind: 'VIDEO';
+  filename: string;
+  mimeType: 'video/mp4';
+  expectedSizeBytes: number;
+};
 
 @Injectable()
 export class GuardianService {
@@ -86,6 +95,372 @@ export class GuardianService {
     return this.mutate(id, (s) =>
       s.uploadLocked(actorId, side, id, kind, file, agencyId, revision),
     );
+  }
+
+  /** New direct uploads take the same report lock as legacy evidence and approvals.
+   * Scope the lock itself; a foreign tenant cannot block a guessed report ID. */
+  private async videoMutation<T>(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    work: (service: GuardianService) => Promise<T>,
+  ): Promise<T> {
+    this.requireScope(actorId);
+    this.requireScope(agencyId);
+    return this.prisma.$transaction(
+      async (tx) => {
+        const rows = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "GuardianReport"
+        WHERE id = ${reportId} AND "agencyId" = ${agencyId} FOR UPDATE`;
+        if (!rows.length) this.missing();
+        return work(new GuardianService(tx as PrismaService, this.storage));
+      },
+      { timeout: 15000 },
+    );
+  }
+
+  private assertVideoDraft(
+    report: { revision: number; status: string },
+    revision: number,
+  ) {
+    this.assertRevision(report, revision);
+    // Match uploadLocked's existing VIDEO policy. Renters still add DAMAGE photos only.
+    if (report.status !== 'DRAFT')
+      throw new ConflictException(
+        'Video evidence is closed for this report state.',
+      );
+  }
+
+  private videoIntentView(intent: GuardianUploadIntent) {
+    return {
+      id: intent.id,
+      reportId: intent.reportId,
+      kind: intent.kind,
+      storagePath: intent.storagePath,
+      filename: intent.filename,
+      mimeType: intent.mimeType,
+      expectedSizeBytes: intent.expectedSizeBytes,
+      revisionAtInit: intent.revisionAtInit,
+      expiresAt: intent.expiresAt,
+      status: intent.status,
+    };
+  }
+
+  private async ownedVideoIntent(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    intentId: string,
+  ) {
+    const report = await this.staff(agencyId, reportId);
+    const intent = await this.prisma.guardianUploadIntent.findFirst({
+      where: {
+        id: intentId,
+        reportId,
+        agencyId,
+        actorId,
+        side: 'AGENCY',
+        kind: 'VIDEO',
+      },
+    });
+    if (!intent) this.missing();
+    return { report, intent };
+  }
+
+  private assertPendingVideo(
+    report: {
+      revision: number;
+      status: string;
+      phase: string;
+      bookingId: string;
+    },
+    intent: GuardianUploadIntent,
+  ) {
+    if (intent.status !== 'PENDING' || intent.expiresAt.getTime() <= Date.now())
+      throw new ConflictException(
+        'Upload expired or canceled. Cancel it and select the video again.',
+      );
+    this.assertVideoDraft(report, intent.revisionAtInit);
+    if (
+      report.phase !== intent.phaseAtInit ||
+      report.bookingId !== intent.bookingId
+    )
+      throw new ConflictException(
+        'Inspection association changed. Start a new upload.',
+      );
+  }
+
+  /** Persist an intent before disclosing a path-specific, no-upsert storage token.
+   * No bucket/path, actor, tenant or expiry is accepted from the client. */
+  initiateVideoUpload(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    input: VideoInit,
+  ) {
+    return this.videoMutation(actorId, agencyId, reportId, async (s) => {
+      const report = await s.staff(agencyId, reportId);
+      s.assertVideoDraft(report, input.revision);
+      if (
+        input.kind !== 'VIDEO' ||
+        input.mimeType !== 'video/mp4' ||
+        !Number.isSafeInteger(input.expectedSizeBytes) ||
+        input.expectedSizeBytes < VIDEO_MIN_BYTES ||
+        input.expectedSizeBytes > VIDEO_MAX_BYTES ||
+        typeof input.filename !== 'string' ||
+        !input.filename.trim() ||
+        input.filename.length > 160 ||
+        /[\p{Cc}/\\]/u.test(input.filename)
+      )
+        throw new BadRequestException(
+          'Select an MP4 video from 6 to 150 MiB with a valid filename.',
+        );
+      const pending = await s.prisma.guardianUploadIntent.findFirst({
+        where: {
+          reportId,
+          agencyId,
+          actorId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (pending)
+        throw new ConflictException(
+          'Resume or cancel your pending video before starting another.',
+        );
+      const storagePath = `${agencyId}/guardian/${reportId}/${randomUUID()}.mp4`;
+      const intent = await s.prisma.guardianUploadIntent.create({
+        data: {
+          reportId,
+          agencyId,
+          actorId,
+          side: 'AGENCY',
+          kind: 'VIDEO',
+          storagePath,
+          filename: input.filename,
+          mimeType: 'video/mp4',
+          expectedSizeBytes: input.expectedSizeBytes,
+          revisionAtInit: report.revision,
+          phaseAtInit: report.phase,
+          bookingId: report.bookingId,
+          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        },
+      });
+      const signed = await s.storage.createGuardianVideoUpload(storagePath);
+      await s.log(
+        reportId,
+        report.revision,
+        actorId,
+        'AGENCY',
+        'VIDEO_UPLOAD_INITIATED',
+        { intentId: intent.id },
+      );
+      return { ...s.videoIntentView(intent), ...signed };
+    });
+  }
+
+  async listVideoUploads(actorId: string, agencyId: string, reportId: string) {
+    this.requireScope(actorId);
+    await this.staff(agencyId, reportId);
+    const intents = await this.prisma.guardianUploadIntent.findMany({
+      where: {
+        reportId,
+        agencyId,
+        actorId,
+        side: 'AGENCY',
+        kind: 'VIDEO',
+        status: 'PENDING',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    // Include stale intents so the same actor can explicitly cancel and clean them.
+    return intents.map((intent) => this.videoIntentView(intent));
+  }
+
+  resumeVideoUpload(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    intentId: string,
+  ) {
+    return this.videoMutation(actorId, agencyId, reportId, async (s) => {
+      const { report, intent } = await s.ownedVideoIntent(
+        actorId,
+        agencyId,
+        reportId,
+        intentId,
+      );
+      s.assertPendingVideo(report, intent);
+      const signed = await s.storage.createGuardianVideoUpload(
+        intent.storagePath,
+      );
+      // Supabase always mints a 2-hour token. The original DB expiry is never extended.
+      return { ...s.videoIntentView(intent), ...signed };
+    });
+  }
+
+  private async completedVideo(intent: GuardianUploadIntent) {
+    const evidence =
+      intent.evidenceId &&
+      (await this.prisma.guardianEvidence.findFirst({
+        where: {
+          id: intent.evidenceId,
+          reportId: intent.reportId,
+          storagePath: intent.storagePath,
+          uploadedById: intent.actorId,
+          uploadedByRole: intent.side,
+          kind: 'VIDEO',
+        },
+      }));
+    if (!evidence || !intent.completedRevision)
+      throw new ConflictException('Completed upload metadata is unavailable.');
+    return {
+      id: evidence.id,
+      kind: evidence.kind,
+      sha256: evidence.sha256,
+      sizeBytes: evidence.sizeBytes,
+      revision: intent.completedRevision,
+    };
+  }
+
+  /** Remote bytes are verified outside the SQL lock to bound lock duration.
+   * A second scoped lock rechecks every precondition and commits evidence + revision
+   * + event + completion atomically. Competing finalizers replay the same result. */
+  async finalizeVideoUpload(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    intentId: string,
+  ) {
+    const prepared = await this.videoMutation(
+      actorId,
+      agencyId,
+      reportId,
+      async (s) => {
+        const { report, intent } = await s.ownedVideoIntent(
+          actorId,
+          agencyId,
+          reportId,
+          intentId,
+        );
+        if (intent.status === 'COMPLETED')
+          return { result: await s.completedVideo(intent), intent };
+        s.assertPendingVideo(report, intent);
+        return { result: null, intent };
+      },
+    );
+    if (prepared.result) return prepared.result;
+    const verified = await this.storage.verifyGuardianVideo(
+      prepared.intent.storagePath,
+      prepared.intent.expectedSizeBytes,
+    );
+    // Never delete on a transaction failure: another finalizer may have committed
+    // the identical path. Invalid/incomplete objects remain pending for retry/cancel.
+    return this.videoMutation(actorId, agencyId, reportId, async (s) => {
+      const { report, intent } = await s.ownedVideoIntent(
+        actorId,
+        agencyId,
+        reportId,
+        intentId,
+      );
+      if (intent.status === 'COMPLETED') return s.completedVideo(intent);
+      s.assertPendingVideo(report, intent);
+      const evidence = await s.prisma.guardianEvidence.create({
+        data: {
+          reportId,
+          kind: 'VIDEO',
+          storagePath: intent.storagePath,
+          sha256: verified.sha256,
+          filename: intent.filename,
+          mimeType: verified.mimeType,
+          sizeBytes: verified.sizeBytes,
+          uploadedById: actorId,
+          uploadedByRole: 'AGENCY',
+        },
+      });
+      const changed = await s.prisma.guardianReport.update({
+        where: { id: reportId },
+        data: {
+          revision: { increment: 1 },
+          agencyApprovedRevision: null,
+          customerApprovedRevision: null,
+          publishedAt: null,
+          mutuallyApprovedAt: null,
+        },
+      });
+      await s.prisma.guardianUploadIntent.update({
+        where: { id: intent.id },
+        data: {
+          status: 'COMPLETED',
+          evidenceId: evidence.id,
+          completedRevision: changed.revision,
+        },
+      });
+      await s.log(
+        reportId,
+        changed.revision,
+        actorId,
+        'AGENCY',
+        'EVIDENCE_UPLOADED',
+        {
+          evidenceId: evidence.id,
+          kind: 'VIDEO',
+          sha256: verified.sha256,
+          intentId: intent.id,
+        },
+      );
+      return {
+        id: evidence.id,
+        kind: evidence.kind,
+        sha256: evidence.sha256,
+        sizeBytes: evidence.sizeBytes,
+        revision: changed.revision,
+      };
+    });
+  }
+
+  /** Cancellation is terminal in SQL before best-effort deletion. The signed
+   * token cannot be revoked; late TUS writes must be swept after token expiry. */
+  async cancelVideoUpload(
+    actorId: string,
+    agencyId: string,
+    reportId: string,
+    intentId: string,
+  ) {
+    const intent = await this.videoMutation(
+      actorId,
+      agencyId,
+      reportId,
+      async (s) => {
+        const { report, intent } = await s.ownedVideoIntent(
+          actorId,
+          agencyId,
+          reportId,
+          intentId,
+        );
+        if (intent.status === 'COMPLETED')
+          throw new ConflictException('Completed evidence cannot be canceled.');
+        if (intent.status !== 'CANCELED') {
+          await s.prisma.guardianUploadIntent.update({
+            where: { id: intent.id },
+            data: { status: 'CANCELED' },
+          });
+          await s.log(
+            reportId,
+            report.revision,
+            actorId,
+            'AGENCY',
+            'VIDEO_UPLOAD_CANCELED',
+            { intentId },
+          );
+        }
+        return intent;
+      },
+    );
+    // Deletion never runs for a completed intent, including concurrent cancel/finalize.
+    await this.storage.remove(intent.storagePath);
+    return { status: 'CANCELED' as const };
   }
   finding(
     actorId: string,
