@@ -20,7 +20,7 @@ The project now has three consecutive, safely isolated layers:
 - `AiPlatformPolicyEvent`: append-only through this API, one audit record per policy revision.
 - `GET /api/saas-admin/ai-control/requests`: ROOT_ADMIN only; up to 100 opted-in agencies, with minimal business-facing name, caps, language, status and revision; no customer or invoice data.
 - `PATCH /api/saas-admin/ai-control/agencies/:agencyId/review`: ROOT_ADMIN only. Requires a valid agency, an existing opt-in request, positive request and budget caps, an explicit boolean approval/revocation, reason and version. Rechecks live ROOT_ADMIN role and stores a separate `AiPlatformReview` plus an `AiSettingsChange` in the same database transaction as the revisioned approval update.
-- `AiPlatformReview`: separately versioned per-agency platform approval/revocation history. No agency-facing endpoint can set `platformApproved`.
+- `AiPlatformReview`: separately versioned per-agency APPROVE / REJECT / REVOKE decisions. Rejection of an unapproved opt-in is an explicit, reasoned audit event distinct from an outstanding pending request; revocation applies to an earlier approval. The UI shows the latest reviewed status by revision. No agency-facing endpoint can set `platformApproved`.
 - **Approval invalidation:** any subsequent OWNER settings update (including opt-out, re-opt-in or increased budget/request caps) resets `platformApproved=false` and records this in the same settings audit transaction. A new platform approval is required.
 - `AiGovernanceService.getSettings` reads `AiPlatformPolicy.emergencyDisabled`; missing policy => fail-closed. Actual provider readiness remains hardcoded false, independent of every request, policy flag or approval.
 
@@ -68,3 +68,7 @@ The project now has three consecutive, safely isolated layers:
 ## QA environment
 
 Use the isolated CI database and generated synthetic roles. Do not test platform approvals by upgrading a production agency account or deleting production data. The route `/admin/ai-control` must not be interpreted as evidence of a live AI provider.
+
+## Review feedback resolved
+
+A focused Codex CLI security review found that an unapproved request could not be explicitly rejected because the service disallowed writing `approved=false` when approval was already false. The platform review flow now records a distinct `REJECT` decision, with justification, revision, and audit history. The E2E suite was also updated to call the isolated NestJS API origin rather than the Next.js frontend origin. Both changes are subject to the updated CI run.
