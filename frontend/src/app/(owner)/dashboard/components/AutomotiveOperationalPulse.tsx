@@ -26,11 +26,23 @@ interface OperationalMetrics {
   criticalIssuesCount: number;
 }
 
+// Mirrors GET /api/maintenance/predictive-overview, returned by
+// PredictiveMaintenanceService.getFleetPredictiveOverview.
 interface PredictiveOverview {
-  totalAssets: number;
-  overdueAssets: number;
-  dueSoonAssets: number;
-  forecast30DaysMad: number;
+  totalVehicles: number;
+  criticalCount: number;
+  attentionCount: number;
+  projected30DayCostMad: number;
+}
+
+// API JSON is untyped at runtime. An unsuccessful deployment or future
+// contract change must never crash the entire owner dashboard.
+function isPredictiveOverview(value: unknown): value is PredictiveOverview {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const v = value as Record<string, unknown>;
+  return ['totalVehicles', 'criticalCount', 'attentionCount', 'projected30DayCostMad'].every(
+    (key) => typeof v[key] === 'number' && Number.isFinite(v[key]),
+  );
 }
 
 export function AutomotiveOperationalPulse() {
@@ -51,8 +63,10 @@ export function AutomotiveOperationalPulse() {
           setMetrics(mData);
         }
         if (pRes.ok) {
-          const pData = await pRes.json();
-          setPredictive(pData);
+          const pData: unknown = await pRes.json();
+          // Do not render an incomplete/old contract (e.g. forecast30DaysMad)
+          // as if it were valid numbers. Workshop KPIs can still render.
+          setPredictive(isPredictiveOverview(pData) ? pData : null);
         }
       } catch {
         // Fallback or offline
@@ -219,7 +233,7 @@ export function AutomotiveOperationalPulse() {
                 Fleet Predictive Maintenance Forecast (Next 30 Days)
               </p>
               <p className="text-text-muted mt-0.5">
-                {predictive.totalAssets} fleet assets tracked &bull; {predictive.overdueAssets} overdue &bull; {predictive.dueSoonAssets} due soon
+                {predictive.totalVehicles} fleet vehicles tracked &bull; {predictive.criticalCount} critical &bull; {predictive.attentionCount} need attention
               </p>
             </div>
           </div>
@@ -227,7 +241,7 @@ export function AutomotiveOperationalPulse() {
             <div className="text-right">
               <span className="text-[10px] text-text-muted uppercase tracking-wider block">Estimated 30-Day Budget</span>
               <span className="font-mono font-bold text-sm text-text-primary">
-                {predictive.forecast30DaysMad.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                {predictive.projected30DayCostMad.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
               </span>
             </div>
             <Link href="/dashboard/diagnostics">
