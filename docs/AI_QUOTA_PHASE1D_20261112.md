@@ -66,3 +66,7 @@ This implements infrastructure requirements from the user’s **MASTER PROJECT I
 ## Review tooling
 
 A read-only Codex CLI security review was attempted but did not produce a result because the CLI account hit its usage limit. The changes have therefore **not** received independent AI review. Local tests, isolated database rehearsals and GitHub CI are verifiable; human security review remains a release requirement.
+
+### Replaying the isolated concurrency test
+
+After constructing the specifically named disposable database as documented, run the script from `backend/` using `AI_QUOTA_TEST_DATABASE_URL` and `node -r ts-node/register/transpile-only ../scripts/ai-quota-runtime-rehearsal.cjs`. The script refuses every DB name except `carhub_ai_phase1d_scratch_20261112`. It lives outside `backend/` because that directory’s full ESLint project-service configuration does not include standalone `.cjs` scripts. No real provider calls are involved.

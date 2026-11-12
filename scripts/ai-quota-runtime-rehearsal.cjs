@@ -5,7 +5,7 @@
  * Never point at a real agency, staging or production DB.
  * The script expects the scratch DB schema created by the documented runbook.
  * Usage: AI_QUOTA_TEST_DATABASE_URL=postgres://.../carhub_ai_phase1d_scratch_20261112
- *        node -r ts-node/register/transpile-only test/ai-quota-runtime-rehearsal.cjs
+ *        node -r ts-node/register/transpile-only ../scripts/ai-quota-runtime-rehearsal.cjs
  */
 const assert = require('node:assert/strict');
 
@@ -16,8 +16,8 @@ if (parsed.pathname !== '/carhub_ai_phase1d_scratch_20261112') {
 }
 process.env.DATABASE_URL = uri;
 
-const { PrismaClient } = require('@prisma/client');
-const { AiQuotaService } = require('../src/ai-operations/ai-quota.service');
+const { PrismaClient } = require('../backend/node_modules/@prisma/client');
+const { AiQuotaService } = require('../backend/src/ai-operations/ai-quota.service');
 
 async function main() {
   const prisma = new PrismaClient();
