@@ -28,6 +28,24 @@ test.describe('Role-based login routing', () => {
     });
   }
 
+  test('agent navigation never offers owner-only Work Orders', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('name@agency.com').fill('agent@carhub.os');
+    await page.locator('input[type="password"]').fill('admin123');
+    await page.locator('form button[type="submit"]').click();
+    await page.waitForURL('**/agent');
+    await expect(page.locator('a[href="/dashboard/work-orders"]')).toHaveCount(0);
+  });
+
+  test('manager navigation keeps its permitted Work Orders route', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('name@agency.com').fill('manager@carhub.os');
+    await page.locator('input[type="password"]').fill('admin123');
+    await page.locator('form button[type="submit"]').click();
+    await page.waitForURL('**/dashboard');
+    await expect(page.locator('a[href="/dashboard/work-orders"]')).toBeVisible();
+  });
+
   test('a renter cannot reach the owner dashboard (role gate)', async ({ page }) => {
     // Log in as renter, then try to open /dashboard directly.
     await page.goto('/login');

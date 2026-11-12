@@ -96,7 +96,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       { label: t('agent.tasks'), href: '/agent/tasks', icon: FileText },
       { label: t('agent.inspections'), href: '/agent/inspections', icon: ShieldCheck },
       { label: t('diagnostics'), href: '/agent/diagnostics', icon: Activity },
-      { label: t('workOrders'), href: '/dashboard/work-orders', icon: Wrench },
+      // Default AGENT lacks work_order.manage. Never link to the owner-only
+      // Work Orders page; its role gate redirects agents back to /agent.
     ],
     RENTER: [
       { label: 'Guardian Vision', href: '/portal/inspections', icon: ShieldCheck },
