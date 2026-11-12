@@ -557,7 +557,7 @@ integration(
       });
       const invalid = [
         { expectedSizeBytes: sizeBytes - 1 },
-        { expectedSizeBytes: 150 * 1024 * 1024 + 1 },
+        { expectedSizeBytes: 45 * 1024 * 1024 + 1 },
         { kind: 'DAMAGE' },
         { side: 'UNTRUSTED' },
         { mimeType: 'text/html' },

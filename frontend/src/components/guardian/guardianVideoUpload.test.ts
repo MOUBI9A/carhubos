@@ -69,7 +69,7 @@ describe("Guardian resumable video transport", () => {
         type: "video/mp4",
         size: VIDEO_MAX_BYTES + 1,
       } as File),
-    ).toThrow(/150 MiB/);
+    ).toThrow(/45 MiB/);
     expect(() =>
       validateVideoFile({ type: "video/quicktime", size: 10 } as File),
     ).toThrow(/MP4/);

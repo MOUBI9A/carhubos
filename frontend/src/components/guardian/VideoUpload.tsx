@@ -336,7 +336,7 @@ export function VideoUpload({
         Refresh pending videos
       </Button>
       <p className="text-xs text-text-muted">
-        Up to 150 MiB. Videos from 6 MiB use resumable private upload. Pending
+        Up to 45 MiB. Videos from 6 MiB use resumable private upload. Pending
         uploads expire after two hours. Keep the original file to resume.
       </p>
       {pending.map((intent) => (

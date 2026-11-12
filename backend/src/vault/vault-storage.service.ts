@@ -7,7 +7,7 @@ import {
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 
-export const GUARDIAN_VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+export const GUARDIAN_VIDEO_MAX_BYTES = 45 * 1024 * 1024;
 const GUARDIAN_VIDEO_VERIFY_TIMEOUT_MS = 120_000;
 const MP4_HEADER_LIMIT = 4096;
 const MP4_BRANDS = new Set([
@@ -182,7 +182,7 @@ export class VaultStorageService {
       expectedSizeBytes > GUARDIAN_VIDEO_MAX_BYTES
     ) {
       throw new BadRequestException(
-        'Inspection video exceeds the 150 MiB limit.',
+        'Inspection video exceeds the 45 MiB limit.',
       );
     }
     const { api, direct } = this.guardianStorageUrls();

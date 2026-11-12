@@ -52,7 +52,7 @@ ALTER TABLE "GuardianUploadIntent"
   ADD CONSTRAINT "GuardianUploadIntent_side_check" CHECK ("side" IN ('AGENCY', 'CUSTOMER')),
   ADD CONSTRAINT "GuardianUploadIntent_kind_check" CHECK ("kind" = 'VIDEO'),
   ADD CONSTRAINT "GuardianUploadIntent_mimeType_check" CHECK ("mimeType" = 'video/mp4'),
-  ADD CONSTRAINT "GuardianUploadIntent_size_check" CHECK ("expectedSizeBytes" BETWEEN 6291456 AND 157286400),
+  ADD CONSTRAINT "GuardianUploadIntent_size_check" CHECK ("expectedSizeBytes" BETWEEN 6291456 AND 47185920),
   ADD CONSTRAINT "GuardianUploadIntent_revision_check" CHECK ("revisionAtInit" >= 1),
   ADD CONSTRAINT "GuardianUploadIntent_phase_check" CHECK ("phaseAtInit" IN ('OUT', 'IN')),
   ADD CONSTRAINT "GuardianUploadIntent_expiry_check" CHECK ("expiresAt" > "createdAt"),

@@ -36,7 +36,7 @@ export class GuardianVideoUploadDto extends GuardianRevisionDto {
   @IsIn(['video/mp4']) mimeType!: 'video/mp4';
   @IsInt()
   @Min(6 * 1024 * 1024)
-  @Max(150 * 1024 * 1024)
+  @Max(45 * 1024 * 1024)
   expectedSizeBytes!: number;
 }
 export class GuardianFindingDto extends GuardianRevisionDto {

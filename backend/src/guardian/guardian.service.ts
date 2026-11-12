@@ -54,7 +54,7 @@ const details = {
 };
 type Side = 'AGENCY' | 'CUSTOMER';
 const VIDEO_MIN_BYTES = 6 * 1024 * 1024;
-const VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+const VIDEO_MAX_BYTES = 45 * 1024 * 1024;
 type VideoInit = {
   revision: number;
   kind: 'VIDEO';
@@ -213,7 +213,7 @@ export class GuardianService {
         /[\p{Cc}/\\]/u.test(input.filename)
       )
         throw new BadRequestException(
-          'Select an MP4 video from 6 to 150 MiB with a valid filename.',
+          'Select an MP4 video from 6 to 45 MiB with a valid filename.',
         );
       const pending = await s.prisma.guardianUploadIntent.findFirst({
         where: {

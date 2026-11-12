@@ -1,6 +1,6 @@
 # Guardian Vision — Mutual Inspection MVP (November 11, 2026)
 
-**2026-11-12 local follow-up:** The resumable-video release candidate supersedes the 32 MiB video architecture described in this historical MVP snapshot. Staff draft MP4 videos from 6–150 MiB now use signed direct private TUS, durable actor/report/revision intents and bounded streaming verification. Photos retain their original route. See [current implementation/QA and pending release gates](GUARDIAN_RESUMABLE_UPLOAD_QA.md). No production rollout of this candidate has occurred.
+**2026-11-12 local follow-up:** The resumable-video release candidate supersedes the 32 MiB video architecture described in this historical MVP snapshot. Staff draft MP4 videos from 6–45 MiB now use signed direct private TUS, durable actor/report/revision intents and bounded streaming verification. Photos retain their original route. See [current implementation/QA and pending release gates](GUARDIAN_RESUMABLE_UPLOAD_QA.md). No production rollout of this candidate has occurred.
 
 ## Status
 **Branch:** `feat/guardian-vision-mutual-approval` on the local `carhubos` repository. **Not deployed**. This is a usable initial pilot, not a production-ready automated AI damage detection product. The existing `/ai-vision` module is still simulated when enabled and is **not** used to assert liability here.

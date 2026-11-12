@@ -159,7 +159,7 @@ export function GuardianWorkspace({
               : "A shared vehicle condition record. Capture the evidence, resolve findings, and request customer approval."}
           </p>
           <p className="text-xs text-text-faint mt-3">
-            Pilot · Human review · Photos up to 8 MiB · Staff MP4 video up to 150 MiB
+            Pilot · Human review · Photos up to 8 MiB · Staff MP4 video up to 45 MiB
           </p>
         </div>
       </header>

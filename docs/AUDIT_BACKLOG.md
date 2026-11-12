@@ -2,7 +2,7 @@
 
 ## Guardian resumable video candidate — 2026-11-12
 
-- Implemented on `feat/guardian-resumable-video-upload` from `f950d92`: signed private TUS videos (6–150 MiB), staff retry/resume/cancel UI, pending upload intents with RLS/client-grant revocation, actual streamed verification and replay-safe completion. Photos and renter review policy preserved.
+- Implemented on `feat/guardian-resumable-video-upload` from `f950d92`: signed private TUS videos (6–45 MiB), staff retry/resume/cancel UI, pending upload intents with RLS/client-grant revocation, actual streamed verification and replay-safe completion. Photos and renter review policy preserved.
 - Additive migration generated/rehearsed on isolated local PostgreSQL only. **No production migration/deployment, push or merge.**
 - Remaining gates: real nonproduction Supabase >32 MiB interrupt/reload/resume smoke, production timeout/CORS/bucket-limit validation, scheduled terminal-intent orphan cleanup, dependency audit remediation, media scanning/decoding and retention controls. See [candidate QA](GUARDIAN_RESUMABLE_UPLOAD_QA.md) for exact results and limits. No virus-scanning or AI inference claim.
 

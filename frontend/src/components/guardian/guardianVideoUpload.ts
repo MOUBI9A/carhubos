@@ -1,7 +1,7 @@
 import type { Upload } from "tus-js-client";
 
 export const VIDEO_CHUNK_BYTES = 6 * 1024 * 1024;
-export const VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+export const VIDEO_MAX_BYTES = 45 * 1024 * 1024;
 export type GuardianUploadIntent = {
   id: string;
   reportId: string;
@@ -33,7 +33,7 @@ export function validateVideoFile(
       "Choose an MP4 video (video/mp4). Convert other formats first.",
     );
   if (!file.size || file.size > VIDEO_MAX_BYTES)
-    throw new Error("MP4 video must be between 1 byte and 150 MiB.");
+    throw new Error("MP4 video must be between 1 byte and 45 MiB.");
   if (
     intent &&
     (file.name !== intent.filename ||
@@ -174,7 +174,7 @@ export function videoTransportError(error: Error): string {
   if (status === 409)
     return "Another upload is using this file location. Pause the other transfer, then retry.";
   if (status === 413)
-    return "Storage rejected the video size. The private bucket must allow videos up to 150 MiB.";
+    return "Storage rejected the video size. The private bucket must allow videos up to 45 MiB.";
   return "The video transfer was interrupted. Check your connection, then resume. Your accepted chunks can be reused before expiry.";
 }
 
