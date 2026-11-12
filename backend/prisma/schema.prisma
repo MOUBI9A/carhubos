@@ -92,6 +92,10 @@ model User {
   qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
   isVerified Boolean  @default(false)
   emailVerifiedAt DateTime?
+  // User acknowledgement records; NOT proof of CNDP/GDPR compliance.
+  legalNoticeAcknowledgedAt DateTime?
+  legalNoticeRevision String?
+  adultBusinessAuthorityConfirmedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

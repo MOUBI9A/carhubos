@@ -21,6 +21,8 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
         name: 'Unverified Owner',
         role: 'OWNER',
         agencyName: `Agency ${stamp}`,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       },
     });
     expect(regRes.ok()).toBeTruthy();
@@ -57,6 +59,8 @@ test.describe('Owner Verification & Mandatory Onboarding Journey (P0-2 & P0-3)',
         name: 'Flow Owner',
         role: 'OWNER',
         agencyName,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       },
     });
     expect(regRes.ok()).toBeTruthy();

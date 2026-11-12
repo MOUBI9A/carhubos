@@ -85,6 +85,20 @@ describe('AuthService.register — service-level behavior', () => {
     expect(tx.user.create).not.toHaveBeenCalled();
   });
 
+  it('refuses agency signup without both legal acknowledgement and adult authority', async () => {
+    const tx = makeTx();
+    const service = makeService(tx);
+    await expect(service.register({
+      email: 'owner@agency.test',
+      password: 'longenough1',
+      name: 'Owner',
+      agencyName: 'Example Agency',
+      legalNoticeAcknowledged: false,
+      confirmsAdultAndAuthority: true,
+    })).rejects.toThrow('Agency signup requires acknowledgement');
+    expect(tx.agency.create).not.toHaveBeenCalled();
+  });
+
   it('creating an agency seeds an OWNER AgencyMembership regardless of the requested role', async () => {
     const tx = makeTx();
     tx.user.create.mockResolvedValue({
@@ -99,6 +113,8 @@ describe('AuthService.register — service-level behavior', () => {
       password: 'longenough1',
       name: 'A',
       agencyName: 'New Agency',
+      legalNoticeAcknowledged: true,
+      confirmsAdultAndAuthority: true,
     });
 
     expect(tx.agencyMembership.create).toHaveBeenCalledTimes(1);
@@ -113,6 +129,9 @@ describe('AuthService.register — service-level behavior', () => {
     // client-supplied one (RegisterDto has no such field to begin with).
     const userArg = tx.user.create.mock.calls[0][0].data;
     expect(userArg.agencyId).toBe('agency-1');
+    expect(userArg.legalNoticeAcknowledgedAt).toBeInstanceOf(Date);
+    expect(userArg.legalNoticeRevision).toBe('2026-11-12-draft');
+    expect(userArg.adultBusinessAuthorityConfirmedAt).toBeInstanceOf(Date);
   });
 
   it('registering without agencyName creates no agency and no membership', async () => {
@@ -139,6 +158,28 @@ describe('AuthService.register — service-level behavior', () => {
 });
 
 describe('AuthService.deleteAccount — compliant account deletion', () => {
+  it('never promises complete erasure when account-linked records can remain', async () => {
+    const hashed = await bcrypt.hash('mypassword123', 10);
+    const tx = {
+      emailVerificationToken: { deleteMany: jest.fn() },
+      consentGrant: { updateMany: jest.fn() },
+      renterDocument: { deleteMany: jest.fn() },
+      user: { update: jest.fn() },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({
+        id: 'renter-1', email: 'secret@invalid.test', name: 'Private Name',
+        role: 'RENTER', agencyId: null, password: hashed,
+      }) },
+      booking: { count: jest.fn().mockResolvedValue(0) },
+      $transaction: jest.fn((cb: any) => cb(tx)),
+    };
+    const svc = new AuthService({} as any, {} as any, prisma as any);
+    const result = await svc.deleteAccount('renter-1', 'mypassword123');
+    expect(result.message).toContain('retention and deletion review');
+    expect(result.message).not.toMatch(/compliance with privacy regulations|fully erased/);
+  });
+
   it('rejects deletion if user does not exist', async () => {
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue(null) },

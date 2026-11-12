@@ -27,6 +27,8 @@ setup('authenticate and seed a fresh agency', async ({ page, request }) => {
       name: 'E2E Owner',
       role: 'OWNER',
       agencyName: account.agencyName,
+      legalNoticeAcknowledged: true,
+      confirmsAdultAndAuthority: true,
     },
   });
   expect(

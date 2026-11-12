@@ -19,9 +19,12 @@ export default function PublicLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[100] focus:rounded-lg focus:bg-background focus:px-4 focus:py-3 focus:text-foreground">
+        Aller au contenu principal
+      </a>
       <PublicNav />
 
-      <main className="pt-20">
+      <main id="main-content" tabIndex={-1} className="pt-20">
         {children}
       </main>
 
@@ -42,9 +45,9 @@ export default function PublicLayout({
             <div>
               <h4 className="eyebrow mb-6">{t('product')}</h4>
               <ul className="space-y-4">
-                <li><Link href="#features" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('features')}</Link></li>
-                <li><Link href="#solutions" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('trustNetwork')}</Link></li>
-                <li><Link href="#enterprise" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('enterprise')}</Link></li>
+                <li><Link href="/landing#features" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('features')}</Link></li>
+                <li><Link href="/landing#solutions" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('trustNetwork')}</Link></li>
+                <li><Link href="/landing#enterprise" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('enterprise')}</Link></li>
               </ul>
             </div>
             <div>
@@ -52,6 +55,8 @@ export default function PublicLayout({
               <ul className="space-y-4">
                 <li><Link href="/privacy" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Politique de Confidentialité</Link></li>
                 <li><Link href="/terms" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Conditions Générales</Link></li>
+                <li><Link href="/refunds" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Remboursements</Link></li>
+                <li><Link href="/cookies" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Cookies</Link></li>
                 <li><Link href="/support" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Assistance & Support</Link></li>
                 <li><Link href="/account-deletion" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">Suppression de Compte</Link></li>
               </ul>
@@ -59,9 +64,9 @@ export default function PublicLayout({
             <div>
               <h4 className="eyebrow mb-6">{t('getStartedSection')}</h4>
               <ul className="space-y-4">
-                <li><Link href="#contact" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('requestAccess')}</Link></li>
+                <li><Link href="/landing#contact" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('requestAccess')}</Link></li>
                 <li><Link href="/login" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('login')}</Link></li>
-                <li><Link href="#contact" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('contact')}</Link></li>
+                <li><Link href="/landing#contact" className="text-sm font-medium text-text-muted hover:text-foreground transition-colors">{t('contact')}</Link></li>
               </ul>
               <div className="mt-6">
                 <LocaleSwitcher variant="pills" />

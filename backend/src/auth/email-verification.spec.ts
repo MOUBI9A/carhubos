@@ -91,6 +91,8 @@ describe('Email Verification & Gating (P0-2)', () => {
         password: 'Password123!',
         role: 'OWNER',
         agencyName: 'Test Agency',
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       });
 
       expect(res.user.isVerified).toBe(false);

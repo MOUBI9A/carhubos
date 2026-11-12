@@ -1,139 +1,104 @@
-'use client';
+import Link from "next/link";
+import { ArrowLeft, FileWarning, Shield } from "lucide-react";
 
-import React from 'react';
-import Link from 'next/link';
-import { Shield, Lock, Eye, FileText, ArrowLeft } from 'lucide-react';
-
+/**
+ * Operational disclosure aligned to code review. Legal identity, controller
+ * assignments, retention schedules and international transfer terms must be
+ * verified by counsel and by the responsible business before publication.
+ */
 export default function PrivacyPolicyPage() {
-  const lastUpdated = '12 Octobre 2026';
-
   return (
-    <div className="py-16 md:py-24 max-w-4xl mx-auto px-6">
-      <Link
-        href="/landing"
-        className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-foreground transition-colors mb-8"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Retour à l'accueil
+    <div className="mx-auto max-w-4xl px-6 py-16 md:py-24">
+      <Link href="/landing" className="mb-8 inline-flex items-center gap-2 text-sm text-text-muted hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Retour à l&apos;accueil
       </Link>
-
-      <div className="mb-12 border-b border-hairline pb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-raised border border-hairline text-xs font-mono text-primary mb-4">
-          <Shield className="w-3.5 h-3.5" />
-          <span>CONFORMITÉ LOI 09-08 & CNDP</span>
-        </div>
-        <h1 className="font-display text-3xl md:text-5xl text-foreground mb-4">
-          Politique de Confidentialité
-        </h1>
-        <p className="text-text-muted text-sm font-mono">
-          Dernière mise à jour : {lastUpdated} · Fider Technologies SARL
+      <div className="mb-8 flex items-center gap-3">
+        <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+        <h1 className="font-display text-3xl text-foreground md:text-5xl">Informations sur la confidentialité</h1>
+      </div>
+      <div role="note" className="mb-10 flex gap-3 rounded-xl border border-warning/30 bg-warning/10 p-5 text-sm text-foreground">
+        <FileWarning className="h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+        <p>
+          <strong>Document en cours de validation juridique.</strong> L&apos;identité du
+          responsable de traitement, ses coordonnées légales, les durées de
+          conservation et les prestataires doivent être confirmés avant toute
+          déclaration de conformité. Cette page ne constitue pas une certification CNDP.
         </p>
       </div>
-
-      <div className="space-y-12 text-foreground/90 leading-relaxed text-sm md:text-base">
-        <section className="space-y-4">
-          <h2 className="font-display text-xl md:text-2xl text-foreground flex items-center gap-3">
-            <span className="text-primary font-mono text-lg">01.</span> Introduction et Portée
-          </h2>
-          <p className="text-text-muted">
-            La présente Politique de Confidentialité régit la collecte, le traitement et la conservation des données à caractère personnel effectuées par la plateforme <strong>Fider</strong> (ci-après « la Plateforme », « l'Application »), exploitée par CarHub OS / Fider Mobility, accessible sur <code>https://www.carhub.codes</code> et via ses applications mobiles natives iOS et Android.
-          </p>
-          <p className="text-text-muted">
-            Fider s'engage formellement à respecter la législation marocaine en vigueur, notamment la <strong>Loi n° 09-08</strong> relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, ainsi que les directives de la Commission Nationale de contrôle de la protection des Données à caractère Personnel (<strong>CNDP</strong>).
+      <div className="space-y-9 text-sm leading-relaxed text-text-muted md:text-base">
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">1. À quoi sert CarHub OS ?</h2>
+          <p>
+            CarHub OS met à disposition des agences de location, de leurs équipes et
+            des conducteurs un outil de gestion de véhicules, de réservations,
+            d&apos;inspection et de suivi. Selon l&apos;opération, l&apos;agence et
+            l&apos;opérateur du logiciel peuvent avoir des responsabilités distinctes
+            dans le traitement des données. Ces rôles doivent être formalisés par contrat.
           </p>
         </section>
-
-        <section className="space-y-4">
-          <h2 className="font-display text-xl md:text-2xl text-foreground flex items-center gap-3">
-            <span className="text-primary font-mono text-lg">02.</span> Données Collectées
-          </h2>
-          <p className="text-text-muted">Dans le cadre de l'exécution des contrats de location et de la gestion de flotte :</p>
-          <div className="grid md:grid-cols-2 gap-4 my-4">
-            <div className="p-4 rounded-xl bg-surface border border-hairline">
-              <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" /> Données d'Identité & Permis
-              </h3>
-              <p className="text-xs text-text-muted">
-                Nom complet, numéro de Carte d'Identité Nationale (CIN) ou Passeport, numéro de permis de conduire, date de validité, photographies du document d'identité (coffre sécurisé).
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-surface border border-hairline">
-              <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-primary" /> Inspections & Télémesure
-              </h3>
-              <p className="text-xs text-text-muted">
-                Photographies de l'état du véhicule (départ/retour), niveau de carburant, kilométrage relevé, signatures électroniques des parties contractantes.
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-surface border border-hairline">
-              <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-primary" /> Données de Compte & Sécurité
-              </h3>
-              <p className="text-xs text-text-muted">
-                Adresse email, numéro de téléphone, mot de passe haché (bcrypt), adresse IP, identifiants d'appareils mobiles (tokens de notification push).
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-surface border border-hairline">
-              <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" /> Transactions Financières
-              </h3>
-              <p className="text-xs text-text-muted">
-                Dépôts de garantie, factures en MAD, montants réglés par espèces, virement, chèque ou carte bancaire. Aucune coordonnée bancaire brute n'est stockée sur nos serveurs.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="font-display text-xl md:text-2xl text-foreground flex items-center gap-3">
-            <span className="text-primary font-mono text-lg">03.</span> Finalités du Traitement
-          </h2>
-          <ul className="list-disc ps-6 space-y-2 text-text-muted">
-            <li>Création, suivi et exécution des contrats de location de véhicules au Maroc.</li>
-            <li>Vérification préalable de l'authenticité des conducteurs et prévention de la fraude documentaire.</li>
-            <li>Gestion des états des lieux photographiques contradictoires et résolution impartiale des litiges de restitution.</li>
-            <li>Envoi d'alertes opérationnelles (rappel de restitution, échéance d'assurance, validation de consentement).</li>
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">2. Catégories de données</h2>
+          <ul className="list-disc space-y-2 ps-6">
+            <li>Compte : nom, e-mail, rôle, identifiants d&apos;authentification et journaux techniques.</li>
+            <li>Location : contact client, dates, véhicule, prix, contrat et éventuels paiements.</li>
+            <li>Identification : informations de permis et d&apos;identité, avec documents si téléchargés.</li>
+            <li>État du véhicule : photos, vidéos lorsqu&apos;activées, dommages signalés, décisions et signatures.</li>
+            <li>Assistance et sécurité : demandes au support, autorisations d&apos;accès, événements de sécurité.</li>
           </ul>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="font-display text-xl md:text-2xl text-foreground flex items-center gap-3">
-            <span className="text-primary font-mono text-lg">04.</span> Conservation et Sécurité des Données
-          </h2>
-          <p className="text-text-muted">
-            Toutes les communications réseau transitent par des canaux chiffrés <strong>TLS 1.3 / HTTPS</strong>. Les documents d'identité sont conservés dans un coffre numérique privé isolé (chiffrement au repos AES-256) avec accès soumis au consentement explicite et révocable du conducteur.
-          </p>
-          <p className="text-text-muted">
-            Conformément aux obligations du Code de Commerce marocain, les pièces comptables et contrats de location sont archivés pour la durée légale requise (10 ans), après quoi les données personnelles associées sont purgées ou anonymisées.
+          <p className="mt-3">
+            Évitez de partager des données sensibles supplémentaires dans les zones de texte libre.
           </p>
         </section>
-
-        <section className="space-y-4">
-          <h2 className="font-display text-xl md:text-2xl text-foreground flex items-center gap-3">
-            <span className="text-primary font-mono text-lg">05.</span> Droits des Utilisateurs & Suppression de Compte
-          </h2>
-          <p className="text-text-muted">
-            Conformément à la Loi 09-08, vous disposez d'un droit d'accès, de rectification et d'opposition sur vos données personnelles.
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">3. Utilisation et accès</h2>
+          <p>
+            Ces informations servent à gérer les comptes et locations, documenter les
+            états des lieux, assurer la sécurité, répondre aux demandes et produire des
+            rapports. L&apos;accès dépend du rôle et des habilitations; les demandes
+            de consultation de documents du conducteur utilisent un circuit
+            d&apos;autorisation distinct. Les bases juridiques de chaque traitement,
+            les sous-traitants et les transferts internationaux restent à documenter.
           </p>
-          <p className="text-text-muted">
-            Vous pouvez à tout moment demander la <strong>suppression intégrale de votre compte et de vos données personnelles</strong> :
-          </p>
-          <ul className="list-disc ps-6 space-y-2 text-text-muted">
-            <li>Directement depuis l'application mobile Fider via l'onglet <em>Paramètres &gt; Supprimer mon compte</em>.</li>
-            <li>En ligne sur notre portail dédié : <Link href="/account-deletion" className="text-primary underline">https://www.carhub.codes/account-deletion</Link>.</li>
-            <li>Par courrier électronique à notre Délégué à la Protection des Données : <a href="mailto:privacy@carhub.codes" className="text-primary underline">privacy@carhub.codes</a>.</li>
-          </ul>
         </section>
-
-        <section className="space-y-4 border-t border-hairline pt-8">
-          <h2 className="font-display text-xl md:text-2xl text-foreground">
-            Contactez notre Service Juridique & Données
-          </h2>
-          <p className="text-text-muted">
-            Pour toute question concernant cette politique ou pour exercer vos droits :<br />
-            <strong>Fider Technologies — DPO</strong><br />
-            Boulevard de la Corniche, Anfa, Casablanca, Maroc<br />
-            Email : <a href="mailto:privacy@carhub.codes" className="text-primary">privacy@carhub.codes</a> · Support : <a href="mailto:support@carhub.codes" className="text-primary">support@carhub.codes</a>
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">4. Cookies et services externes</h2>
+          <p>
+            Le site utilise notamment un cookie de session nécessaire à la connexion et
+            un cookie pour mémoriser la langue choisie. Aucun traqueur publicitaire
+            optionnel n&apos;a été identifié dans le code frontend audité; cela ne
+            remplace pas un inventaire des services actifs en production.
+            Voir la <Link href="/cookies" className="text-primary underline">notice sur les cookies</Link>.
+          </p>
+        </section>
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">5. Conservation et sécurité</h2>
+          <p>
+            Des restrictions d&apos;accès et des mécanismes de stockage privé sont
+            prévus, mais aucune technologie particulière ne garantit à elle seule
+            l&apos;absence d&apos;incident. Les durées exactes doivent être définies
+            par catégorie de données et obligation applicable; elles ne sont pas
+            uniformément fixées à dix ans.
+          </p>
+        </section>
+        <section>
+          <h2 className="mb-3 text-xl text-foreground">6. Vos droits et vos demandes</h2>
+          <p>
+            La loi marocaine n° 09-08 prévoit notamment des droits d&apos;information,
+            d&apos;accès, de rectification et d&apos;opposition, selon les conditions
+            applicables. Vous pouvez consulter notre page de{" "}
+            <Link href="/account-deletion" className="text-primary underline">fermeture de compte</Link>
+            {" "}ou écrire à{" "}
+            <a href="mailto:privacy@carhub.codes" className="text-primary underline">
+              privacy@carhub.codes
+            </a>.
+            La fermeture désactive l&apos;accès et anonymise certains champs du
+            compte; elle ne signifie pas que tous les documents et archives
+            sont immédiatement effacés.
+          </p>
+          <p className="mt-3">
+            Le responsable de traitement, l&apos;adresse légale et l&apos;interlocuteur
+            chargé des demandes devront être publiés après vérification de
+            l&apos;identité et des coordonnées de l&apos;entité exploitante.
           </p>
         </section>
       </div>

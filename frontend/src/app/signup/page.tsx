@@ -23,6 +23,8 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [legalNoticeAcknowledged, setLegalNoticeAcknowledged] = useState(false);
+  const [confirmsAdultAndAuthority, setConfirmsAdultAndAuthority] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -31,9 +33,16 @@ export default function SignupPage() {
       showToast('danger', t('passwordTooShortTitle'), t('passwordTooShortBody'));
       return;
     }
+    if (!legalNoticeAcknowledged || !confirmsAdultAndAuthority) {
+      showToast('danger', t('signupFailTitle'), t('legalNoticeRequired'));
+      return;
+    }
     setIsLoading(true);
     try {
-      await api.post('/auth/register', { agencyName, name, email, password });
+      await api.post('/auth/register', {
+        agencyName, name, email, password,
+        legalNoticeAcknowledged, confirmsAdultAndAuthority,
+      });
       await login(email, password);
       showToast(
         'success',
@@ -96,18 +105,51 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSignup} className="bg-surface border border-hairline rounded-2xl shadow-soft p-8 space-y-5">
-          <Field label={t('agencyName')} icon={Building2}>
-            <input required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className={INPUT_CLASS} placeholder={t('agencyPlaceholder')} autoComplete="organization" />
+          <Field htmlFor="signup-agency" label={t('agencyName')} icon={Building2}>
+            <input id="signup-agency" required value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className={INPUT_CLASS} placeholder={t('agencyPlaceholder')} autoComplete="organization" />
           </Field>
-          <Field label={t('yourName')} icon={User}>
-            <input required value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLASS} placeholder={t('fullNamePlaceholder')} autoComplete="name" />
+          <Field htmlFor="signup-name" label={t('yourName')} icon={User}>
+            <input id="signup-name" required value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLASS} placeholder={t('fullNamePlaceholder')} autoComplete="name" />
           </Field>
-          <Field label={t('workEmail')} icon={Mail}>
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} placeholder={t('workEmailPlaceholder')} autoComplete="email" />
+          <Field htmlFor="signup-email" label={t('workEmail')} icon={Mail}>
+            <input id="signup-email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT_CLASS} placeholder={t('workEmailPlaceholder')} autoComplete="email" />
           </Field>
-          <Field label={t('password')} icon={Lock} hint={t('passwordHint')}>
-            <input required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT_CLASS} placeholder="••••••••" autoComplete="new-password" />
+          <Field htmlFor="signup-password" label={t('password')} icon={Lock} hint={t('passwordHint')}>
+            <input id="signup-password" required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT_CLASS} placeholder="••••••••" autoComplete="new-password" />
           </Field>
+
+          <div className="space-y-4 rounded-xl border border-hairline p-4">
+            <label htmlFor="signup-legal" className="flex items-start gap-3 text-sm text-text-muted cursor-pointer">
+              <input
+                id="signup-legal"
+                type="checkbox"
+                required
+                checked={legalNoticeAcknowledged}
+                onChange={(e) => setLegalNoticeAcknowledged(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-primary"
+              />
+              <span>
+                {t('legalNoticeLabel')}{' '}
+                <Link href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                  {t('termsLink')}
+                </Link>{' '}
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                  {t('privacyLink')}
+                </Link>
+              </span>
+            </label>
+            <label htmlFor="signup-adult" className="flex items-start gap-3 text-sm text-text-muted cursor-pointer">
+              <input
+                id="signup-adult"
+                type="checkbox"
+                required
+                checked={confirmsAdultAndAuthority}
+                onChange={(e) => setConfirmsAdultAndAuthority(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-primary"
+              />
+              <span>{t('adultBusinessLabel')}</span>
+            </label>
+          </div>
 
           <Button type="submit" variant="primary" size="lg" className="w-full group" disabled={isLoading}>
             {isLoading ? t('creatingAgency') : t('createAgency')}
@@ -132,11 +174,13 @@ export default function SignupPage() {
 
 function Field({
   label,
+  htmlFor,
   icon: Icon,
   hint,
   children,
 }: {
   label: string;
+  htmlFor: string;
   icon: React.ElementType;
   hint?: string;
   children: React.ReactNode;
@@ -144,7 +188,7 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between px-1">
-        <p className="eyebrow">{label}</p>
+        <label htmlFor={htmlFor} className="eyebrow">{label}</label>
         {hint && <p className="text-[10px] font-medium text-text-faint">{hint}</p>}
       </div>
       <div className="relative group">

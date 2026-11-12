@@ -60,14 +60,14 @@ export default function PricingSection() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center max-w-2xl mx-auto mb-14 md:mb-16">
           <div className="flex justify-center mb-5">
-            <Badge variant="trust">Free during the beta</Badge>
+            <Badge variant="trust">Published plan information</Badge>
           </div>
           <h2 className="display text-4xl md:text-5xl lg:text-6xl text-foreground mb-5">
             Simple, honest pricing.
           </h2>
           <p className="text-lg text-text-muted leading-relaxed">
-            Every plan is <span className="text-foreground font-medium">free while we&apos;re in beta</span> — pick the
-            tier that fits your fleet and pay nothing until we launch. Prices below are what you&apos;ll pay after.
+            Compare the plans and their current published rates. Any beta discount,
+            taxes and future renewal price must be confirmed before you agree to pay.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function PricingSection() {
               >
                 {isFeatured && (
                   <span className="absolute -top-3 start-1/2 -translate-x-1/2">
-                    <Badge variant="trust">Most popular</Badge>
+                    <Badge variant="trust">Highlighted plan</Badge>
                   </span>
                 )}
                 <p className="eyebrow mb-4">{plan.name}</p>
@@ -120,7 +120,7 @@ export default function PricingSection() {
 
                 <Link href="/signup" className="mt-8">
                   <Button variant={isFeatured ? 'premium' : 'outline'} className="w-full">
-                    Start free
+                    Explore this plan
                   </Button>
                 </Link>
               </div>
@@ -129,7 +129,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-sm text-text-faint mt-10">
-          Prices in MAD, VAT included · No card required during beta
+          Prices and applicable taxes must be confirmed before any payment. No card required at signup.
         </p>
       </div>
     </section>

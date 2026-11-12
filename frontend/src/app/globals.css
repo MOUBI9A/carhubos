@@ -35,7 +35,7 @@
 
   /* Restrained violet — the single interactive accent */
   --color-primary: hsl(266 58% 66%);
-  --color-primary-foreground: hsl(40 30% 96%);
+  --color-primary-foreground: hsl(30 9% 7%); /* 5.47:1 against primary background */
   --color-violet-soft: hsl(266 40% 22%);
 
   /* Warm metallic — premium moments ONLY (CTA, trust seal, plan tier, hero KPI) */
@@ -49,7 +49,7 @@
   --color-muted: hsl(32 9% 14%);
   --color-muted-foreground: hsl(35 14% 66%);
   --color-text-muted: hsl(35 14% 66%);
-  --color-text-faint: hsl(33 11% 48%);
+  --color-text-faint: hsl(33 11% 54%); /* >=4.5:1 on raised surfaces */
 
   --color-accent: hsl(32 9% 14%);
   --color-accent-foreground: hsl(38 28% 94%);
@@ -103,6 +103,10 @@
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
+  }
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/25;
