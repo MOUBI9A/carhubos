@@ -8,11 +8,13 @@ import { AiPlatformControlsController } from './ai-platform-controls.controller'
 import { AiPlatformControlsService } from './ai-platform-controls.service';
 import { AiReadToolsController } from './ai-read-tools.controller';
 import { AiReadToolsService } from './ai-read-tools.service';
+import { AiQuotaService } from './ai-quota.service';
+import { AiQuotaController } from './ai-quota.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [AiOperationsController, AiGovernanceController, AiPlatformControlsController, AiReadToolsController],
-  providers: [AiOperationsService, AiGovernanceService, AiPlatformControlsService, AiReadToolsService],
+  controllers: [AiOperationsController, AiGovernanceController, AiPlatformControlsController, AiReadToolsController, AiQuotaController],
+  providers: [AiOperationsService, AiGovernanceService, AiPlatformControlsService, AiReadToolsService, AiQuotaService],
   exports: [AiOperationsService, AiGovernanceService, AiReadToolsService],
 })
 export class AiOperationsModule {}

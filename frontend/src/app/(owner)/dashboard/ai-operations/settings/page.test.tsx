@@ -39,9 +39,22 @@ const usage = {
   recordedCostUsdMicros: 0,
 };
 
+const quota = {
+  periodStart: "2026-11-01T00:00:00.000Z",
+  monthlyRequestLimit: 0,
+  monthlyBudgetUsdMicros: 0,
+  heldRequests: 0,
+  committedRequests: 0,
+  heldCostUsdMicros: 0,
+  committedCostUsdMicros: 0,
+  providerIntegrationReady: false,
+  spendEnabled: false,
+};
+
 function mockLoads() {
   vi.mocked(api.get).mockImplementation(async (path: string) => ({
-    data: path.endsWith("/settings") ? settings : usage,
+    data: path.endsWith("/settings") ? settings :
+      path.endsWith("/quota") ? quota : usage,
   } as never));
 }
 
@@ -60,6 +73,9 @@ describe("AI governance settings (model-off by default)", () => {
     expect(screen.getByText("usageNote")).toBeVisible();
     expect(api.get).toHaveBeenCalledWith("/ai-operations/settings");
     expect(api.get).toHaveBeenCalledWith("/ai-operations/usage");
+    expect(api.get).toHaveBeenCalledWith("/ai-operations/quota");
+    expect(screen.getByText("quotaTitle")).toBeVisible();
+    expect(screen.getByText("quotaNote")).toBeVisible();
     expect(api.patch).not.toHaveBeenCalled();
   });
 
@@ -103,7 +119,8 @@ describe("AI governance settings (model-off by default)", () => {
 
   it("respects a server-side revoked settings.manage capability for an Owner", async () => {
     vi.mocked(api.get).mockImplementation(async (path: string) => ({
-      data: path.endsWith("/settings") ? { ...settings, canEdit: false } : usage,
+      data: path.endsWith("/settings") ? { ...settings, canEdit: false } :
+        path.endsWith("/quota") ? quota : usage,
     } as never));
     render(<AiGovernanceSettingsPage />);
     await screen.findByText("disabled");
@@ -119,6 +136,18 @@ describe("AI governance settings (model-off by default)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("loadError");
     expect(screen.queryByText("secret-token-wrong")).not.toBeInTheDocument();
     expect(screen.queryByText("usageTitle")).not.toBeInTheDocument();
+  });
+
+  it("preserves settings when the optional quota endpoint is unavailable", async () => {
+    vi.mocked(api.get).mockImplementation(async (path: string) => {
+      if (path.endsWith("/quota")) throw new Error("quota-private-error");
+      return { data: path.endsWith("/settings") ? settings : usage } as never;
+    });
+    render(<AiGovernanceSettingsPage />);
+    expect(await screen.findByText("disabled")).toBeVisible();
+    expect(screen.getByText("quotaUnavailable")).toBeVisible();
+    expect(screen.queryByText("quota-private-error")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("optIn")).toBeEnabled();
   });
 
   it("rejects invalid budget entries without sending a request", async () => {

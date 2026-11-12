@@ -28,6 +28,18 @@ type Usage = {
   recordedCostUsdMicros: number;
 };
 
+type QuotaSummary = {
+  periodStart: string;
+  monthlyRequestLimit: number;
+  monthlyBudgetUsdMicros: number;
+  heldRequests: number;
+  committedRequests: number;
+  heldCostUsdMicros: number;
+  committedCostUsdMicros: number;
+  providerIntegrationReady: false;
+  spendEnabled: false;
+};
+
 export default function AiGovernanceSettingsPage() {
   const t = useTranslations("aiGovernance");
   const locale = useLocale();
@@ -35,6 +47,7 @@ export default function AiGovernanceSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const canEdit = role === "OWNER" && settings?.canEdit === true;
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [quota, setQuota] = useState<QuotaSummary | null>(null);
   const [requestedEnabled, setRequestedEnabled] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState<Language>("EN");
   const [budgetUsd, setBudgetUsd] = useState("0");
@@ -49,12 +62,16 @@ export default function AiGovernanceSettingsPage() {
     setError("");
     setSuccess(false);
     try {
-      const [config, meter] = await Promise.all([
+      const [config, meter, quotaResult] = await Promise.all([
         api.get<Settings>("/ai-operations/settings"),
         api.get<Usage>("/ai-operations/usage"),
+        // Quota telemetry is optional: a temporary error must not block
+        // verified settings, governance controls or the existing usage view.
+        api.get<QuotaSummary>("/ai-operations/quota").catch(() => null),
       ]);
       setSettings(config.data);
       setUsage(meter.data);
+      setQuota(quotaResult?.data ?? null);
       setRequestedEnabled(config.data.requestedEnabled);
       setPreferredLanguage(config.data.preferredLanguage);
       setBudgetUsd(String(config.data.monthlyBudgetUsdCents / 100));
@@ -62,6 +79,7 @@ export default function AiGovernanceSettingsPage() {
     } catch {
       setSettings(null);
       setUsage(null);
+      setQuota(null);
       setError(t("loadError"));
     } finally {
       setLoading(false);
@@ -90,6 +108,13 @@ export default function AiGovernanceSettingsPage() {
         monthlyRequestLimit: limit,
       });
       setSettings(data);
+      // Keep the displayed policy limit consistent with the just-saved
+      // config; the counters themselves remain from the last verified read.
+      setQuota((previous) => previous ? ({
+        ...previous,
+        monthlyRequestLimit: data.monthlyRequestLimit,
+        monthlyBudgetUsdMicros: data.monthlyBudgetUsdCents * 10_000,
+      }) : previous);
       setSuccess(true);
     } catch {
       setError(t("saveError"));
@@ -164,6 +189,33 @@ export default function AiGovernanceSettingsPage() {
             {!valid && <p role="alert" className="text-xs text-danger">{t("invalid")}</p>}
             {success && <p role="status" className="text-sm text-text-muted">{t("saved")}</p>}
           </section>
+          {quota ? (
+            <section aria-labelledby="ai-quota-summary-title" className="space-y-3 rounded-xl border border-hairline bg-surface p-5">
+              <h2 id="ai-quota-summary-title" className="font-semibold text-foreground">{t("quotaTitle")}</h2>
+              <p className="text-xs text-text-muted">{t("quotaStatus")}</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <p className="text-sm text-foreground">
+                  <strong className="block text-xl tabular-nums">{quota.heldRequests} / {quota.monthlyRequestLimit}</strong>
+                  {t("quotaHeld")}
+                </p>
+                <p className="text-sm text-foreground">
+                  <strong className="block text-xl tabular-nums">{quota.committedRequests}</strong>
+                  {t("quotaCommitted")}
+                </p>
+                <p className="text-sm text-foreground">
+                  <strong className="block text-xl tabular-nums">\${(quota.heldCostUsdMicros / 1_000_000).toFixed(4)}</strong>
+                  {t("quotaReservedCost")}
+                </p>
+                <p className="text-sm text-foreground">
+                  <strong className="block text-xl tabular-nums">\${(quota.committedCostUsdMicros / 1_000_000).toFixed(4)}</strong>
+                  {t("quotaCommittedCost")}
+                </p>
+              </div>
+              <p className="text-xs leading-relaxed text-text-muted">{t("quotaNote")}</p>
+            </section>
+          ) : (
+            <p role="status" className="text-xs text-text-muted">{t("quotaUnavailable")}</p>
+          )}
           {usage && <section className="space-y-3 rounded-xl border border-hairline bg-surface p-5">
             <h2 className="font-semibold text-foreground">{t("usageTitle")}</h2>
             <p className="text-xs text-text-muted">{t("period")} {new Date(usage.periodStart).toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" })} (UTC)</p>

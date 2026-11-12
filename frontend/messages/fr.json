@@ -1549,7 +1549,15 @@
     "requests": "Requêtes",
     "tokens": "Tokens",
     "cost": "Coût enregistré (USD)",
-    "usageNote": "Aucun modèle n'est connecté. Seules les utilisations vérifiées sont comptées ; ceci n'est pas une facture."
+    "usageNote": "Aucun modèle n'est connecté. Seules les utilisations vérifiées sont comptées ; ceci n'est pas une facture.",
+    "quotaTitle": "Réservations de quotas IA (internes)",
+    "quotaStatus": "Aucun fournisseur n'est connecté. Ces réservations servent uniquement aux futurs appels vérifiés.",
+    "quotaHeld": "Requêtes réservées (sur la limite mensuelle)",
+    "quotaCommitted": "Requêtes confirmées",
+    "quotaReservedCost": "Coût estimé réservé (USD)",
+    "quotaCommittedCost": "Coût confirmé enregistré (USD)",
+    "quotaNote": "Ces chiffres sont un instantané comptable interne, pas une facture ni un paiement. Les réservations peuvent expirer et sont rapprochées par un service interne de confiance.",
+    "quotaUnavailable": "Les quotas sont indisponibles. Les paramètres restent accessibles."
   },
   "aiPlatform": {
     "reject": "Rejeter la demande",

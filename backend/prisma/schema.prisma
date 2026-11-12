@@ -65,6 +65,8 @@ model Agency {
   aiSettings         AgencyAiSettings?
   aiSettingsChanges  AiSettingsChange[]
   aiUsageRecords     AiUsageRecord[]
+  aiQuotaBuckets     AiQuotaBucket[]
+  aiQuotaReservations AiQuotaReservation[]
   aiPlatformReviews AiPlatformReview[]
 
   @@index([deletedAt])
@@ -1129,4 +1131,43 @@ model AiPlatformReview {
 
   @@unique([agencyId, revision])
   @@index([agencyId, createdAt])
+}
+
+
+// === PHASE 1D — PROVIDER-DISABLED AI QUOTA RESERVATIONS ===
+// The server-only ledger is inaccessible to customer/agency write routes.
+// A per-(agency, UTC-month) bucket is updated first in transactions to
+// serialize reservation admissions even when callers execute concurrently.
+model AiQuotaBucket {
+  agencyId               String
+  agency                 Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  periodStart            DateTime  @db.Date
+  heldRequests           Int       @default(0)
+  committedRequests      Int       @default(0)
+  heldCostUsdMicros      Int       @default(0)
+  committedCostUsdMicros Int       @default(0)
+  lockVersion            Int       @default(0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@id([agencyId, periodStart])
+}
+
+model AiQuotaReservation {
+  id                     String    @id @default(uuid())
+  agencyId               String
+  agency                 Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  periodStart            DateTime  @db.Date
+  requestKey             String    @db.VarChar(128)
+  status                 String    @default("RESERVED") // RESERVED | COMMITTED | RELEASED | EXPIRED
+  estimatedCostUsdMicros Int
+  committedCostUsdMicros Int       @default(0)
+  createdAt              DateTime  @default(now())
+  expiresAt              DateTime
+  settledAt              DateTime?
+  updatedAt              DateTime  @updatedAt
+
+  @@unique([agencyId, requestKey])
+  @@index([agencyId, periodStart, status])
+  @@index([status, expiresAt])
 }
