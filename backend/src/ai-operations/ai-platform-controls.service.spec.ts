@@ -165,7 +165,7 @@ describe('Phase 1C: platform-only AI controls', () => {
       expectedRevision: 1, approve: true, reason: REASON,
     });
     expect(result).toMatchObject({
-      agencyId: AGENCY, platformApproved: true, revision: 2,
+      agencyId: AGENCY, platformApproved: true, decision: 'APPROVE', revision: 2,
       effectiveInferenceEnabled: false, actionMode: 'MONITOR',
     });
     expect(tx.agencyAiSettings.updateMany).toHaveBeenCalledWith({
@@ -174,7 +174,7 @@ describe('Phase 1C: platform-only AI controls', () => {
     });
     expect(tx.aiPlatformReview.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        agencyId: AGENCY, actorId: ROOT, approved: true, revision: 2,
+        agencyId: AGENCY, actorId: ROOT, approved: true, decision: 'APPROVE', revision: 2,
       }),
     });
     expect(tx.aiSettingsChange.create).toHaveBeenCalledWith({
@@ -187,12 +187,37 @@ describe('Phase 1C: platform-only AI controls', () => {
     });
   });
 
+  it('records a distinct rejection with reason on a previously pending request', async () => {
+    const { service, tx } = setup();
+    const result = await service.reviewAgency(ROOT, AGENCY, {
+      expectedRevision: 1,
+      approve: false,
+      reason: 'Agency has not yet completed the required privacy review.',
+    });
+    expect(result).toMatchObject({
+      platformApproved: false, decision: 'REJECT', revision: 2,
+      effectiveInferenceEnabled: false,
+    });
+    expect(tx.aiPlatformReview.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        agencyId: AGENCY, actorId: ROOT, approved: false,
+        decision: 'REJECT', revision: 2,
+      }),
+    });
+    expect(tx.aiSettingsChange.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        agencyId: AGENCY, revision: 2,
+        snapshot: expect.objectContaining({ decision: 'REJECT' }),
+      }),
+    });
+  });
+
   it('revokes a previous approval with a separate immutable review event', async () => {
     const { service, tx, setSettings } = setup();
     setSettings({ platformApproved: true, revision: 5 });
     await expect(service.reviewAgency(ROOT, AGENCY, {
       expectedRevision: 5, approve: false, reason: REASON,
-    })).resolves.toMatchObject({ platformApproved: false, revision: 6 });
+    })).resolves.toMatchObject({ platformApproved: false, decision: 'REVOKE', revision: 6 });
     expect(tx.aiPlatformReview.create).toHaveBeenCalledTimes(1);
   });
 
