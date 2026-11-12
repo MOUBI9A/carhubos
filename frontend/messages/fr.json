@@ -1465,6 +1465,7 @@
     "emptyDescription": "Créez un ordre de travail à partir d une session de diagnostic pour commencer le suivi."
   },
   "aiOperations": {
+    "settingsLink": "Paramètres IA",
     "phase": "Phase 1 · surveillance uniquement",
     "title": "Intelligence opérationnelle",
     "description": "Chiffres tirés des données réelles de votre agence. Ce suivi à règles fixes prépare les futurs assistants IA ; ce n'est pas un agent autonome.",
@@ -1514,5 +1515,39 @@
       "DOCUMENTS_EXPIRING_7D": "Pièces de véhicule à échéance sous sept jours ; confirmez leur validité.",
       "URGENT_TASKS": "Tâches URGENT encore en attente ou en cours."
     }
+  },
+  "aiGovernance": {
+    "back": "Retour à l'intelligence opérationnelle",
+    "title": "Accès IA et limites",
+    "description": "Demandez un futur accès IA, choisissez la langue et les plafonds. Cette page n'active aucun modèle et ne facture pas votre agence.",
+    "safetyTitle": "Désactivé par défaut · validation humaine obligatoire",
+    "safetyDetails": "L'approbation de la plateforme et une intégration contrôlée sont indispensables. Aucun message, pénalité, paiement ou contrôle de véhicule n'est déclenché.",
+    "loading": "Chargement des paramètres…",
+    "loadError": "Impossible de charger les paramètres vérifiés. Réessayez.",
+    "saveError": "Enregistrement impossible. Les paramètres ont peut-être changé : rechargez la page.",
+    "statusTitle": "Statut actuel",
+    "active": "Accès IA actif",
+    "disabled": "Inférence IA désactivée",
+    "pendingReview": "Demande envoyée : validation de la plateforme et intégration encore nécessaires.",
+    "notRequested": "Cette agence n'a pas demandé l'accès IA.",
+    "statusDetails": "Le tableau d'intelligence opérationnelle utilise toujours des règles fixes. Aucun fournisseur IA n'est connecté.",
+    "controlsTitle": "Préférences de l'agence",
+    "optIn": "Demander un futur accès IA",
+    "optInNote": "La demande ne déclenche ni inférence ni facturation.",
+    "language": "Langue préférée",
+    "monthlyRequests": "Limite mensuelle de requêtes (0–10 000)",
+    "monthlyBudget": "Plafond mensuel en USD (0–1 000)",
+    "budgetNote": "Ces plafonds sont réservés aux futures requêtes vérifiées. Ils n'activent pas les dépenses.",
+    "ownerOnly": "Seul le propriétaire autorisé peut modifier ces paramètres.",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "saved": "Préférences enregistrées. L'accès IA reste soumis à validation.",
+    "invalid": "Saisissez des nombres entiers dans les limites autorisées.",
+    "usageTitle": "Utilisation IA enregistrée",
+    "period": "Période :",
+    "requests": "Requêtes",
+    "tokens": "Tokens",
+    "cost": "Coût enregistré (USD)",
+    "usageNote": "Aucun modèle n'est connecté. Seules les utilisations vérifiées sont comptées ; ceci n'est pas une facture."
   }
 }
