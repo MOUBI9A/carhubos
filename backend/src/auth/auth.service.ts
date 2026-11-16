@@ -37,6 +37,17 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
+    const legalRevision = '2026-11-12-draft'; // Counsel must approve before production.
+    if (
+      registerDto.agencyName &&
+      (registerDto.legalNoticeAcknowledged !== true ||
+        registerDto.confirmsAdultAndAuthority !== true)
+    ) {
+      throw new BadRequestException(
+        'Agency signup requires acknowledgement of terms and confirmation of adult business authority.',
+      );
+    }
+
     const existingUser = await this.usersService.findOneByEmail(
       registerDto.email,
     );
@@ -99,6 +110,12 @@ export class AuthService {
             registerDto.role || (registerDto.agencyName ? 'OWNER' : 'AGENT'),
           agencyId: agencyId,
           isVerified: false,
+          legalNoticeAcknowledgedAt:
+            registerDto.legalNoticeAcknowledged === true ? new Date() : null,
+          legalNoticeRevision:
+            registerDto.legalNoticeAcknowledged === true ? legalRevision : null,
+          adultBusinessAuthorityConfirmedAt:
+            registerDto.confirmsAdultAndAuthority === true ? new Date() : null,
         },
       });
 
@@ -479,9 +496,49 @@ export class AuthService {
   }
 
   /**
-   * Compliant Account Deletion & Right to be Forgotten (Apple 5.1.1(v) & Google Play Data Safety).
-   * Verifies password, prevents deletion if active rentals exist, revokes consent,
-   * soft-deletes agency if owner, anonymizes PII, and logs audit record.
+   * Safe, non-destructive data-rights intake. The operator must separately
+   * verify the requester's authority, retention obligations and result.
+   * No ID images, free-text messages or outward notifications are collected.
+   */
+  async submitPrivacyRequest(
+    userId: string,
+    type: 'ACCESS' | 'RECTIFICATION' | 'ERASURE' | 'OPPOSITION',
+  ) {
+    // Database partial unique index guarantees no duplicate open request,
+    // including one already IN_REVIEW or concurrent POSTs.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    await this.prisma.privacyRequest.createMany({
+      data: [{ userId, type }],
+      skipDuplicates: true,
+    });
+    const item = await this.prisma.privacyRequest.findFirst({
+      where: { userId, type, status: { in: ['PENDING', 'IN_REVIEW'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, type: true, status: true, createdAt: true },
+    });
+    if (!item) throw new ConflictException('Could not record privacy request');
+    return item;
+  }
+
+  async listMyPrivacyRequests(userId: string) {
+    return this.prisma.privacyRequest.findMany({
+      where: { userId },
+      select: { id: true, type: true, status: true, createdAt: true, closedAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+  }
+
+  /**
+   * Self-service account closure. Verifies password, prevents closure when
+   * active rentals exist, revokes consent and scrubs account credentials.
+   * This is NOT guaranteed full erasure: linked contracts/audit history and
+   * storage objects may need independent retention/deletion review.
    */
   async deleteAccount(userId: string, passwordConfirm: string, reason?: string) {
     const user = await this.prisma.user.findUnique({
@@ -580,8 +637,10 @@ export class AuthService {
           'USER_ACCOUNT_DELETED',
           'USER',
           user.id,
-          { email: user.email, name: user.name, role: user.role, reason },
-          { status: 'DELETED_AND_SCRUBBED' },
+          // Do not copy the deleted person's raw email, name or free-text
+          // deletion reason into long-lived audit metadata.
+          { role: user.role, requestType: 'SELF_SERVICE_ACCOUNT_CLOSURE' },
+          { status: 'ACCOUNT_ACCESS_REVOKED', dataReviewPending: true },
         );
       }
 
@@ -605,7 +664,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Account successfully deleted and personal data scrubbed in compliance with privacy regulations.',
+      message: 'Account sign-in disabled and core identity fields scrubbed. Some contractual records and stored files may remain subject to separate legal retention and deletion review.',
     };
   }
 }

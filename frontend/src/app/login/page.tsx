@@ -80,10 +80,12 @@ export default function LoginPage() {
         <form onSubmit={handleRealLogin} className="bg-surface border border-hairline rounded-2xl shadow-soft p-8 space-y-6">
            <div className="space-y-4">
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">{t('email')}</p>
+                 <label htmlFor="login-email" className="eyebrow px-1">{t('email')}</label>
                  <div className="relative group">
                     <Mail className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
                     <input
+                      id="login-email"
+                      autoComplete="email"
                       required
                       type="email"
                       value={email}
@@ -95,10 +97,12 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                 <p className="eyebrow px-1">{t('password')}</p>
+                 <label htmlFor="login-password" className="eyebrow px-1">{t('password')}</label>
                  <div className="relative group">
                     <Lock className="absolute start-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-faint group-focus-within:text-primary transition-colors" />
                     <input
+                      id="login-password"
+                      autoComplete="current-password"
                       required
                       type="password"
                       value={password}

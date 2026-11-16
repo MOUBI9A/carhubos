@@ -92,6 +92,10 @@ model User {
   qrHash     String?  @unique // Encrypted hash for the Trust Vault QR
   isVerified Boolean  @default(false)
   emailVerifiedAt DateTime?
+  // User acknowledgement records; NOT proof of CNDP/GDPR compliance.
+  legalNoticeAcknowledgedAt DateTime?
+  legalNoticeRevision String?
+  adultBusinessAuthorityConfirmedAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -103,6 +107,7 @@ model User {
   verifiedPayments Payment[]          @relation("PaymentVerifier")
   memberships      AgencyMembership[]
   emailVerificationTokens EmailVerificationToken[]
+  privacyRequests PrivacyRequest[]
 
   // 🌐 PILLAR 6 link: the global, cross-tenant identity this claimed RENTER portal
   // account resolves to. Null until the renter claims/verifies their identity.
@@ -119,6 +124,22 @@ model User {
   assignedWorkOrders WorkOrder[] @relation("AssignedTechnician")
 
   @@index([agencyId])
+}
+
+// Non-destructive privacy-rights intake: an authenticated customer asks the
+// operator to review a request. It is NOT an automated erasure engine.
+model PrivacyRequest {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  type      String    // ACCESS | RECTIFICATION | ERASURE | OPPOSITION
+  status    String    @default("PENDING") // PENDING | IN_REVIEW | CLOSED
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 // ✉️ EMAIL VERIFICATION TOKEN (Secure hashed single-use token)

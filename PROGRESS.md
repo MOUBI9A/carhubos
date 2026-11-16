@@ -1,7 +1,9 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
+> **Current integration reality (2026-11-16):** Vercel production is READY on GitHub `main` commit `6a61b3c`; the landing page, login, dashboard shell, health API and plans API return HTTP 200. Six newer workstreams remain in draft PRs: Guardian resumable video (#20), compliance/privacy (#22), and the stacked AI foundation (#23–#26). Do not treat their green preview checks as production release approval. See `docs/INTEGRATION_ROADMAP_20261116.md` for verified state, blockers and merge order.
+
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `ff8021b`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/108 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> **Historical baseline below was last updated at commit `ff8021b`.** Its test counts and “tree clean” statement are not current release evidence; use the dated integration roadmap and current CI for decisions.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -26,7 +28,7 @@ npm run start:dev                               # http://localhost:5406/api
 cd frontend && npm run dev                      # http://localhost:3002
 ```
 Logins (password `admin123`): `root@ owner@ manager@ agent@ renter@` `carhub.os`.
-**Backend tests run via `jest`** (`cd backend && npx jest`) — **frontend tests run via `vitest`, NOT jest** (`cd frontend && npx vitest run`) — running `jest` in `frontend/` gives a misleading babel parse error, not a clear "wrong runner" message. Lint: `npx eslint .` in either dir (both `react-hooks/rules-of-hooks` and `no-floating-promises` are now hard errors, not warnings).
+**Backend tests run via Jest with the CI VM-module environment** (`cd backend && NODE_OPTIONS=--experimental-vm-modules npx jest`) — the flag is required by the work-order PDF test's dynamic Puppeteer import. **Frontend tests run via `vitest`, NOT jest** (`cd frontend && npx vitest run`) — running `jest` in `frontend/` gives a misleading babel parse error, not a clear "wrong runner" message. Lint: `npx eslint .` in either dir (both `react-hooks/rules-of-hooks` and `no-floating-promises` are now hard errors, not warnings).
 
 ## DONE (committed to `main`, verified — tsc/jest/vitest/eslint green at every commit)
 

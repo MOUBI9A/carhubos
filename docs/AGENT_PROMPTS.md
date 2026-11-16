@@ -41,7 +41,7 @@ WORK LOOP (repeat):
 3. Take the top unblocked, non-locked task from EXECUTION_PLAN.md / MASTER_BACKLOG.md.
    Claim its files in the COORDINATION.md board (edit your row) before editing them.
 4. Build to the acceptance criteria. Then run and require GREEN:
-     cd backend  && npx tsc --noEmit && npx jest && npx eslint .
+     cd backend  && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest && npx eslint .
      cd frontend && npx tsc --noEmit && npx vitest run && npx eslint .
    (frontend tests are vitest, NOT jest). Run the stack for a live check when the
    change is user-facing.
@@ -114,7 +114,7 @@ WORK LOOP (repeat):
    cycle — that burns your budget): `git log --oneline -8`, `git show <sha>`.
    Check them against the task's acceptance criteria + the invariants below.
 3. Run the FULL verify suite yourself (don't trust "green"):
-     cd backend  && npx tsc --noEmit && npx jest && npx eslint .
+     cd backend  && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest && npx eslint .
      cd frontend && npx tsc --noEmit && npx vitest run && npx eslint .
    Run the stack + browser-check anything user-facing.
 4. Write results into COORDINATION.md "Open findings": for each real defect give

@@ -25,7 +25,7 @@
 
 **Verify block (both agents, before every commit):**
 ```
-cd backend  && npx tsc --noEmit && npx jest && npx eslint .
+cd backend  && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest && npx eslint .
 cd frontend && npx tsc --noEmit && npx vitest run && npx eslint .
 ```
 Frontend tests are **vitest, not jest**. Money is **Decimal** — never `+ - * /` on a Decimal (see `CLAUDE.md` §5.3). Every business query is scoped by `agencyId` (cross-tenant → **404**). `prisma/schema.prisma` is **single-owner** — claim it in the board before touching it, and only one migration in flight at a time.
@@ -57,7 +57,7 @@ The daily-intensity chart is done (`SrDataTable` + touch + locale). Two chart su
 ### T2 — Extend multi-tenant boundary spec (non-🔒, ~S)
 Boundary spec covers 12 domains + 3 scoping shapes. Close the tail.
 - **Files:** `backend/src/common/multi-tenant-boundary.spec.ts` (+ read the target services first for exact signatures).
-- **Acceptance:** add automations, notifications, and the analytics command-centre customer directory (or whichever remain) — agency A → 404/empty on agency B's resource, asserting `agencyId` is in the WHERE clause. `npx jest` green.
+- **Acceptance:** add automations, notifications, and the analytics command-centre customer directory (or whichever remain) — agency A → 404/empty on agency B's resource, asserting `agencyId` is in the WHERE clause. `NODE_OPTIONS=--experimental-vm-modules npx jest` green.
 - **Verify:** backend block.
 
 ### T3 — Accidents domain (semi-🔒: schema; model spec provided so it's executable) (~L)

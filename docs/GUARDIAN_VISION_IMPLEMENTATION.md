@@ -39,7 +39,7 @@
 **Vehicle history:** Individual accepted/confirmed damage appears across rental bookings until repair is verified; it is not deduplicated automatically by computer vision. Avoid double-recording manually by checking existing damage history during handover. Repair records contain before/after photos but approval and repair are separate events.
 
 ## Reproducible local verification
-- `cd backend && npx prisma validate && npx tsc --noEmit && npx jest --runInBand`
+- `cd backend && npx prisma validate && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest --runInBand`
 - `cd frontend && npx tsc --noEmit && npx vitest run && npx eslint src/components/guardian src/app/(agent)/agent/guardian ...`
 - `cd frontend && npm run build` (ensure no concurrent `next dev` uses the same build output).
 - Browser E2E: Use a **dedicated disposable local database**, apply Prisma migrations to that DB only, start an isolated backend and frontend, then `PW_FRONTEND_URL=http://127.0.0.1:5302 PW_API_URL=http://127.0.0.1:55406/api DATABASE_URL=<local-test-db-url> npx playwright test e2e/guardian.e2e.ts --project=chromium`.

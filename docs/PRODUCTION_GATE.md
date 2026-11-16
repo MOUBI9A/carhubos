@@ -10,7 +10,7 @@ No code may be designated as "production-ready" without meeting the concrete ver
 |---|---|---|
 | **Clean Working Tree** | No uncommitted changes or untracked artifacts | `git status --porcelain` |
 | **Backend TypeScript** | Zero compiler errors | `cd backend && npx tsc --noEmit` |
-| **Backend Unit Tests** | 100% test suites pass | `cd backend && npx jest` |
+| **Backend Unit Tests** | 100% test suites pass | `cd backend && NODE_OPTIONS=--experimental-vm-modules npx jest` |
 | **Frontend TypeScript**| Zero compiler errors | `cd frontend && npx tsc --noEmit` |
 | **Frontend Unit Tests** | 100% Vitest suites pass | `cd frontend && npx vitest run` |
 | **Mobile TypeScript**   | Zero compiler errors | `cd mobile && npm run typecheck` |

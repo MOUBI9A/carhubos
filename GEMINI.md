@@ -125,7 +125,7 @@ npx tsc --noEmit
 
 # 2. Execute Jest test suites
 cd backend
-npx jest
+NODE_OPTIONS=--experimental-vm-modules npx jest
 
 # 3. Typecheck the frontend codebase
 cd frontend

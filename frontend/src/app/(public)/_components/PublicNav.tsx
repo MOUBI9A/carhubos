@@ -14,10 +14,10 @@ export default function PublicNav() {
   const tc = useTranslations('common');
 
   const LINKS = [
-    { href: '#features', label: t('features') },
-    { href: '#solutions', label: t('solutions') },
-    { href: '#enterprise', label: t('enterprise') },
-    { href: '#pricing', label: t('pricing') },
+    { href: '/landing#features', label: t('features') },
+    { href: '/landing#solutions', label: t('solutions') },
+    { href: '/landing#enterprise', label: t('enterprise') },
+    { href: '/landing#pricing', label: t('pricing') },
   ];
 
   return (

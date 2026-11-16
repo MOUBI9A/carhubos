@@ -1,7 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Res, Get, Delete, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, VerifyEmailDto, ResendVerificationDto, DeleteAccountDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, VerifyEmailDto, ResendVerificationDto, DeleteAccountDto, PrivacyRequestDto } from './dto/auth.dto';
 import type { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AllowUnverified } from '../common/decorators/allow-unverified.decorator';
@@ -139,6 +139,23 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return data;
+  }
+
+  /** Non-destructive user-rights intake; never invokes account deletion. */
+  @UseGuards(AuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('privacy-requests')
+  requestPrivacyReview(
+    @CurrentUser() user: { id: string },
+    @Body() dto: PrivacyRequestDto,
+  ) {
+    return this.authService.submitPrivacyRequest(user.id, dto.type);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('privacy-requests')
+  listMyPrivacyRequests(@CurrentUser() user: { id: string }) {
+    return this.authService.listMyPrivacyRequests(user.id);
   }
 
   @HttpCode(HttpStatus.OK)
