@@ -89,14 +89,17 @@ test.describe('Authenticated privacy rights intake (non-destructive)', () => {
       }
     });
     await page.goto('/account-deletion');
-    await expect(page.getByRole('heading', { name: /Demander l.examen de mes droits/ })).toBeVisible();
-    const requestType = page.getByLabel('Type de demande');
+    const requestPanel = page.locator('section[aria-labelledby="privacy-request-title"]');
+    await expect(requestPanel.locator('#privacy-request-title')).toBeVisible();
+    const requestType = requestPanel.locator('#privacy-request-type');
     await requestType.selectOption('ERASURE');
-    await page.getByRole('button', { name: 'Enregistrer ma demande' }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Demande enregistrée pour examen' })).toBeVisible();
-    await expect(page.getByText('En attente')).toHaveCount(1);
-    await page.getByRole('button', { name: 'Enregistrer ma demande' }).click();
-    await expect(page.getByText('En attente')).toHaveCount(1);
+    const submitRequest = requestPanel.getByRole('button', { name: /Enregistrer ma demande|Submit request|إرسال الطلب/ });
+    await submitRequest.click();
+    await expect(requestPanel.getByRole('status')).toContainText(/Demande enregistrée|Request recorded|تم تسجيل الطلب/);
+    const pendingRequest = requestPanel.getByText(/^(En attente|Pending|قيد الانتظار)$/);
+    await expect(pendingRequest).toHaveCount(1);
+    await submitRequest.click();
+    await expect(pendingRequest).toHaveCount(1);
     expect(deletionCalls).toHaveLength(0);
   });
 });
