@@ -51,7 +51,7 @@ cd frontend && npm run dev # http://localhost:3002
 
 **Seed logins** (password `admin123`): `root@` · `owner@` · `manager@` · `agent@` · `renter@` — all `@carhub.os`.
 
-Verify: `cd backend && npx tsc --noEmit && npx jest` · `cd frontend && npx tsc --noEmit`.
+Verify: `cd backend && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest` · `cd frontend && npx tsc --noEmit`. The VM-modules flag is required by the work-order PDF test's dynamic Puppeteer import and matches CI.
 
 ---
 

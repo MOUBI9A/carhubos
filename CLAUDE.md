@@ -17,7 +17,7 @@ Being taken from demo → market-ready. **This file + [docs/AUDIT_BACKLOG.md](do
 | Database | **PostgreSQL 15** | local dev via Docker (`docker compose up -d db`); prod host TBD (Phase 9) |
 | Auth | JWT in HttpOnly cookie `infinity_token` | `AuthGuard` + `RolesGuard`; global `ThrottlerGuard` |
 | Validation | `class-validator` DTOs | global `ValidationPipe` (`whitelist` + `forbidNonWhitelisted`) |
-| Tests | Jest | `cd backend && npx jest` |
+| Tests | Jest | `cd backend && NODE_OPTIONS=--experimental-vm-modules npx jest` |
 
 **MCP tools available in this project** (2026-07-18): `.mcp.json` connects Claude Code to the Docker MCP Toolkit gateway (`MCP_DOCKER`, `dev_workflow` profile) — GitHub (repos/files/issues/PRs/search) and Atlassian (Jira/Confluence) tools, both OAuth-authorized (`docker mcp oauth ls` → `authorized`; GitHub account `MOUBI9A`). Use them when a task actually calls for it (checking/filing a GitHub issue, opening a PR, a Jira ticket, searching a repo) — this does **not** change the locked workflow decision in §9 (commit verified milestones directly to `main`, no phase branches) unless the founder says otherwise. If a session reports these tools as unavailable/ungated, it needs an app restart to pick up `.mcp.json` — the connection itself (`docker mcp client ls`) is already live.
 
@@ -42,7 +42,7 @@ npm run start:dev                            # http://localhost:5406/api
 cd frontend && npm run dev                   # http://localhost:3002
 
 # Tests / typecheck
-cd backend && npx tsc --noEmit && npx jest
+cd backend && npx tsc --noEmit && NODE_OPTIONS=--experimental-vm-modules npx jest
 ```
 
 **Seed logins** (local only, password `admin123`): `root@`(ROOT_ADMIN) · `owner@`(OWNER) · `manager@`(MANAGER) · `agent@`(AGENT) · `renter@`(RENTER) — all `@carhub.os`.
@@ -95,7 +95,7 @@ cd backend && npx tsc --noEmit && npx jest
 
 ## 7. Testing
 
-- `cd backend && npx jest` — unit tests, real Postgres not required (mocked Prisma). 31+ suites covering money/state-machine flows (deposits, late fees, refund reconciliation), tenant-boundary regressions (`common/multi-tenant-boundary.spec.ts` across ~13 domains), auth/capabilities fail-closed guards, and forensic/impersonation. Add tests alongside risky changes even when not strictly required.
+- `cd backend && NODE_OPTIONS=--experimental-vm-modules npx jest` — unit tests, real Postgres not required (mocked Prisma). The VM-modules flag is required by the dynamic Puppeteer import in the work-order PDF test and matches CI. The suite covers money/state-machine flows, tenant-boundary regressions, auth/capabilities fail-closed guards, and forensic/impersonation. Add tests alongside risky changes even when not strictly required.
 - `cd frontend && npx vitest run` — frontend unit tests.
 - **Live-DB e2e:** `backend/test/tenant-isolation.e2e-spec.ts` (Nest's Jest e2e scaffold, `npx jest --config test/jest-e2e.json`) runs against a **real Postgres**, not mocked Prisma — proves login + a cross-tenant 404 over actual HTTP. It registers its own fresh, run-scoped users via `POST /auth/register` and tears them down in `afterAll`, so it needs **no seed data** — just `DATABASE_URL` + `JWT_SECRET` + `IDENTITY_PEPPER` pointed at an empty (freshly migrated) DB. Runs in CI (below) and locally against `docker compose up -d db` + `npx prisma migrate deploy`.
 - **CI** (`.github/workflows/ci.yml`, 3 jobs): `backend` (tsc/jest/eslint, mocked), `backend-e2e` (a `postgres:15` service container → `prisma migrate deploy` → the live-DB e2e spec above), `frontend` (tsc/vitest/eslint). Not yet a **required** PR check (repo-admin setting — Phase 9 item).

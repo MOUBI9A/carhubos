@@ -136,7 +136,29 @@
     "signupFailTitle": "Échec de l’inscription",
     "emailTaken": "Cet e-mail est déjà enregistré — essayez de vous connecter.",
     "tooManyAttempts": "Trop de tentatives. Attendez une minute et réessayez.",
-    "signupGenericError": "Impossible de créer votre agence. Réessayez."
+    "signupGenericError": "Impossible de créer votre agence. Réessayez.",
+    "privacyRequests": {
+      "title": "Demander l’examen de mes droits sur les données",
+      "description": "Envoyez une demande sans pièce d’identité ni information sensible supplémentaire. Une personne habilitée devra vérifier votre situation et les éventuelles obligations de conservation. Cette démarche ne supprime pas automatiquement vos documents ou contrats.",
+      "typeLabel": "Type de demande",
+      "submit": "Enregistrer ma demande",
+      "recent": "Mes demandes récentes",
+      "loadError": "Impossible de charger vos demandes. Réessayez ultérieurement.",
+      "submitSuccess": "Demande enregistrée pour examen. Aucun document n’a été supprimé.",
+      "submitError": "Votre demande n’a pas pu être enregistrée. Réessayez plus tard.",
+      "unknownType": "Demande",
+      "types": {
+        "access": "Accès à mes données",
+        "rectification": "Rectification de mes données",
+        "erasure": "Examen d’une demande d’effacement",
+        "opposition": "Opposition à un traitement"
+      },
+      "statuses": {
+        "closed": "Clôturée",
+        "inReview": "En examen",
+        "pending": "En attente"
+      }
+    }
   },
   "landing": {
     "eyebrow": "Accès anticipé",

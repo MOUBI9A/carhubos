@@ -136,7 +136,29 @@
     "signupFailTitle": "Sign-up failed",
     "emailTaken": "That email is already registered — try signing in.",
     "tooManyAttempts": "Too many attempts. Please wait a minute and retry.",
-    "signupGenericError": "Could not create your agency. Please try again."
+    "signupGenericError": "Could not create your agency. Please try again.",
+    "privacyRequests": {
+      "title": "Request a review of my data rights",
+      "description": "Submit a request without an identity document or extra sensitive information. An authorized person must verify your situation and any retention duties. This request does not automatically delete documents or contracts.",
+      "typeLabel": "Request type",
+      "submit": "Submit request",
+      "recent": "My recent requests",
+      "loadError": "Your requests could not be loaded. Please try again later.",
+      "submitSuccess": "Request recorded for review. No document was deleted.",
+      "submitError": "Your request could not be recorded. Please try again later.",
+      "unknownType": "Request",
+      "types": {
+        "access": "Access my data",
+        "rectification": "Correct my data",
+        "erasure": "Review an erasure request",
+        "opposition": "Object to processing"
+      },
+      "statuses": {
+        "closed": "Closed",
+        "inReview": "Under review",
+        "pending": "Pending"
+      }
+    }
   },
   "landing": {
     "eyebrow": "Now in early access",

@@ -45,7 +45,7 @@
 3. **Signup schema migration** `20261112160000_agency_legal_acknowledgements` adds nullable `User.legalNoticeAcknowledgedAt`, `User.legalNoticeRevision` and `User.adultBusinessAuthorityConfirmedAt`. It has **not** been run in production. Test mobile/API clients for compatibility before enforcing these flags.
 4. Guardian Vision video-upload functionality remains separate in **draft PR #20**. Do not merge/rebase that feature into this compliance work.
 5. Renter/agency sensitive documents require role/capability and consent verification beyond public legal pages. Confirm Supabase Storage bucket settings, RLS and external processor contracts.
-6. The existing demo accounts share a known password; rotate before real customers access the platform. No account passwords or production state were changed during this compliance branch.
+6. **Production test-account update (reported and previously verified on 2026-11-12):** all 11 test accounts were email-verified (1 root admin, 4 owners, 2 managers, 3 agents, 1 renter), their existing credentials were preserved, and none used the known local demo password. This does not change the local seed accounts documented with `admin123`; keep production and local test credentials operationally separate and never copy passwords into the repository.
 7. No real checkout, refund, payment, outbound message, deletion, production migration or production deployment was executed by this branch.
 
 ## Verification checklist before approval
@@ -59,7 +59,8 @@
 - [ ] Record licenses and permissions for all `public/img` assets and fonts.
 - [ ] WCAG 2.2 AA automated/manual review, keyboard, screen reader, contrast, mobile zoom.
 - [ ] Test migration on a disposable database; run full frontend/backend suites and full-stack Playwright against an isolated environment.
-- [ ] Rotate test account passwords and verify there are no privileged shared credentials.
+- [x] Confirm the 11 production test accounts do not use the known local demo password (reported and previously verified 2026-11-12; credentials were not exposed or changed).
+- [ ] Establish an owner-approved rotation cadence and periodically recheck that privileged production test credentials remain unique and non-default.
 - [ ] Reconcile mobile clients with new registration acknowledgement requirements.
 - [ ] Review final changes before any merge/deployment. This branch must stay draft until these gates are satisfied.
 
