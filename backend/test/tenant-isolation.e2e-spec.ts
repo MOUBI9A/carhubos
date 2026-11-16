@@ -87,6 +87,8 @@ describe('Tenant isolation (e2e)', () => {
         password,
         name: 'Agency A Owner',
         agencyName: `E2E Agency A ${runId}`,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       })
       .expect(201);
 
@@ -103,6 +105,8 @@ describe('Tenant isolation (e2e)', () => {
         password,
         name: 'Agency B Owner',
         agencyName: `E2E Agency B ${runId}`,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       })
       .expect(201);
 

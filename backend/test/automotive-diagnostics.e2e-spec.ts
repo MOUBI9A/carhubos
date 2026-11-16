@@ -63,6 +63,8 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
         password,
         name: 'Master Technician',
         agencyName: `Garage Tanger ${runId}`,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       })
       .expect(201);
 
@@ -75,6 +77,8 @@ describe('Automotive Diagnostics & Repair Lifecycle (e2e)', () => {
         password,
         name: 'Foreign Technician',
         agencyName: `Garage Casablanca ${runId}`,
+        legalNoticeAcknowledged: true,
+        confirmsAdultAndAuthority: true,
       })
       .expect(201);
 
