@@ -2,6 +2,8 @@
 
 > **Current integration reality (2026-11-16):** Vercel production is READY on GitHub `main` commit `6a61b3c`; the landing page, login, dashboard shell, health API and plans API return HTTP 200. Six newer workstreams remain in draft PRs: Guardian resumable video (#20), compliance/privacy (#22), and the stacked AI foundation (#23–#26). Do not treat their green preview checks as production release approval. See `docs/INTEGRATION_ROADMAP_20261116.md` for verified state, blockers and merge order.
 
+> **Contract-boundary follow-up (2026-11-16):** `codex/api-contract-boundary` is stacked on compliance PR #22. It adds runtime schemas for the owner operational-pulse endpoints, independent widget degradation, unit contract fixtures, and a live-stack Playwright response check. Local frontend typecheck, 69 Vitest tests, lint, production build and production dependency audit pass; exact-head CI remains the release evidence.
+
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
 > **Historical baseline below was last updated at commit `ff8021b`.** Its test counts and “tree clean” statement are not current release evidence; use the dated integration roadmap and current CI for decisions.
 

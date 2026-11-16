@@ -38,7 +38,7 @@ The pasted operational record says all 11 test accounts were verified in the pro
 
 ## Product upgrades worth building next
 
-1. **Contract-tested API clients.** Generate or validate frontend response schemas from backend contracts so mismatches like `forecast30DaysMad` versus `projected30DayCostMad` fail in CI instead of crashing production.
+1. **Contract-tested API clients — first increment implemented on `codex/api-contract-boundary`.** The owner operational pulse now validates both responses with Zod, degrades each endpoint independently, and reuses the schemas in a live-stack Playwright check so mismatches like `forecast30DaysMad` versus `projected30DayCostMad` fail in CI. Expand this boundary incrementally; evaluate generated OpenAPI clients separately when coverage grows.
 2. **Role-based QA cockpit.** Give operators a non-production checklist for Owner → Agent → Renter Guardian handoff, with test-data reset and no stored passwords.
 3. **Release evidence page.** Show deployed commit, migration set, feature flags, health state and last smoke-test timestamp to ROOT_ADMIN without exposing secrets.
 4. **Guardian capture quality gates.** Add blur/darkness/coverage checks before upload, then human-reviewed comparison assistance; never auto-assign fault or charge a renter.
