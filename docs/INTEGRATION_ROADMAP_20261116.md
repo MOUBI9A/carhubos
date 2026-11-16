@@ -10,9 +10,9 @@
 - Vercel production deployment `dpl_45uYKsYToddYg3uE1nKUdWWivJtg` is READY and serves `www.carhub.codes`, `carhub.codes`, and `carhubos.vercel.app` from commit `6a61b3c` on Node.js 24.
 - Public smoke checks returned HTTP 200 for `/`, `/login`, `/dashboard`, `/api/health`, and `/api/platform/plans` on 2026-11-16. Anonymous 200 responses do not prove every authenticated workflow.
 - Vercel reported no production `error` or `fatal` runtime logs in the latest 30-minute window. Its seven-day error cluster belongs to an older deployment; Hobby retention prevented a complete long-window log read.
-- The active checkout is `feat/compliance-20-point-audit` at `d8a6b12`. The user's existing `screenshots/` directory is untracked and must remain untouched.
-- GitHub draft PRs #20 and #22–#26 are mergeable. CI is green on #20 and #23–#26. PR #22 has successful frontend/backend/container/Playwright checks, but its latest live-Postgres jobs are canceled and must be rerun or replaced with equivalent exact-head evidence before release.
-- Render exposes one account workspace named `My Workspace`; service/database inspection is intentionally pending explicit workspace confirmation.
+- The active checkout is `feat/compliance-20-point-audit` for draft PR #22. The user's existing `screenshots/` directory is untracked and must remain untouched.
+- GitHub draft PRs #20 and #22–#26 are mergeable. CI was green on #20 and #23–#26 when checked. PR #22's prior live-Postgres run exposed E2E registration fixtures missing required legal acknowledgements; the fixtures are fixed and exact-head CI must pass before release.
+- The user confirmed Render `My Workspace` is theirs. Its listed services are `carhub-infinity-api` from `MOUBI9A/carhub-infinity` and two Creator Revenue OS services. The listed `influence-factory-db` Postgres instance is suspended for billing and is not a CarHub OS database. No service for `MOUBI9A/carhubos` was listed in this workspace; its currently observed production deployment is on Vercel.
 
 ## Reported production account state
 
