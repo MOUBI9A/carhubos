@@ -14,36 +14,11 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-
-interface OperationalMetrics {
-  waitingVehicles: number;
-  diagnosticsNeedingReview: number;
-  activeRepairs: number;
-  blockedJobs: number;
-  readyForQc: number;
-  awaitingApproval: number;
-  completedThisMonth: number;
-  criticalIssuesCount: number;
-}
-
-// Mirrors GET /api/maintenance/predictive-overview, returned by
-// PredictiveMaintenanceService.getFleetPredictiveOverview.
-interface PredictiveOverview {
-  totalVehicles: number;
-  criticalCount: number;
-  attentionCount: number;
-  projected30DayCostMad: number;
-}
-
-// API JSON is untyped at runtime. An unsuccessful deployment or future
-// contract change must never crash the entire owner dashboard.
-function isPredictiveOverview(value: unknown): value is PredictiveOverview {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const v = value as Record<string, unknown>;
-  return ['totalVehicles', 'criticalCount', 'attentionCount', 'projected30DayCostMad'].every(
-    (key) => typeof v[key] === 'number' && Number.isFinite(v[key]),
-  );
-}
+import {
+  fetchOperationalPulse,
+  type OperationalMetrics,
+  type PredictiveOverview,
+} from '@/lib/api-contracts/operational-pulse';
 
 export function AutomotiveOperationalPulse() {
   const [metrics, setMetrics] = useState<OperationalMetrics | null>(null);
@@ -53,21 +28,9 @@ export function AutomotiveOperationalPulse() {
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const [mRes, pRes] = await Promise.all([
-          fetch('/api/work-orders/metrics/summary', { credentials: 'include' }),
-          fetch('/api/maintenance/predictive-overview', { credentials: 'include' }),
-        ]);
-
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          setMetrics(mData);
-        }
-        if (pRes.ok) {
-          const pData: unknown = await pRes.json();
-          // Do not render an incomplete/old contract (e.g. forecast30DaysMad)
-          // as if it were valid numbers. Workshop KPIs can still render.
-          setPredictive(isPredictiveOverview(pData) ? pData : null);
-        }
+        const pulse = await fetchOperationalPulse();
+        setMetrics(pulse.metrics);
+        setPredictive(pulse.predictive);
       } catch {
         // Fallback or offline
       } finally {
