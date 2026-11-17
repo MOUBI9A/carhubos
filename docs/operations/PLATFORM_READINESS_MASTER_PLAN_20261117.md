@@ -87,7 +87,7 @@ The following were found in current `main` and must be resolved, hidden, or expl
 | #22 compliance | Draft; GitHub currently reports merge state `CLEAN` against `main` | Rebase, review legal/DB impact, run migration rehearsal, accept first if the exact head stays green. `CLEAN` is Git graph status, not staging or production proof. External legal approval remains separate. |
 | #27 runtime API contracts | Draft, stacked on #22; GitHub currently reports merge state `CLEAN` | Rebase after #22 lands; keep the runtime validation and live-stack contract test. `CLEAN` does not prove live data or migration compatibility. |
 | #20 Guardian resumable video | Draft; GitHub currently reports merge state `CLEAN` | Do not merge for production use until hosted non-production Supabase/TUS acceptance, retention, scanning, authorization, and recovery evidence pass. |
-| #23–#26 AI foundation stack | Four draft PRs; GitHub currently reports merge state `CLEAN` for each stacked base | Preserve the governance design. Rebase only after core/compliance consolidation; keep provider execution disabled until the AI release phases below. |
+| #23–#26 AI foundation stack | Four draft PRs; GitHub currently reports merge state `CLEAN` for each stacked base | Preserve and review the governance design, but do not merge it before the Phase 3 core-pilot exit gate. Rebase it against post-pilot `main`; keep provider execution disabled until the AI release phases below. |
 | #5–#13 legacy set | Mostly conflicting and months old | Compare each against exact `main`; port only still-missing behavior into small new PRs, then close the stale branches with disposition notes. |
 | #8 telematics | Conflicting and includes immobilization | Never merge as-is. Salvage only safe adapter/crypto/network patterns; replace the feature with a new passive, read-only telemetry design. |
 
@@ -168,7 +168,7 @@ The phases are ordered gates, not parallel promises. Work within a phase can run
 **Work**
 
 - Protect `main`: pull request required, no force pushes/deletion, conversation resolution, stale-review dismissal, and required CI checks.
-- Require the five always-running web/backend checks by their stable names. Do not make the path-filtered mobile workflow globally required until it is changed to report a deterministic aggregate result on every PR.
+- Remove the duplicate CI execution caused by running identical jobs on both every branch push and the pull-request event. Then require the five always-running web/backend checks by stable, unambiguous names. Do not make the path-filtered mobile workflow globally required until it reports a deterministic aggregate result on every PR.
 - Add CODEOWNERS/reviewer ownership for schema/migrations, auth/tenancy, money/payments, consent/vault, CI/deployment, and legal pages.
 - Reconcile the source-of-truth path mismatch. Move or index the legacy root documents into `docs/operations`, `docs/product`, and `docs/progress` without losing history; archive superseded readiness claims prominently.
 - Generate a current inventory from exact `main`: routes, controllers, Prisma models/migrations, jobs, providers, environment variable names, feature flags, open TODOs, and externally owned decisions.
@@ -241,7 +241,7 @@ The phases are ordered gates, not parallel promises. Work within a phase can run
 
 1. Rebase #22 on current `main`; review privacy migration, public pages, accessibility, localization, and operator workflows; merge only with migration rehearsal and all required checks.
 2. Rebase #27 on the new `main`; merge the runtime schemas and live-stack dashboard contract test.
-3. Rebase #23–#26 as a newly reviewed AI foundation stack or squash into reviewable slices. Provider calls remain impossible/default-off.
+3. Preserve and review #23–#26, but do not merge the AI stack before the Phase 3 core pilot exit gate. Record its rebase/migration plan for Phase 4.
 4. Keep #20 separate until hosted staging storage acceptance is complete.
 5. For #5–#13, produce a per-PR diff against current main. Create small replacement PRs only for behavior still missing; close the original conflicting PR after the replacement or documented rejection.
 
@@ -292,6 +292,7 @@ The phases are ordered gates, not parallel promises. Work within a phase can run
 - Prove real outbound email/SMS/WhatsApp only for the providers selected for pilot; otherwise make the unavailable channel explicit and non-successful.
 - Verify SaaS subscription entitlement enforcement and the failure behavior of renewal/upgrade flows.
 - Establish reconciliation queues for payment, refund, storage, and notification provider ambiguity.
+- Define a tenant-safe agency data-import procedure: encrypted transfer, schema mapping, dry run, duplicate detection, row-level validation, financial/control totals, idempotent batches, audit evidence, rollback/quarantine, and deletion of temporary import files.
 
 **Mobile decision**
 
@@ -306,6 +307,7 @@ The phases are ordered gates, not parallel promises. Work within a phase can run
 - Load tests based on pilot concurrency and largest expected fleet/customer datasets.
 - No fabricated metrics, mock success toast, placeholder provider success, or unbounded list on a critical path.
 - User acceptance performed by at least one non-developer using a staging agency.
+- Approve provisional pilot guardrails before onboarding: availability/error/latency thresholds, RPO/RTO, support response targets, reconciliation tolerance, capacity ceiling, incident owner, and the exact stop/rollback decision path. Replace provisional values with measured objectives after pilot evidence exists.
 
 **Phase 3A exit gate:** the non-AI web platform can operate one complete rental and financial cycle in production-shaped staging, recover failures, and support a user.
 
@@ -323,6 +325,8 @@ The phases are ordered gates, not parallel promises. Work within a phase can run
 ### Phase 4 — Governed AI foundation, provider disabled
 
 **Goal:** establish the safety and cost control layer before generating production advice.
+
+**Entry action:** rebase and re-review PRs #23–#26 against the post-pilot `main`, resolve migration/contract drift, and merge only the slices that satisfy the controls and evidence below.
 
 **Core entities**
 
@@ -570,8 +574,8 @@ These are the next concrete milestones, in order:
 6. **Compliance stack:** finish #22’s technical review and business/legal operator inputs, then merge through the protected gate.
 7. **Contract boundary:** rebase/merge #27 and extend runtime validation to the remaining release-critical frontend/provider boundaries.
 8. **Core acceptance:** execute the five-role journey matrix; close or hide the fleet report, accident upload/insurance, contact, and booking-concurrency gaps.
-9. **AI foundation:** rebase #23–#26 with provider disabled, run threat/evaluation review, and preserve zero-default budgets.
-10. **Pilot:** onboard the first agency only after Phases 0–3 exit; enable later features one capability and one agency at a time.
+9. **Core pilot:** onboard the first agency only after Phase 3A, then expand to 3–5 agencies and establish the accepted non-AI baseline.
+10. **AI foundation:** only after the Phase 3 core-pilot exit gate, rebase #23–#26 with provider disabled, run threat/evaluation review, and preserve zero-default budgets.
 
 Suggested engineering delivery shape is reviewable milestones of roughly two weeks, each ending in a verified outcome. This is a work-sizing cadence, not a promise that procurement, production access, legal review, provider contracts, or pilot-agency acceptance will finish inside a sprint. The web pilot is scheduled from gate completion, not from a fixed calendar date.
 
