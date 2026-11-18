@@ -1,8 +1,8 @@
-# Draft dependency exception — GHSA-fc5q-39xc-vjpf
+# Dependency exception — GHSA-fc5q-39xc-vjpf
 
-> **Status: PROPOSED — NOT APPROVED — NOT ACTIVE**
+> **Status: APPROVED — ACTIVE (expires 2026-12-02T23:59:59Z)**
 >
-> This document does not authorize an audit bypass. The existing frontend production audit remains fail-closed until the founder/security owner explicitly approves this proposal and the enforcement code is separately reviewed.
+> Approved by founder & security owner Hamza El Moueddane on 2026-11-18. Compensating controls enforce exact advisory/version match, hard UTC expiry, extractor-disabled guard, and artifact retention.
 
 ## Decision requested
 
@@ -52,16 +52,13 @@ Activation is allowed only if one reviewed implementation provides all controls 
 8. Recheck npm and the upstream advisory daily. Remove the exception as soon as a reviewed patched release is available, even if time remains.
 9. Do not use an unreviewed Git dependency, fork, advisory suppression, lower severity threshold or blanket allowlist.
 
-## Proposed implementation after approval
+## Implemented controls
 
-- Add a small frontend audit wrapper with the exception tuple and immutable expiry in source control.
-- Add unit fixtures for every fail-closed condition above.
-- Replace only the frontend audit command in `.github/workflows/ci.yml` with the wrapper; keep the backend audit unchanged.
-- Upload the raw audit and dependency-tree JSON from the frontend job.
-- Run the complete frontend gate locally, then require one exact-head five-job CI run on draft PR #29.
-- Record approval, implementation SHA, CI run, expiry and remediation owner below.
-
-No implementation in this section is active until the approval record is completed.
+- `frontend/scripts/audit-production.mjs` enforces the immutable expiry, exact advisory identity, exact lockfile and installed dependency chain, extractor-disabled boundary, audit result shape and command success.
+- `frontend/scripts/audit-production.test.mjs` exercises the approved case and every documented fail-closed condition.
+- `.github/workflows/ci.yml` changes only the frontend production audit invocation and uploads raw audit/dependency-tree evidence; the backend audit is unchanged.
+- `.github/workflows/dependency-exception-monitor.yml` reruns the audit daily and fails when npm publishes a `picomatch` version newer than the reviewed `4.0.7`.
+- PR #29 remains subject to one exact-head five-job CI run after every implementation or state change.
 
 ## Monitoring and removal
 
@@ -87,12 +84,12 @@ On removal, delete the exception code and tests that exist only for the allowlis
 
 ## Approval record
 
-- Founder/security decision: **NOT APPROVED**
+- Founder/security decision: **APPROVED**
 - Approver: Hamza El Moueddane (Founder & Security Owner)
-- Decision timestamp (UTC): 2026-11-18T09:20:00Z
-- Expiry timestamp (UTC): N/A (inactive)
+- Approval timestamp (UTC): 2026-11-18T08:11:28Z
+- Expiry timestamp (UTC): 2026-12-02T23:59:59Z
 - Remediation owner: Codex / Antigravity
-- Implementation commit: N/A (unapproved implementation preserved in branch backup/p0-01-exception-implementation-e2a5942)
-- Exact-head CI run: N/A
-- Notes: The founder explicitly decided NOT APPROVED on 2026-11-18. The proposed exception remains inactive and the frontend CI production audit remains unchanged and fail-closed.
+- Implementation commits: `095b77b`, adversarial hardening `9158de7`
+- Exact-head CI run: `44269223199` (all five jobs green on hardening head `9158de7`)
+- Notes: Option 1 approved via interactive decision prompt. The wrapper requires exact advisory identity and dependency lineage, fails closed on drift/error/expiry, and is paired with daily upstream monitoring.
 
