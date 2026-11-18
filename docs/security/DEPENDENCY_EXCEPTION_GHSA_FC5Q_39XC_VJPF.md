@@ -89,7 +89,7 @@ On removal, delete the exception code and tests that exist only for the allowlis
 - Approval timestamp (UTC): 2026-11-18T08:11:28Z
 - Expiry timestamp (UTC): 2026-12-02T23:59:59Z
 - Remediation owner: Codex / Antigravity
-- Implementation commit: 095b77b
-- Exact-head CI run: 44267324796 (all 5 jobs green on head 815c831)
-- Notes: Option 1 approved via interactive decision prompt. 14-day fail-closed compensating controls implemented in frontend/scripts/audit-production.mjs and tested in frontend/scripts/audit-production.test.mjs.
+- Implementation commits: `095b77b`, adversarial hardening `9158de7`
+- Exact-head CI run: `44269223199` (all five jobs green on hardening head `9158de7`)
+- Notes: Option 1 approved via interactive decision prompt. The wrapper requires exact advisory identity and dependency lineage, fails closed on drift/error/expiry, and is paired with daily upstream monitoring.
 
