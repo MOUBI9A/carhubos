@@ -77,7 +77,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-02`
 
-P0-02 currently claims `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,BLOCKERS}.md`; `docs/operations/BRANCH_PROTECTION.md`; and the live GitHub `main` branch-protection settings. The temporary red-proof file claim ended when PR #33 was closed and its branch deleted.
+None. The P0-02 implementation claim is released; the live policy remains governed by `docs/operations/BRANCH_PROTECTION.md` while the documentation PR is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
