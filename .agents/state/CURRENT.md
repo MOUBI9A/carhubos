@@ -57,6 +57,7 @@ Always re-verify these drift-prone facts before acting.
 
 - `.github/workflows/ci.yml`
 - `docs/operations/CI_GOVERNANCE.md`
+- `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`
 - `frontend/package.json`
 - `frontend/package-lock.json`
 - `docs/progress/EXECUTION_BOARD.md`
