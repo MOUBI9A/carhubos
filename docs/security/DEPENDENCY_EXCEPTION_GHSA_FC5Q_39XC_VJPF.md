@@ -1,8 +1,8 @@
-# Draft dependency exception — GHSA-fc5q-39xc-vjpf
+# Dependency exception — GHSA-fc5q-39xc-vjpf
 
-> **Status: PROPOSED — NOT APPROVED — NOT ACTIVE**
+> **Status: APPROVED — ACTIVE (expires 2026-12-02T23:59:59Z)**
 >
-> This document does not authorize an audit bypass. The existing frontend production audit remains fail-closed until the founder/security owner explicitly approves this proposal and the enforcement code is separately reviewed.
+> Approved by founder & security owner Hamza El Moueddane on 2026-11-18. Compensating controls enforce exact advisory/version match, hard UTC expiry, extractor-disabled guard, and artifact retention.
 
 ## Decision requested
 
@@ -87,12 +87,12 @@ On removal, delete the exception code and tests that exist only for the allowlis
 
 ## Approval record
 
-- Founder/security decision: **PENDING**
-- Approver:
-- Approval timestamp (UTC):
-- Expiry timestamp (UTC):
-- Remediation owner:
-- Implementation commit:
-- Exact-head CI run:
-- Notes:
+- Founder/security decision: **APPROVED**
+- Approver: Hamza El Moueddane (Founder & Security Owner)
+- Approval timestamp (UTC): 2026-11-18T08:11:28Z
+- Expiry timestamp (UTC): 2026-12-02T23:59:59Z
+- Remediation owner: Codex / Antigravity
+- Implementation commit: pending commit
+- Exact-head CI run: pending PR check
+- Notes: Option 1 approved via interactive decision prompt. 14-day fail-closed compensating controls implemented in frontend/scripts/audit-production.mjs and tested in frontend/scripts/audit-production.test.mjs.
 

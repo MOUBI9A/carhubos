@@ -46,6 +46,11 @@ Always re-verify these drift-prone facts before acting.
 - Verified the current reachability boundary: `next-intl` extraction/watch options are disabled, the watcher subscription is not started, and no application/user input supplies glob patterns through this path.
 - Obtained a bounded Antigravity read-only assessment. It supports only an exact-path, fail-closed, expiring exception with formal approval and continuous monitoring; its opinion is not authorization or runtime proof.
 - Added `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md` as a proposed, inactive 14-day exception with exposure analysis, mandatory controls, removal triggers and a pending approval record.
+- Obtained explicit founder/security approval for the 14-day exception from Hamza El Moueddane on 2026-11-18.
+- Implemented the fail-closed audit wrapper in `frontend/scripts/audit-production.mjs` with hardcoded UTC expiry `2026-12-02T23:59:59Z`, exact tuple validation, disabled extractor check, and audit artifact generation.
+- Added 8 unit tests in `frontend/scripts/audit-production.test.mjs` proving all required pass and fail conditions. All 8 unit tests pass in vitest.
+- Updated `.github/workflows/ci.yml` to replace the frontend audit step with `node scripts/audit-production.mjs` and upload audit artifacts; backend audit remains unchanged.
+- Verified frontend checks locally: audit wrapper, typecheck, 15 vitest suites (63 tests), and eslint all pass.
 
 ## Last verified state
 
