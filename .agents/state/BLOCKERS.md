@@ -4,13 +4,6 @@
 
 ## Active now
 
-### B-008 — Stale concurrent-agent revert entered the PR #29 merge
-
-- **Blocks:** completion of `P0-01` and activation of its approved daily dependency monitor on `main`.
-- **Evidence:** PR #29 merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443` with final head `a697a31`; that final commit reverted the approved wrapper and monitor after the last reviewed head.
-- **Recovery:** stale process stopped; exclusive recovery claim `4a113e2` pushed on `codex/p0-01-recover-approved-controls`; restore the exact reviewed controls, require exact-head CI, then verify post-merge `main` CI.
-- **Safety rule:** preserve history; do not force-push or bypass the recovery PR gate.
-
 ### B-007 — No patched release for new `picomatch` high-severity advisory
 
 - **Blocks:** permanent resolution of dependency risk; previously blocked green acceptance evidence for `P0-01`.
@@ -22,6 +15,12 @@
 - **Permanent resolution:** consume a published patched release or a reviewed upstream dependency change, remove the exception wrapper, then rerun the direct audit and all five CI jobs before `2026-12-02T23:59:59Z`.
 
 ## Resolved
+
+### B-008 — Stale concurrent-agent revert entered the PR #29 merge
+
+- **Resolved:** 2026-11-18.
+- **Evidence:** stale process stopped; recovery PR #31 restored the exact reviewed controls and merged as `61e30aca33d196442ec74926e0f911e63e15f4ab`; all five canonical jobs passed on `main` run `44278183559`.
+- **Safety outcome:** history was preserved; no force push or direct edit to `main` was used.
 
 ### B-001 — Continuity setup not yet canonical on `main`
 
