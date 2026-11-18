@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-01-ci-contexts`
 
-**Current PR:** #29 — in review; hardening head `9158de7` passed all five jobs on run `44269223199`
+**Current PR:** #29 — draft; CI deduplication proven, founder decision NOT APPROVED on B-007 exception; blocked awaiting upstream patched release
 
 **Current base:** `origin/main` at `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `REVIEW`
+**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `BLOCKED`
 
 **Next task:** `P0-02` — protect `main` and prove enforcement, after `P0-01` is accepted and merged
 
@@ -46,42 +46,34 @@ Always re-verify these drift-prone facts before acting.
 - Verified the current reachability boundary: `next-intl` extraction/watch options are disabled, the watcher subscription is not started, and no application/user input supplies glob patterns through this path.
 - Obtained a bounded Antigravity read-only assessment. It supports only an exact-path, fail-closed, expiring exception with formal approval and continuous monitoring; its opinion is not authorization or runtime proof.
 - Added `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md` as a proposed, inactive 14-day exception with exposure analysis, mandatory controls, removal triggers and a pending approval record.
-- Obtained explicit founder/security approval for the 14-day exception from Hamza El Moueddane on 2026-11-18.
-- Implemented the fail-closed audit wrapper in `frontend/scripts/audit-production.mjs` with hardcoded UTC expiry `2026-12-02T23:59:59Z`, exact tuple validation, disabled extractor check, and audit artifact generation.
-- Added fail-closed unit tests in `frontend/scripts/audit-production.test.mjs` proving all required pass and fail conditions.
-- Updated `.github/workflows/ci.yml` to replace the frontend audit step with `node scripts/audit-production.mjs` and upload audit artifacts; backend audit remains unchanged.
-- Adversarial review reproduced a fail-open advisory identity check, incomplete installed-chain validation and missing daily upstream monitoring; all three were fixed in `9158de7`.
-- Added `.github/workflows/dependency-exception-monitor.yml` to re-evaluate the audit daily and fail when npm publishes a version newer than the reviewed `picomatch@4.0.7`.
-- Verified frontend checks locally: real audit wrapper, typecheck, 15 Vitest suites (64 tests), ESLint and production build all pass. ESLint retains three pre-existing navigation warnings and no errors.
 
 ## Last verified state
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` had no branch protection and no ruleset.
-- Draft PR #29 changes the branch-push trigger to `main`; its PR head produced exactly one automatic five-job CI set.
-- All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
-- The 14-day fail-closed dependency exception for `GHSA-fc5q-39xc-vjpf` was approved by the founder on 2026-11-18, hardened after adversarial review, and is monitored daily after merge.
+- Draft PR #29 changes the branch-push trigger to `main`; its first PR head produced exactly one automatic five-job CI set.
+- The unchanged frontend production audit is red on `GHSA-fc5q-39xc-vjpf`. The gate was not suppressed or weakened, and the proposed exception is not active.
 - Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
 ## Files currently claimed by `P0-01`
 
-None. The claim is released; PR #29 is in `REVIEW` awaiting the final state-only head check and founder merge gate.
+None. The claim is released while the founder/security decision is pending.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Verify the final state-only PR head receives exactly one green five-job CI run.
-2. Merge PR #29 into `main` only after the founder merge gate.
-3. After merge, verify that `origin/main` receives exactly one push-triggered CI run and all 5 jobs remain green. Mark `P0-01` `DONE`.
-4. Proceed to `P0-02` (protect `main` and prove enforcement) or rebase PR #30 (`codex/p0-04-doc-consolidation`) onto updated `main`.
+1. The founder decision on the B-007 exception is `NOT APPROVED`. The exception proposal remains inactive, and the CI production audit remains unchanged and fail-closed.
+2. Monitor upstream for a published patched release of `picomatch`, `@parcel/watcher`, or `next-intl`. When published, update dependencies, run full verification, and unblock PR #29.
+3. Move `P0-01` to `REVIEW` only after the exact PR head has one green five-job CI set without an unapproved allowlist; after merge, verify one push-triggered set on `main`.
+4. Do not begin `P0-02` or enable branch protection until `P0-01` is accepted and merged. Another dependency-satisfied Phase 0 task may proceed on a separate branch while B-007 remains external.
 
 ## Unresolved risks
 
 - `main` remains unprotected.
-- The approved exception expires at `2026-12-02T23:59:59Z`; a permanent patched dependency or reviewed replacement is still required before then.
+- `P0-01` cannot satisfy its green test-PR gate until B-007 has a safe remediation or the proposed time-bounded security exception is explicitly approved and correctly implemented.
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
