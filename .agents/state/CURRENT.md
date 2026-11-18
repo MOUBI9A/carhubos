@@ -6,17 +6,17 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-01-closeout`
+**Current branch:** `codex/p0-02-branch-protection`
 
-**Current PR:** P0-01 state-only closeout pending; recovery PR #31 merged as `61e30aca33d196442ec74926e0f911e63e15f4ab`
+**Current PR:** P0-02 documentation PR pending; disposable enforcement proof PR #33 is closed without merge
 
-**Current base:** `origin/main` at `61e30aca33d196442ec74926e0f911e63e15f4ab`
+**Current base:** `origin/main` at `4421ec39217484d5f5fffe26c3820414637f5295`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate CI and establish stable contexts, status `DONE`
+**Active task:** `P0-02` — protect `main` and prove enforcement, status `REVIEW`
 
-**Next task:** `P0-02` — protect `main` and prove enforcement, status `READY`
+**Next task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix after P0-02 documentation merges
 
 Always re-verify these drift-prone facts before acting.
 
@@ -58,11 +58,16 @@ Always re-verify these drift-prone facts before acting.
 - The recovery restores the exact implementation previously reviewed at `e2a5942`; no force push or direct edit to `main` is used.
 - Recovery PR #31 passed all five jobs on exact head `5e571ab`, merged as `61e30aca33d196442ec74926e0f911e63e15f4ab`, and produced exactly one push-triggered run on `main`.
 - Canonical `main` run `44278183559` passed Backend, Backend e2e, Backend production container, Frontend, and E2E full stack; P0-01 acceptance is complete.
+- Merged P0-01 closeout PR #32 as `4421ec39217484d5f5fffe26c3820414637f5295` and claimed P0-02 on `codex/p0-02-branch-protection`.
+- Applied `main` branch protection through the GitHub API: pull requests required; strict five-check gate; stale-review dismissal; conversation resolution; admin enforcement; force pushes and deletion disabled; zero mandatory approvals for the solo-founder repository.
+- Opened disposable red proof PR #33 at `79a18e1`; its isolated TS2322 failure made the required Frontend check fail in run `44280610548`, and GitHub reported `mergeStateStatus: BLOCKED`.
+- Closed PR #33 without merge and deleted only its disposable local and remote branch after evidence capture.
+- A bounded read-only Antigravity review returned `NO BLOCKER`; it confirmed the solo-owner zero-approval policy avoids self-approval deadlock while retaining mandatory PR, strict CI, conversation, admin, force-push, and deletion protections.
 
 ## Last verified state
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
-- GitHub `main` had no branch protection and no ruleset.
+- GitHub `main` is protected with strict five-check PR enforcement, admin enforcement, stale-review dismissal, conversation resolution, and force-push/deletion disabled.
 - PR #29 is merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443`; recovery PR #31 is merged as canonical head `61e30aca33d196442ec74926e0f911e63e15f4ab`.
 - All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
 - The 14-day fail-closed dependency exception for `GHSA-fc5q-39xc-vjpf` was approved by the founder on 2026-11-18, hardened after adversarial review, and is monitored daily after merge.
@@ -70,21 +75,20 @@ Always re-verify these drift-prone facts before acting.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-01`
+## Files currently claimed by `P0-02`
 
-None. The P0-01 recovery claim is released by this closeout.
+P0-02 currently claims `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,BLOCKERS}.md`; `docs/operations/BRANCH_PROTECTION.md`; and the live GitHub `main` branch-protection settings. The temporary red-proof file claim ended when PR #33 was closed and its branch deleted.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Merge this state-only closeout after its exact-head checks pass.
-2. Rebase PR #30 onto recovered `main`.
-3. Claim `P0-02` on a new `codex/` branch, configure branch protection, and prove enforcement with a deliberately failing PR.
+1. Open the P0-02 documentation PR and require all protected checks on its exact head.
+2. Merge only after GitHub reports the protected PR mergeable and all five application checks pass.
+3. Verify the live protection API after merge, mark P0-02 `DONE`, release its claim, then claim P0-03.
 
 ## Unresolved risks
 
-- `main` remains unprotected.
 - The approved exception expires at `2026-12-02T23:59:59Z`; a permanent patched dependency or reviewed replacement is still required before then.
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
