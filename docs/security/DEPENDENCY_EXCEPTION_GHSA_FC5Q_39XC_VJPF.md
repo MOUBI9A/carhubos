@@ -93,6 +93,6 @@ On removal, delete the exception code and tests that exist only for the allowlis
 - Expiry timestamp (UTC): 2026-12-02T23:59:59Z
 - Remediation owner: Codex / Antigravity
 - Implementation commit: 095b77b
-- Exact-head CI run: pending PR check
+- Exact-head CI run: 44267324796 (all 5 jobs green on head 815c831)
 - Notes: Option 1 approved via interactive decision prompt. 14-day fail-closed compensating controls implemented in frontend/scripts/audit-production.mjs and tested in frontend/scripts/audit-production.test.mjs.
 

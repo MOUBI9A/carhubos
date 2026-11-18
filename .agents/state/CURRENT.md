@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-01-ci-contexts`
 
-**Current PR:** #29 — draft; CI deduplication proven, implementing founder-approved B-007 exception
+**Current PR:** #29 — in review; CI deduplication proven, all 5 CI jobs green on run 44267324796
 
 **Current base:** `origin/main` at `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `IN_PROGRESS`
+**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `REVIEW`
 
 **Next task:** `P0-02` — protect `main` and prove enforcement, after `P0-01` is accepted and merged
 
@@ -56,32 +56,24 @@ Always re-verify these drift-prone facts before acting.
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` had no branch protection and no ruleset.
-- Draft PR #29 changes the branch-push trigger to `main`; its first PR head produced exactly one automatic five-job CI set.
-- The unchanged frontend production audit is red on `GHSA-fc5q-39xc-vjpf`. The gate was not suppressed or weakened, and the proposed exception is not active.
+- Draft PR #29 changes the branch-push trigger to `main`; its PR head produced exactly one automatic five-job CI set.
+- All five GitHub Actions CI jobs passed on run `44267324796` (head `815c831`): Backend, Backend e2e, Backend production container, Frontend, and E2E full stack. Vercel preview deployment is green.
+- The 14-day fail-closed dependency exception for `GHSA-fc5q-39xc-vjpf` was approved by the founder on 2026-11-18, implemented, and verified with 8 unit tests in vitest.
 - Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
 ## Files currently claimed by `P0-01`
 
-- `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`
-- `frontend/scripts/audit-production.mjs`
-- `frontend/scripts/audit-production.test.mjs`
-- `.github/workflows/ci.yml`
-- `docs/progress/EXECUTION_BOARD.md`
-- `.agents/state/CURRENT.md`
-- `.agents/state/NEXT.md`
-- `.agents/state/BLOCKERS.md`
-- `COORDINATION.md`
+None. The claim is released; PR #29 is in `REVIEW` awaiting merge.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Obtain the founder/security decision on `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`, or continue waiting for a published patched dependency.
-2. If the exception is approved, claim the exact wrapper/test/workflow/state files, complete the approval record, implement every fail-closed control and run the full required CI. If it is rejected, leave the audit unchanged and monitor upstream.
-3. Move `P0-01` to `REVIEW` only after the exact PR head has one green five-job CI set; after merge, verify one push-triggered set on `main`.
-4. Do not begin `P0-02` or enable branch protection until `P0-01` is accepted and merged. Another dependency-satisfied Phase 0 task may proceed on a separate branch while B-007 remains external.
+1. Merge PR #29 into `main` (human gate).
+2. After merge, verify that `origin/main` receives exactly one push-triggered CI run and all 5 jobs remain green. Mark `P0-01` `DONE`.
+3. Proceed to `P0-02` (protect `main` and prove enforcement) or rebase PR #30 (`codex/p0-04-doc-consolidation`) onto updated `main`.
 
 ## Unresolved risks
 
