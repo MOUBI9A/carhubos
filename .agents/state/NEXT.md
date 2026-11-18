@@ -4,16 +4,16 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 1. Remove duplicate CI execution (`P0-01`)
 
-**Status:** `IN_PROGRESS` on `codex/p0-01-ci-contexts`.
+**Status:** `BLOCKED` on draft PR #29 by B-007.
 
 - Limit normal CI push coverage to `main`; preserve pull requests targeting `main` and manual dispatch.
 - Keep the exact five web/backend job names stable.
 - Document event behavior and why mobile CI is not yet globally required.
-- Open a test PR and prove exactly one green CI set on its exact head.
+- The test PR already proves exactly one automatic CI set; wait for a safe upstream fix for `GHSA-fc5q-39xc-vjpf`, then restore a green exact-head run without weakening the audit.
 
 ## 2. Protect `main` (`P0-02`)
 
-**Status:** `NOT_STARTED`; depends on accepted and merged `P0-01`.
+**Status:** `NOT_STARTED`; blocked until `P0-01` is accepted and merged.
 
 - Require PRs and the stable checks.
 - Block force pushes and deletion.
@@ -22,7 +22,7 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 3. Consolidate canonical documentation (`P0-04`)
 
-**Status:** `NOT_STARTED`; depends on `P0-00` and is unblocked after the current serialized task.
+**Status:** `READY`; depends on completed `P0-00` and may proceed on a separate branch while B-007 blocks `P0-01`.
 
 - Reconcile active progress/backlog/design/production-gate pointers.
 - Mark stale readiness claims as historical without deleting useful evidence.

@@ -4,7 +4,14 @@
 
 ## Active now
 
-No active blocker prevents `P0-01`.
+### B-007 — No patched release for new `picomatch` high-severity advisory
+
+- **Blocks:** green acceptance evidence for `P0-01` and therefore `P0-02` branch-protection setup.
+- **Evidence:** manual CI run `44230394964` fails the unchanged frontend `npm audit --omit=dev --audit-level=high` gate on `GHSA-fc5q-39xc-vjpf`; draft PR #29 reproduces the same gate on one non-duplicated CI set.
+- **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected. A lockfile-only update to latest was tested and fully reverted because it did not clear the audit.
+- **Safe resolution:** consume a published patched release or a reviewed upstream dependency change, then rerun the exact audit and all five CI jobs.
+- **Human alternative:** a founder/security owner may approve a documented, time-bounded exception with exposure analysis, compensating controls and expiry; no such exception currently exists.
+- **Do not bypass by:** suppressing the advisory, lowering the audit threshold, removing the production audit, or marking a red PR ready.
 
 ## Resolved
 
@@ -41,4 +48,4 @@ No active blocker prevents `P0-01`.
 - **Blocks:** `P3-05` and later pilot expansion.
 - **Human input:** named agencies, onboarding owner, support/on-call owner and signed pilot terms.
 
-These blockers do not prevent `P0-01` through the other unblocked Phase 0 documentation/governance tasks once `P0-00` is accepted.
+These blockers do not prevent dependency-satisfied Phase 0 documentation/governance tasks such as `P0-04` from proceeding on separate scoped branches.

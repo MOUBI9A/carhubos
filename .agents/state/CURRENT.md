@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-01-ci-contexts`
 
-**Current PR:** pending creation for `P0-01`
+**Current PR:** #29 — draft; CI deduplication proven, green acceptance blocked by B-007
 
 **Current base:** `origin/main` at `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `IN_PROGRESS`
+**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `BLOCKED`
 
 **Next task:** `P0-02` — protect `main` and prove enforcement, after `P0-01` is accepted and merged
 
@@ -37,12 +37,18 @@ Always re-verify these drift-prone facts before acting.
 - Created `codex/p0-01-ci-contexts` from that exact `origin/main` and pushed coordination claim `b3003de`.
 - Re-ran the mandatory repository, remote, branch, worktree and open-PR audit. The user-owned untracked `screenshots/` directory remains untouched.
 - Obtained a bounded, read-only Antigravity review. It independently recommended limiting normal CI branch pushes to `main`, keeping PR/manual triggers, preserving the five job names, and leaving path-filtered mobile CI non-required.
+- Changed the CI branch-push trigger from every branch to `main` only and added `docs/operations/CI_GOVERNANCE.md` with the event/check/mobile contract.
+- Antigravity performed a second read-only diff review and returned `PASS`; YAML parsing and `git diff --check` also passed.
+- Manual run `44230394964` on implementation head `ad585eb0a28096b9dae0ded718d8821607b4308a` created exactly the five expected jobs. Backend, backend E2E, backend container and full-stack E2E passed; frontend failed only at the unchanged production dependency audit.
+- Opened draft PR #29. Exact head `8171ef517ce9654a26a04c5cef68ca804c90fe12` received one `pull_request` CI run (`44231169636`) and no feature-branch `push` run, proving the duplication fix on that head.
+- Investigated the audit failure. `GHSA-fc5q-39xc-vjpf` affects every published `picomatch` release through current latest `4.0.7`; no safe npm upgrade exists. An attempted lockfile-only update could not clear the audit and was fully reverted.
 
 ## Last verified state
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` had no branch protection and no ruleset.
-- CI still triggers identical jobs on every branch push and again on pull requests; `P0-01` owns the correction and test-PR proof.
+- Draft PR #29 changes the branch-push trigger to `main`; its first PR head produced exactly one automatic five-job CI set.
+- The unchanged frontend production audit is red on `GHSA-fc5q-39xc-vjpf`. The gate was not suppressed or weakened.
 - Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
@@ -61,14 +67,15 @@ No runtime code, database schema, migration, deployment, provider, billing confi
 
 ## Exact resume action
 
-1. Change `.github/workflows/ci.yml` so ordinary feature-branch pushes do not duplicate the pull-request run while `main` pushes and manual dispatch remain covered.
-2. Document the five stable web/backend contexts, event matrix, mobile path-filter limitation and verification method.
-3. Open the `P0-01` test PR, prove exactly one CI set and a green exact head, then move the task to `REVIEW`.
-4. Do not begin `P0-02` or enable branch protection until `P0-01` is accepted and merged.
+1. Monitor the npm/GitHub advisory for a published patched `picomatch` release or a safe upstream dependency removal.
+2. When a safe fix exists, claim the exact dependency files, update through the package manager, run the production audit and full required CI, then refresh PR #29 evidence.
+3. Move `P0-01` to `REVIEW` only after the exact PR head has one green five-job CI set; after merge, verify one push-triggered set on `main`.
+4. Do not begin `P0-02` or enable branch protection until `P0-01` is accepted and merged. Another dependency-satisfied Phase 0 task may proceed on a separate branch while B-007 remains external.
 
 ## Unresolved risks
 
 - `main` remains unprotected.
+- `P0-01` cannot satisfy its green test-PR gate until B-007 has a safe remediation or an explicitly approved, time-bounded security exception with compensating controls.
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
