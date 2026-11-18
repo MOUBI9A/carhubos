@@ -3,6 +3,7 @@ import {
   checkExpiry,
   checkNextConfig,
   checkLockfile,
+  checkDependencyTree,
   validateAuditReport,
   runAudit,
   EXCEPTION_EXPIRY_UTC,
@@ -10,6 +11,9 @@ import {
   APPROVED_ADVISORY_ID,
   EXPECTED_NODE_PATH,
   EXPECTED_PARENT_NODE,
+  EXPECTED_NEXT_INTL_VERSION,
+  EXPECTED_WATCHER_VERSION,
+  EXPECTED_PICOMATCH_VERSION,
 } from './audit-production.mjs';
 
 function createValidAuditJson() {
@@ -71,10 +75,37 @@ function createValidAuditJson() {
 function createValidLockfile() {
   return {
     packages: {
-      'node_modules/next-intl': { version: '4.13.2' },
-      'node_modules/@parcel/watcher': { version: '2.5.6' },
+      '': { dependencies: { 'next-intl': '^4.13.2' } },
+      'node_modules/next-intl': {
+        version: EXPECTED_NEXT_INTL_VERSION,
+        dependencies: { '@parcel/watcher': '^2.4.1' },
+      },
+      'node_modules/@parcel/watcher': {
+        version: EXPECTED_WATCHER_VERSION,
+        dependencies: { picomatch: '^4.0.3' },
+      },
       'node_modules/@parcel/watcher/node_modules/picomatch': {
-        version: '4.0.5',
+        version: EXPECTED_PICOMATCH_VERSION,
+      },
+    },
+  };
+}
+
+function createValidDependencyTree() {
+  return {
+    name: 'frontend',
+    version: '0.1.0',
+    dependencies: {
+      'next-intl': {
+        version: EXPECTED_NEXT_INTL_VERSION,
+        dependencies: {
+          '@parcel/watcher': {
+            version: EXPECTED_WATCHER_VERSION,
+            dependencies: {
+              picomatch: { version: EXPECTED_PICOMATCH_VERSION },
+            },
+          },
+        },
       },
     },
   };
@@ -84,6 +115,8 @@ describe('audit-production fail-closed compensating controls', () => {
   // Test 1: exact-match pass
   it('1. exact-match pass: succeeds with valid audit JSON, valid lockfile, and no extractor', () => {
     const validAudit = createValidAuditJson();
+    expect(() => checkLockfile(createValidLockfile())).not.toThrow();
+    expect(() => checkDependencyTree(createValidDependencyTree())).not.toThrow();
     const result = validateAuditReport(validAudit);
     expect(result.allowed).toBe(true);
     expect(result.advisory).toBe(APPROVED_ADVISORY_ID);
@@ -120,6 +153,18 @@ describe('audit-production fail-closed compensating controls', () => {
     ];
     expect(() => validateAuditReport(auditPathDrift)).toThrow(
       /picomatch node path drift/
+    );
+
+    // 3d. A second installed parent makes the approved path non-exclusive
+    const treePathDrift = createValidDependencyTree();
+    treePathDrift.dependencies['another-parent'] = {
+      version: '1.0.0',
+      dependencies: {
+        picomatch: { version: EXPECTED_PICOMATCH_VERSION },
+      },
+    };
+    expect(() => checkDependencyTree(treePathDrift)).toThrow(
+      /Dependency path drift/
     );
   });
 
@@ -168,13 +213,53 @@ describe('audit-production fail-closed compensating controls', () => {
     ).toThrow(/missing vulnerabilities object/);
   });
 
-  // Test 7: command-error fail
-  it('7. command-error fail: throws if child process command fails or produces empty stdout', () => {
+  // Test 7: exact advisory identity and command-error fail
+  it('7a. advisory identity fail: requires both the approved source and URL', () => {
+    const wrongSource = createValidAuditJson();
+    wrongSource.vulnerabilities.picomatch.via[0].source = 999999;
+    expect(() => validateAuditReport(wrongSource)).toThrow(
+      /Unapproved advisory/
+    );
+
+    const wrongUrl = createValidAuditJson();
+    wrongUrl.vulnerabilities.picomatch.via[0].url =
+      'https://github.com/advisories/GHSA-wrong-id';
+    expect(() => validateAuditReport(wrongUrl)).toThrow(
+      /Unapproved advisory/
+    );
+  });
+
+  it('7b. command-error fail: rejects npm ls and npm audit execution errors', () => {
+    const baseOptions = {
+      nextConfigContent: 'export default {};',
+      lockfile: createValidLockfile(),
+      writeFileImpl: () => {},
+    };
+
     expect(() =>
       runAudit({
-        cwd: '/non/existent/path',
+        ...baseOptions,
+        spawnImpl: () => ({ error: new Error('npm ls unavailable') }),
       })
-    ).toThrow();
+    ).toThrow(/Failed to execute npm ls/);
+
+    let callCount = 0;
+    expect(() =>
+      runAudit({
+        ...baseOptions,
+        spawnImpl: () => {
+          callCount += 1;
+          if (callCount === 1) {
+            return {
+              status: 0,
+              stdout: JSON.stringify(createValidDependencyTree()),
+              stderr: '',
+            };
+          }
+          return { error: new Error('npm audit unavailable') };
+        },
+      })
+    ).toThrow(/Failed to execute npm audit/);
   });
 
   // Test 8: extractor-enabled fail
