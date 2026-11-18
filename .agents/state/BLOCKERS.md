@@ -1,15 +1,17 @@
 # Operational Blockers
 
-**Last updated:** 2026-11-17
+**Last updated:** 2026-11-18
 
 ## Active now
 
+No active blocker prevents `P0-01`.
+
+## Resolved
+
 ### B-001 — Continuity setup not yet canonical on `main`
 
-- **Blocks:** completion of `P0-00` and clean handoff to `P0-01`.
-- **State:** PR #28 contains the setup; acceptance and merge remain.
-- **Owner needed:** founder/repository maintainer for merge authorization.
-- **Do not bypass by:** starting an alternate roadmap or copying the files directly into another checkout.
+- **Resolved:** 2026-11-18.
+- **Evidence:** PR #28 merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef` after exact-head CI and Vercel preview checks passed.
 
 ## Later phase gates
 
