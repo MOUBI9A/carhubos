@@ -2,7 +2,7 @@
 
 **Board version:** 1
 
-**Last updated:** 2026-11-17
+**Last updated:** 2026-11-18
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 
@@ -10,9 +10,9 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Next task after this setup is accepted:** `P0-01`
+**Active task:** `P0-04`
 
-**Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`)
+**Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 This board is the canonical work queue. Strategy belongs in the master plan; exact resume state belongs in `.agents/state/CURRENT.md`. Do not create another roadmap.
 
@@ -46,11 +46,11 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 
 | ID | Status | Task | Dependencies | Acceptance evidence | Owner / PR |
 |---|---|---|---|---|---|
-| `P0-00` | `REVIEW` | Install the canonical cross-AI plan, board, current-state and handoff protocol; remove stale resume signals | None | Canonical files linked from `AGENTS.md`/`CLAUDE.md`; stale state replaced; master-plan corrections incorporated; CI and preview green | Codex / #28 |
-| `P0-01` | `NOT_STARTED` | Remove duplicate push+PR CI runs and establish stable required-check contexts | `P0-00` | One CI set per PR; push-to-main coverage preserved; five web/backend contexts deterministic; mobile required-check behavior documented; green test PR | Unclaimed |
+| `P0-00` | `DONE` | Install the canonical cross-AI plan, board, current-state and handoff protocol; remove stale resume signals | None | Canonical files linked from `AGENTS.md`/`CLAUDE.md`; stale state replaced; master-plan corrections incorporated; exact-head CI and preview green; merged | Codex / #28 |
+| `P0-01` | `BLOCKED` | Remove duplicate push+PR CI runs and establish stable required-check contexts | `P0-00` | One CI set per PR; push-to-main coverage preserved; five web/backend contexts deterministic; mobile required-check behavior documented; green test PR | Codex / draft #29; blocked by B-007 |
 | `P0-02` | `NOT_STARTED` | Protect `main` and prove enforcement | `P0-01` | PR required; required checks enforced; force-push/deletion blocked; stale approvals/conversations policy set; deliberately red test PR cannot merge | Unclaimed |
 | `P0-03` | `NOT_STARTED` | Add CODEOWNERS and release/incident authority matrix | `P0-02` | Sensitive paths have reviewers; merge/deploy/migrate/secret/AI/payment/incident owners recorded and reviewed | Unclaimed |
-| `P0-04` | `NOT_STARTED` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Unclaimed |
+| `P0-04` | `IN_PROGRESS` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Codex / PR pending |
 | `P0-05` | `NOT_STARTED` | Verify production topology and deployment trigger read-only | `P0-02` | Hosting project/team, deployed SHA/revision, DB/storage/DNS, env ownership, migration history and main-to-production behavior recorded without secrets | Unclaimed |
 | `P0-06` | `NOT_STARTED` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Unclaimed |
 | `P0-07` | `NOT_STARTED` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Unclaimed |
@@ -108,4 +108,4 @@ Add entries here only when a task becomes `DONE`:
 
 | ID | Merge SHA | Evidence summary | Date |
 |---|---|---|---|
-| — | — | No master-plan task has been merged into the canonical base yet. | 2026-11-17 |
+| `P0-00` | `e010505e5f5ad53cc3bf9535e506668e2ed913ef` | PR #28 merged after duplicate backend, container, live-Postgres E2E, frontend, full Playwright and Vercel preview checks passed on exact head `2f2bbe4a82b61427f536895bc97e225f6beda79c`. | 2026-11-18 |
