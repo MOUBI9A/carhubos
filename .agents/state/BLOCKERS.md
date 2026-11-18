@@ -6,7 +6,7 @@
 
 ### B-007 — No patched release for new `picomatch` high-severity advisory
 
-- **Blocks:** green acceptance evidence for `P0-01` and therefore `P0-02` branch-protection setup.
+- **Blocks:** green acceptance/merge evidence for `P0-01` and `P0-04`, and therefore `P0-02` branch-protection setup.
 - **Evidence:** draft PR #29 produces one non-duplicated five-job CI set, but the unchanged frontend `npm audit --omit=dev --audit-level=high` gate fails on `GHSA-fc5q-39xc-vjpf`; the other four application CI jobs and Vercel preview pass.
 - **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected. `next-intl@4.15.1`, also the latest, still depends on `@parcel/watcher`, so upgrading that parent does not remove the path.
 - **Safe resolution:** consume a published patched release or a reviewed upstream dependency change, then rerun the exact audit and all five CI jobs.

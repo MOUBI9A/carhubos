@@ -2,21 +2,21 @@
 
 The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentionally contains only the next one to three actions.
 
-## 1. Consolidate canonical documentation (`P0-04`)
-
-**Status:** `IN_PROGRESS` on `codex/p0-04-doc-consolidation`.
-
-- Point every active entry document to the canonical plan, execution board and current state.
-- Mark obsolete phase narratives and work queues as historical/superseded without moving or deleting them.
-- Verify links and conflicting source-of-truth claims, then open a scoped documentation PR.
-
-## 2. Resolve CI security blocker and accept deduplication (`P0-01`)
+## 1. Resolve CI security blocker and accept deduplication (`P0-01`)
 
 **Status:** `BLOCKED` on draft PR #29 by B-007.
 
 - Wait for a safe patched dependency or reviewed upstream dependency removal.
 - Do not suppress the advisory or lower the production audit gate.
 - Once safe, prove one green five-job CI set on the exact PR head and one push-triggered set after merge.
+
+## 2. Accept canonical documentation consolidation (`P0-04`)
+
+**Status:** implementation verified in draft PR #30; required CI and merge are blocked by B-007.
+
+- After PR #29 merges, rebase #30 and reconcile the shared board/state files.
+- Re-run link resolution, conflicting-claim scan and one exact-head CI set.
+- Merge only with explicit human authorization.
 
 ## 3. Protect `main` (`P0-02`)
 
