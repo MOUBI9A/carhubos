@@ -4,16 +4,16 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 1. Remove duplicate CI execution (`P0-01`)
 
-**Status:** `BLOCKED` on draft PR #29 by B-007.
+**Status:** `IN_PROGRESS` on recovery branch `codex/p0-01-recover-approved-controls` after stale concurrent commit `a697a31` entered the PR #29 merge.
 
 - Limit normal CI push coverage to `main`; preserve pull requests targeting `main` and manual dispatch.
 - Keep the exact five web/backend job names stable.
 - Document event behavior and why mobile CI is not yet globally required.
-- The test PR already proves exactly one automatic CI set. Either consume a safe upstream fix or obtain explicit founder/security approval for `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`; then implement and prove the selected path without a blanket audit bypass.
+- Restore the exact founder-approved, fail-closed, artifact-backed controls already verified at `e2a5942`; run the full gate, merge the recovery PR only on a green exact head, then verify the resulting `main` run.
 
 ## 2. Protect `main` (`P0-02`)
 
-**Status:** `NOT_STARTED`; blocked until `P0-01` is accepted and merged.
+**Status:** `NOT_STARTED`; blocked until the `P0-01` recovery is merged and verified on `main`.
 
 - Require PRs and the stable checks.
 - Block force pushes and deletion.
