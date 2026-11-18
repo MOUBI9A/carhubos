@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-01-ci-contexts`
 
-**Current PR:** #29 — draft; CI deduplication proven, green acceptance blocked by B-007
+**Current PR:** #29 — draft; CI deduplication proven, B-007 remediation in progress
 
 **Current base:** `origin/main` at `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `BLOCKED`
+**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `IN_PROGRESS`
 
 **Next task:** `P0-02` — protect `main` and prove enforcement, after `P0-01` is accepted and merged
 
@@ -57,6 +57,8 @@ Always re-verify these drift-prone facts before acting.
 
 - `.github/workflows/ci.yml`
 - `docs/operations/CI_GOVERNANCE.md`
+- `frontend/package.json`
+- `frontend/package-lock.json`
 - `docs/progress/EXECUTION_BOARD.md`
 - `.agents/state/CURRENT.md`
 - `.agents/state/NEXT.md`
