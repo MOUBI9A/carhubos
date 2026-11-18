@@ -2,6 +2,16 @@
 
 A production-grade, multi-tenant SaaS platform for car rental agencies, specifically localized for the Moroccan market (MAD currency, VAT 20%, local compliance).
 
+> [!IMPORTANT]
+> **Canonical project governance and execution truth**
+>
+> 1. [Repository rules and invariants](../AGENTS.md)
+> 2. [Platform readiness master plan](operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md)
+> 3. [Active execution board](progress/EXECUTION_BOARD.md)
+> 4. [Current verified resume state](../.agents/state/CURRENT.md)
+>
+> Select work and report readiness only from that hierarchy. Legacy phase numbers, roadmaps, audit snapshots and progress narratives elsewhere in `docs/` are supporting or historical material unless the canonical board explicitly activates them.
+
 ## 🚀 Key Features
 
 ### 🏢 Multi-Tenant Agency Management
@@ -35,7 +45,7 @@ A production-grade, multi-tenant SaaS platform for car rental agencies, specific
 - **Testing**: Jest
 - **Security**: `@nestjs/jwt`, `@nestjs/throttler` (rate limiting), `class-validator` (input validation), `RolesGuard` (RBAC)
 
-> See **[../CLAUDE.md](../CLAUDE.md)** for how to run it and the current conventions, and **[AUDIT_BACKLOG.md](./AUDIT_BACKLOG.md)** for market-readiness status.
+> See **[../CLAUDE.md](../CLAUDE.md)** for technical conventions. Use the **[master plan](operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md)** and **[execution board](progress/EXECUTION_BOARD.md)** for market-readiness status; `AUDIT_BACKLOG.md` is retained as supporting historical audit context.
 
 ## 📂 Project Structure
 
@@ -52,8 +62,11 @@ A production-grade, multi-tenant SaaS platform for car rental agencies, specific
 
 ## 📖 Documentation
 
-- [API Reference](./backend/API.md) - Detailed endpoint documentation.
-- [Development Guide](./backend/DEVELOPMENT.md) - Setup, testing, and contribution instructions.
+- [Cross-AI continuity protocol](operations/AI_CONTINUITY_PROTOCOL.md) — mandatory start, claim, evidence and handoff workflow.
+- [Platform readiness master plan](operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) — accepted strategy, architecture and release gates.
+- [Execution board](progress/EXECUTION_BOARD.md) — canonical task order, dependencies, status and acceptance evidence.
+- [Current state](../.agents/state/CURRENT.md) — exact branch, task, verified state, blocker and resume point.
+- [Product vision](PRODUCT_VISION.md), [design vision](DESIGN_VISION.md) and [audit backlog](AUDIT_BACKLOG.md) — supporting domain and historical context; they do not override the canonical execution hierarchy.
 
 ## ⚖️ License
 Proprietary - Developed for CarHub SaaS Platform.

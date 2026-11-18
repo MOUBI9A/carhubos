@@ -1,7 +1,11 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
-> Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
-> **Last updated at commit `ff8021b`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/108 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
+> [!WARNING]
+> **Historical progress snapshot — superseded.** This document preserves an older development handoff and its point-in-time verification claims. Do not select work, infer current readiness, or resume from it.
+>
+> Current authority: [AGENTS.md](AGENTS.md) → [platform readiness master plan](docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) → [execution board](docs/progress/EXECUTION_BOARD.md) → [current verified state](.agents/state/CURRENT.md).
+
+**Snapshot baseline:** last updated at commit `ff8021b`; at that time the tree was reported clean, backend tsc/Jest (16 suites/108 tests)/ESLint and frontend tsc/Vitest (9/9)/ESLint were green. These counts are historical, not current evidence.
 
 ## ⚠️ Important: another AI may also work this repo
 
@@ -12,8 +16,8 @@
 ## The goal
 Take this multi-tenant car-rental SaaS from demo → market-ready. B2B SaaS: the **founder** (ROOT_ADMIN) runs the platform; **agencies** (OWNER + staff) are paying subscribers; **renters** are end users. Done = the **Market-Ready Checklist** at the bottom of `docs/AUDIT_BACKLOG.md`.
 
-## Founder decisions (locked)
-VAT inclusive · Billing = manual invoicing (no Stripe) · Plans free during beta (BETA plan grants all) · i18n FR (default) + AR (RTL) + EN · Trial 14 days · Deploy target deferred to the Phase 9 gate · Commit verified milestones directly to `main` (no phase branches).
+## Founder decisions recorded by this historical snapshot
+VAT inclusive · Billing = manual invoicing (no Stripe) · Plans free during beta (BETA plan grants all) · i18n FR (default) + AR (RTL) + EN · Trial 14 days · Deploy target deferred to the legacy Phase 9 gate. The former direct-to-`main` instruction is superseded by the scoped-branch and pull-request workflow in `AGENTS.md`.
 
 ## Local run
 ```

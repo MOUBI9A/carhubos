@@ -2,7 +2,12 @@
 
 Welcome to the Gemini CLI Developer Guide for **Fider** (formerly Infinity/CarHub). Fider is a multi-tenant SaaS ERP engineered specifically for car-rental agencies, localized for **Morocco** (currency **MAD**, **20% VAT**).
 
-This document serves as the primary system-wide source of truth for the codebase architecture, development conventions, strict invariants, and localized workflows when operating with the Gemini CLI.
+> [!IMPORTANT]
+> **Canonical project governance and execution truth:** [AGENTS.md](AGENTS.md) → [platform readiness master plan](docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) → [execution board](docs/progress/EXECUTION_BOARD.md) → [current verified state](.agents/state/CURRENT.md).
+>
+> Select or resume work only from that hierarchy. Legacy phase narratives in this guide are historical context and do not override the Phase 0–8 master plan or active task board.
+
+This document is a Gemini-oriented technical guide for architecture, development conventions, strict invariants and localized workflows. It is not the active work queue or readiness ledger.
 
 ---
 
@@ -136,7 +141,10 @@ npx tsc --noEmit
 
 ---
 
-## 5. Development Progress & Roadmap
+## 5. Historical Development Progress
+
+> [!NOTE]
+> The Phase 0–12 labels below are a retained milestone snapshot. They are not the current Phase 0–8 release gates. Use the canonical execution board and current state for live status.
 
 ### Completed Milestones
 * **Phase 0 (Security Scrape):** Purged exposed keys, hardened root routes, and patched user signup escalation vectors.
@@ -146,8 +154,8 @@ npx tsc --noEmit
 * **Phase 5B (Consent Engine):** Constructed the secure `RenterDocument` global vault and time-boxed, revocable consent matching systems.
 * **Phase 11 (SaaS Business Layer):** Created billing schema (`Plan`, `Subscription`, `PlatformInvoice`), built out the `EntitlementsService` with strict limits gating, wired up tenant impersonation, and deployed the root `/admin` metrics console.
 
-### Current Target Work
-* **Phase 12 (Design Rebuild — "Fider Lux"):** Currently in progress. We are transitioning the frontend from a generic glassmorphism aesthetic to a warm, premium, hospitality-style interface (Warm graphite, off-white, restrained violet, sparing brass accents, and real photographic placeholders). logical CSS layout properties are enforced to support multi-lingual RTL transitions in the next phase.
+### Historical target recorded by this snapshot
+* **Legacy Phase 12 (Design Rebuild — "Fider Lux"):** This guide originally recorded the rebuild as in progress. Treat the description as design context only; current implementation and task status must be verified through the canonical board and current-state handoff.
 
 ---
 
