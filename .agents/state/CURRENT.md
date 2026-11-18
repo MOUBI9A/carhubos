@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-01-ci-contexts`
 
-**Current PR:** #29 — in review; CI deduplication proven, all 5 CI jobs green on run 44267324796
+**Current PR:** #29 — adversarial review fixes in progress after initial green run 44267324796
 
 **Current base:** `origin/main` at `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `REVIEW`
+**Active task:** `P0-01` — remove duplicate push+PR CI runs and establish stable required-check contexts, status `IN_PROGRESS`
 
 **Next task:** `P0-02` — protect `main` and prove enforcement, after `P0-01` is accepted and merged
 
@@ -65,7 +65,16 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-01`
 
-None. The claim is released; PR #29 is in `REVIEW` awaiting merge.
+- `frontend/scripts/audit-production.mjs`
+- `frontend/scripts/audit-production.test.mjs`
+- `.github/workflows/dependency-exception-monitor.yml`
+- `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`
+- `docs/operations/CI_GOVERNANCE.md`
+- `docs/progress/EXECUTION_BOARD.md`
+- `.agents/state/CURRENT.md`
+- `.agents/state/NEXT.md`
+- `.agents/state/BLOCKERS.md`
+- `COORDINATION.md` (claim/release commits only)
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
