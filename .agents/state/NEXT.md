@@ -9,7 +9,7 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 - Limit normal CI push coverage to `main`; preserve pull requests targeting `main` and manual dispatch.
 - Keep the exact five web/backend job names stable.
 - Document event behavior and why mobile CI is not yet globally required.
-- The test PR already proves exactly one automatic CI set; wait for a safe upstream fix for `GHSA-fc5q-39xc-vjpf`, then restore a green exact-head run without weakening the audit.
+- The test PR already proves exactly one automatic CI set. Either consume a safe upstream fix or obtain explicit founder/security approval for `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`; then implement and prove the selected path without a blanket audit bypass.
 
 ## 2. Protect `main` (`P0-02`)
 

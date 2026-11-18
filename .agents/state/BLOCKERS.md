@@ -8,9 +8,10 @@
 
 - **Blocks:** green acceptance evidence for `P0-01` and therefore `P0-02` branch-protection setup.
 - **Evidence:** manual CI run `44230394964` fails the unchanged frontend `npm audit --omit=dev --audit-level=high` gate on `GHSA-fc5q-39xc-vjpf`; draft PR #29 reproduces the same gate on one non-duplicated CI set.
-- **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected. A lockfile-only update to latest was tested and fully reverted because it did not clear the audit.
+- **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected. A lockfile-only update and an older `@parcel/watcher@2.5.1` override were each tested and fully reverted because neither cleared the audit.
+- **Reachability evidence:** the project does not enable `next-intl` experimental extraction; the vulnerable watcher subscription and glob compilation are therefore not started by the current configuration, and no application/user input supplies glob patterns through this path. This lowers known exploitability but does not erase the installed-package risk.
 - **Safe resolution:** consume a published patched release or a reviewed upstream dependency change, then rerun the exact audit and all five CI jobs.
-- **Human alternative:** a founder/security owner may approve a documented, time-bounded exception with exposure analysis, compensating controls and expiry; no such exception currently exists.
+- **Human alternative:** a founder/security owner may explicitly approve the proposed, currently inactive 14-day exception in `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`. Approval must precede implementation.
 - **Do not bypass by:** suppressing the advisory, lowering the audit threshold, removing the production audit, or marking a red PR ready.
 
 ## Resolved
