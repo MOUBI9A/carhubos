@@ -1,5 +1,41 @@
 # Architectural Decision Records (ADR)
 
+> The master plan and decisions below are binding for new work. ADR-001 and the remaining older automotive ADRs are retained as historical context and apply only if revalidated against the current execution board. ADR-001's branch choice is superseded by ADR-010.
+
+## ADR-010: One canonical cross-AI execution system
+
+- **Date:** 2026-11-17
+- **Status:** Accepted in PR #28; canonical after merge.
+- **Decision:** Every AI follows `AGENTS.md` → master plan → execution board → current state, claims one stable task ID, and updates the handoff files before stopping. No second roadmap may be created.
+- **Reason:** Existing state files and phase summaries diverged and could send a new agent to an obsolete branch or duplicate completed work.
+- **Consequences:** Progress becomes resumable and auditable; maintaining the board/current state is part of every task’s definition of done.
+
+## ADR-011: Staged modular-monolith completion and web-first pilot
+
+- **Date:** 2026-11-17
+- **Status:** Accepted in the master plan.
+- **Decision:** Keep the NestJS/Next.js/PostgreSQL modular monolith, protect and prove the non-AI web core first, then add governed capabilities in phase order.
+- **Rejected:** rewrite, big-bang open-PR merge, and premature microservice split.
+- **Consequences:** Some headline AI/mobile/GPS capabilities remain disabled while the core reaches a controlled pilot.
+
+## ADR-012: AI and telemetry follow the stable core pilot
+
+- **Date:** 2026-11-17
+- **Status:** Accepted in the master plan.
+- **Decision:** PRs #23–#26 are preserved but not merged before the Phase 3 core-pilot exit gate. Initial AI is fixed-tool/read-only/default-off. Initial GPS is passive/read-only with no vehicle-control path.
+- **Reason:** Intelligence features must not hide or amplify defects in tenancy, money, consent, recovery or support.
+- **Consequences:** AI rebase happens against post-pilot `main`; provider/model/GPS legal and security gates remain explicit.
+
+## ADR-013: Protected PR workflow supersedes direct-to-main development
+
+- **Date:** 2026-11-17
+- **Status:** Accepted; enforcement is task `P0-02`.
+- **Decision:** Use scoped branches, required CI and pull requests. Direct development on `main` is no longer the operating model.
+- **Reason:** The real-user program needs reviewable exact-SHA evidence and cannot rely on voluntary local gates.
+- **Consequences:** CI contexts must first be made unambiguous in `P0-01`; branch protection then becomes mandatory.
+
+## Historical automotive decisions
+
 ## ADR-001: Dedicated Feature Branch for Automotive OS Platform
 - **Date**: 2026-10-17
 - **Decision**: Branch from latest hardened mobile & release baseline (`feat/mobile-app-store-release`) to `feat/automotive-os-platform`.

@@ -2,7 +2,9 @@
 
 Multi-tenant SaaS ERP for car-rental agencies, localized for **Morocco** (currency **MAD**, **20% VAT**).
 **Public brand = "Fider"** (tagline *"the trust layer for mobility"*) — rebranded from "Infinity"/"CarHub" across the frontend (nav, footer, login, `/signup`, metadata). The repo dir is still `carhubos`; internal-only CSS class names (`.btn-infinity`) are unchanged.
-Being taken from demo → market-ready. **This file + [docs/AUDIT_BACKLOG.md](docs/AUDIT_BACKLOG.md) + [docs/DESIGN_VISION.md](docs/DESIGN_VISION.md) are the source of truth.** Older docs (`docs/README.md`, `docs/PRODUCTION_READINESS_REPORT.md`, the dossiers) are historical and may be stale — trust these three. **Keep this file current at the end of every phase.**
+Being taken from demo → market-ready. **Execution source of truth:** [AGENTS.md](AGENTS.md) → [master plan](docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) → [execution board](docs/progress/EXECUTION_BOARD.md) → [.agents/state/CURRENT.md](.agents/state/CURRENT.md). This file documents technical conventions and architecture; its historical phase narrative must not be used to select new work when it disagrees with the execution board. [docs/AUDIT_BACKLOG.md](docs/AUDIT_BACKLOG.md), [docs/DESIGN_VISION.md](docs/DESIGN_VISION.md), and `PROGRESS.md` remain supporting context. Older docs (`docs/README.md`, `docs/PRODUCTION_READINESS_REPORT.md`, the dossiers) may be stale.
+
+> **Every AI must start with [the continuity protocol](docs/operations/AI_CONTINUITY_PROTOCOL.md).** Verify Git/live state, claim one board task, preserve unrelated work, and update the board plus `.agents/state/CURRENT.md` before pausing.
 
 **Public surface:** `/landing` (marketing — hero, features, `#solutions` with an interactive client-side **Trust Console** demo, `#enterprise`, honest capability tiles, `#contact` with WhatsApp `+212616880653` + email `hamzamoadin37@gmail.com`), `/login`, `/signup` (agency onboarding → `POST /auth/register` creates OWNER + agency → auto-login). Note: `lib/api.ts`'s 401 interceptor exempts public routes (`/landing`,`/login`,`/signup`,`/`) so logged-out visitors aren't bounced.
 
@@ -19,7 +21,7 @@ Being taken from demo → market-ready. **This file + [docs/AUDIT_BACKLOG.md](do
 | Validation | `class-validator` DTOs | global `ValidationPipe` (`whitelist` + `forbidNonWhitelisted`) |
 | Tests | Jest | `cd backend && npx jest` |
 
-**MCP tools available in this project** (2026-07-18): `.mcp.json` connects Claude Code to the Docker MCP Toolkit gateway (`MCP_DOCKER`, `dev_workflow` profile) — GitHub (repos/files/issues/PRs/search) and Atlassian (Jira/Confluence) tools, both OAuth-authorized (`docker mcp oauth ls` → `authorized`; GitHub account `MOUBI9A`). Use them when a task actually calls for it (checking/filing a GitHub issue, opening a PR, a Jira ticket, searching a repo) — this does **not** change the locked workflow decision in §9 (commit verified milestones directly to `main`, no phase branches) unless the founder says otherwise. If a session reports these tools as unavailable/ungated, it needs an app restart to pick up `.mcp.json` — the connection itself (`docker mcp client ls`) is already live.
+**MCP tools available in this project** (2026-07-18): `.mcp.json` connects Claude Code to the Docker MCP Toolkit gateway (`MCP_DOCKER`, `dev_workflow` profile) — GitHub (repos/files/issues/PRs/search) and Atlassian (Jira/Confluence) tools, both OAuth-authorized (`docker mcp oauth ls` → `authorized`; GitHub account `MOUBI9A`). Use them when a task actually calls for it (checking/filing a GitHub issue, opening a PR, a Jira ticket, searching a repo). Tool availability never overrides the scoped-branch, PR, evidence, and human-gate workflow in §9 and the continuity protocol. Re-verify authentication before relying on a connection.
 
 ---
 
@@ -118,7 +120,7 @@ A **supervisor** decomposes each backlog phase into small tasks with **exact fil
 
 - **Disjoint file ownership** for anything run in parallel — never two workers on the same file at once. Schema-touching work (shared `schema.prisma`) is **serialized**.
 - **Verify before commit:** a `verifier` pass on each change (or per batch); **always individual** for security / money / DB / migration changes. Never commit red (tsc or tests failing).
-- **Branch/commit:** currently working directly on `main` (per owner's choice). Keep `tsc --noEmit` + `jest` green at every commit. Conventional, descriptive commit messages.
+- **Branch/commit:** use a scoped feature/fix branch and pull request; never work directly on `main`. Keep the relevant typecheck, tests, lint, and build green at every commit. Use conventional, descriptive commit messages.
 - **Human gates:** Phase 0 (secret rotation / history rewrite — done), Phase 2 (destructive migration — done), Phase 9 (deploy target + go-live), and any product decision (DB host, VAT model, i18n scope).
 - **Docs:** update `CLAUDE.md` + the backlog + any stale doc at the end of every phase.
 - **Two AI agents share this checkout** (a Lead Developer and a Co-Developer, plus possibly the Codex fleet in §10). **[COORDINATION.md](COORDINATION.md) is the async channel between them (protocol, live status board, open lanes)** — read it before your first write of a session, claim contended work in its "Live status board", and check its "Open findings" list for cross-cutting issues one agent flagged for the other to own. Neither agent sees the other's conversation; anything the other needs to know goes in that file, not in chat.
@@ -126,6 +128,8 @@ A **supervisor** decomposes each backlog phase into small tasks with **exact fil
 ---
 
 ## 10. Phase progress (see the backlog for detail)
+
+> **Historical snapshot only.** Do not choose or resume work from this section. Use `docs/progress/EXECUTION_BOARD.md` and `.agents/state/CURRENT.md`; reconcile this history only as an explicit documentation task.
 
 - **Phase 0** ✅ security incident — secrets purged/rotated, git history scrubbed, repo private, register authz fixed.
 - **Phase 1** ✅ correctness & authz — throttler, JWT fail-fast, trust role-gating, payments/expenses IDOR, invoice reconciliation, double-booking guard, HMAC identity hash.
