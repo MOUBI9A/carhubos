@@ -6,17 +6,17 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-08-retire-withdrawn-exception`
+**Current branch:** `codex/p0-02-p0-08-closeout`
 
-**Current PR:** P0-08 remediation PR pending; P0-02 PR #34 merged as `b7cc4156f61ca017ef08aaec190d7e8672b59a67`
+**Current PR:** P0-02/P0-08 state-only closeout pending; P0-08 PR #35 merged as `eba3c5cd9aab02e15b99f2a85a45561bdf541654`
 
-**Current base:** `origin/main` at `b7cc4156f61ca017ef08aaec190d7e8672b59a67`
+**Current base:** `origin/main` at `eba3c5cd9aab02e15b99f2a85a45561bdf541654`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-08` — retire the withdrawn picomatch exception and restore the standard production audit, status `REVIEW`
+**Active task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix, status `READY`
 
-**Next task:** close P0-02 after recovered `main` CI is green, then claim `P0-03`
+**Next task:** merge this state-only closeout, then claim `P0-03` on a new branch
 
 Always re-verify these drift-prone facts before acting.
 
@@ -69,6 +69,9 @@ Always re-verify these drift-prone facts before acting.
 - Claimed urgent P0-08 to remove the obsolete wrapper, monitor, artifacts and exception-only tests and restore the standard frontend production audit.
 - Verified P0-08 locally: direct production audit reports zero vulnerabilities; TypeScript passes; 14 Vitest suites / 55 non-exception tests pass; ESLint has zero errors and the same three pre-existing navigation warnings; production build, workflow YAML and diff checks pass.
 - A bounded read-only Antigravity review returned `NO BLOCKER`, confirming complete exception cleanup, restored standard auditing, unchanged severity threshold, preserved historical evidence, and consistent operational state.
+- P0-08 PR #35 passed all five protected checks plus Vercel on exact head `8b461b8`, became `CLEAN`, and merged as `eba3c5cd9aab02e15b99f2a85a45561bdf541654`.
+- Canonical `main` run `44442498902` passed all five jobs, including the restored standard production audit; live branch protection was reverified with the same strict five contexts and safety controls.
+- P0-08 and P0-02 now satisfy their acceptance evidence and are marked `DONE`; P0-03 is the next ready task.
 
 ## Last verified state
 
@@ -81,21 +84,20 @@ Always re-verify these drift-prone facts before acting.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-08`
+## Files currently claimed by closeout
 
-None. The P0-08 implementation claim is released while the protected remediation PR is reviewed.
+None. The P0-02/P0-08 closeout claim is released while its protected state-only PR is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Verify the restored direct audit plus TypeScript, Vitest, ESLint, production build, workflow YAML and diff integrity locally.
-2. Open the P0-08 remediation PR and require all five protected checks on its exact head.
-3. Merge only a green exact head, verify the resulting `main` run, then mark P0-08 and P0-02 `DONE` and claim P0-03.
+1. Merge this state-only closeout after its exact-head protected checks pass.
+2. Re-verify the canonical `main` run and live protection state.
+3. Claim `P0-03` on a new `codex/` branch and add founder-owned sensitive-path CODEOWNERS plus the release/incident authority matrix.
 
 ## Unresolved risks
 
-- Canonical `main` run `44440792583` is red until P0-08 retires the withdrawn-advisory wrapper and restores the standard audit.
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
