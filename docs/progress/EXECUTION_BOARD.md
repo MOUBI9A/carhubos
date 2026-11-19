@@ -2,7 +2,7 @@
 
 **Board version:** 1
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 
@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-03`
+**Active task:** `P0-04`
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
@@ -49,8 +49,8 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 | `P0-00` | `DONE` | Install the canonical cross-AI plan, board, current-state and handoff protocol; remove stale resume signals | None | Canonical files linked from `AGENTS.md`/`CLAUDE.md`; stale state replaced; master-plan corrections incorporated; exact-head CI and preview green; merged | Codex / #28 |
 | `P0-01` | `DONE` | Remove duplicate push+PR CI runs and establish stable required-check contexts | `P0-00` | One CI set per PR; push-to-main coverage preserved; five web/backend contexts deterministic; mobile required-check behavior documented; green test PR | Codex / #29 + recovery #31; canonical merge `61e30ac`; all five jobs green on push run `44278183559` |
 | `P0-02` | `DONE` | Protect `main` and prove enforcement | `P0-01` | PR required; required checks enforced; force-push/deletion blocked; stale approvals/conversations policy set; deliberately red test PR cannot merge | Codex / #34; red proof #33 blocked; live API reverified; all five jobs green on canonical run `44442498902` |
-| `P0-03` | `REVIEW` | Add CODEOWNERS and release/incident authority matrix | `P0-02` | Sensitive paths have reviewers; merge/deploy/migrate/secret/AI/payment/incident owners recorded and reviewed | Codex / #37 merged as `091d320`; post-merge run `44446578976` green; closeout in progress on `codex/p0-03-closeout` |
-| `P0-04` | `NOT_STARTED` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Unclaimed |
+| `P0-03` | `DONE` | Add CODEOWNERS and release/incident authority matrix | `P0-02` | Sensitive paths have reviewers; merge/deploy/migrate/secret/AI/payment/incident owners recorded and reviewed | Codex / #37; merge `091d320`; GitHub CODEOWNERS parser clean on `main`; all five jobs green on run `44446578976` |
+| `P0-04` | `READY` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Existing draft #30 must be rebased and reconciled with post-P0-03 `main`; unclaimed until closeout merges |
 | `P0-05` | `NOT_STARTED` | Verify production topology and deployment trigger read-only | `P0-02` | Hosting project/team, deployed SHA/revision, DB/storage/DNS, env ownership, migration history and main-to-production behavior recorded without secrets | Unclaimed |
 | `P0-06` | `NOT_STARTED` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Unclaimed |
 | `P0-07` | `NOT_STARTED` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Unclaimed |
