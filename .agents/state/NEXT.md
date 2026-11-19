@@ -4,10 +4,10 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 1. Finish production topology evidence (`P0-05`)
 
-**Status:** `IN_PROGRESS` on `codex/p0-05-topology-audit`.
+**Status:** `REVIEW` in draft PR #39.
 
-- Independently review `docs/operations/PRODUCTION_TOPOLOGY.md` and the recorded release restrictions.
-- Open a protected documentation PR and wait for exact-head CI plus Vercel preview evidence.
+- Independent review returned `NO BLOCKER`; wait for exact-head CI plus Vercel Preview evidence.
+- Resolve any material review finding without weakening the recorded production restrictions.
 - Do not merge without the founder/release-owner gate: P0-05 proves that every `main` merge triggers production automatically.
 
 ## 2. Define environment/provider/data rules (`P0-06`)

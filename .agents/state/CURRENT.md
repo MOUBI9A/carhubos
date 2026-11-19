@@ -8,15 +8,15 @@
 
 **Current branch:** `codex/p0-05-topology-audit`
 
-**Current PR:** not opened yet; implementation and independent review are in progress
+**Current PR:** #39 — draft; implementation and independent review complete, protected exact-head checks pending
 
 **Current base:** `origin/main` at `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-05` — verify production topology and deployment trigger read-only, status `IN_PROGRESS`
+**Active task:** `P0-05` — verify production topology and deployment trigger read-only, status `REVIEW`
 
-**Next task:** finish and review the P0-05 evidence document, open its protected documentation PR, then begin `P0-06`
+**Next task:** finish protected review for PR #39; merge only through the founder/release-owner gate, then begin `P0-06`
 
 Always re-verify these drift-prone facts before acting.
 
@@ -36,6 +36,7 @@ Always re-verify these drift-prone facts before acting.
 - Only Production Vercel variables are configured. Secret values were not read or copied; no production mutation or customer-row export occurred.
 - Detailed evidence and limitations are recorded in `docs/operations/PRODUCTION_TOPOLOGY.md`.
 - A bounded read-only Antigravity review returned `NO BLOCKER`; it found the production/Preview distinction, migration conclusions, RLS wording, secret handling and release restrictions consistent.
+- Draft PR #39 is open for the documentation-only change; exact-head CI, Vercel Preview and the founder/release-owner merge gate remain pending.
 
 ## Completed before the current task
 
@@ -130,9 +131,9 @@ provider, billing configuration or customer data mutation is in scope.
 
 ## Exact resume action
 
-1. Run document consistency checks and a bounded independent Antigravity review of the P0-05 evidence.
-2. Commit and push the P0-05 documentation/state, open a protected documentation PR, then release the coordination claim in a separate commit.
-3. Wait for exact-head CI and Vercel preview evidence. Because P0-05 proves that every merge to `main` is a production deployment trigger, the merge requires the founder/release-owner gate recorded in B-009.
+1. Release the P0-05 coordination claim in a separate commit and mark PR #39 ready for review.
+2. Wait for exact-head CI and Vercel Preview evidence; resolve any material review finding without weakening the documented restrictions.
+3. Because P0-05 proves that every merge to `main` is a production deployment trigger, merge only after the founder/release-owner gate recorded in B-009.
 
 ## Unresolved risks
 
