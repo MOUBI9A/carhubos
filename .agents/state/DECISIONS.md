@@ -34,6 +34,14 @@
 - **Reason:** The real-user program needs reviewable exact-SHA evidence and cannot rely on voluntary local gates.
 - **Consequences:** CI contexts must first be made unambiguous in `P0-01`; branch protection then becomes mandatory.
 
+## ADR-014: Repository access does not imply production authority
+
+- **Date:** 2026-11-19
+- **Status:** Accepted under P0-03.
+- **Decision:** Sensitive paths map to the founder/security owner in `.github/CODEOWNERS`. The founder's explicit 2026-11-18 autonomy instruction delegates only low-risk documentation, governance and test-only PR merges to Codex after every protected gate passes. Runtime, dependency, schema, infrastructure or deployment-affecting merges—and production deploys, migrations, secret operations, live AI/provider/payment activation, billing changes, customer-data exports, legal/public commitments and incident command—remain founder-gated under `docs/operations/AUTHORITY_MATRIX.md` until production topology and authority are deliberately revised.
+- **Reason:** GitHub roles and AI tool access are technical capabilities, not proof of business, security, financial, legal or incident authority.
+- **Consequences:** Collaborators may author and review without silently receiving production powers. AI merge execution is a narrow, explicit and revocable delegation rather than a consequence of tool access. Required CODEOWNER approval remains disabled until an independently accountable owner is confirmed, avoiding a solo-founder self-approval deadlock.
+
 ## Historical automotive decisions
 
 ## ADR-001: Dedicated Feature Branch for Automotive OS Platform

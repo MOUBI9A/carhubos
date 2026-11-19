@@ -1,19 +1,25 @@
 # Operational Blockers
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 
 ## Active now
 
-### B-007 — No patched release for new `picomatch` high-severity advisory
-
-- **Blocks:** green acceptance/merge evidence for `P0-01` and `P0-04`, and therefore `P0-02` branch-protection setup.
-- **Evidence:** draft PR #29 produces one non-duplicated five-job CI set, but the unchanged frontend `npm audit --omit=dev --audit-level=high` gate fails on `GHSA-fc5q-39xc-vjpf`; the other four application CI jobs and Vercel preview pass.
-- **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected. `next-intl@4.15.1`, also the latest, still depends on `@parcel/watcher`, so upgrading that parent does not remove the path.
-- **Safe resolution:** consume a published patched release or a reviewed upstream dependency change, then rerun the exact audit and all five CI jobs.
-- **Human alternative:** a founder/security owner may approve a documented, time-bounded exception with exposure analysis, compensating controls and expiry; no such exception currently exists.
-- **Do not bypass by:** suppressing the advisory, lowering the audit threshold, removing the production audit, or marking a red PR ready.
+None.
 
 ## Resolved
+
+### B-007 — Withdrawn `picomatch` advisory required exception retirement
+
+- **Resolved:** 2026-11-19.
+- **Withdrawal evidence:** GitHub reports `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z` and updated at `2026-11-18T15:38:58Z`.
+- **Resolution:** PR #35 removed the exception-only wrapper, tests, monitor and artifacts and restored the direct high-threshold audit; merge commit `eba3c5c` passed all five canonical jobs in run `44442498902`.
+- **Audit evidence:** the unchanged production dependency tree reports zero production vulnerabilities.
+
+### B-008 — Stale concurrent-agent revert entered the PR #29 merge
+
+- **Resolved:** 2026-11-18.
+- **Evidence:** stale process stopped; recovery PR #31 restored the exact reviewed controls and merged as `61e30aca33d196442ec74926e0f911e63e15f4ab`; all five canonical jobs passed on `main` run `44278183559`.
+- **Safety outcome:** history was preserved; no force push or direct edit to `main` was used.
 
 ### B-001 — Continuity setup not yet canonical on `main`
 
