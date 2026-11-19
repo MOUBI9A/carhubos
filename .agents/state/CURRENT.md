@@ -83,7 +83,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-08`
 
-Claimed on `codex/p0-08-retire-withdrawn-exception`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,BLOCKERS}.md`; `.github/workflows/{ci,dependency-exception-monitor}.yml`; `docs/operations/CI_GOVERNANCE.md`; `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`; `frontend/package.json`; and `frontend/scripts/audit-production{,.test}.mjs`.
+None. The P0-08 implementation claim is released while the protected remediation PR is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
