@@ -93,7 +93,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-03`
 
-Claimed on `codex/p0-03-codeowners-authority`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,DECISIONS}.md`; `.github/CODEOWNERS`; and `docs/operations/{AUTHORITY_MATRIX,BRANCH_PROTECTION}.md`.
+None. The P0-03 claim is released while the protected pull request is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
