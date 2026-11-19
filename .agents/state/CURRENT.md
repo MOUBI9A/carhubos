@@ -6,17 +6,17 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-02-p0-08-closeout`
+**Current branch:** `codex/p0-03-codeowners-authority`
 
-**Current PR:** P0-02/P0-08 state-only closeout pending; P0-08 PR #35 merged as `eba3c5cd9aab02e15b99f2a85a45561bdf541654`
+**Current PR:** P0-03 PR pending; P0-02/P0-08 closeout PR #36 merged as `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`
 
-**Current base:** `origin/main` at `eba3c5cd9aab02e15b99f2a85a45561bdf541654`
+**Current base:** `origin/main` at `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix, status `READY`
+**Active task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix, status `REVIEW`
 
-**Next task:** merge this state-only closeout, then claim `P0-03` on a new branch
+**Next task:** `P0-04` — consolidate canonical documentation after P0-03 merges
 
 Always re-verify these drift-prone facts before acting.
 
@@ -72,6 +72,13 @@ Always re-verify these drift-prone facts before acting.
 - P0-08 PR #35 passed all five protected checks plus Vercel on exact head `8b461b8`, became `CLEAN`, and merged as `eba3c5cd9aab02e15b99f2a85a45561bdf541654`.
 - Canonical `main` run `44442498902` passed all five jobs, including the restored standard production audit; live branch protection was reverified with the same strict five contexts and safety controls.
 - P0-08 and P0-02 now satisfy their acceptance evidence and are marked `DONE`; P0-03 is the next ready task.
+- P0-02/P0-08 closeout PR #36 passed all five protected checks plus Vercel and merged as `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`.
+- Claimed P0-03 on `codex/p0-03-codeowners-authority`; live collaborator inventory shows founder/admin `@MOUBI9A` and write collaborator `@ChaimaAhaik`.
+- Added founder-owned sensitive-path mappings in `.github/CODEOWNERS` and a release/incident authority matrix that separates repository access from production, payment, secret, provider, data, legal and incident authority.
+- Recorded ADR-014 and documented why mandatory CODEOWNER approval remains disabled until an independently accountable owner is confirmed.
+- Confirmed canonical `main` run `44444423639` passed all five required jobs on closeout SHA `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`.
+- An initial bounded Antigravity review identified that autonomous merge authority could be read too broadly while the main-to-production trigger remains unverified; the matrix and ADR were narrowed to reversible documentation, governance and test-only PRs.
+- A second complete-snapshot Antigravity review returned `NO BLOCKER`, finding the sensitive-path coverage, solo-founder deadlock handling, authority boundaries and coordination state consistent.
 
 ## Last verified state
 
@@ -84,21 +91,22 @@ Always re-verify these drift-prone facts before acting.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by closeout
+## Files currently claimed by `P0-03`
 
-None. The P0-02/P0-08 closeout claim is released while its protected state-only PR is reviewed.
+Claimed on `codex/p0-03-codeowners-authority`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,DECISIONS}.md`; `.github/CODEOWNERS`; and `docs/operations/{AUTHORITY_MATRIX,BRANCH_PROTECTION}.md`.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Merge this state-only closeout after its exact-head protected checks pass.
-2. Re-verify the canonical `main` run and live protection state.
-3. Claim `P0-03` on a new `codex/` branch and add founder-owned sensitive-path CODEOWNERS plus the release/incident authority matrix.
+1. Commit and push the reviewed P0-03 implementation, then release its coordination claim in a separate commit.
+2. Open the protected P0-03 PR and merge only a green, clean exact head.
+3. Verify the post-merge `main` run and CODEOWNERS parser state, then mark P0-03 done and proceed to P0-04.
 
 ## Unresolved risks
 
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
+- Required CODEOWNER approval is intentionally disabled while the founder is the only confirmed accountable CODEOWNER; automated checks and conversation resolution remain mandatory.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
 - Several old phase summaries and historical documents remain stale; `P0-04` owns their reconciliation.
