@@ -102,7 +102,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-04`
 
-`.agents/state/{BLOCKERS,CURRENT,NEXT}.md`; `CLAUDE.md`; `COORDINATION.md`; `GEMINI.md`; `PROGRESS.md`; `docs/{EXECUTION_PLAN,README,ROADMAP}.md`; `docs/progress/EXECUTION_BOARD.md`; and `project_status.md`.
+None. The P0-04 claim is released while PR #30 receives protected exact-head review.
 
 No runtime code, database schema, migration, CI implementation, deployment, provider, billing configuration or customer data is in scope.
 
