@@ -57,3 +57,9 @@ Do not add a path-filtered job as globally required until it reports a
 deterministic result on every pull request. Do not disable admin enforcement,
 force-push protection, deletion protection, or conversation resolution to
 unblock a merge.
+
+## Completion evidence
+
+- Protection documentation PR #34 passed all five required checks on exact head `022d2e9` and merged as `b7cc4156f61ca017ef08aaec190d7e8672b59a67`.
+- After the withdrawn-advisory cleanup merged, canonical `main` SHA `eba3c5cd9aab02e15b99f2a85a45561bdf541654` passed all five jobs in run `44442498902`.
+- The live API was reverified after that run: strict mode, all five contexts, admin enforcement, stale-review dismissal and conversation resolution remain enabled; force pushes and deletion remain disabled.

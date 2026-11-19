@@ -9,7 +9,7 @@
 - GitHub marked `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z`; the advisory API was last updated at `2026-11-18T15:38:58Z`.
 - The unchanged installed chain remains `next-intl@4.13.2 -> @parcel/watcher@2.5.6 -> picomatch@4.0.5`.
 - On 2026-11-19, `npm audit --omit=dev --json` exited `0` and reported zero info, low, moderate, high, or critical production findings.
-- Canonical `main` run `44440792583` correctly failed closed because the temporary wrapper expected the approved advisory to remain present. P0-08 removes the obsolete wrapper, monitor, artifacts and exception-only tests and restores `npm audit --omit=dev --audit-level=high`.
+- Canonical `main` run `44440792583` correctly failed closed because the temporary wrapper expected the approved advisory to remain present. P0-08 removed the obsolete wrapper, monitor, artifacts and exception-only tests and restored `npm audit --omit=dev --audit-level=high`.
 - No dependency version, lockfile, runtime, schema, provider, customer data or environment value changed to obtain the clean result.
 
 ## Historical decision
@@ -80,7 +80,7 @@ Removal trigger, earliest wins:
 - a new exploit or severity change invalidates this analysis; or
 - the UTC expiry is reached.
 
-P0-08 executes this removal contract: delete exception-only code, tests and monitoring; restore the direct audit command; rerun all required CI jobs; and update the operational state.
+P0-08 completed this removal contract: exception-only code, tests and monitoring were deleted; the direct audit command was restored; and all required CI jobs passed on the exact PR head and canonical `main`.
 
 ## Evidence
 
@@ -88,6 +88,9 @@ P0-08 executes this removal contract: delete exception-only code, tests and moni
 - GitHub advisory API observed on 2026-11-19: `withdrawn_at=2026-11-18T15:38:56Z`, `updated_at=2026-11-18T15:38:58Z`
 - Clean unchanged-tree production audit observed on 2026-11-19: exit `0`, zero findings at every severity
 - Fail-closed canonical run that triggered retirement: `44440792583`
+- Retirement PR: <https://github.com/MOUBI9A/carhubos/pull/35>
+- Retirement merge: `eba3c5cd9aab02e15b99f2a85a45561bdf541654`
+- Green post-retirement canonical run: `44442498902`
 - Failed manual CI run: `44230394964`
 - Draft CI PR: <https://github.com/MOUBI9A/carhubos/pull/29>
 - Current npm latest observed on 2026-11-18: `picomatch@4.0.7`
@@ -103,5 +106,5 @@ P0-08 executes this removal contract: delete exception-only code, tests and moni
 - Implementation commits: `095b77b`, adversarial hardening `9158de7`
 - Exact-head CI run: `44269223199` (all five jobs green on hardening head `9158de7`)
 - Notes: Option 1 approved via interactive decision prompt. The wrapper requires exact advisory identity and dependency lineage, fails closed on drift/error/expiry, and is paired with daily upstream monitoring.
-- Retirement: advisory withdrawn and exception no longer active; P0-08 restores the standard audit before the original expiry.
+- Retirement: advisory withdrawn and exception no longer active; P0-08 restored the standard audit before the original expiry and passed all protected checks.
 

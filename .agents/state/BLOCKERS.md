@@ -4,16 +4,16 @@
 
 ## Active now
 
-### B-007 — Withdrawn `picomatch` advisory requires exception retirement
-
-- **Blocks:** green canonical `main` evidence for P0-02 closeout.
-- **Status:** Resolution in progress under P0-08; the exception is no longer active or justified.
-- **Withdrawal evidence:** GitHub reports `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z` and updated at `2026-11-18T15:38:58Z`.
-- **Audit evidence:** the unchanged production dependency tree returns `npm audit --omit=dev --json` status `0` with zero findings at every severity.
-- **Fail-closed evidence:** canonical `main` run `44440792583` rejected the obsolete wrapper because it correctly no longer observed the approved finding.
-- **Resolution:** remove the exception-only wrapper, tests, monitor and artifacts; restore the direct high-threshold audit; require exact-head and post-merge `main` CI to pass.
+None.
 
 ## Resolved
+
+### B-007 — Withdrawn `picomatch` advisory required exception retirement
+
+- **Resolved:** 2026-11-19.
+- **Withdrawal evidence:** GitHub reports `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z` and updated at `2026-11-18T15:38:58Z`.
+- **Resolution:** PR #35 removed the exception-only wrapper, tests, monitor and artifacts and restored the direct high-threshold audit; merge commit `eba3c5c` passed all five canonical jobs in run `44442498902`.
+- **Audit evidence:** the unchanged production dependency tree reports zero production vulnerabilities.
 
 ### B-008 — Stale concurrent-agent revert entered the PR #29 merge
 
