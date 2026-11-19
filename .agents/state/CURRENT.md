@@ -8,13 +8,13 @@
 
 **Current branch:** `codex/p0-04-doc-consolidation`
 
-**Current PR:** #30 — draft; current-main reconciliation in progress
+**Current PR:** #30 — draft; current-main reconciliation verified and ready for protected review
 
 **Current base:** `origin/main` at `238c56f5bda6e2223b60091a7c79c40c32f1034b`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-04` — consolidate canonical documentation and mark stale readiness/roadmap claims, status `IN_PROGRESS`
+**Active task:** `P0-04` — consolidate canonical documentation and mark stale readiness/roadmap claims, status `REVIEW`
 
 **Next task:** finish P0-04 reconciliation and protected review, then begin P0-05 read-only topology verification
 
@@ -82,6 +82,9 @@ Always re-verify these drift-prone facts before acting.
 - P0-03 PR #37 passed all five protected checks plus Vercel on exact head `0e1afa66f37c7d099c5237bf46d96e5ace6d4730`, became `CLEAN`, and merged as `091d320066ae3ab6c2bec42877f19512bea40c02`.
 - GitHub reports zero CODEOWNERS parser errors on canonical `main`, and post-merge run `44446578976` passed all five required jobs.
 - Audited the existing P0-04 draft PR #30: it contains useful consolidation work but is based on the pre-hardening `e010505` baseline and records the now-resolved B-007 blocker, so it must be rebased and reconciled rather than merged unchanged or duplicated.
+- Merged current `main` `238c56f5bda6e2223b60091a7c79c40c32f1034b` into the existing PR #30 branch as `c3c3840` without rebasing, force-pushing or rewriting history; the five expected state/coordination conflicts were reconciled to current verified facts.
+- Revalidated all seven target documents: every relative Markdown link resolves, `git diff --check` passes, and the targeted source-of-truth scan finds no active conflicting task-pickup claim.
+- A bounded read-only Antigravity review returned `NO BLOCKER`, confirming the canonical hierarchy, historical banners, current state consistency, documentation-only scope and absence of reintroduced exception controls.
 
 ## Last verified state
 
@@ -105,9 +108,9 @@ No runtime code, database schema, migration, CI implementation, deployment, prov
 
 ## Exact resume action
 
-1. Complete the no-force current-main merge and remove all stale B-007/P0-01-through-P0-03 state from PR #30.
-2. Re-run relative-link resolution, source-of-truth conflict scans, `git diff --check`, and a bounded independent review.
-3. Release the claim, mark PR #30 ready, and merge only a green, clean exact head; then verify canonical `main` before marking P0-04 done.
+1. Commit and push the verified P0-04 review state, then release the coordination claim in a separate commit.
+2. Mark PR #30 ready, replace its stale B-007 description, and wait for a green, clean exact head.
+3. Merge only under the documented low-risk delegation, verify canonical `main`, then record P0-04 completion and proceed to P0-05.
 
 ## Unresolved risks
 
