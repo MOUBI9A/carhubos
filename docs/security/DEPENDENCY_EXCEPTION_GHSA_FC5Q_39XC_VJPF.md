@@ -1,10 +1,18 @@
 # Dependency exception — GHSA-fc5q-39xc-vjpf
 
-> **Status: APPROVED — ACTIVE (expires 2026-12-02T23:59:59Z)**
+> **Status: RETIRED — advisory withdrawn before expiry**
 >
-> Approved by founder & security owner Hamza El Moueddane on 2026-11-18. Compensating controls enforce exact advisory/version match, hard UTC expiry, extractor-disabled guard, and artifact retention.
+> Approved by founder & security owner Hamza El Moueddane on 2026-11-18, then retired on 2026-11-19 after GitHub withdrew the advisory and the unchanged production audit returned zero findings.
 
-## Decision requested
+## Retirement record
+
+- GitHub marked `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z`; the advisory API was last updated at `2026-11-18T15:38:58Z`.
+- The unchanged installed chain remains `next-intl@4.13.2 -> @parcel/watcher@2.5.6 -> picomatch@4.0.5`.
+- On 2026-11-19, `npm audit --omit=dev --json` exited `0` and reported zero info, low, moderate, high, or critical production findings.
+- Canonical `main` run `44440792583` correctly failed closed because the temporary wrapper expected the approved advisory to remain present. P0-08 removes the obsolete wrapper, monitor, artifacts and exception-only tests and restores `npm audit --omit=dev --audit-level=high`.
+- No dependency version, lockfile, runtime, schema, provider, customer data or environment value changed to obtain the clean result.
+
+## Historical decision
 
 Approve a maximum 14-day exception for GitHub advisory `GHSA-fc5q-39xc-vjpf` / npm advisory source `1247710`, limited to the exact installed chain:
 
@@ -16,7 +24,7 @@ next-intl@4.13.2
 
 If activated on 2026-11-18, the exception must expire no later than `2026-12-02T23:59:59Z`. Expiry is automatic and fail-closed. Renewal requires a new written decision and evidence; it is not implicit.
 
-## Why this is blocked
+## Historical reason for the exception
 
 - `npm audit --omit=dev --audit-level=high` reports a high-severity ReDoS advisory with CVSS 7.5.
 - The advisory covers published `picomatch` releases through current npm latest `4.0.7`, so a normal patched upgrade is not available.
@@ -38,7 +46,7 @@ The vulnerable function compiles attacker-controlled repeated extglob patterns i
 
 These facts make the currently known exploit path unlikely to be reachable, but they do not prove that an installed vulnerable package is harmless. Configuration drift, a future `next-intl` behavior change, a second dependency path or an incorrect reachability assumption remain residual risks.
 
-## Required compensating controls
+## Historical required compensating controls
 
 Activation is allowed only if one reviewed implementation provides all controls below:
 
@@ -52,15 +60,15 @@ Activation is allowed only if one reviewed implementation provides all controls 
 8. Recheck npm and the upstream advisory daily. Remove the exception as soon as a reviewed patched release is available, even if time remains.
 9. Do not use an unreviewed Git dependency, fork, advisory suppression, lower severity threshold or blanket allowlist.
 
-## Implemented controls
+## Historical implemented controls (removed at retirement)
 
-- `frontend/scripts/audit-production.mjs` enforces the immutable expiry, exact advisory identity, exact lockfile and installed dependency chain, extractor-disabled boundary, audit result shape and command success.
-- `frontend/scripts/audit-production.test.mjs` exercises the approved case and every documented fail-closed condition.
-- `.github/workflows/ci.yml` changes only the frontend production audit invocation and uploads raw audit/dependency-tree evidence; the backend audit is unchanged.
-- `.github/workflows/dependency-exception-monitor.yml` reruns the audit daily and fails when npm publishes a `picomatch` version newer than the reviewed `4.0.7`.
-- PR #29 remains subject to one exact-head five-job CI run after every implementation or state change.
+- During the active window, `frontend/scripts/audit-production.mjs` enforced the immutable expiry, exact advisory identity, exact lockfile and installed dependency chain, extractor-disabled boundary, audit result shape and command success.
+- `frontend/scripts/audit-production.test.mjs` exercised the approved case and every documented fail-closed condition.
+- `.github/workflows/ci.yml` used the wrapper and uploaded raw audit/dependency-tree evidence; the backend audit remained unchanged.
+- `.github/workflows/dependency-exception-monitor.yml` reran the audit daily and detected upstream state changes.
+- These exception-only files and steps are removed by P0-08; the direct frontend production audit is restored.
 
-## Monitoring and removal
+## Historical monitoring and removal contract
 
 Owner: Codex for implementation evidence; founder/security owner for risk acceptance.
 
@@ -72,11 +80,14 @@ Removal trigger, earliest wins:
 - a new exploit or severity change invalidates this analysis; or
 - the UTC expiry is reached.
 
-On removal, delete the exception code and tests that exist only for the allowlist, restore the direct audit command, rerun all required CI jobs, and update the operational state.
+P0-08 executes this removal contract: delete exception-only code, tests and monitoring; restore the direct audit command; rerun all required CI jobs; and update the operational state.
 
 ## Evidence
 
 - Advisory: <https://github.com/advisories/GHSA-fc5q-39xc-vjpf>
+- GitHub advisory API observed on 2026-11-19: `withdrawn_at=2026-11-18T15:38:56Z`, `updated_at=2026-11-18T15:38:58Z`
+- Clean unchanged-tree production audit observed on 2026-11-19: exit `0`, zero findings at every severity
+- Fail-closed canonical run that triggered retirement: `44440792583`
 - Failed manual CI run: `44230394964`
 - Draft CI PR: <https://github.com/MOUBI9A/carhubos/pull/29>
 - Current npm latest observed on 2026-11-18: `picomatch@4.0.7`
@@ -92,4 +103,5 @@ On removal, delete the exception code and tests that exist only for the allowlis
 - Implementation commits: `095b77b`, adversarial hardening `9158de7`
 - Exact-head CI run: `44269223199` (all five jobs green on hardening head `9158de7`)
 - Notes: Option 1 approved via interactive decision prompt. The wrapper requires exact advisory identity and dependency lineage, fails closed on drift/error/expiry, and is paired with daily upstream monitoring.
+- Retirement: advisory withdrawn and exception no longer active; P0-08 restores the standard audit before the original expiry.
 

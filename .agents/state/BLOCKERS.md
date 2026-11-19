@@ -1,18 +1,17 @@
 # Operational Blockers
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 
 ## Active now
 
-### B-007 — No patched release for new `picomatch` high-severity advisory
+### B-007 — Withdrawn `picomatch` advisory requires exception retirement
 
-- **Blocks:** permanent resolution of dependency risk; previously blocked green acceptance evidence for `P0-01`.
-- **Status:** Mitigated under approved 14-day time-bounded security exception (`docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`) expiring `2026-12-02T23:59:59Z`.
-- **Compensating controls:** Fail-closed wrapper in `frontend/scripts/audit-production.mjs` verifying exact advisory identity, exact lockfile and installed dependency chain, hard UTC expiry, disabled extractor check, command success and audit artifact retention; covered by unit tests in `frontend/scripts/audit-production.test.mjs` and daily monitoring in `.github/workflows/dependency-exception-monitor.yml`.
-- **Evidence:** manual CI run `44230394964` failed on `GHSA-fc5q-39xc-vjpf`; hardening head `9158de7` passed all five jobs on run `44269223199` with the approved compensating controls.
-- **Current package fact:** npm reports `picomatch@4.0.7` as latest, while the advisory marks all versions through `4.0.7` affected.
-- **Reachability evidence:** the project does not enable `next-intl` experimental extraction; the vulnerable watcher subscription and glob compilation are therefore not started by the current configuration, and no application/user input supplies glob patterns through this path.
-- **Permanent resolution:** consume a published patched release or a reviewed upstream dependency change, remove the exception wrapper, then rerun the direct audit and all five CI jobs before `2026-12-02T23:59:59Z`.
+- **Blocks:** green canonical `main` evidence for P0-02 closeout.
+- **Status:** Resolution in progress under P0-08; the exception is no longer active or justified.
+- **Withdrawal evidence:** GitHub reports `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z` and updated at `2026-11-18T15:38:58Z`.
+- **Audit evidence:** the unchanged production dependency tree returns `npm audit --omit=dev --json` status `0` with zero findings at every severity.
+- **Fail-closed evidence:** canonical `main` run `44440792583` rejected the obsolete wrapper because it correctly no longer observed the approved finding.
+- **Resolution:** remove the exception-only wrapper, tests, monitor and artifacts; restore the direct high-threshold audit; require exact-head and post-merge `main` CI to pass.
 
 ## Resolved
 
