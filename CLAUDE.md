@@ -6,6 +6,8 @@ Being taken from demo → market-ready. **Execution source of truth:** [AGENTS.m
 
 > **Every AI must start with [the continuity protocol](docs/operations/AI_CONTINUITY_PROTOCOL.md).** Verify Git/live state, claim one board task, preserve unrelated work, and update the board plus `.agents/state/CURRENT.md` before pausing.
 
+**Local Guardian candidate (2026-11-12):** `feat/guardian-resumable-video-upload`, based on production `f950d92`, adds actor/revision-bound private signed TUS video uploads (6–45 MiB), streaming byte verification and replay-safe evidence attachment. Photos and renter permissions retain their existing workflows. Migration `20261112100000_guardian_resumable_upload_intents` is additive and **not applied to production**; no production deployment/merge. See [implementation, exact QA and release gates](docs/GUARDIAN_RESUMABLE_UPLOAD_QA.md), including dependency findings, non-revocable token cleanup and pending real nonproduction storage E2E.
+
 **Public surface:** `/landing` (marketing — hero, features, `#solutions` with an interactive client-side **Trust Console** demo, `#enterprise`, honest capability tiles, `#contact` with WhatsApp `+212616880653` + email `hamzamoadin37@gmail.com`), `/login`, `/signup` (agency onboarding → `POST /auth/register` creates OWNER + agency → auto-login). Note: `lib/api.ts`'s 401 interceptor exempts public routes (`/landing`,`/login`,`/signup`,`/`) so logged-out visitors aren't bounced.
 
 ---

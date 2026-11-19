@@ -1,5 +1,9 @@
 # PROGRESS — CarHub / "Fider" market-readiness
 
+## Current local candidate — 2026-11-12
+
+`feat/guardian-resumable-video-upload` starts from production `f950d92`. Implemented private signed direct TUS Guardian videos, progress/pause/resume/retry/cancel, persisted actor/report/revision/phase/booking intents, bounded streaming SHA-256/MIME/size/magic verification, atomic single attachment/revision/event and original-result replay. Existing photo and renter damage permissions preserved. Migration generated offline through Prisma diff; tested on a new isolated local PostgreSQL database only. See [exact QA, deployment instructions and remaining gates](docs/GUARDIAN_RESUMABLE_UPLOAD_QA.md). This is a local committed release candidate, not a production migration/deployment. Existing unrelated `screenshots/` remains untracked. The older progress snapshot below is historical.
+
 > Living handoff for resuming the build. Source-of-truth docs: **`docs/AUDIT_BACKLOG.md`** (phased task list) + **`docs/PRODUCT_VISION.md`** (target product) + **`docs/DESIGN_VISION.md`** (target frontend/design, Phase 12) + **`CLAUDE.md`** (project guide). This file is the "where we are right now" snapshot.
 > **Last updated at commit `ff8021b`.** Tree is 100% clean, `backend` tsc clean + jest **16 suites/108 tests green** + eslint clean, `frontend` tsc clean + vitest **9/9 green** + eslint clean.
 

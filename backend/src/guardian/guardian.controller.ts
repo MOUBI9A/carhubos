@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
+  ParseUUIDPipe,
   Post,
   UploadedFile,
   UseGuards,
@@ -24,6 +26,7 @@ import {
   GuardianFindingDto,
   GuardianRepairDto,
   GuardianRevisionDto,
+  GuardianVideoUploadDto,
 } from './guardian.dto';
 
 const UPLOAD_LIMIT = 32 * 1024 * 1024;
@@ -32,6 +35,65 @@ const UPLOAD_LIMIT = 32 * 1024 * 1024;
 @UseGuards(AuthGuard, CapabilitiesGuard)
 export class GuardianStaffController {
   constructor(private service: GuardianService) {}
+
+  @Post('reports/:id/upload-intents')
+  @Header('Cache-Control', 'no-store')
+  @RequireCapabilities('inspection.perform')
+  initiateVideo(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: GuardianVideoUploadDto,
+  ) {
+    return this.service.initiateVideoUpload(user.id, user.agencyId, id, dto);
+  }
+
+  @Get('reports/:id/upload-intents')
+  @Header('Cache-Control', 'no-store')
+  @RequireCapabilities('inspection.perform')
+  videoUploads(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.listVideoUploads(user.id, user.agencyId, id);
+  }
+
+  @Post('reports/:id/upload-intents/:intentId/resume')
+  @Header('Cache-Control', 'no-store')
+  @RequireCapabilities('inspection.perform')
+  resumeVideo(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('intentId', ParseUUIDPipe) intentId: string,
+  ) {
+    return this.service.resumeVideoUpload(user.id, user.agencyId, id, intentId);
+  }
+
+  @Post('reports/:id/upload-intents/:intentId/finalize')
+  @Header('Cache-Control', 'no-store')
+  @RequireCapabilities('inspection.perform')
+  finalizeVideo(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('intentId', ParseUUIDPipe) intentId: string,
+  ) {
+    return this.service.finalizeVideoUpload(
+      user.id,
+      user.agencyId,
+      id,
+      intentId,
+    );
+  }
+
+  @Post('reports/:id/upload-intents/:intentId/cancel')
+  @Header('Cache-Control', 'no-store')
+  @RequireCapabilities('inspection.perform')
+  cancelVideo(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('intentId', ParseUUIDPipe) intentId: string,
+  ) {
+    return this.service.cancelVideoUpload(user.id, user.agencyId, id, intentId);
+  }
 
   @Post('reports')
   @RequireCapabilities('inspection.perform')
@@ -183,7 +245,15 @@ export class GuardianCustomerController {
     @Body() dto: GuardianEvidenceDto,
   ) {
     if (!file) throw new BadRequestException('File is required.');
-    return this.service.upload(user.id, 'CUSTOMER', id, dto.kind, file, undefined, dto.revision);
+    return this.service.upload(
+      user.id,
+      'CUSTOMER',
+      id,
+      dto.kind,
+      file,
+      undefined,
+      dto.revision,
+    );
   }
   @Get('reports/:id/media/:evidenceId/url')
   media(

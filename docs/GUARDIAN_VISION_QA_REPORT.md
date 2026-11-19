@@ -1,4 +1,6 @@
 # Guardian Vision — Engineering QA and Release Review
+
+**2026-11-12:** New local resumable-video candidate and its separate exact validation are recorded in [GUARDIAN_RESUMABLE_UPLOAD_QA.md](GUARDIAN_RESUMABLE_UPLOAD_QA.md). Results below describe the previous November 11 milestone and do not prove TUS or the new intent migration.
 **Review date:** 2026-11-11
 **Codebase:** `~/Desktop/carhubos` (Mac)
 **Branch:** `feat/guardian-vision-mutual-approval`
