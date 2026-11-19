@@ -1,8 +1,13 @@
 # EXECUTION PLAN — Fider / CarHub → market-ready
 
-> **The forward, ordered backlog two agents work against.** The **Executor** takes
-> the top unblocked task and builds it; the **Reviewer** checks each pushed change
-> and writes findings back. This file = *what to build next*. Companions:
+> [!WARNING]
+> **Superseded work queue.** The tasks, ownership loop and priorities below are retained as historical process evidence. Do not pick or resume work from this file.
+>
+> Current authority: [AGENTS.md](../AGENTS.md) → [platform readiness master plan](operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) → [execution board](progress/EXECUTION_BOARD.md) → [current verified state](../.agents/state/CURRENT.md).
+
+> **Historical process description.** The **Executor** took the top unblocked task
+> and built it; the **Reviewer** checked each pushed change and wrote findings
+> back. This file formerly described what to build next. Its companions were:
 > `COORDINATION.md` (how the two agents work + live board + reviewer→executor
 > findings), `CLAUDE.md` (project guide + invariants), `docs/AUDIT_BACKLOG.md`
 > (phased audit + the market-ready checklist = definition of done).

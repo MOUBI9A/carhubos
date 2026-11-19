@@ -6,17 +6,17 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-03-closeout`
+**Current branch:** `codex/p0-04-doc-consolidation`
 
-**Current PR:** P0-03 state-only closeout pending; implementation PR #37 merged as `091d320066ae3ab6c2bec42877f19512bea40c02`
+**Current PR:** #30 — draft; current-main reconciliation verified and ready for protected review
 
-**Current base:** `origin/main` at `091d320066ae3ab6c2bec42877f19512bea40c02`
+**Current base:** `origin/main` at `238c56f5bda6e2223b60091a7c79c40c32f1034b`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-03` — completion evidence recorded, status `DONE`
+**Active task:** `P0-04` — consolidate canonical documentation and mark stale readiness/roadmap claims, status `REVIEW`
 
-**Next task:** `P0-04` — reconcile and resume existing draft PR #30 after this closeout merges
+**Next task:** finish P0-04 reconciliation and protected review, then begin P0-05 read-only topology verification
 
 Always re-verify these drift-prone facts before acting.
 
@@ -82,30 +82,35 @@ Always re-verify these drift-prone facts before acting.
 - P0-03 PR #37 passed all five protected checks plus Vercel on exact head `0e1afa66f37c7d099c5237bf46d96e5ace6d4730`, became `CLEAN`, and merged as `091d320066ae3ab6c2bec42877f19512bea40c02`.
 - GitHub reports zero CODEOWNERS parser errors on canonical `main`, and post-merge run `44446578976` passed all five required jobs.
 - Audited the existing P0-04 draft PR #30: it contains useful consolidation work but is based on the pre-hardening `e010505` baseline and records the now-resolved B-007 blocker, so it must be rebased and reconciled rather than merged unchanged or duplicated.
+- Merged current `main` `238c56f5bda6e2223b60091a7c79c40c32f1034b` into the existing PR #30 branch as `c3c3840` without rebasing, force-pushing or rewriting history; the five expected state/coordination conflicts were reconciled to current verified facts.
+- Revalidated all seven target documents: every relative Markdown link resolves, `git diff --check` passes, and the targeted source-of-truth scan finds no active conflicting task-pickup claim.
+- A bounded read-only Antigravity review returned `NO BLOCKER`, confirming the canonical hierarchy, historical banners, current state consistency, documentation-only scope and absence of reintroduced exception controls.
 
 ## Last verified state
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` is protected with strict five-check PR enforcement, admin enforcement, stale-review dismissal, conversation resolution, and force-push/deletion disabled.
-- Canonical `main` is `091d320066ae3ab6c2bec42877f19512bea40c02`; CODEOWNERS parses without errors and CI run `44446578976` is green across all five required jobs.
+- Canonical `main` is `238c56f5bda6e2223b60091a7c79c40c32f1034b`; P0-03 is complete, CODEOWNERS parses without errors, and its canonical implementation run `44446578976` is green across all five required jobs.
 - PR #29 is merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443`; recovery PR #31 is merged as canonical head `61e30aca33d196442ec74926e0f911e63e15f4ab`.
 - All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
 - The former 14-day dependency exception is no longer active: GitHub withdrew `GHSA-fc5q-39xc-vjpf`, and the unchanged production dependency tree audits clean.
+- Draft PR #30 points active entry documents to the canonical hierarchy and visibly marks obsolete progress/roadmap/queue narratives as historical or superseded; its current-main merge is being reconciled without rewriting history.
+- No historical file was moved or deleted; existing open-PR and Git-history links remain valid.
 - Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-03` closeout
+## Files currently claimed by `P0-04`
 
-None. The P0-03 closeout claim is released while its protected state-only pull request is reviewed.
+None. The P0-04 claim is released while PR #30 receives protected exact-head review.
 
-No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
+No runtime code, database schema, migration, CI implementation, deployment, provider, billing configuration or customer data is in scope.
 
 ## Exact resume action
 
-1. Commit and push the P0-03 completion evidence, then release the closeout claim in a separate commit.
-2. Open and merge the protected state-only closeout only after its exact head is green and clean.
-3. Reconcile the existing P0-04 draft PR #30 with current `main`, re-claim its exact files, and re-run its evidence instead of creating duplicate documentation work.
+1. Commit and push the verified P0-04 review state, then release the coordination claim in a separate commit.
+2. Mark PR #30 ready, replace its stale B-007 description, and wait for a green, clean exact head.
+3. Merge only under the documented low-risk delegation, verify canonical `main`, then record P0-04 completion and proceed to P0-05.
 
 ## Unresolved risks
 
@@ -113,7 +118,6 @@ No runtime code, database schema, migration, deployment, provider, billing confi
 - Required CODEOWNER approval is intentionally disabled while the founder is the only confirmed accountable CODEOWNER; automated checks and conversation resolution remain mandatory.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
-- Several old phase summaries and historical documents remain stale; `P0-04` owns their reconciliation.
-- Draft PR #30 predates P0-01 through P0-03 and includes stale state/blocker edits; it must not merge without a current-main reconciliation.
+- P0-04 acceptance must prove that no active document retains a conflicting source-of-truth or task-pickup claim after reconciliation.
 - GitHub Actions reports Node 20 deprecation annotations for action runtimes, and frontend lint retains three pre-existing internal-navigation warnings; both are non-blocking follow-up evidence, not P0-03 failures.
 - AI, provider, payment, GPS, legal, mobile-store and real-user pilot work remain gated by later board tasks.

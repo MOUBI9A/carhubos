@@ -4,10 +4,10 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 1. Consolidate canonical documentation (`P0-04`)
 
-**Status:** `READY` after the P0-03 state-only closeout merges.
+**Status:** `REVIEW` on existing draft PR #30 after current-main reconciliation.
 
-- Reconcile and rebase the useful work already in draft PR #30 against current `main`.
-- Remove its stale B-007/current-state edits and re-run link, source-of-truth and protected-CI evidence.
+- Seven-document hierarchy/banner work is reconciled without rewriting branch history.
+- Link, source-of-truth and independent-review evidence pass; protected exact-head CI remains the final gate.
 
 ## 2. Verify production topology (`P0-05`)
 

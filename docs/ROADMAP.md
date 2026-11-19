@@ -1,5 +1,10 @@
 # CarHub OS — Engineering Roadmap & Milestones
 
+> [!WARNING]
+> **Superseded automotive roadmap.** The phases and priorities below are retained only as automotive-diagnostics domain history. Do not execute or report project status from this file.
+>
+> Current authority: [AGENTS.md](../AGENTS.md) → [platform readiness master plan](operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md) → [execution board](progress/EXECUTION_BOARD.md) → [current verified state](../.agents/state/CURRENT.md).
+
 This roadmap guides the autonomous transformation of CarHub OS into a production-grade automotive operating system connecting vehicles, telemetry, AI reasoning, repair workflows, work orders, and invoicing.
 
 ---
