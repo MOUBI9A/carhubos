@@ -97,7 +97,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by `P0-03` closeout
 
-Claimed on `codex/p0-03-closeout`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; and `.agents/state/{CURRENT,NEXT}.md`.
+None. The P0-03 closeout claim is released while its protected state-only pull request is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
