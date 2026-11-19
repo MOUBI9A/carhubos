@@ -6,17 +6,17 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-03-codeowners-authority`
+**Current branch:** `codex/p0-03-closeout`
 
-**Current PR:** P0-03 PR pending; P0-02/P0-08 closeout PR #36 merged as `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`
+**Current PR:** P0-03 state-only closeout pending; implementation PR #37 merged as `091d320066ae3ab6c2bec42877f19512bea40c02`
 
-**Current base:** `origin/main` at `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`
+**Current base:** `origin/main` at `091d320066ae3ab6c2bec42877f19512bea40c02`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix, status `REVIEW`
+**Active task:** `P0-03` — completion evidence recorded, status `DONE`
 
-**Next task:** `P0-04` — consolidate canonical documentation after P0-03 merges
+**Next task:** `P0-04` — reconcile and resume existing draft PR #30 after this closeout merges
 
 Always re-verify these drift-prone facts before acting.
 
@@ -79,11 +79,15 @@ Always re-verify these drift-prone facts before acting.
 - Confirmed canonical `main` run `44444423639` passed all five required jobs on closeout SHA `4fd683d5f80a0638e7c5d6185d886e809b6ab7ae`.
 - An initial bounded Antigravity review identified that autonomous merge authority could be read too broadly while the main-to-production trigger remains unverified; the matrix and ADR were narrowed to reversible documentation, governance and test-only PRs.
 - A second complete-snapshot Antigravity review returned `NO BLOCKER`, finding the sensitive-path coverage, solo-founder deadlock handling, authority boundaries and coordination state consistent.
+- P0-03 PR #37 passed all five protected checks plus Vercel on exact head `0e1afa66f37c7d099c5237bf46d96e5ace6d4730`, became `CLEAN`, and merged as `091d320066ae3ab6c2bec42877f19512bea40c02`.
+- GitHub reports zero CODEOWNERS parser errors on canonical `main`, and post-merge run `44446578976` passed all five required jobs.
+- Audited the existing P0-04 draft PR #30: it contains useful consolidation work but is based on the pre-hardening `e010505` baseline and records the now-resolved B-007 blocker, so it must be rebased and reconciled rather than merged unchanged or duplicated.
 
 ## Last verified state
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` is protected with strict five-check PR enforcement, admin enforcement, stale-review dismissal, conversation resolution, and force-push/deletion disabled.
+- Canonical `main` is `091d320066ae3ab6c2bec42877f19512bea40c02`; CODEOWNERS parses without errors and CI run `44446578976` is green across all five required jobs.
 - PR #29 is merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443`; recovery PR #31 is merged as canonical head `61e30aca33d196442ec74926e0f911e63e15f4ab`.
 - All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
 - The former 14-day dependency exception is no longer active: GitHub withdrew `GHSA-fc5q-39xc-vjpf`, and the unchanged production dependency tree audits clean.
@@ -91,17 +95,17 @@ Always re-verify these drift-prone facts before acting.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-03`
+## Files currently claimed by `P0-03` closeout
 
-None. The P0-03 claim is released while the protected pull request is reviewed.
+None. The P0-03 closeout claim is released while its protected state-only pull request is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Commit and push the reviewed P0-03 implementation, then release its coordination claim in a separate commit.
-2. Open the protected P0-03 PR and merge only a green, clean exact head.
-3. Verify the post-merge `main` run and CODEOWNERS parser state, then mark P0-03 done and proceed to P0-04.
+1. Commit and push the P0-03 completion evidence, then release the closeout claim in a separate commit.
+2. Open and merge the protected state-only closeout only after its exact head is green and clean.
+3. Reconcile the existing P0-04 draft PR #30 with current `main`, re-claim its exact files, and re-run its evidence instead of creating duplicate documentation work.
 
 ## Unresolved risks
 
@@ -110,4 +114,6 @@ No runtime code, database schema, migration, deployment, provider, billing confi
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.
 - Several old phase summaries and historical documents remain stale; `P0-04` owns their reconciliation.
+- Draft PR #30 predates P0-01 through P0-03 and includes stale state/blocker edits; it must not merge without a current-main reconciliation.
+- GitHub Actions reports Node 20 deprecation annotations for action runtimes, and frontend lint retains three pre-existing internal-navigation warnings; both are non-blocking follow-up evidence, not P0-03 failures.
 - AI, provider, payment, GPS, legal, mobile-store and real-user pilot work remain gated by later board tasks.
