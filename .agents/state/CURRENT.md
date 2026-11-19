@@ -86,7 +86,7 @@ Always re-verify these drift-prone facts before acting.
 
 ## Files currently claimed by closeout
 
-Claimed on `codex/p0-02-p0-08-closeout`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,BLOCKERS}.md`; `docs/operations/BRANCH_PROTECTION.md`; and `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`.
+None. The P0-02/P0-08 closeout claim is released while its protected state-only PR is reviewed.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
