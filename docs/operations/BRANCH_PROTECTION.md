@@ -25,6 +25,13 @@ assuming this document is current.
   enforcement gates remain mandatory. `P0-03` owns CODEOWNERS and the future
   release/incident authority matrix.
 
+P0-03 added `.github/CODEOWNERS` and
+`docs/operations/AUTHORITY_MATRIX.md`. Required CODEOWNER approval remains
+disabled until an independently accountable owner is explicitly confirmed;
+enabling it with only the founder as accountable CODEOWNER would deadlock
+founder-authored pull requests. CODEOWNERS still documents and requests the
+responsible reviewer for sensitive paths.
+
 ## Required application checks
 
 1. `Backend (tsc + jest + lint + build)`

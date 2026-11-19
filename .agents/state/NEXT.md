@@ -4,7 +4,7 @@ The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentional
 
 ## 1. Add CODEOWNERS and authority matrix (`P0-03`)
 
-**Status:** `READY`; claim after the P0-02/P0-08 state-only closeout merges.
+**Status:** `REVIEW` on `codex/p0-03-codeowners-authority`.
 
 - Add sensitive-path ownership without granting unverified authority.
 - Record merge, deploy, migration, secret, AI, payment, and incident authority.

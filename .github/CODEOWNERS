@@ -1,0 +1,73 @@
+# Default repository owner. CODEOWNERS requests review; it does not replace the
+# protected-branch checks or grant production authority.
+* @MOUBI9A
+
+# Governance, CI, releases and deployment configuration
+/.github/ @MOUBI9A
+/AGENTS.md @MOUBI9A
+/CLAUDE.md @MOUBI9A
+/COORDINATION.md @MOUBI9A
+/.agents/ @MOUBI9A
+/docs/operations/ @MOUBI9A
+/backend/Dockerfile @MOUBI9A
+/backend/Dockerfile.vercel @MOUBI9A
+/frontend/Dockerfile @MOUBI9A
+/docker-compose.yml @MOUBI9A
+/vercel.json @MOUBI9A
+
+# Database schema, migrations, seeds, capabilities and commercial plans
+/backend/prisma/schema.prisma @MOUBI9A
+/backend/prisma/migrations/ @MOUBI9A
+/backend/prisma/seed*.js @MOUBI9A
+/backend/prisma/capability-presets.js @MOUBI9A
+/backend/prisma/plan-catalog.js @MOUBI9A
+
+# Authentication, tenancy, authorization and platform administration
+/backend/src/auth/ @MOUBI9A
+/backend/src/common/ @MOUBI9A
+/backend/src/agencies/ @MOUBI9A
+/backend/src/agency-staff/ @MOUBI9A
+/backend/src/users/ @MOUBI9A
+/backend/src/entitlements/ @MOUBI9A
+/backend/src/saas-admin/ @MOUBI9A
+/backend/src/prisma/ @MOUBI9A
+
+# Money, contracts, checkout and provider boundaries
+/backend/src/payments/ @MOUBI9A
+/backend/src/payment-gateway/ @MOUBI9A
+/backend/src/checkout/ @MOUBI9A
+/backend/src/expenses/ @MOUBI9A
+/backend/src/contracts/ @MOUBI9A
+/backend/src/bookings/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/billing/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/finance/ @MOUBI9A
+
+# Consent vault, renter documents and intentionally cross-tenant trust logic
+/backend/src/consent/ @MOUBI9A
+/backend/src/documents/ @MOUBI9A
+/backend/src/vault/ @MOUBI9A
+/backend/src/trust/ @MOUBI9A
+/frontend/src/app/(renter)/portal/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/vault/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/vault-files/ @MOUBI9A
+/frontend/src/lib/vault.ts @MOUBI9A
+
+# AI, automation, integrations and outbound communication boundaries
+/backend/src/ai-vision/ @MOUBI9A
+/backend/src/automations/ @MOUBI9A
+/backend/src/diagnostics/ @MOUBI9A
+/backend/src/guardian/ @MOUBI9A
+/backend/src/integrations/ @MOUBI9A
+/backend/src/email/ @MOUBI9A
+/backend/src/notifications/ @MOUBI9A
+/backend/src/webhooks/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/ai-vision/ @MOUBI9A
+/frontend/src/app/(owner)/dashboard/automations/ @MOUBI9A
+
+# Legal, privacy, public commitments and store disclosures
+/frontend/src/app/(public)/privacy/ @MOUBI9A
+/frontend/src/app/(public)/terms/ @MOUBI9A
+/frontend/src/app/(public)/account-deletion/ @MOUBI9A
+/docs/store/ @MOUBI9A
+/docs/mobile/SECURITY_AND_PRIVACY.md @MOUBI9A
+/docs/mobile/STORE_BILLING_DECISION.md @MOUBI9A
