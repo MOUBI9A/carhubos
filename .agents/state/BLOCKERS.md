@@ -4,7 +4,20 @@
 
 ## Active now
 
-None.
+### B-009 — `main` auto-deploys without a production migration gate
+
+- **Verified:** 2026-11-19 by `P0-05` read-only topology inspection.
+- **Blocks:** autonomous merge of runtime, dependency, environment,
+  infrastructure, schema or migration changes; any such merge is a production
+  deployment trigger.
+- **Evidence:** Vercel maps `main` to production automatically; the production
+  backend starts `node dist/main`; no Vercel or GitHub production migration
+  gate runs `prisma migrate deploy`.
+- **Resolution path:** `P0-06` environment rules, `P1-02` isolated staging and
+  accepted backup/PITR posture, `P1-03` restore/migration rehearsal, then a
+  founder-approved release/promotion procedure.
+- **Human gate:** founder/release owner approval remains required for every
+  production-affecting merge or deployment.
 
 ## Resolved
 
@@ -30,8 +43,25 @@ None.
 
 ### B-002 — Production topology and database provenance unverified
 
-- **Blocks:** production migration planning, staging equivalence and release claims.
-- **Owned by task:** `P0-05`, then `P1-01`.
+- **Topology portion:** `P0-05` verified the Vercel, GitHub, DNS, Supabase,
+  storage, Render and Prisma-migration path read-only; acceptance remains
+  pending until its protected documentation PR lands.
+- **Still blocks:** production migration planning, staging equivalence and
+  release claims until the deeper schema/drift/scale/backup audit completes.
+- **Owned by task:** `P1-01` after `P0-05` merges.
+
+### B-010 — Public-schema RLS is incomplete
+
+- **Verified:** production has 41 ordinary `public` tables; RLS is disabled on
+  33 and enabled on 8.
+- **Current containment:** direct privilege checks found zero public tables with
+  DML privileges for either `anon` or `authenticated`; direct anonymous Data
+  API exposure was not proven.
+- **Risk:** future grants or exposed-schema changes could bypass application
+  tenant isolation on tables without row policies.
+- **Resolution path:** `P1-01` records exact grants/exposed schemas and `P1-05`
+  designs and tests compatible tenant-safe policies. Do not bulk-enable RLS in
+  production without those policies and tests.
 
 ### B-003 — Managed PostgreSQL/staging/PITR decision not accepted
 
