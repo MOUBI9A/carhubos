@@ -33,11 +33,11 @@ Do not make a mobile job globally required in branch protection yet. GitHub woul
 
 Mobile remains a separate release track. A green web/backend PR does not prove signed builds, store readiness, device behavior, or mobile API compatibility.
 
-## Temporary dependency exception operations
+## Production dependency audit
 
-The frontend production audit uses `frontend/scripts/audit-production.mjs` only for the approved `GHSA-fc5q-39xc-vjpf` exception recorded in `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`. The wrapper fails closed on expiry, advisory identity drift, dependency path/version drift, extractor enablement, command errors and every additional high or critical finding.
+The frontend runs the standard `npm audit --omit=dev --audit-level=high` command. No advisory allowlist or exception wrapper is active.
 
-`.github/workflows/dependency-exception-monitor.yml` reruns the production audit daily on the default branch and fails if npm publishes a `picomatch` version newer than the reviewed `4.0.7`. A monitor failure requires review; it is not permission to advance the exception automatically. Remove the wrapper, monitor and exception-specific tests when the exception is retired.
+The former `GHSA-fc5q-39xc-vjpf` exception was retired after GitHub withdrew the advisory on 2026-11-18 and the unchanged production dependency tree returned a clean audit. The historical approval, controls and retirement evidence remain in `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`.
 
 ## Verification for `P0-01`
 

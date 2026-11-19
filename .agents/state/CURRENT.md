@@ -1,22 +1,22 @@
 # Current Operational State
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-02-branch-protection`
+**Current branch:** `codex/p0-08-retire-withdrawn-exception`
 
-**Current PR:** P0-02 documentation PR pending; disposable enforcement proof PR #33 is closed without merge
+**Current PR:** P0-08 remediation PR pending; P0-02 PR #34 merged as `b7cc4156f61ca017ef08aaec190d7e8672b59a67`
 
-**Current base:** `origin/main` at `4421ec39217484d5f5fffe26c3820414637f5295`
+**Current base:** `origin/main` at `b7cc4156f61ca017ef08aaec190d7e8672b59a67`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-02` — protect `main` and prove enforcement, status `REVIEW`
+**Active task:** `P0-08` — retire the withdrawn picomatch exception and restore the standard production audit, status `REVIEW`
 
-**Next task:** `P0-03` — add CODEOWNERS and the release/incident authority matrix after P0-02 documentation merges
+**Next task:** close P0-02 after recovered `main` CI is green, then claim `P0-03`
 
 Always re-verify these drift-prone facts before acting.
 
@@ -63,6 +63,12 @@ Always re-verify these drift-prone facts before acting.
 - Opened disposable red proof PR #33 at `79a18e1`; its isolated TS2322 failure made the required Frontend check fail in run `44280610548`, and GitHub reported `mergeStateStatus: BLOCKED`.
 - Closed PR #33 without merge and deleted only its disposable local and remote branch after evidence capture.
 - A bounded read-only Antigravity review returned `NO BLOCKER`; it confirmed the solo-owner zero-approval policy avoids self-approval deadlock while retaining mandatory PR, strict CI, conversation, admin, force-push, and deletion protections.
+- P0-02 PR #34 passed all five protected checks, became `CLEAN`, and merged as `b7cc4156f61ca017ef08aaec190d7e8672b59a67`; the live protection API remained correct after merge.
+- Canonical `main` run `44440792583` failed closed in the frontend because `npm audit --omit=dev --json` now exits `0` while the temporary exception wrapper required status `1` for the approved finding.
+- GitHub's advisory API reports `GHSA-fc5q-39xc-vjpf` withdrawn at `2026-11-18T15:38:56Z`; a local unchanged-tree production audit on 2026-11-19 reports zero findings at every severity.
+- Claimed urgent P0-08 to remove the obsolete wrapper, monitor, artifacts and exception-only tests and restore the standard frontend production audit.
+- Verified P0-08 locally: direct production audit reports zero vulnerabilities; TypeScript passes; 14 Vitest suites / 55 non-exception tests pass; ESLint has zero errors and the same three pre-existing navigation warnings; production build, workflow YAML and diff checks pass.
+- A bounded read-only Antigravity review returned `NO BLOCKER`, confirming complete exception cleanup, restored standard auditing, unchanged severity threshold, preserved historical evidence, and consistent operational state.
 
 ## Last verified state
 
@@ -70,26 +76,26 @@ Always re-verify these drift-prone facts before acting.
 - GitHub `main` is protected with strict five-check PR enforcement, admin enforcement, stale-review dismissal, conversation resolution, and force-push/deletion disabled.
 - PR #29 is merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443`; recovery PR #31 is merged as canonical head `61e30aca33d196442ec74926e0f911e63e15f4ab`.
 - All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
-- The 14-day fail-closed dependency exception for `GHSA-fc5q-39xc-vjpf` was approved by the founder on 2026-11-18, hardened after adversarial review, and is monitored daily after merge.
+- The former 14-day dependency exception is no longer active: GitHub withdrew `GHSA-fc5q-39xc-vjpf`, and the unchanged production dependency tree audits clean.
 - Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
 - Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-02`
+## Files currently claimed by `P0-08`
 
-None. The P0-02 implementation claim is released; the live policy remains governed by `docs/operations/BRANCH_PROTECTION.md` while the documentation PR is reviewed.
+Claimed on `codex/p0-08-retire-withdrawn-exception`: `COORDINATION.md`; `docs/progress/EXECUTION_BOARD.md`; `.agents/state/{CURRENT,NEXT,BLOCKERS}.md`; `.github/workflows/{ci,dependency-exception-monitor}.yml`; `docs/operations/CI_GOVERNANCE.md`; `docs/security/DEPENDENCY_EXCEPTION_GHSA_FC5Q_39XC_VJPF.md`; `frontend/package.json`; and `frontend/scripts/audit-production{,.test}.mjs`.
 
 No runtime code, database schema, migration, deployment, provider, billing configuration, or customer data was changed.
 
 ## Exact resume action
 
-1. Open the P0-02 documentation PR and require all protected checks on its exact head.
-2. Merge only after GitHub reports the protected PR mergeable and all five application checks pass.
-3. Verify the live protection API after merge, mark P0-02 `DONE`, release its claim, then claim P0-03.
+1. Verify the restored direct audit plus TypeScript, Vitest, ESLint, production build, workflow YAML and diff integrity locally.
+2. Open the P0-08 remediation PR and require all five protected checks on its exact head.
+3. Merge only a green exact head, verify the resulting `main` run, then mark P0-08 and P0-02 `DONE` and claim P0-03.
 
 ## Unresolved risks
 
-- The approved exception expires at `2026-12-02T23:59:59Z`; a permanent patched dependency or reviewed replacement is still required before then.
+- Canonical `main` run `44440792583` is red until P0-08 retires the withdrawn-advisory wrapper and restores the standard audit.
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
 - Production topology and database provenance are not fully verified.

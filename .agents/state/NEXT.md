@@ -2,25 +2,25 @@
 
 The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentionally contains only the next one to three actions.
 
-## 1. Protect `main` (`P0-02`)
+## 1. Retire withdrawn dependency exception (`P0-08`)
 
-**Status:** `REVIEW`; protection is live and red proof PR #33 was blocked. Documentation PR pending.
+**Status:** `REVIEW`; local gate and independent review pass; protected PR pending.
 
-- Merge the protection documentation only after all five required checks pass.
-- Re-verify the live API after merge, record the result, and release the P0-02 claim.
+- Remove the exception wrapper, tests, monitor and artifact-only steps.
+- Restore `npm audit --omit=dev --audit-level=high` and prove all protected checks green.
 
-## 2. Add CODEOWNERS and authority matrix (`P0-03`)
+## 2. Close protected-main task (`P0-02`)
 
-**Status:** `NOT_STARTED`; blocked until P0-02 documentation merges.
+**Status:** `REVIEW`; policy and red-PR enforcement proof are merged, but post-merge `main` must return green after P0-08.
+
+- Re-verify the live protection API after P0-08 merges.
+- Record canonical green `main` evidence and mark P0-02 done.
+
+## 3. Add CODEOWNERS and authority matrix (`P0-03`)
+
+**Status:** `NOT_STARTED`; claim after P0-08 and P0-02 closeout.
 
 - Add sensitive-path ownership without inventing unavailable reviewers.
 - Record merge, deploy, migration, secret, AI, payment, and incident authority.
-
-## 3. Consolidate canonical documentation (`P0-04`)
-
-**Status:** `NOT_STARTED`; keep queued behind P0-03 unless explicitly reprioritized.
-
-- Reconcile active progress/backlog/design/production-gate pointers.
-- Mark stale readiness claims as historical without deleting useful evidence.
 
 Do not skip ahead to AI, telemetry, provider activation, schema consolidation or pilot onboarding while these dependencies are incomplete.
