@@ -56,6 +56,7 @@
     "owner": {
       "erp": "Titan ERP Console",
       "command": "Command Center",
+      "aiOperations": "Operations Intelligence",
       "reports": "Report Factory",
       "fleet": "Fleet Guardian",
       "bookings": "Visual Scheduler",
@@ -74,6 +75,7 @@
     },
     "manager": {
       "command": "Command Center",
+      "aiOperations": "Operations Intelligence",
       "fleet": "Fleet Guardian",
       "bookings": "Visual Scheduler",
       "customers": "Customer CRM",
@@ -1461,5 +1463,56 @@
     "save": "Create Work Order",
     "noOrders": "No work orders in this shop yet.",
     "emptyDescription": "Create a work order from a diagnostic session or vehicle check-in to begin shop tracking."
+  },
+  "aiOperations": {
+    "phase": "Phase 1 · monitor only",
+    "title": "Operations Intelligence",
+    "description": "Verified counts from this agency's records. Rule-based monitoring is a safe foundation for future AI assistants; it is not an autonomous AI agent.",
+    "refresh": "Refresh records",
+    "safetyTitle": "Human review is required",
+    "safetyDescription": "No external AI model is called. Signals cannot collect payments, send messages, change contracts, apply penalties or control vehicles.",
+    "loading": "Checking agency records…",
+    "error": "Unable to load verified agency metrics. No data has been invented. Try again.",
+    "sampledAt": "Checked at",
+    "dataSource": "Agency database (read-only)",
+    "monitor": "MONITOR",
+    "metricsTitle": "Current operating signals",
+    "signalsTitle": "Items to review",
+    "signalsDescription": "These are deterministic checks, not allegations or automatic decisions.",
+    "noSignals": "None of the limited checks returned a positive signal. This does not certify that there are no other issues.",
+    "source": "Record type",
+    "review": "Review records",
+    "limitationsTitle": "What this monitoring cannot establish",
+    "limitations": "An open invoice is not necessarily overdue. Counts are queried separately, not as a transaction snapshot. There is no live GPS, externally verified payment status, AI diagnosis, messaging or autonomous action here.",
+    "metrics": {
+      "vehiclesTotal": "Total vehicles",
+      "vehiclesAvailable": "Available vehicles",
+      "vehiclesMaintenance": "Vehicles under maintenance",
+      "activeRentals": "Active rentals",
+      "returnsNext24h": "Active rentals due within 24 hours",
+      "overdueReturns": "Late or marked-overdue returns",
+      "openInvoices": "Invoices marked due or partial",
+      "documentsExpired": "Expired documents",
+      "documentsExpiring7d": "Vehicle documents expiring in seven days",
+      "urgentTasks": "Open urgent tasks"
+    },
+    "signals": {
+      "OVERDUE_RETURNS": "Late vehicle returns",
+      "RETURNS_NEXT_24H": "Returns in next 24 hours",
+      "OPEN_INVOICES": "Invoices needing review",
+      "MAINTENANCE_VEHICLES": "Vehicles in maintenance",
+      "DOCUMENTS_EXPIRED": "Vehicle documents expired",
+      "DOCUMENTS_EXPIRING_7D": "Documents expiring soon",
+      "URGENT_TASKS": "Urgent staff tasks"
+    },
+    "details": {
+      "OVERDUE_RETURNS": "Review active bookings past their expected return and bookings marked overdue; confirm facts before contacting customers.",
+      "RETURNS_NEXT_24H": "These active bookings end in the next 24 hours. Review planned handovers.",
+      "OPEN_INVOICES": "Invoices are marked DUE or PARTIAL in CarHub. No due date or payment gateway settlement is inferred.",
+      "MAINTENANCE_VEHICLES": "Cars currently have MAINTENANCE status in their fleet record.",
+      "DOCUMENTS_EXPIRED": "Vehicle documents whose expiry date passed or status is EXPIRED need review.",
+      "DOCUMENTS_EXPIRING_7D": "Vehicle documents with a recorded expiry within seven days need human validation.",
+      "URGENT_TASKS": "Tasks marked URGENT remain pending or in progress."
+    }
   }
 }
