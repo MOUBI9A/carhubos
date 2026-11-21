@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-04`
+**Active task:** `P0-07` (independent of P0-05 merge approval)
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
@@ -53,7 +53,7 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 | `P0-04` | `REVIEW` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Codex / draft #30; current-main merge `c3c3840`; link/conflict scans pass; Antigravity `NO BLOCKER`; protected exact-head checks pending |
 | `P0-05` | `NOT_STARTED` | Verify production topology and deployment trigger read-only | `P0-02` | Hosting project/team, deployed SHA/revision, DB/storage/DNS, env ownership, migration history and main-to-production behavior recorded without secrets | Unclaimed |
 | `P0-06` | `NOT_STARTED` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Unclaimed |
-| `P0-07` | `NOT_STARTED` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Unclaimed |
+| `P0-07` | `IN_PROGRESS` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Codex / `codex/p0-07-pr-disposition`; dependency satisfied by merged #30; eligible READY task claimed 2026-11-21 |
 | `P0-08` | `DONE` | Retire the withdrawn picomatch exception and restore the standard production audit | `P0-01` | Official withdrawal recorded; exception wrapper/monitor removed; standard production audit reports zero high/critical findings; exact-head and post-merge `main` CI green | Codex / #35; merge `eba3c5c`; all five jobs green on canonical run `44442498902` |
 
 ## Phase 1 — security, data and recovery
