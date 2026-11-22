@@ -8,7 +8,7 @@
 
 **Current working branch:** `codex/p0-07-pr-disposition` (reconciled with `main` as of merge `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`)
 
-**Active task:** `P0-07` — 16 open-PR disposition inventory, `IN_PROGRESS` until protected PR acceptance
+**Active task:** `P0-07` — inventory submitted for protected `REVIEW` in draft PR #42. No implementation files remain claimed after separate coordination release.
 
 **P0-05:** `DONE`; PR #39 merged as `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83` with founder approval. The Vercel production deployment for this exact SHA is READY. Full topology/provenance limitations are documented in `docs/operations/PRODUCTION_TOPOLOGY.md`.
 
@@ -30,15 +30,15 @@
 - Azure for Students is enabled. The `carhub-staging-dev` resource group exists and was verified **empty**, with no additional billable resources. The existing unrelated `creator-os-dev` Azure VM remains untouched. Supabase rejected a quoted `$0/month` staging project because the owner is at the free-project count limit; no new project exists. Evidence and isolated staging matrix are in issue #41; hosted staging and recovery/PITR remain blocked.
 - No real agency has signed pilot terms or been onboarded. CIG CAR is only a potential candidate, not a verified consenting user. Legal/operator, provider, backup and support gates still apply.
 
-## Current file claim
+## Coordination status
 
-P0-07 exclusively owns `COORDINATION.md`, `docs/progress/EXECUTION_BOARD.md`, `.agents/state/CURRENT.md`, `.agents/state/NEXT.md` and `docs/operations/PR_DISPOSITION.md`. No ownership of `backend/`, `frontend/`, `backend/prisma/schema.prisma`, cloud secrets, production data or user screenshots is implied.
+P0-07 final inventory was submitted in draft PR #42 on implementation head `7dde1600d349a863bae0d515613f70b1c1e48871`. Its scoped file claim is to be released in a separate coordination-only commit. Do not edit screenshots, backend/schema, provider configuration or production data.
 
 ## Next action
 
-1. Validate the fully reconciled P0-07 document, Git diff, and current main history without rewriting either branch.
-2. Push the scoped branch and open a documentation PR; record exact SHA and Vercel preview results. GitHub billing-blocked mandatory checks prevent protected acceptance or merging.
-3. Release the P0-07 claim after committing task handoff state in a separate coordination commit, while preserving the existing PR.
-4. Prepare P0-06 environment/provider/data matrix on a distinct branch only after releasing the shared-file claim. Do not create paid resources or claim hosted staging exists.
+1. Leave PR #42 in draft protected REVIEW until five exact-head GitHub checks can run again; billing blocker #40 is not a reason to bypass enforcement.
+2. Release P0-07 claim in a separate coordination-only commit; a fresh P0-06 worker can then claim its files.
+3. Prepare the P0-06 environment/provider/data matrix (issue #41) in a separate scope without touching live providers or user data.
+4. No hosted staging, paid Azure resources or agency pilot until the applicable gates are met.
 
 The board and master plan, not this snapshot, define dependencies and acceptance. Re-verify remote state before acting.
