@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-07` (independent of P0-05 merge approval)
+**Active task:** `P0-07` — scoped PR disposition inventory in preparation for protected review
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
@@ -50,9 +50,9 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 | `P0-01` | `DONE` | Remove duplicate push+PR CI runs and establish stable required-check contexts | `P0-00` | One CI set per PR; push-to-main coverage preserved; five web/backend contexts deterministic; mobile required-check behavior documented; green test PR | Codex / #29 + recovery #31; canonical merge `61e30ac`; all five jobs green on push run `44278183559` |
 | `P0-02` | `DONE` | Protect `main` and prove enforcement | `P0-01` | PR required; required checks enforced; force-push/deletion blocked; stale approvals/conversations policy set; deliberately red test PR cannot merge | Codex / #34; red proof #33 blocked; live API reverified; all five jobs green on canonical run `44442498902` |
 | `P0-03` | `DONE` | Add CODEOWNERS and release/incident authority matrix | `P0-02` | Sensitive paths have reviewers; merge/deploy/migrate/secret/AI/payment/incident owners recorded and reviewed | Codex / #37; merge `091d320`; GitHub CODEOWNERS parser clean on `main`; all five jobs green on run `44446578976` |
-| `P0-04` | `DONE` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Codex / #30 merged ff6d167; canonical CI 44481889569 passed |
-| `P0-05` | `REVIEW` | Verify production topology and deployment trigger read-only | `P0-02` | Hosting project/team, deployed SHA/revision, DB/storage/DNS, env ownership, migration history and main-to-production behavior recorded without secrets | Codex / #39; all five checks plus Vercel green at e59f32e; awaiting merge approval |
-| `P0-06` | `NOT_STARTED` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Unclaimed |
+| `P0-04` | `DONE` | Consolidate canonical documentation and archive/signal stale readiness claims | `P0-00` | All active docs link to plan/board/current state; stale phase summaries visibly historical; no conflicting source-of-truth claim | Codex / #30; merged `ff6d167`; Antigravity `NO BLOCKER`; all five checks passed on run `44481889569` |
+| `P0-05` | `DONE` | Verify production topology and deployment trigger read-only | `P0-02` | Hosting project/team, deployed SHA/revision, DB/storage/DNS, env ownership, migration history and main-to-production behavior recorded without secrets | Codex / #39 merged `a854a21`; pre-merge exact-head five CI plus Vercel Preview passed. Production READY and read-only health/ready checks returned HTTP 200. Post-merge CI jobs could not start due billing restriction (#40); migration/promotion gap B-009 retained. Detailed topology: `docs/operations/PRODUCTION_TOPOLOGY.md` |
+| `P0-06` | `READY` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Unclaimed |
 | `P0-07` | `IN_PROGRESS` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Codex / `codex/p0-07-pr-disposition`; dependency satisfied by merged #30; eligible READY task claimed 2026-11-21 |
 | `P0-08` | `DONE` | Retire the withdrawn picomatch exception and restore the standard production audit | `P0-01` | Official withdrawal recorded; exception wrapper/monitor removed; standard production audit reports zero high/critical findings; exact-head and post-merge `main` CI green | Codex / #35; merge `eba3c5c`; all five jobs green on canonical run `44442498902` |
 
@@ -64,7 +64,7 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 | `P1-02` | `NOT_STARTED` | Select and provision production-shaped staging plus managed PostgreSQL/PITR | `P1-01` | Approved service/region/access/backup policy; staging isolated with sandbox providers | Unclaimed |
 | `P1-03` | `NOT_STARTED` | Rehearse backup restore, PITR, pending migrations and rollback/forward repair | `P1-02` | Measured RPO/RTO, successful disposable restore, integrity smoke, migration lock/duration evidence and named owners | Unclaimed |
 | `P1-04` | `NOT_STARTED` | Privileged MFA, session inventory/revocation and emergency recovery | Phase 0 | ROOT_ADMIN/OWNER MFA and recovery pass; session revoke proven; impersonation time-bound/audited | Unclaimed |
-| `P1-05` | `NOT_STARTED` | Controller/tenant/capability/consent security audit | Phase 0 | Negative IDOR/authz/consent suite and review cover every sensitive controller; findings resolved or explicitly gated | Unclaimed |
+| `P1-05` | `NOT_STARTED` | Controller/tenant/capability/consent security audit | Phase 0 | Negative IDOR/authz/consent suite and review cover every sensitive controller; Supabase exposed-schema grants and compatible RLS policy posture reviewed; findings resolved or explicitly gated | Unclaimed |
 | `P1-06` | `NOT_STARTED` | Observability, redaction, alerts, on-call and incident runbooks | `P0-05` | Error/request/provider/DB dashboards; alert reaches owner; tenant/payment/breach/provider/restore runbooks exercised | Unclaimed |
 | `P1-07` | `NOT_STARTED` | Shared throttling and runtime/dependency/security baseline | `P0-05` | Multi-replica rate-limit behavior defined/proven; runtime versions aligned deliberately; no unaccepted critical/high production issue | Unclaimed |
 

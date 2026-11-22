@@ -1,44 +1,44 @@
 # Current Operational State
 
-**Last updated:** 2026-11-21
-**Branch:** `codex/p0-07-pr-disposition`
-**Base:** `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd` (origin/main)
-**Active task:** P0-07 — PR disposition inventory, IN_PROGRESS
-**PR:** to be opened after verification
+**Last reviewed:** 2026-11-22
 
-## Verified state
+**Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 
-- P0-04 merged through PR #30 at the base above. Earlier P0-04 REVIEW text on main was stale.
-- P0-05 remains REVIEW in PR #39 at `e59f32eed1109d54550d69aa1e3bc7bba094bc90`; all five required CI checks and Vercel passed and GitHub reports CLEAN on 2026-11-21.
-- PR #39 merge approval remains pending because main automatically deploys production. No merge occurred this session.
-- P0-07 depends only on completed P0-04 and was claimed independently. No P0-05 implementation files were imported from its unmerged branch.
-- Inventoried all 16 scoped PRs, including exact heads, API-reported bases, local merge-bases, schema paths, accountable owner, dependencies, dispositions and required acceptance evidence.
-- Author is @MOUBI9A for every listed PR; no implementation assignees are set.
-- #27 inherits #22 compliance migrations. AI chain is #23 → #24 → #25 → #26 and stays deferred until after the core pilot.
-- Legacy branches diverge by 171–180 main-only commits; proposed ports require current defect reproduction.
-- GitHub metadata and source inspection are inventory evidence, not runtime acceptance.
+**Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-## Files claimed
+**Current working branch:** `codex/p0-07-pr-disposition` (reconciled with `main` as of merge `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`)
 
-COORDINATION.md; docs/progress/EXECUTION_BOARD.md; .agents/state/CURRENT.md;
-.agents/state/NEXT.md; docs/operations/PR_DISPOSITION.md.
+**Active task:** `P0-07` — 16 open-PR disposition inventory, `IN_PROGRESS` until protected PR acceptance
 
-## Verification and limits
+**P0-05:** `DONE`; PR #39 merged as `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83` with founder approval. The Vercel production deployment for this exact SHA is READY. Full topology/provenance limitations are documented in `docs/operations/PRODUCTION_TOPOLOGY.md`.
 
-Read-only GitHub inventory and local revision comparisons completed. No code,
-migration, provider, production configuration or customer data was changed.
-No listed PR was closed, rebased or merged. Screenshots remain user-owned and untouched.
-Independent review and documentation checks are next.
+## Verified P0-07 inventory
 
-## Resume
+- PR #30 (P0-04) merged as `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`; canonical CI run `44481889569` passed all five required jobs.
+- P0-07 was claimed on branch `codex/p0-07-pr-disposition` in `COORDINATION.md` at `b872005d9d2f70e701c7596f9fe9c1ea1bdf833d`, before editing.
+- Recorded all 16 open PRs (#5–#13, #20, #22–#27), exact heads, GitHub-reported bases, merge-base comparisons, schema dependencies, ownership, approved disposition and required future evidence. Exact heads were independently compared with GitHub on 2026-11-22, all 16 matched.
+- AI PR chain #23–#26 stays draft/deferred until after the core pilot; vehicle-control scope in #8 is not eligible for release. `docs/operations/PR_DISPOSITION.md` is a read-only decision inventory, not implementation or acceptance.
+- The earlier base `ff6d1674` is preserved in the inventory as the exact historical comparison baseline, not misrepresented as current production.
+- No runtime, schema, migrations, environment variables, provider configuration, real customer records or production settings were changed in this task.
+- The untracked `screenshots/` directory remains user-owned and untouched.
 
-1. Verify the inventory and open its documentation PR; release the claim separately.
-2. Obtain protected CI evidence on the final PR commit.
-3. Resolve PR #39 approval; after acceptance P0-06 becomes eligible.
-4. Before either documentation PR merges, reconcile shared state files so that
-   P0-05 evidence and P0-07 progress are both preserved. Never overwrite either
-   task's latest state with an older branch snapshot.
+## Current release and billing evidence
 
-The plan/board remain authoritative. Production release, migration, staging,
-backup/PITR, RLS, legal/provider and pilot gates remain outstanding. Historical
-execution evidence is preserved in Git history and PRs #28–#39.
+- Production `main` at `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83` auto-deploys on every merge; there is no production migration/promote gate (blocker B-009). `PAYMENT_PROVIDER=DISABLED` and `AI_VISION_MODE=disabled` remain verified deployment configuration; provider activation stays gated.
+- Exact-commit isolated local verification: 45/45 full Chromium Playwright checks in one run, backend 17/17 live-DB integration tests, backend 656 passing unit tests (16 skipped), frontend 55 passing tests, backend/frontend production-style builds and syntax/lint/type checks passed. Synthetic PostgreSQL 17 accepted 21/21 migrations, and a local dump/restore reproduced 21 migration records and 41 public tables. These checks are **local-only**, not hosted staging, live storage or production PITR acceptance.
+- GitHub-hosted required checks on the November 22 post-merge run `44986349161` **did not start** because GitHub annotated account payment/spending-limit restrictions. Root cause, evidence, and local fallback are recorded in issue #40. Never bypass required CI or enable paid overages.
+- Azure for Students is enabled. The `carhub-staging-dev` resource group exists and was verified **empty**, with no additional billable resources. The existing unrelated `creator-os-dev` Azure VM remains untouched. Supabase rejected a quoted `$0/month` staging project because the owner is at the free-project count limit; no new project exists. Evidence and isolated staging matrix are in issue #41; hosted staging and recovery/PITR remain blocked.
+- No real agency has signed pilot terms or been onboarded. CIG CAR is only a potential candidate, not a verified consenting user. Legal/operator, provider, backup and support gates still apply.
+
+## Current file claim
+
+P0-07 exclusively owns `COORDINATION.md`, `docs/progress/EXECUTION_BOARD.md`, `.agents/state/CURRENT.md`, `.agents/state/NEXT.md` and `docs/operations/PR_DISPOSITION.md`. No ownership of `backend/`, `frontend/`, `backend/prisma/schema.prisma`, cloud secrets, production data or user screenshots is implied.
+
+## Next action
+
+1. Validate the fully reconciled P0-07 document, Git diff, and current main history without rewriting either branch.
+2. Push the scoped branch and open a documentation PR; record exact SHA and Vercel preview results. GitHub billing-blocked mandatory checks prevent protected acceptance or merging.
+3. Release the P0-07 claim after committing task handoff state in a separate coordination commit, while preserving the existing PR.
+4. Prepare P0-06 environment/provider/data matrix on a distinct branch only after releasing the shared-file claim. Do not create paid resources or claim hosted staging exists.
+
+The board and master plan, not this snapshot, define dependencies and acceptance. Re-verify remote state before acting.

@@ -236,6 +236,6 @@ Sources: GitHub PR metadata and complete changed-file lists, local Git merge-bas
 
 ## Limits and release gate
 
-The November 19 topology audit in PR #39 found automatic production deployment from main without a production migration gate. PR #39 is still awaiting merge approval as of this inventory; its facts must be refreshed before release. No production mutation, data export, provider activation, branch rewriting or dependency installation occurred in P0-07. The untracked screenshots directory is untouched.
+The November 19 topology audit in PR #39 found automatic production deployment from main without a production migration gate. PR #39 subsequently merged as `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83` on 2026-11-22, after the November 21 inventory base `ff6d1674`. This historical revision comparison is intentionally preserved; the follow-up merge of the P0-07 branch includes the accepted topology document. Post-merge GitHub CI jobs were blocked before starting by account billing restrictions (issue #40), not by an application test failure. No production mutation, data export, provider activation, branch rewriting or dependency installation occurred in P0-07. The untracked screenshots directory is untouched.
 
 Rollback for this documentation change is a reviewed revert of this PR; no database rollback is needed. Each future code release must satisfy its own tests, staging, migration and founder approval gates. P0-07 completes only when this inventory is accepted and merged; P2-03 owns actual selective ports and closures.
