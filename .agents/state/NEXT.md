@@ -1,27 +1,22 @@
 # Next Engineering Priorities
 
-The canonical queue is `docs/progress/EXECUTION_BOARD.md`. This file intentionally contains only the next one to three actions.
+The canonical task order is `docs/progress/EXECUTION_BOARD.md`. This is only a near-term handoff, not a second roadmap.
 
-## 1. Finish production topology evidence (`P0-05`)
+## 1. Review draft PR #42 (P0-07)
 
-**Status:** `REVIEW` in draft PR #39.
+- Inventory submitted in [PR #42](https://github.com/MOUBI9A/carhubos/pull/42) with all 16 exact GitHub heads and future disposition. Merge blocked until the required five CI checks run.
+- No code from those PRs was merged or closed. Coordination claim to be released separately.
+- GitHub required checks are currently blocked before job start by account billing limits (issue #40); preserve branch protection and do not merge a red/unverified PR.
 
-- Independent review returned `NO BLOCKER`; wait for exact-head CI plus Vercel Preview evidence.
-- Resolve any material review finding without weakening the recorded production restrictions.
-- Do not merge without the founder/release-owner gate: P0-05 proves that every `main` merge triggers production automatically.
+## 2. Start P0-06 environment isolation rules
 
-## 2. Define environment/provider/data rules (`P0-06`)
+- P0-05 / PR #39 is merged (`a854a21`); P0-06 is dependency-satisfied and unclaimed. Issue #41 records the tentative environment/provider/data matrix and zero-cost constraints.
+- Use separate scoped branch after the P0-07 ownership release. Vercel Preview is not production-shaped staging. Azure CarHub staging resource group is empty and Supabase free-project quota rejected a new staging project.
+- No cloud database, production schema, provider or payment activation until verified budget, separate credentials and migration/recovery controls exist.
 
-**Status:** `NOT_STARTED`; depends on P0-05.
+## 3. Prepare P1-01 read-only database security provenance
 
-- Define allowed data, credentials, providers, flags, seeding, retention and approvals for development, test, Preview, staging, pilot and production.
-- Record explicitly that Vercel Preview is not production-shaped staging and currently has no project-level Preview variables.
+- Audit exact production schema grants, RLS policy posture, drift and scale without reading/exporting real customer rows.
+- Do not run production migrations or call local synthetic restore proof a production PITR exercise.
 
-## 3. Publish the legacy/open-PR disposition matrix (`P0-07`)
-
-**Status:** `NOT_STARTED`; dependency P0-04 is complete.
-
-- Record exact base/head, owner, dependencies, schema risk and port/close/rebase disposition for PRs #5–#13, #20 and #22–#27.
-- Do not merge or enable the AI stack while completing the inventory.
-
-Do not skip ahead to provider activation, production schema changes, telemetry, AI or pilot onboarding while their gates remain incomplete.
+AI foundation remains deferred until Phase 3 pilot acceptance. Never weaken protected checks to bypass the GitHub account billing restriction.
