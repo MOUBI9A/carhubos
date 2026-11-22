@@ -6,19 +6,37 @@
 
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
 
-**Current branch:** `codex/p0-04-doc-consolidation`
+**Current branch:** `codex/p0-05-topology-audit`
 
-**Current PR:** #30 — draft; current-main reconciliation verified and ready for protected review
+**Current PR:** #39 — draft; implementation and independent review complete, protected exact-head checks pending
 
-**Current base:** `origin/main` at `238c56f5bda6e2223b60091a7c79c40c32f1034b`
+**Current base:** `origin/main` at `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-04` — consolidate canonical documentation and mark stale readiness/roadmap claims, status `REVIEW`
+**Active task:** `P0-05` — verify production topology and deployment trigger read-only, status `REVIEW`
 
-**Next task:** finish P0-04 reconciliation and protected review, then begin P0-05 read-only topology verification
+**Next task:** finish protected review for PR #39; merge only through the founder/release-owner gate, then begin `P0-06`
 
 Always re-verify these drift-prone facts before acting.
+
+## Current P0-05 evidence
+
+- P0-04 PR #30 merged as `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`; canonical run `44481889569` passed all five required jobs.
+- P0-05 was claimed on `codex/p0-05-topology-audit`; claim commit `480860db92069f92bb16bd7c5997f92cdef34d4a` is pushed.
+- Vercel team `hel-moues-projects` owns project `carhubos`, which is linked to `MOUBI9A/carhubos` with production branch `main`.
+- Current production is Vercel deployment `dpl_CoTyp78nFzyKXiSmQpKhG8tcziTv`, READY on exact SHA `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`.
+- `main` auto-deploys to production; feature branches create previews. There is no staging promotion between protected `main` and production.
+- `carhub.codes` and `www.carhub.codes` are valid Vercel domains. Public page, API health and API readiness checks returned HTTP 200 after redirects; readiness reported the database reachable.
+- Production data is Supabase project `carhubos` in `eu-west-1`, PostgreSQL `17.6.1.147`, status `ACTIVE_HEALTHY`; storage bucket `vault-files` is private.
+- All 21 checked-in Prisma migration names exist in production `_prisma_migrations`, finished with no rollback marker. Supabase's separate migration registry is empty because Prisma owns migration history.
+- Production startup does not run `prisma migrate deploy`; CI and local Compose migration gates do not protect the Vercel production release.
+- Render `My Workspace` has no service or database linked to this repository. `carhub-infinity-api` belongs to the different `MOUBI9A/carhub-infinity` repository.
+- Production has 41 ordinary public-schema tables; 33 lack RLS, but direct checks found zero DML grants to `anon` or `authenticated`. This is a contained defense-in-depth gap, not proof of current anonymous access.
+- Only Production Vercel variables are configured. Secret values were not read or copied; no production mutation or customer-row export occurred.
+- Detailed evidence and limitations are recorded in `docs/operations/PRODUCTION_TOPOLOGY.md`.
+- A bounded read-only Antigravity review returned `NO BLOCKER`; it found the production/Preview distinction, migration conclusions, RLS wording, secret handling and release restrictions consistent.
+- Draft PR #39 is open for the documentation-only change; exact-head CI, Vercel Preview and the founder/release-owner merge gate remain pending.
 
 ## Completed before the current task
 
@@ -90,34 +108,41 @@ Always re-verify these drift-prone facts before acting.
 
 - PR #28 is merged into `main` as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`.
 - GitHub `main` is protected with strict five-check PR enforcement, admin enforcement, stale-review dismissal, conversation resolution, and force-push/deletion disabled.
-- Canonical `main` is `238c56f5bda6e2223b60091a7c79c40c32f1034b`; P0-03 is complete, CODEOWNERS parses without errors, and its canonical implementation run `44446578976` is green across all five required jobs.
+- Canonical `main` is `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`; P0-04 is complete and canonical run `44481889569` is green across all five required jobs.
 - PR #29 is merged as `2c9c93f9cc88a81650a3e59e33b75b3cfc1ed443`; recovery PR #31 is merged as canonical head `61e30aca33d196442ec74926e0f911e63e15f4ab`.
 - All five GitHub Actions CI jobs passed on run `44269223199` for hardening head `9158de7`: Backend, Backend e2e, Backend production container, Frontend, and E2E full stack.
 - The former 14-day dependency exception is no longer active: GitHub withdrew `GHSA-fc5q-39xc-vjpf`, and the unchanged production dependency tree audits clean.
-- Draft PR #30 points active entry documents to the canonical hierarchy and visibly marks obsolete progress/roadmap/queue narratives as historical or superseded; its current-main merge is being reconciled without rewriting history.
+- PR #30 consolidated the canonical hierarchy and merged as `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`.
 - No historical file was moved or deleted; existing open-PR and Git-history links remain valid.
-- Public `carhub.codes`, `/api/health` and `/api/ready` were reachable during the plan audit, but the exact production project/database/deployed-SHA provenance remains unverified.
-- Render “My Workspace” had no matching `MOUBI9A/carhubos` service during the audit.
+- Public `carhub.codes`, `/api/health` and `/api/ready` are served by Vercel production deployment `dpl_CoTyp78nFzyKXiSmQpKhG8tcziTv` on exact SHA `ff6d1674aa9350c03dbb0dc915c1bdf778d0ccbd`.
+- Supabase project `carhubos` is the live database/storage service; all 21 Prisma migrations are applied and the private `vault-files` bucket exists.
+- Render “My Workspace” has no matching `MOUBI9A/carhubos` service or database.
 - The local untracked `screenshots/` directory is user-owned and must remain untouched.
 
-## Files currently claimed by `P0-04`
+## Files currently claimed by `P0-05`
 
-None. The P0-04 claim is released while PR #30 receives protected exact-head review.
+`COORDINATION.md`, `docs/progress/EXECUTION_BOARD.md`,
+`.agents/state/CURRENT.md`, `.agents/state/NEXT.md`,
+`.agents/state/BLOCKERS.md`, and
+`docs/operations/PRODUCTION_TOPOLOGY.md`.
 
-No runtime code, database schema, migration, CI implementation, deployment, provider, billing configuration or customer data is in scope.
+No runtime code, database schema, migration, CI implementation, deployment,
+provider, billing configuration or customer data mutation is in scope.
 
 ## Exact resume action
 
-1. Commit and push the verified P0-04 review state, then release the coordination claim in a separate commit.
-2. Mark PR #30 ready, replace its stale B-007 description, and wait for a green, clean exact head.
-3. Merge only under the documented low-risk delegation, verify canonical `main`, then record P0-04 completion and proceed to P0-05.
+1. Release the P0-05 coordination claim in a separate commit and mark PR #39 ready for review.
+2. Wait for exact-head CI and Vercel Preview evidence; resolve any material review finding without weakening the documented restrictions.
+3. Because P0-05 proves that every merge to `main` is a production deployment trigger, merge only after the founder/release-owner gate recorded in B-009.
 
 ## Unresolved risks
 
 - Feature-branch pushes without a PR will no longer run automatically after `P0-01`; manual dispatch remains available.
 - Required CODEOWNER approval is intentionally disabled while the founder is the only confirmed accountable CODEOWNER; automated checks and conversation resolution remain mandatory.
 - Path-filtered mobile CI cannot be globally required until it reports a deterministic result for every PR.
-- Production topology and database provenance are not fully verified.
-- P0-04 acceptance must prove that no active document retains a conflicting source-of-truth or task-pickup claim after reconciliation.
+- `main` auto-deploys to production and there is no production migration gate; B-009 blocks production-affecting merges until the staged release path is accepted.
+- Full schema drift, extensions, backup/PITR, restore, scale and data-quality provenance remain `P1-01` through `P1-03`; this topology audit does not replace them.
+- RLS is disabled on 33 public tables. Current direct grants to `anon` and `authenticated` are zero, but `P1-01`/`P1-05` must preserve that containment and design compatible policies.
+- Vercel Preview has no verified isolated database/provider configuration and is not staging.
 - GitHub Actions reports Node 20 deprecation annotations for action runtimes, and frontend lint retains three pre-existing internal-navigation warnings; both are non-blocking follow-up evidence, not P0-03 failures.
 - AI, provider, payment, GPS, legal, mobile-store and real-user pilot work remain gated by later board tasks.
