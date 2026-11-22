@@ -2,11 +2,11 @@
 
 The task order is `docs/progress/EXECUTION_BOARD.md`; this is a near-term handoff only.
 
-## 1. P0-06: submit environment and data rules
+## 1. Review draft P0-06 PR #43 and P0-07 PR #42
 
-- Current branch `codex/p0-06-environment-rules` has the independent claim from `0ebace0`, and its new policy document is `docs/operations/ENVIRONMENT_PROVIDER_DATA_MATRIX.md`.
+- Draft P0-06 [PR #43](https://github.com/MOUBI9A/carhubos/pull/43) includes the new `docs/operations/ENVIRONMENT_PROVIDER_DATA_MATRIX.md`; implementation head `cd5f8d3`, coordinated through claim `0ebace0`.
 - Review allowed data, credentials, providers, feature flags, seeding, retention, preview/staging separation and release approvals for each environment. It is policy documentation, not hosted staging.
-- Submit as a **draft PR stacked on P0-07 PR #42** to avoid overwriting that owner's state. Release claim after status/PR update.
+- PR #43 deliberately targets P0-07 PR #42 to avoid overwriting that owner's state. Release the P0-06 file claim separately, then wait for the protected review and retarget after #42 safely merges.
 
 ## 2. P0-07 and protected CI
 
