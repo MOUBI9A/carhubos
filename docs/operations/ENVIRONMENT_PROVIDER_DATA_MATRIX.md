@@ -2,7 +2,7 @@
 
 **Board task:** `P0-06` — Phase 0 control and one source of truth
 **Status:** Implementation proposal for protected review, **not a deployed staging environment**
-**Verified baseline:** 2026-11-22; `main` at `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`
+**Code and GitHub review:** 2026-11-23; `main` at `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`. Hosting, cost and local QA observations below were recorded on November 22 and were not rerun for this documentation review.
 **Owner:** Founder/release and security owner `@MOUBI9A`
 **Related:** [Production topology](PRODUCTION_TOPOLOGY.md), [authority matrix](AUTHORITY_MATRIX.md), [master plan](PLATFORM_READINESS_MASTER_PLAN_20261117.md), [CI billing blocker #40](https://github.com/MOUBI9A/carhubos/issues/40), [environment decision #41](https://github.com/MOUBI9A/carhubos/issues/41).
 
@@ -23,7 +23,9 @@ This is the authoritative **policy proposal** for environment ownership, data, p
 
 `main` merges **automatically deploy to Vercel production**. There is no mandatory production `prisma migrate deploy` gate, tested staging promotion or accepted production rollback/restore procedure. Production settings observed in the topology audit include `PAYMENT_PROVIDER=DISABLED` and `AI_VISION_MODE=disabled`. These are configuration facts, **not** feature-completeness or AI safety proofs. Do not merge runtime/dependency/schema/infra changes until the release, backup and rehearsal gates are met.
 
-## Required data and provider rules
+## Required data and provider rules (target policy)
+
+Staging remains unprovisioned. Its row is a prerequisite for `P1-02`, not permission to seed, deploy or rehearse against an existing production service.
 
 | Scope | Database and storage | Credentials and providers | Seeding and retention | Release and owners |
 |---|---|---|---|---|
@@ -36,6 +38,8 @@ This is the authoritative **policy proposal** for environment ownership, data, p
 
 ## Secret and environment-variable contract
 
+These are required boundaries, not a claim that a universal stage validator or provider kill switch already exists. The implementation gaps below must be closed before relying on this policy for hosted acceptance.
+
 | Variable / setting | Allowed placement | Owner / purpose |
 |---|---|---|
 | `DATABASE_URL` | Backend/worker secrets only, different server for every stage; never public or in CI logs | Infra and migration owner; enforce TLS, minimum database role, migration privileges separately when feasible |
@@ -45,9 +49,45 @@ This is the authoritative **policy proposal** for environment ownership, data, p
 | `NEXT_PUBLIC_API_URL` | Public endpoint only; never credentials; correct preview/staging host | Frontend owner; any `NEXT_PUBLIC_*` value is browser-visible |
 | `PAYMENT_PROVIDER` | `DISABLED` by default on Preview/staging/production; `MOCK` only in isolated local/test fixtures | Payment owner; verified provider settlement and idempotency before real money |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Twilio tokens and similar | Only in specifically approved, separate **server-side** sandbox/live stage; unset while provider disabled | Provider/billing owner, explicit per-environment approval and spending cap |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Key server-only; absent unless outbound email is approved; verified sender and isolated recipient test sink required | Communications owner; setting the key activates the adapter regardless of deployment stage |
+| `GUARDIAN_WHATSAPP_MODE`, `GUARDIAN_WHATSAPP_AGENCY_IDS`, `GUARDIAN_WHATSAPP_CONTENT_SID` | Guardian mode unset and agency allowlist empty until explicitly approved; template identifier is stage-specific | Communications/security owner; these settings do not disable the generic Twilio sending path |
 | `AI_VISION_MODE` and any AI/GPS feature controls | `disabled` by default in hosted environments; labeled `simulation` only in nonproduction development | AI/security owner; AI quota/kill-switch and consent review required before activation |
 
 **Configuration enforcement requirement for later implementation:** Validate the actual backend configuration at startup. Missing isolated staging/preview identity must **fail closed**, not default to `DATABASE_URL` or Supabase production. Distinguish deploy stage from `NODE_ENV`: staging/pilot can run production builds with `NODE_ENV=production` and a separate, explicit stage label; do not assume Nest or Next understands `NODE_ENV=staging`. No new runtime stage flag is claimed to exist yet.
+
+### Observed enforcement and assigned gaps
+
+Static review of canonical runtime code on November 23; no provider calls or production changes:
+
+| Area | Current code behavior | Required containment / follow-up |
+|---|---|---|
+| Payments | `PaymentGatewayService` defaults unknown/unset selection to MOCK outside production; production startup rejects MOCK. DISABLED rejects checkout/callbacks. `CmiGateway` is an unimplemented throwing scaffold. | Explicit DISABLED for hosted environments. A provider selector or merchant key alone is not CMI implementation. `P1-07` configuration validation; `P3-02` provider-truth acceptance. |
+| Email | `EmailService` selects Resend whenever its key exists, including development/test. Without a key the development adapter reports mock success outside production and failure in production. | Keep keys absent in automated tests; use an approved recipient sink for sandbox evaluation. `P1-07` stage configuration; `P3-02` honest delivery state. |
+| WhatsApp | Guardian applies its own mode and agency allowlist. Generic `TwilioService.sendWhatsAppMessage` sends whenever credentials exist, independently of Guardian settings; without credentials it returns `success: true, status: mock_sent`, including in production. | No production delivery claim from this result; keys absent until approved. Track B-012, `P3-02` must fix or hide affected surfaces before pilot; `P1-06` must review recipient/body log redaction. No global disable switch is assumed. |
+| AI Vision | Explicit `AI_VISION_MODE=simulation` takes precedence even with production `NODE_ENV`; only the unset production default is disabled. | Explicit disabled setting is required on hosted deployments; `P1-07` must enforce stage constraints before hosted acceptance. Simulation is not real AI. |
+| Stage identity | No unified six-stage validator is established by this PR; CI uses PostgreSQL 15 while production audit reports 17. | `P1-02` verifies production-shaped staging and separate credentials; `P1-07` aligns runtime/config deliberately. Do not silently treat existing CI as PG17 rehearsal. |
+
+Source: `backend/src/payment-gateway/payment-gateway.service.ts`, `backend/src/payment-gateway/providers/cmi.gateway.ts`, `backend/src/email/email.service.ts`, `backend/src/email/providers/development-email.provider.ts`, `backend/src/integrations/twilio/twilio.service.ts`, `backend/src/ai-vision/ai-vision.service.ts`, `.github/workflows/ci.yml`.
+
+## Retention and cleanup ownership
+
+The following synthetic-data limits are proposed operating policy, not implemented schedulers or legal retention periods. Before creating shared fixtures, record resource ID, owner, purpose, creation/expiry date and cleanup evidence without credentials or customer rows. Expiry alone never authorizes deleting an unidentified database, user file or unrelated resource. A cleanup failure blocks reuse and is escalated to the founder/security owner.
+
+| Environment / data | Proposed limit or required decision | Cleanup owner and evidence |
+|---|---|---|
+| Development synthetic databases/traces | Remove task-created disposable fixtures at task close; review any justified extension every 7 days | Task owner verifies exact target and records removal or dated extension; never include owner screenshots or unrelated local files |
+| CI fixtures and artifacts | Ephemeral DB/container ends with run; current Playwright artifact retention is 7 days. Other logs/artifacts require a verified repository retention setting; no claim of a universal 7-day purge | CI owner verifies teardown and artifact settings; exclude tokens, real contacts and document content from reports |
+| Preview synthetic DB/storage | Expire within 7 days after PR closure; access credentials revoked on closure after confirming no remaining consumer | Preview owner records exact resource IDs, deletion and revocation; no automatic shared-service seed/reset |
+| Staging synthetic/anonymized fixtures | Maximum 30 days per dataset before purge or explicit renewed purpose/expiry; test uploads follow the same limit | Staging/data owner inventories datasets, files and backups; verifies anonymization before import and records cleanup |
+| Pilot/production personal, financial and audit records | **Unapproved**: category-specific purpose, legal basis, retention, deletion/hold exceptions and backup expiry must be accepted under B-004 before onboarding | Founder plus legal/data owner define the schedule and privacy-request workflow; no invented legal duration, bulk deletion or automated production purge |
+
+Backup copies follow their environment's data classification. Their expiry, access, deletion propagation, restore quarantine and legal-hold handling must be documented under `P1-02`/`P1-03` and B-004 before real-user data. Synthetic TTLs do not establish a production backup or PITR policy.
+
+## Exact-head CI and stacked review
+
+PR #43 targets `codex/p0-07-pr-disposition`. `.github/workflows/ci.yml` triggers PR checks only against `main`, so its five jobs are **not scheduled** on #43 at this stage; a successful Vercel status is not those jobs. Parent PR #42 at `10eb8377ce46cf831b30948c660684eb41f71bed` has five failed jobs in run `45011531906`; the check annotation re-read November 23 reports account payment/spending-limit failure before execution.
+
+Restore included GitHub allowance/account access without paid overages, then rerun and accept #42 through protected review. After the parent is merged, retarget #43 to `main`, reconcile any changed base without force-push, and verify all five checks on its final head. If retargeting does not schedule a run, use the existing workflow-dispatch entry point on the exact branch and verify its head SHA; do not alter branch protection or count local tests as hosted checks. Review/deployment authority still applies to each merge.
 
 ## Budget and service facts — verified November 22
 
@@ -64,7 +104,7 @@ This is the authoritative **policy proposal** for environment ownership, data, p
 
 1. Verify exact source SHA, change/diff scope, all five required GitHub contexts, no unresolved review threads and current production target project/team.
 2. For schema changes: decide reversible expand/migrate/contract sequence; rehearsal on a **separate** PostgreSQL 17 instance; record index locks, query compatibility, failure/forward-repair and production backup/PITR evidence before migration approval.
-3. Verify secrets and allowed origins belong to the selected environment **without printing values**; check disabled providers cannot report success. Never run real user imports/seed on production.
+3. Verify secrets and allowed origins belong to the selected environment **without printing values**; check disabled providers cannot report success. Never seed/reset production. Real-user imports require the separately approved `P3-03` validated, audited import procedure and `P3-05` pilot gate; this policy does not authorize an import.
 4. Record named migration and rollback owners, recovery approach and support escalation. Test the selected hosted build before promotion, then read-only health, API readiness, auth, and a representative tenant/consent negative test.
 5. With the present auto-deploy topology, a merge itself deploys production. Do not treat a documentation-only preview or a local restored database as proving this release pipeline safe.
 

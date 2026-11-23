@@ -1,8 +1,22 @@
 # Operational Blockers
 
-**Last updated:** 2026-11-19
+**Last updated:** 2026-11-23
 
 ## Active now
+
+### B-011 — Required GitHub CI cannot start; stacked PR has no CI trigger yet
+
+- **Verified:** 2026-11-23, PR #42 head `10eb837`, run `45011531906`: all five jobs failed before execution. Check annotation reports failed account payments or a spending-limit restriction; exact account remedy remains owner-specific (issue #40).
+- **Separate fact:** PR #43 targets a feature branch; the workflow only triggers PR checks against `main`, so its five jobs are not scheduled. Vercel success is not a CI pass.
+- **Blocks:** protected acceptance of #42 and #43, hence the Phase 0 exit gate.
+- **Owner/action:** founder/account owner restores included access without paid overages; then rerun exact-head #42 checks, merge only through applicable release authority, retarget #43 and require all five final-head checks. No protection bypass or personal-Mac runner workaround.
+
+### B-012 — Generic WhatsApp mock success is not delivery evidence
+
+- **Verified statically:** 2026-11-23, `TwilioService.sendWhatsAppMessage` returns `success: true, status: mock_sent` with no credentials, even in production. With credentials it sends independently of Guardian mode/allowlist.
+- **Blocks:** delivery-success claims and affected communications surfaces in real-user acceptance. No live message was sent to reproduce this.
+- **Containment:** credentials stay absent until approved; mock result must never be accepted as provider delivery. Guardian settings are not a global messaging kill switch.
+- **Assigned:** `P3-02` fixes or hides affected surfaces and proves provider truth before pilot; `P1-07` stage configuration and `P1-06` message/recipient log redaction. These are existing task scopes, not a new roadmap.
 
 ### B-009 — `main` auto-deploys without a production migration gate
 
@@ -44,11 +58,10 @@
 ### B-002 — Production topology and database provenance unverified
 
 - **Topology portion:** `P0-05` verified the Vercel, GitHub, DNS, Supabase,
-  storage, Render and Prisma-migration path read-only; acceptance remains
-  pending until its protected documentation PR lands.
+  storage, Render and Prisma-migration path read-only; PR #39 merged as `a854a21`.
 - **Still blocks:** production migration planning, staging equivalence and
   release claims until the deeper schema/drift/scale/backup audit completes.
-- **Owned by task:** `P1-01` after `P0-05` merges.
+- **Owned by task:** `P1-01` after the Phase 0 exit gate.
 
 ### B-010 — Public-schema RLS is incomplete
 
