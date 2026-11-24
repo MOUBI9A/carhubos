@@ -59,6 +59,8 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 
 ## Phase 1 — security, data and recovery
 
+Founder requested implementation ahead of Phase 0 acceptance. Parallel draft lanes on `codex/phase1-foundation`: P1-01 (metadata audit), P1-03 (restore safety), P1-06 (HTTP log redaction), P1-07 (shared throttling). Existing dependencies still govern acceptance and deployment.
+
 | ID | Status | Task | Dependencies | Acceptance evidence | Owner / PR |
 |---|---|---|---|---|---|
 | `P1-01` | `NOT_STARTED` | Read-only production schema, migration and data-quality provenance audit | Phase 0 | Deployed SHA/schema/migration table/version/extensions/scale/drift and invalid-data risks recorded; no raw customer export | Unclaimed |
