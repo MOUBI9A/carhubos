@@ -1,6 +1,6 @@
 # Operational Blockers
 
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-24
 
 ## Active now
 
@@ -10,6 +10,9 @@
 - **Separate fact:** PR #43 targets a feature branch; the workflow only triggers PR checks against `main`, so its five jobs are not scheduled. Vercel success is not a CI pass.
 - **Blocks:** protected acceptance of #42 and #43, hence the Phase 0 exit gate.
 - **Owner/action:** founder/account owner restores included access without paid overages; then rerun exact-head #42 checks, merge only through applicable release authority, retarget #43 and require all five final-head checks. No protection bypass or personal-Mac runner workaround.
+- **November 24 read-only refresh:** parent #42 still has the same failed run; no newer run is present. Main protection still enforces all five contexts, including for administrators. PR #43 Vercel status passed on `124b674d883851b62c000d85c4ee9e3805be082f`; no five-job CI is scheduled for its feature-branch base.
+- **Account UI evidence:** the signed-in Actions budget shows `Usage blocked` with a zero paid-spending limit, while the billing overview still shows included compute allowance remaining. This does **not** prove exhausted free allowance or identify a failed payment. Keep the zero-overage limit; account owner should resolve the discrepancy with GitHub billing support before retrying. No payment details, unrelated-product usage, budgets or settings were changed/exported.
+- **API limitation:** the existing CLI credential cannot read the billing-usage summary (404 with a request for additional `user` scope). No permission expansion was attempted; the read-only account UI supplied the evidence above. [GitHub budget documentation](https://docs.github.com/en/billing/concepts/budgets-and-alerts) distinguishes budget limits from included-usage alerts; [account-lock guidance](https://docs.github.com/en/billing/how-tos/troubleshooting/locked-account) describes other possible account restrictions, not a confirmed diagnosis here.
 
 ### B-012 — Generic WhatsApp mock success is not delivery evidence
 

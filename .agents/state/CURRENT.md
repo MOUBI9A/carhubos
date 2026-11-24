@@ -1,6 +1,6 @@
 # Current Operational State
 
-**Last verified:** 2026-11-23 for Git, CI and code/policy review; hosting, cost and local QA observations remain dated November 22.
+**Last verified:** 2026-11-24 for Git, required checks and read-only Actions budget UI; code/policy review remains November 23; hosting, cost and local QA observations remain dated November 22.
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
@@ -40,6 +40,10 @@ Independent consultation: Antigravity `gemini-3.8-flash-low`, plan mode, receive
 Verification: local documentation links, code-source references, whitespace and credential-pattern scan; no application tests rerun for documentation-only changes. Historical synthetic QA above is not a new run or evidence for unimplemented controls. Protected remote CI, hosted staging, provider execution and production recovery remain unproved. Rollback is a reviewed documentation revert. Final review/release commits are recorded in the PR history; verify its current head before accepting.
 
 ## Resume
+
+November 24 release-blocker refresh (claim `653d282`): canonical main remains `a854a21`; #42 remains at `10eb837` with the same pre-start failures and no later run. All five required contexts remain enforced for administrators. #43 Vercel status passed on `124b674`; this does not supply its unscheduled GitHub jobs. Signed-in account UI reports Actions `Usage blocked` at zero paid budget even though some included compute remains. B-011 now records this discrepancy and the CLI billing-permission limitation. No paid budget, account permission, production setting or provider was changed; no new test run or merge was attempted.
+
+The next external action is account-owner resolution of included Actions access, using GitHub billing support if necessary while retaining zero paid overages. Do not equate the displayed budget block with proven exhaustion or a confirmed failed payment. Further release retries need evidence that the account restriction has cleared. This documentation refresh was checked with `git diff --check` and staged-file inspection; application tests are unchanged.
 
 1. Leave P0-06 PR #43 in protected REVIEW until PR #42 merges and the five exact-head required jobs run successfully. Retarget #43 to `main` only when its parent is safely accepted.
 2. Read COORDINATION for current ownership: its separate release commit is authoritative; do not repeat a released claim. Use `/private/tmp/carhub-p0-06-20261122` while it exists (clean tracked worktree), not the older P0-07 checkout as a P0-06 resume source.

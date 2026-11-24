@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-06` — read-only release-blocker evidence refresh on draft PR #43; protected acceptance still pending
+**Active task:** `P0-06` — draft PR #43 remains in REVIEW; November 24 B-011 account UI evidence recorded, protected acceptance still pending
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
