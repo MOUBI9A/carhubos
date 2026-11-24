@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-06` — draft PR #43 remains in REVIEW; November 24 B-011 account UI evidence recorded, protected acceptance still pending
+**Active task:** P0-09 inventory in protected review on draft PR #44. P0-06 and P0-07 remain in review on #43 and #42.
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
@@ -55,7 +55,7 @@ Allowed statuses: `NOT_STARTED`, `READY`, `IN_PROGRESS`, `BLOCKED`, `REVIEW`, `D
 | `P0-06` | `REVIEW` | Define environment/provider/data rules for development, test, staging, pilot and production | `P0-05` | Matrix covers allowed data, providers, credentials, feature flags, seeding, retention and approvals for every environment | Codex / draft PR #43, initial implementation `cd5f8d3`, review claim `21d509c`. November 23: Antigravity consultation, static code cross-check, retention ownership, policy/enforcement separation, links/whitespace/credential scan. Five CI jobs are not scheduled on this feature-base PR; parent #42 is billing-blocked (B-011). B-012 records provider-truth follow-up. Documentation only; acceptance/merge still pending. |
 | `P0-07` | `REVIEW` | Publish disposition/dependency matrix for PRs #5–#13, #20 and #22–#27 | `P0-04` | Every PR has exact base/head, owner, dependency, schema risk, port/close/rebase decision and exit evidence | Codex / draft PR #42 (`codex/p0-07-pr-disposition`); 16/16 exact GitHub heads verified, merge current `main` without force-push; documentation-only review. Mandatory GitHub CI blocked by account billing limit (#40); do not merge without five exact-head checks |
 | `P0-08` | `DONE` | Retire the withdrawn picomatch exception and restore the standard production audit | `P0-01` | Official withdrawal recorded; exception wrapper/monitor removed; standard production audit reports zero high/critical findings; exact-head and post-merge `main` CI green | Codex / #35; merge `eba3c5c`; all five jobs green on canonical run `44442498902` |
-| `P0-09` | `IN_PROGRESS` | Inventory the committed application surfaces required by master plan §6 Phase 0 | `P0-04` | Reproducible source snapshot for routes, controllers, models, migrations, jobs, providers, environment names, flags, TODOs and owner decisions | Codex / `codex/p0-09-source-inventory` |
+| `P0-09` | `REVIEW` | Inventory the committed application surfaces required by master plan §6 Phase 0 | `P0-04` | Reproducible source snapshot for routes, controllers, models, migrations, jobs, providers, environment names, flags, TODOs and owner decisions | Codex / draft #44, implementation `a5245be`, source main `a854a21`; byte-identical regeneration and six independent count checks passed. Static coverage limits in CURRENT. |
 
 ## Phase 1 — security, data and recovery
 
