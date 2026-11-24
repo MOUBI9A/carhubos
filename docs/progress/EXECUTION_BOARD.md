@@ -2,7 +2,7 @@
 
 **Board version:** 1
 
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-24
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 
@@ -10,7 +10,7 @@
 
 **Active phase:** Phase 0 — control and one source of truth
 
-**Active task:** `P0-06` — review corrections submitted on draft PR #43; stacked after P0-07 draft PR #42
+**Active task:** `P0-06` — read-only release-blocker evidence refresh on draft PR #43; protected acceptance still pending
 
 **Plan/setup PR:** #28 (`codex/platform-readiness-master-plan`) — merged as `e010505e5f5ad53cc3bf9535e506668e2ed913ef`
 
