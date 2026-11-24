@@ -2,7 +2,9 @@
 
 The task order is `docs/progress/EXECUTION_BOARD.md`; this is a near-term handoff only.
 
-## 1. Review draft P0-06 PR #43 and P0-07 PR #42
+## 1. Review P0-09 inventory and its parent PRs
+
+- Draft [PR #44](https://github.com/MOUBI9A/carhubos/pull/44) targets #43. Reproduce the report using its pinned main SHA. Review the source coverage before protected acceptance. Retarget after #43 merges and check for source drift.
 
 - Draft P0-06 [PR #43](https://github.com/MOUBI9A/carhubos/pull/43) includes `docs/operations/ENVIRONMENT_PROVIDER_DATA_MATRIX.md`; initial implementation `cd5f8d3`, review corrections claimed at `21d509c` on November 23. Read its current head and COORDINATION before edits.
 - Review allowed data, credentials, providers, feature flags, seeding, retention, preview/staging separation and release approvals for each environment. It is policy documentation, not hosted staging.

@@ -4,9 +4,18 @@
 
 **Canonical plan:** `docs/operations/PLATFORM_READINESS_MASTER_PLAN_20261117.md`
 **Canonical task board:** `docs/progress/EXECUTION_BOARD.md`
-**Working branch:** `codex/p0-06-environment-rules` (stacked on PR #42 for conflict-free shared-state review)
-**Branch base:** PR #42's released-claim SHA `10eb8377ce46cf831b30948c660684eb41f71bed`; canonical `main` remains `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`
-**Active task:** `P0-06` — policy submitted for protected `REVIEW` in draft PR #43; no other implementation action is in progress once coordination is released.
+**Working branch:** `codex/p0-09-source-inventory` (draft [PR #44](https://github.com/MOUBI9A/carhubos/pull/44), parent #43 at `e0ee6ba57967429757b000ed30d45c355301933f`).
+**Active task:** P0-09 in REVIEW. P0-06 (#43) and P0-07 (#42) remain in REVIEW.
+
+## P0-09 handoff
+
+The master plan already required a source inventory at the Phase 0 exit. The board now tracks it separately from the PR disposition inventory. Source main is `a854a21d6970a0dd2c6c3abb3c21d945d8ed2b83`. Claim `a9caf32`, implementation `a5245be`. See `docs/operations/SOURCE_INVENTORY.md` and `scripts/source-inventory.py`. Board, CURRENT, NEXT and COORDINATION carry the handoff.
+
+Local verification reproduced the report byte for byte and resolved the referenced source paths against the pinned tree. Independent Git queries confirmed 52 web pages, 42 controller declarations, 206 HTTP methods, four scheduled methods, 40 Prisma models and 21 SQL migrations. The 206 HTTP method/path combinations are unique in the snapshot. Antigravity reviewed the validation approach and flagged its limits: literal scans can miss dynamic registrations or share blind spots with grep. Runtime access, deployment state and provider activation require separate tests. The change affects repository documentation and a local reporting utility only. Revert the scoped change through review to roll back.
+
+## Release order
+
+Resolve B-011 and accept #42 through protected review, then retarget and verify #43, followed by #44. Recheck the inventory if application sources move. The last verified #43 preview passed on `e0ee6ba`. CI for PRs targeting feature branches is unscheduled by the current workflow. Preserve the zero paid-overage limit.
 
 ## Latest accepted and pending work
 
@@ -39,14 +48,14 @@ Independent consultation: Antigravity `gemini-3.8-flash-low`, plan mode, receive
 
 Verification: local documentation links, code-source references, whitespace and credential-pattern scan; no application tests rerun for documentation-only changes. Historical synthetic QA above is not a new run or evidence for unimplemented controls. Protected remote CI, hosted staging, provider execution and production recovery remain unproved. Rollback is a reviewed documentation revert. Final review/release commits are recorded in the PR history; verify its current head before accepting.
 
-## Resume
+## Prior P0-06 release evidence
 
 November 24 release-blocker refresh (claim `653d282`): canonical main remains `a854a21`; #42 remains at `10eb837` with the same pre-start failures and no later run. All five required contexts remain enforced for administrators. #43 Vercel status passed on `124b674`; this does not supply its unscheduled GitHub jobs. Signed-in account UI reports Actions `Usage blocked` at zero paid budget even though some included compute remains. B-011 now records this discrepancy and the CLI billing-permission limitation. No paid budget, account permission, production setting or provider was changed; no new test run or merge was attempted.
 
 The next external action is account-owner resolution of included Actions access, using GitHub billing support if necessary while retaining zero paid overages. Do not equate the displayed budget block with proven exhaustion or a confirmed failed payment. Further release retries need evidence that the account restriction has cleared. This documentation refresh was checked with `git diff --check` and staged-file inspection; application tests are unchanged.
 
 1. Leave P0-06 PR #43 in protected REVIEW until PR #42 merges and the five exact-head required jobs run successfully. Retarget #43 to `main` only when its parent is safely accepted.
-2. Read COORDINATION for current ownership: its separate release commit is authoritative; do not repeat a released claim. Use `/private/tmp/carhub-p0-06-20261122` while it exists (clean tracked worktree), not the older P0-07 checkout as a P0-06 resume source.
+2. Read COORDINATION for current ownership: its separate release commit is authoritative; do not repeat a released claim. Use `git worktree list` and the remote PR head to locate the correct branch.
 3. Do not create staged paid services until Azure remaining credit/expiration and verified free-tier eligibility are known. Do not bypass GitHub checks while billing is blocked.
 4. Later Phase 1 starts with P1-01 read-only provenance, then P1-02 hosted staging and P1-03 recovery rehearsal. No agency import until those gates pass.
 
