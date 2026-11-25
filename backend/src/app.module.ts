@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { configuredStorage } from './common/throttling/shared-storage';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -56,12 +57,17 @@ const throttleLimit = Number(process.env.THROTTLE_LIMIT ?? 100);
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: Number.isFinite(throttleLimit) && throttleLimit > 0 ? throttleLimit : 100,
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        storage: configuredStorage(process.env),
+        throttlers: [
+          {
+            ttl: 60000,
+            limit: Number.isFinite(throttleLimit) && throttleLimit > 0 ? throttleLimit : 100,
+          },
+        ],
+      }),
+    }),
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,

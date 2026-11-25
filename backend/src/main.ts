@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
@@ -8,41 +8,20 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DecimalToNumberInterceptor } from './common/interceptors/decimal-to-number.interceptor';
 import { AutomotiveTelemetryService } from './common/telemetry/automotive-telemetry.service';
 import { AutomotiveTelemetryInterceptor } from './common/telemetry/automotive-telemetry.interceptor';
-import {
-  requestIdMiddleware,
-  RequestWithId,
-} from './common/middleware/request-id.middleware';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
+import { httpAccessLog } from './common/telemetry/safe-http';
 
 async function bootstrap() {
   // rawBody: true captures the raw request body (req.rawBody) alongside the
   // normal parsed body — required to verify payment-gateway webhook signatures
   // (e.g. Stripe). Additive: existing @Body() parsing is unaffected.
   const app = await NestFactory.create(AppModule, { rawBody: true });
-  const requestLogger = new Logger('HTTP');
 
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
   app.use(requestIdMiddleware);
-  app.use((req: RequestWithId, res, next) => {
-    const startedAt = Date.now();
-    res.on('finish', () => {
-      requestLogger.log(
-        JSON.stringify({
-          event: 'http_request',
-          requestId: req.requestId,
-          method: req.method,
-          // Express `path` intentionally excludes the query string. Query
-          // parameters can contain credentials/tokens (for example Vercel's
-          // `_vercel_share` bypass token) and must never be copied into logs.
-          path: req.path,
-          statusCode: res.statusCode,
-          durationMs: Date.now() - startedAt,
-        }),
-      );
-    });
-    next();
-  });
+  app.use(httpAccessLog);
   app.useGlobalFilters(new AllExceptionsFilter());
   // Serialise Prisma.Decimal money fields as JS numbers (preserve API contract).
   const automotiveTelemetry = new AutomotiveTelemetryService();

@@ -80,15 +80,9 @@ export class AutomotiveTelemetryService {
 
   parseTraceparent(header?: string): { traceId: string; parentId: string; sampled: boolean } | null {
     if (!header) return null;
-    const parts = header.trim().split('-');
-    if (parts.length === 4 && parts[0] === '00' && parts[1].length === 32 && parts[2].length === 16) {
-      return {
-        traceId: parts[1],
-        parentId: parts[2],
-        sampled: parts[3] === '01',
-      };
-    }
-    return null;
+    const match = /^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$/.exec(header.trim());
+    if (!match || /^0+$/.test(match[1]) || /^0+$/.test(match[2])) return null;
+    return { traceId: match[1], parentId: match[2], sampled: (parseInt(match[3], 16) & 1) === 1 };
   }
 
   formatTraceparent(traceId: string, spanId: string, sampled = true): string {

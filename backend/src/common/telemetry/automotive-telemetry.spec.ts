@@ -112,3 +112,17 @@ describe('AutomotiveTelemetryService', () => {
     });
   });
 });
+
+describe('incoming trace context validation', () => {
+  const telemetry = new AutomotiveTelemetryService();
+  const trace = '1'.repeat(32);
+  const span = '2'.repeat(16);
+  it.each([
+    `00-${'0'.repeat(32)}-${span}-01`,
+    `00-${trace}-${'0'.repeat(16)}-01`,
+    `00-${'x'.repeat(32)}-${span}-01`,
+    `00-${trace}-${span}-z1`,
+  ])('regenerates invalid contexts', header => {
+    expect(telemetry.parseTraceparent(header)).toBeNull();
+  });
+});

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { RequestWithId } from '../middleware/request-id.middleware';
+import { httpRouteLabel } from '../telemetry/safe-http';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -23,15 +24,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    const safePath = httpRouteLabel(request);
     const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : { message: 'Internal server error', statusCode: 500 };
-
-    // Express `path` excludes the query string. This prevents sensitive query
-    // parameters (for example temporary access/bypass tokens) from leaking into
-    // structured logs or being reflected back in error responses.
-    const safePath = request.path;
+      status === 404 && safePath === 'unmatched'
+        ? { message: 'Not Found', statusCode: status }
+        : exception instanceof HttpException
+          ? exception.getResponse()
+          : { message: 'Internal server error', statusCode: 500 };
 
     this.logger.error(
       JSON.stringify({
@@ -40,12 +39,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         method: request.method,
         path: safePath,
         statusCode: status,
-        error:
-          exception instanceof Error
-            ? exception.name
-            : 'UnknownError',
       }),
-      exception instanceof Error ? exception.stack : undefined,
     );
 
     response.status(status).json({
