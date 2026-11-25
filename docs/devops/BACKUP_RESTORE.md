@@ -55,15 +55,27 @@ Recommended pilot baseline:
 
 ## Restore drill
 
-The repository provides `scripts/db-restore.sh`. It intentionally refuses to run unless the operator opts into a destructive restore.
+Use a fresh, isolated recovery database and a trusted custom archive produced by `scripts/db-backup.sh`. A PostgreSQL dump contains executable SQL. The restore role needs access to create the archived objects and clean up existing versions. Objects outside the archive may survive a restore into a reused database.
 
-Create an isolated target database, then:
+When provisioning the disposable target, verify the cluster and database in the provider or local cluster inventory. Generate a unique UUID (for example with `uuidgen`) and record it with the recovery database name in the drill record. From the **independently verified provisioning session**, register that ID on the database. Substitute the actual database name and UUID in this SQL.
+
+```sql
+ALTER DATABASE fider_recovery_test SET fider.restore_target_id = '<UUID from the recovery record>';
+```
+
+Obtain the expected name and UUID from that record. Supply the connection URI separately using the secret manager. The script compares both fields with the live database and its database-level marker inside the same transaction as the restore. Role or session settings cannot supply this marker. Register a fresh ID if provisioning a new target from a cloned cluster.
 
 ```bash
-export DATABASE_URL='postgresql://.../fider_recovery_test'
+export RESTORE_TARGET_DB=fider_recovery_test
+export RESTORE_TARGET_ID='<UUID from the recovery record>'
 export ALLOW_DB_RESTORE=YES
+# DATABASE_URL is injected by the secret manager for this target.
 bash scripts/db-restore.sh /secure/fider-backups/fider_host_timestamp.dump
 ```
+
+The restore commits after successful archive decoding and SQL execution. If the client loses contact during commit, inspect the target before retrying. Error output omits raw SQL and row data. Keep the target isolated from traffic until verification succeeds. Dropping the disposable database when the drill closes also removes its marker.
+
+For a local rehearsal, run `bash scripts/test-db-restore.sh` with PostgreSQL 17 tools and Python 3 on PATH. It creates a temporary socket-only cluster, applies repository migration SQL, restores a synthetic row and verifies the table list. Negative cases cover a wrong database, a forged session marker, a SQL failure, and a truncated archive that still passes the contents check. The test shuts down and removes its private cluster on exit. Hosted PITR and application recovery require a separate rehearsal on the selected service.
 
 After restore:
 
